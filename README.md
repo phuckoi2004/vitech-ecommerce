@@ -16,9 +16,10 @@ Hệ thống gồm:
 - AI Chatbot tư vấn sản phẩm.
 - Product Recommendation Engine.
 
-Tài liệu đặc tả chính:
+Tài liệu đặc tả:
 
-`VieTech.docx`
+- `docs/database-schema.md`: **SOURCE OF TRUTH** cho database schema.
+- `VieTech.docx`: tài liệu tham khảo về nghiệp vụ, yêu cầu, ERD và thiết kế tổng thể.
 
 ---
 
@@ -88,6 +89,9 @@ VieTech/
 ├── README.md
 ├── VieTech.docx
 │
+├── docs/
+│   └── database-schema.md       # SOURCE OF TRUTH cho database schema
+│
 ├── frontend/
 │   ├── public/
 │   ├── src/
@@ -155,7 +159,10 @@ Không hard-code database credentials.
 
 `backend/.env` chứa thông tin bí mật và không được commit lên GitHub.
 
-Thiết kế database phải bám theo `VieTech.docx`.
+Thiết kế database phải bám theo `docs/database-schema.md` (SOURCE OF TRUTH cho database schema).
+
+`VieTech.docx` chỉ dùng để tham khảo nghiệp vụ, yêu cầu, ERD và thiết kế tổng thể.
+Khi `docs/database-schema.md` khác `VieTech.docx`, ưu tiên `docs/database-schema.md` khi triển khai database.
 
 Không tự ý:
 - Thêm hoặc xóa bảng.
@@ -227,7 +234,7 @@ Nếu phát hiện mâu thuẫn giữa tài liệu và database thực tế, ph�
 - NewsArticles
 - Banners
 
-Chi tiết thuộc tính, kiểu dữ liệu, khóa và ràng buộc phải được đối chiếu từ `VieTech.docx`.
+Chi tiết thuộc tính, kiểu dữ liệu, khóa, default, CHECK, ON DELETE và các status được đặc tả trong `docs/database-schema.md`.
 
 ---
 
@@ -272,7 +279,7 @@ Products 1 - N Reviews
 Reviews 1 - N ReviewImages
 ```
 
-Các quan hệ khác được xác định theo `VieTech.docx`.
+Các quan hệ khác được xác định theo `docs/database-schema.md`.
 
 ---
 
@@ -292,7 +299,8 @@ Sử dụng RBAC để kiểm soát quyền truy cập theo role.
 ## 9. Quy tắc phát triển
 
 - Đọc `README.md` trước khi thực hiện task.
-- Đọc `VieTech.docx` khi task liên quan đến nghiệp vụ hoặc database.
+- Đọc `docs/database-schema.md` khi task liên quan đến database.
+- Đọc `VieTech.docx` khi cần tham khảo nghiệp vụ, yêu cầu hoặc ERD.
 - Kiểm tra source code hiện tại trước khi sửa.
 - Kiểm tra database thực tế thông qua Supabase MCP khi cần.
 - Không tự ý thay đổi kiến trúc.
@@ -311,9 +319,12 @@ Sử dụng RBAC để kiểm soát quyền truy cập theo role.
 Khi thực hiện task, ưu tiên theo thứ tự:
 
 1. Yêu cầu trực tiếp của người dùng.
-2. `VieTech.docx`
-3. Database thực tế thông qua Supabase MCP.
-4. `README.md`
-5. Source code hiện tại.
+2. `docs/database-schema.md` (database schema)
+3. `VieTech.docx` (nghiệp vụ, yêu cầu, ERD, thiết kế tổng thể)
+4. Database thực tế thông qua Supabase MCP.
+5. `README.md`
+6. Source code hiện tại.
+
+Riêng về database schema: khi `docs/database-schema.md` khác `VieTech.docx`, ưu tiên `docs/database-schema.md`.
 
 Nếu có mâu thuẫn giữa các nguồn, **không tự ý quyết định**. Hãy báo cáo sự khác biệt và chờ xác nhận.
