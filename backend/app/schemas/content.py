@@ -1,4 +1,11 @@
-"""Schemas cho NewsArticles, Banners."""
+"""Schemas cho NewsArticles, Banners.
+
+Đợt 5.5 (ContentService): client không gửi trường trạng thái/quản trị.
+- NewsArticles.Status đổi qua nghiệp vụ đăng/ẩn (publish_article/hide_article); bài mới luôn là Draft;
+  PublishedAt do server gán khi đăng lần đầu.
+- Banners.IsActive đổi qua activate_banner/deactivate_banner; banner mới theo mặc định của database (IsActive = true).
+- CreatedByUserId lấy từ Admin đăng nhập.
+"""
 
 import uuid
 from datetime import datetime
@@ -13,7 +20,7 @@ from .common import NewsArticleStatus, RequestSchema, ResponseSchema, check_end_
 
 
 class NewsArticleCreate(RequestSchema):
-    """CreatedByUserId lấy từ người dùng đăng nhập; PublishedAt do server gán khi đăng."""
+    """Admin tạo bài viết (luôn ở trạng thái Draft). CreatedByUserId lấy từ người dùng đăng nhập."""
 
     NULLABLE_FIELDS = frozenset({"Summary", "ThumbnailUrl"})
 
@@ -22,10 +29,11 @@ class NewsArticleCreate(RequestSchema):
     Summary: str | None = None
     Content: str
     ThumbnailUrl: varchar(500) | None = None
-    Status: NewsArticleStatus
 
 
 class NewsArticleUpdate(RequestSchema):
+    """Admin sửa nội dung bài viết (PATCH). Không đổi Status/PublishedAt (dùng nghiệp vụ đăng/ẩn)."""
+
     NULLABLE_FIELDS = frozenset({"Summary", "ThumbnailUrl"})
 
     Title: varchar(255) | None = None
@@ -33,7 +41,6 @@ class NewsArticleUpdate(RequestSchema):
     Summary: str | None = None
     Content: str | None = None
     ThumbnailUrl: varchar(500) | None = None
-    Status: NewsArticleStatus | None = None
 
 
 class NewsArticleSummary(ResponseSchema):
@@ -53,6 +60,11 @@ class NewsArticleResponse(NewsArticleSummary):
     CreatedAt: datetime
 
 
+class AdminNewsArticleSummary(NewsArticleSummary):
+    CreatedByUserId: uuid.UUID
+    CreatedAt: datetime
+
+
 class AdminNewsArticleResponse(NewsArticleResponse):
     CreatedByUserId: uuid.UUID
 
@@ -63,6 +75,8 @@ class AdminNewsArticleResponse(NewsArticleResponse):
 
 
 class BannerCreate(RequestSchema):
+    """Admin tạo banner. IsActive không nhận từ client (mặc định database: true; đổi qua kích hoạt/ngừng)."""
+
     NULLABLE_FIELDS = frozenset({"LinkUrl", "StartDate", "EndDate"})
 
     Title: varchar(255)
@@ -71,7 +85,6 @@ class BannerCreate(RequestSchema):
     DisplayOrder: int | None = None
     StartDate: datetime | None = None
     EndDate: datetime | None = None
-    IsActive: bool | None = None
 
     @model_validator(mode="after")
     def _check_dates(self):

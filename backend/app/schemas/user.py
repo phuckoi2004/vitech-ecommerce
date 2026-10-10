@@ -9,7 +9,16 @@ from typing import Annotated
 
 from pydantic import Field
 
-from .common import EmailAddress, Money, NonNegativeInt, RequestSchema, ResponseSchema, UserRole, varchar
+from .common import (
+    AccountStatusValue,
+    EmailAddress,
+    Money,
+    NonNegativeInt,
+    RequestSchema,
+    ResponseSchema,
+    UserRole,
+    varchar,
+)
 
 # Mật khẩu dạng plain text chỉ có trong request; database chỉ lưu PasswordHash.
 # Chưa có quy định độ dài/độ mạnh mật khẩu trong schema hiện tại.
@@ -39,7 +48,7 @@ class AdminUserCreate(UserRegister):
     """Quản trị viên tạo tài khoản (ví dụ tài khoản nhân viên)."""
 
     Role: UserRole
-    AccountStatus: varchar(20)
+    AccountStatus: AccountStatusValue
 
 
 class UserProfileUpdate(RequestSchema):
@@ -65,7 +74,7 @@ class AdminUserUpdate(RequestSchema):
     NULLABLE_FIELDS = frozenset({"LockReason", "LockedUntil"})
 
     Role: UserRole | None = None
-    AccountStatus: varchar(20) | None = None
+    AccountStatus: AccountStatusValue | None = None
     LockReason: str | None = None
     LockedUntil: datetime | None = None
 
@@ -89,7 +98,7 @@ class UserResponse(ResponseSchema):
     DateOfBirth: date | None
     AvatarUrl: str | None
     Role: UserRole
-    AccountStatus: str
+    AccountStatus: AccountStatusValue
     IsEmailVerified: bool
     CreatedAt: datetime
     UpdatedAt: datetime

@@ -10,6 +10,7 @@ from sqlalchemy import (
     CheckConstraint,
     DateTime,
     ForeignKey,
+    Index,
     Integer,
     Numeric,
     String,
@@ -27,7 +28,14 @@ if TYPE_CHECKING:
     from .user import User
 
 
-PURCHASE_ORDER_STATUSES = ("Pending", "Approved", "Rejected", "Receiving", "Completed", "Cancelled")
+# Closed: Admin đóng phiếu còn thiếu hàng (nhà cung cấp giao thiếu); số thiếu = OrderedQuantity − ReceivedQuantity.
+PURCHASE_ORDER_STATUSES = ("Pending", "Approved", "Rejected", "Receiving", "Completed", "Cancelled", "Closed")
+# Phiếu Closed bắt buộc có thời điểm + lý do đóng; trạng thái khác không có (migration e2b8c4f6a913).
+PURCHASE_ORDER_CLOSED_CONSISTENT_SQL = (
+    "(\"Status\" = 'Closed' AND \"ClosedAt\" IS NOT NULL AND \"CloseReason\" IS NOT NULL "
+    "AND length(btrim(\"CloseReason\")) > 0) OR "
+    "(\"Status\" <> 'Closed' AND \"ClosedAt\" IS NULL AND \"CloseReason\" IS NULL)"
+)
 
 
 class Supplier(Base):
@@ -58,6 +66,7 @@ class PurchaseOrder(Base):
     __table_args__ = (
         CheckConstraint('"TotalAmount" >= 0', name="TotalAmount_NonNegative"),
         check_in("Status", PURCHASE_ORDER_STATUSES, "Status_Valid"),
+        CheckConstraint(PURCHASE_ORDER_CLOSED_CONSISTENT_SQL, name="Closed_Consistent"),
     )
 
     PurchaseOrderId: Mapped[uuid.UUID] = mapped_column(
@@ -81,6 +90,11 @@ class PurchaseOrder(Base):
         DateTime(timezone=True), nullable=False, server_default=text("now()")
     )
     DecidedAt: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    ClosedByUserId: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("Users.UserId", ondelete="SET NULL"), nullable=True
+    )
+    ClosedAt: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    CloseReason: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     supplier: Mapped[Supplier] = relationship(back_populates="purchase_orders", foreign_keys=[SupplierId])
     created_by: Mapped[User] = relationship(
@@ -134,3 +148,52 @@ class PurchaseOrderItem(Base):
     product_variant: Mapped[ProductVariant] = relationship(
         back_populates="purchase_order_items", foreign_keys=[ProductVariantId]
     )
+
+
+class PurchaseReceipt(Base):
+    """Một lần nhận hàng thực tế của phiếu nhập (lịch sử; chỉ ghi thêm — trigger trong migration e2b8c4f6a913)."""
+
+    __tablename__ = "PurchaseReceipts"
+
+    PurchaseReceiptId: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
+    )
+    PurchaseOrderId: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("PurchaseOrders.PurchaseOrderId", ondelete="RESTRICT"), nullable=False
+    )
+    ReceivedByUserId: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("Users.UserId", ondelete="RESTRICT"), nullable=False
+    )
+    ReceivedAt: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=text("now()")
+    )
+    Note: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    items: Mapped[list[PurchaseReceiptItem]] = relationship(
+        back_populates="receipt", passive_deletes=True, order_by="PurchaseReceiptItem.PurchaseOrderItemId"
+    )
+
+
+class PurchaseReceiptItem(Base):
+    """Số lượng thực nhận của một dòng phiếu nhập trong một lần nhận (đơn giá nhập tại lần nhận)."""
+
+    __tablename__ = "PurchaseReceiptItems"
+    __table_args__ = (
+        CheckConstraint('"Quantity" > 0', name="Quantity_Positive"),
+        CheckConstraint('"UnitPrice" >= 0', name="UnitPrice_NonNegative"),
+    )
+
+    PurchaseReceiptId: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("PurchaseReceipts.PurchaseReceiptId", ondelete="CASCADE"), primary_key=True
+    )
+    PurchaseOrderItemId: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("PurchaseOrderItems.PurchaseOrderItemId", ondelete="RESTRICT"), primary_key=True
+    )
+    Quantity: Mapped[int] = mapped_column(Integer, nullable=False)
+    UnitPrice: Mapped[Decimal] = mapped_column(Numeric(15, 2), nullable=False)
+
+    receipt: Mapped[PurchaseReceipt] = relationship(back_populates="items", foreign_keys=[PurchaseReceiptId])
+
+
+Index("IX_PurchaseReceipts_PurchaseOrderId_ReceivedAt", PurchaseReceipt.PurchaseOrderId, PurchaseReceipt.ReceivedAt)
+Index("IX_PurchaseReceiptItems_PurchaseOrderItemId", PurchaseReceiptItem.PurchaseOrderItemId)

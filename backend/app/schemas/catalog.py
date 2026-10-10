@@ -17,6 +17,7 @@ from .common import (
     ProductStatus,
     RequestSchema,
     ResponseSchema,
+    SerialNumberValue,
     relation_field,
     varchar,
 )
@@ -121,7 +122,8 @@ class ProductCreate(RequestSchema):
     Slug: varchar(300)
     Description: str | None = None
     Specifications: dict[str, Any] | None = None
-    WarrantyMonths: int
+    # Số tháng bảo hành (0 = không bảo hành); được chụp vào OrderItems.WarrantyMonths khi đặt hàng.
+    WarrantyMonths: NonNegativeInt
     Status: ProductStatus
 
 
@@ -134,7 +136,7 @@ class ProductUpdate(RequestSchema):
     Slug: varchar(300) | None = None
     Description: str | None = None
     Specifications: dict[str, Any] | None = None
-    WarrantyMonths: int | None = None
+    WarrantyMonths: NonNegativeInt | None = None
     Status: ProductStatus | None = None
 
 
@@ -170,7 +172,11 @@ class AdminProductResponse(ProductResponse):
 
 
 class ProductVariantCreate(RequestSchema):
-    """Admin/staff tạo biến thể. ProductId lấy từ đường dẫn hoặc truyền vào tùy endpoint."""
+    """Admin tạo biến thể. ProductId lấy từ đường dẫn hoặc truyền vào tùy endpoint.
+
+    Không có StockQuantity/CostPrice: tồn kho và giá vốn chỉ thay đổi qua nhận hàng, khai báo tồn đầu kỳ
+    (Opening) và điều chỉnh kho (InventoryService).
+    """
 
     NULLABLE_FIELDS = frozenset({"Color", "Storage"})
 
@@ -180,13 +186,14 @@ class ProductVariantCreate(RequestSchema):
     Color: varchar(50) | None = None
     Storage: varchar(50) | None = None
     Price: Money
-    CostPrice: Money | None = None
-    StockQuantity: NonNegativeInt | None = None
     MinStockLevel: NonNegativeInt | None = None
     IsActive: bool | None = None
+    IsSerialTracked: bool | None = None
 
 
 class ProductVariantUpdate(RequestSchema):
+    """PATCH. Không sửa StockQuantity/CostPrice tại đây (xem ProductVariantCreate)."""
+
     NULLABLE_FIELDS = frozenset({"Color", "Storage"})
 
     Sku: varchar(50) | None = None
@@ -194,10 +201,9 @@ class ProductVariantUpdate(RequestSchema):
     Color: varchar(50) | None = None
     Storage: varchar(50) | None = None
     Price: Money | None = None
-    CostPrice: Money | None = None
-    StockQuantity: NonNegativeInt | None = None
     MinStockLevel: NonNegativeInt | None = None
     IsActive: bool | None = None
+    IsSerialTracked: bool | None = None
 
 
 class ProductVariantResponse(ResponseSchema):
@@ -218,6 +224,7 @@ class AdminProductVariantResponse(ProductVariantResponse):
     CostPrice: Money
     MinStockLevel: NonNegativeInt
     IsDeleted: bool
+    IsSerialTracked: bool
 
 
 # ---------------------------------------------------------------------------
@@ -275,20 +282,19 @@ class ProductSerialCreate(RequestSchema):
     NULLABLE_FIELDS = frozenset({"WarrantyStartDate", "WarrantyEndDate"})
 
     ProductVariantId: uuid.UUID
-    SerialNumber: varchar(100)
+    SerialNumber: SerialNumberValue
     WarrantyStartDate: date | None = None
     WarrantyEndDate: date | None = None
     Status: ProductSerialStatus
 
 
 class ProductSerialUpdate(RequestSchema):
-    NULLABLE_FIELDS = frozenset({"OrderItemId", "WarrantyStartDate", "WarrantyEndDate"})
+    """Admin chỉ sửa số Serial/IMEI nhập nhầm (serial Available, chưa gắn đơn).
 
-    OrderItemId: uuid.UUID | None = None
-    SerialNumber: varchar(100) | None = None
-    WarrantyStartDate: date | None = None
-    WarrantyEndDate: date | None = None
-    Status: ProductSerialStatus | None = None
+    Status, OrderItemId, ngày bảo hành do nghiệp vụ kho/đơn hàng/bảo hành cập nhật, không sửa qua CRUD.
+    """
+
+    SerialNumber: SerialNumberValue
 
 
 class ProductSerialResponse(ResponseSchema):

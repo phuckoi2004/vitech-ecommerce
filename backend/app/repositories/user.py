@@ -1,13 +1,14 @@
-"""Repositories cho Users, Addresses, Notifications.
+"""Repositories cho Users, Addresses, Notifications, OtpChallenges.
 
 Không xử lý mật khẩu/OTP và không log dữ liệu nhạy cảm.
 """
 
 import uuid
+from datetime import datetime
 
-from sqlalchemy import func
+from sqlalchemy import func, select
 
-from app.models import Address, Notification, User
+from app.models import Address, Notification, OtpChallenge, User
 
 from .base import BaseRepository
 
@@ -71,6 +72,39 @@ class UserRepository(BaseRepository[User]):
         self, *, role: str | None = None, account_status: str | None = None, include_deleted: bool = False
     ) -> int:
         return self.count(*self._filters(role, account_status, include_deleted))
+
+    def list_admins_for_update(self) -> list[User]:
+        """Khóa mọi tài khoản Admin chưa xóa (FOR UPDATE, thứ tự UserId) trước khi kiểm tra "Admin cuối cùng".
+
+        Hai thao tác quản trị đồng thời trên các Admin khác nhau chạy tuần tự, không cùng khóa/xóa hết Admin.
+        """
+        stmt = (
+            select(User)
+            .where(User.Role == "Admin", User.IsDeleted.is_(False))
+            .order_by(User.UserId)
+            .with_for_update()
+        )
+        return self._scalars_for_update(stmt)
+
+
+class OtpChallengeRepository(BaseRepository[OtpChallenge]):
+    """Các lần gửi OTP (chỉ bản băm). Caller khóa dòng Users trước khi đọc/ghi để xử lý đồng thời an toàn."""
+
+    model = OtpChallenge
+
+    def latest_for(self, user_id: uuid.UUID, purpose: str) -> OtpChallenge | None:
+        stmt = (
+            select(OtpChallenge)
+            .where(OtpChallenge.UserId == user_id, OtpChallenge.Purpose == purpose)
+            .order_by(OtpChallenge.CreatedAt.desc(), OtpChallenge.OtpChallengeId.desc())
+            .limit(1)
+        )
+        return self.session.scalars(stmt).first()
+
+    def count_sent_since(self, user_id: uuid.UUID, purpose: str, since: datetime) -> int:
+        return self.count(
+            OtpChallenge.UserId == user_id, OtpChallenge.Purpose == purpose, OtpChallenge.CreatedAt > since
+        )
 
 
 class AddressRepository(BaseRepository[Address]):

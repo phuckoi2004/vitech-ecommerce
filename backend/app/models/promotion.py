@@ -6,6 +6,8 @@ from decimal import Decimal
 from typing import TYPE_CHECKING
 
 from sqlalchemy import (
+    Index,
+    func,
     Boolean,
     CheckConstraint,
     DateTime,
@@ -156,7 +158,8 @@ class Coupon(Base):
     CreatedByUserId: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("Users.UserId", ondelete="RESTRICT"), nullable=False
     )
-    Code: Mapped[str] = mapped_column(String(50), nullable=False, unique=True)
+    # Unique không phân biệt hoa thường: UX_Coupons_Code_Lower trên lower("Code").
+    Code: Mapped[str] = mapped_column(String(50), nullable=False)
     Name: Mapped[str] = mapped_column(String(255), nullable=False)
     UsageLimit: Mapped[int | None] = mapped_column(Integer, nullable=True)
     UsedCount: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
@@ -172,3 +175,7 @@ class Coupon(Base):
     orders: Mapped[list[Order]] = relationship(
         back_populates="coupon", foreign_keys="Order.CouponId", passive_deletes="all"
     )
+
+
+# Mã coupon unique không phân biệt hoa thường.
+Index("UX_Coupons_Code_Lower", func.lower(Coupon.Code), unique=True)

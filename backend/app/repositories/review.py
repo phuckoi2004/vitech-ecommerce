@@ -4,8 +4,9 @@ Không quyết định khách hàng có được đánh giá hay không (thuộc
 """
 
 import uuid
+from decimal import Decimal
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import joinedload, selectinload
 
 from app.models import Review, ReviewImage
@@ -54,6 +55,17 @@ class ReviewRepository(BaseRepository[Review]):
             options=self._display_options(),
         )
 
+    def rating_summary(self, product_id: uuid.UUID) -> tuple[int, Decimal | None]:
+        """(Số review, điểm trung bình) của các review đang hiển thị (IsDeleted = false), tính bằng COUNT/AVG ở database.
+
+        Trung bình chưa làm tròn (None khi không có review); Service làm tròn theo Products.AverageRating numeric(3,2).
+        """
+        stmt = select(func.count(Review.ReviewId), func.avg(Review.Rating)).where(
+            Review.ProductId == product_id, Review.IsDeleted.is_(False)
+        )
+        count, average = self.session.execute(stmt).one()
+        return int(count or 0), (Decimal(average) if average is not None else None)
+
     def count_by_product(
         self, product_id: uuid.UUID, *, rating: int | None = None, include_deleted: bool = False
     ) -> int:
@@ -82,6 +94,13 @@ class ReviewRepository(BaseRepository[Review]):
             limit=limit,
             options=self._display_options(),
         )
+
+
+    def count_by_user(self, user_id: uuid.UUID, *, include_deleted: bool = False) -> int:
+        conditions = [Review.UserId == user_id]
+        if not include_deleted:
+            conditions.append(Review.IsDeleted.is_(False))
+        return self.count(*conditions)
 
 
 class ReviewImageRepository(BaseRepository[ReviewImage]):

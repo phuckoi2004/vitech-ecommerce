@@ -9,7 +9,7 @@ Quy ước:
 from decimal import Decimal
 from typing import Annotated, Any, ClassVar, Generic, Literal, TypeVar
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
 
 # ---------------------------------------------------------------------------
 # Kiểu dữ liệu dùng chung
@@ -23,6 +23,11 @@ PositiveInt = Annotated[int, Field(gt=0)]
 # Chưa dùng EmailStr vì cần package email-validator (chưa có trong requirements.txt).
 EmailAddress = Annotated[str, Field(max_length=255)]
 
+# Văn bản bắt buộc (lý do từ chối/điều chỉnh...): bỏ khoảng trắng đầu/cuối, không được rỗng.
+NonBlankText = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+# ProductSerials.SerialNumber varchar(100): trim đầu/cuối, phân biệt hoa thường, không kiểm tra Luhn.
+SerialNumberValue = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=100)]
+
 
 def varchar(length: int) -> Any:
     """Chuỗi tương ứng varchar(length)."""
@@ -33,19 +38,27 @@ def varchar(length: int) -> Any:
 # Giá trị hợp lệ của các cột status (khớp CHECK trong docs/database-schema.md)
 # ---------------------------------------------------------------------------
 
-UserRole = Literal["Customer", "Staff", "Admin", "SuperAdmin"]
+UserRole = Literal["Customer", "Staff", "Admin"]
+AccountStatusValue = Literal["Active", "Locked"]
 OrderStatusValue = Literal["Pending", "Confirmed", "Processing", "Shipping", "Delivered", "Completed", "Cancelled"]
 PaymentStatusValue = Literal["Pending", "Paid", "Failed", "Refunded", "Cancelled"]
 ProductStatus = Literal["Draft", "Active", "Inactive", "Discontinued"]
-ProductSerialStatus = Literal["Available", "Reserved", "Sold", "Warranty", "Returned"]
+ProductSerialStatus = Literal["Available", "Reserved", "Sold", "Warranty", "Returned", "WrittenOff"]
 PromotionStatus = Literal["Draft", "Scheduled", "Active", "Expired", "Cancelled"]
 DiscountTypeValue = Literal["Percentage", "FixedAmount"]
-PurchaseOrderStatus = Literal["Pending", "Approved", "Rejected", "Receiving", "Completed", "Cancelled"]
+PurchaseOrderStatus = Literal["Pending", "Approved", "Rejected", "Receiving", "Completed", "Cancelled", "Closed"]
 PaymentTransactionStatus = Literal["Pending", "Success", "Failed", "Cancelled", "Refunded"]
+TransactionTypeValue = Literal["Payment", "Refund"]
 WarrantyEligibilityStatus = Literal["Pending", "Eligible", "Ineligible"]
 WarrantyRequestStatus = Literal["New", "Rejected", "HandedOver", "Processing", "Completed", "Cancelled"]
+# Giá trị đã chốt đợt 5.4 (CHECK thêm bởi migration d4f7b2e9a6c1, chưa áp dụng).
+WarrantyResultType = Literal["Repaired", "ProductReplaced", "PartReplaced", "NotRepairable"]
+AttachmentFileType = Literal["Image", "Video"]
+ReturnRequestType = Literal["Exchange", "Return"]
 ReturnRequestStatus = Literal["Pending", "Approved", "Rejected", "Receiving", "Processing", "Completed", "Cancelled"]
 ConversationStatus = Literal["Open", "Closed"]
+ConversationMode = Literal["AI", "Staff"]
+MessageTypeValue = Literal["Text", "Image", "Product"]
 NewsArticleStatus = Literal["Draft", "Published", "Hidden"]
 
 

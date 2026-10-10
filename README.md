@@ -172,6 +172,13 @@ Không tự ý:
 
 Nếu phát hiện mâu thuẫn giữa tài liệu và database thực tế, phải báo cáo trước khi thay đổi.
 
+### Migration
+
+- Migration nằm ở `backend/alembic/versions/`: một chuỗi tuyến tính, một head; migration SePay `b81569bc34b0` luôn đứng cuối chuỗi (migration mới được đặt trước nó).
+- Thứ tự từ `763f153af842`: `763f153af842` → `d3326a8fbc5c` → `4c2d9e7a1f53` → `8b7e3d1c5a29` → `5d1f9a3c7e64` → `e2b8c4f6a913` → `a7c3e9d1f285` → `c8d2f4a6b1e3` → `d4f7b2e9a6c1` → `f3b8d1a5c7e2` → `e6a2d9c4b8f1` → `a9f4c2e7b513` → `b81569bc34b0`.
+- `a9f4c2e7b513` (Stage 4, đợt 5.11): `PaymentTransactions` thêm người lập Refund, kết quả xác nhận (`ResolutionSource` Gateway/Manual), mã bằng chứng và ghi chú cho xác nhận refund thủ công.
+- `docs/database-schema.md` ghi các migration từ `763f153af842` trở đi là **chưa áp dụng**. Service Layer hiện tại cần schema ở head; trước khi áp dụng phải kiểm tra `alembic_version` và dữ liệu thực tế trên bản sao (staging). Một số migration dừng có chủ đích khi dữ liệu cũ không suy đoán được (xem docstring từng migration).
+
 ---
 
 ## 6. Các nhóm bảng
@@ -180,6 +187,7 @@ Nếu phát hiện mâu thuẫn giữa tài liệu và database thực tế, ph�
 - Users
 - Addresses
 - Notifications
+- OtpChallenges (OTP băm theo mục đích, giới hạn gửi/nhập sai; migration `a7c3e9d1f285` chưa áp dụng)
 
 ### Quản lý danh mục và sản phẩm
 - Categories
@@ -188,6 +196,8 @@ Nếu phát hiện mâu thuẫn giữa tài liệu và database thực tế, ph�
 - ProductVariants
 - ProductImages
 - ProductSerials
+- StockAdjustments (lịch sử tồn đầu kỳ/điều chỉnh kho; migration `763f153af842` chưa áp dụng)
+- StockAdjustmentSerials (serial thuộc phiếu điều chỉnh In/Out; migration `8b7e3d1c5a29` chưa áp dụng)
 
 ### Quản lý yêu thích và giỏ hàng
 - Wishlists
@@ -200,10 +210,13 @@ Nếu phát hiện mâu thuẫn giữa tài liệu và database thực tế, ph�
 - Orders
 - OrderItems
 - OrderStatusHistories
+- ShipmentReturns, ShipmentReturnItems (hàng của đơn hủy khi đang giao chờ quay về kho; migration `5d1f9a3c7e64` chưa áp dụng)
 
 ### Quản lý thanh toán
 - PaymentMethods
-- PaymentTransactions
+- PaymentTransactions (thêm người lập/kết quả xác nhận Refund: migration `a9f4c2e7b513` chưa áp dụng)
+- PaymentReconciliations (khoản thanh toán bất thường cần đối soát thủ công; migration `d3326a8fbc5c`, mở rộng bởi `b81569bc34b0`, chưa áp dụng)
+- PaymentWebhookEvents (giao dịch ngân hàng từ webhook SePay — tích hợp đang tạm dừng; migration `b81569bc34b0` chưa áp dụng)
 
 ### Quản lý khuyến mãi
 - Promotions
@@ -215,6 +228,7 @@ Nếu phát hiện mâu thuẫn giữa tài liệu và database thực tế, ph�
 - Suppliers
 - PurchaseOrders
 - PurchaseOrderItems
+- PurchaseReceipts, PurchaseReceiptItems (lịch sử từng lần nhận hàng, chỉ ghi thêm; migration `e2b8c4f6a913` chưa áp dụng)
 
 ### Quản lý đánh giá
 - Reviews
@@ -290,7 +304,6 @@ Hệ thống có các role:
 - Customer
 - Staff
 - Admin
-- SuperAdmin
 
 Sử dụng RBAC để kiểm soát quyền truy cập theo role.
 

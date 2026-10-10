@@ -36,13 +36,18 @@ if TYPE_CHECKING:
     from .wishlist_cart import Cart, Wishlist
 
 
-USER_ROLES = ("Customer", "Staff", "Admin", "SuperAdmin")
+USER_ROLES = ("Customer", "Staff", "Admin")
+ACCOUNT_STATUSES = ("Active", "Locked")
+OTP_PURPOSE_REGISTRATION = "Registration"
+OTP_PURPOSE_PASSWORD_RESET = "PasswordReset"
+OTP_PURPOSES = (OTP_PURPOSE_REGISTRATION, OTP_PURPOSE_PASSWORD_RESET)
 
 
 class User(Base):
     __tablename__ = "Users"
     __table_args__ = (
         check_in("Role", USER_ROLES, "Role_Valid"),
+        check_in("AccountStatus", ACCOUNT_STATUSES, "AccountStatus_Valid"),
         CheckConstraint('"TotalSpent" >= 0', name="TotalSpent_NonNegative"),
         CheckConstraint('"TotalOrders" >= 0', name="TotalOrders_NonNegative"),
     )
@@ -231,3 +236,38 @@ class Notification(Base):
     )
 
     user: Mapped[User] = relationship(back_populates="notifications", foreign_keys=[UserId])
+
+
+class OtpChallenge(Base):
+    """Một lần gửi OTP theo tài khoản + mục đích (thêm bởi migration a7c3e9d1f285, chưa áp dụng).
+
+    Chỉ lưu bản băm OTP (CodeHash, qua PasswordHasher). Xác minh luôn dùng lần gửi mới nhất của (UserId, Purpose).
+    FailedAttempts mang sang lần gửi lại (gửi lại không xóa số lần sai); LockedUntil: khóa xác minh (và chặn gửi
+    mới) cho tài khoản + mục đích. Số lần gửi trong một giờ đếm từ các dòng này. Users.OtpCode/OtpExpiredAt không
+    còn được dùng.
+    """
+
+    __tablename__ = "OtpChallenges"
+    __table_args__ = (
+        check_in("Purpose", OTP_PURPOSES, "Purpose_Valid"),
+        CheckConstraint('"FailedAttempts" >= 0', name="FailedAttempts_NonNegative"),
+    )
+
+    OtpChallengeId: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
+    )
+    UserId: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("Users.UserId", ondelete="CASCADE"), nullable=False
+    )
+    Purpose: Mapped[str] = mapped_column(String(20), nullable=False)
+    CodeHash: Mapped[str] = mapped_column(String(255), nullable=False)
+    ExpiresAt: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    FailedAttempts: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
+    LockedUntil: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    ConsumedAt: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    CreatedAt: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=text("now()")
+    )
+
+
+Index("IX_OtpChallenges_UserId_Purpose_CreatedAt", OtpChallenge.UserId, OtpChallenge.Purpose, OtpChallenge.CreatedAt)

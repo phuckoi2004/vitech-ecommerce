@@ -46,7 +46,7 @@ class ReviewUpdate(RequestSchema):
 
 
 class ReviewDeleteRequest(RequestSchema):
-    """Staff/admin xóa mềm (kiểm duyệt) bình luận."""
+    """Admin ẩn/xóa mềm (kiểm duyệt) đánh giá; lý do không bắt buộc."""
 
     NULLABLE_FIELDS = frozenset({"DeleteReason"})
 
