@@ -1,0 +1,284 @@
+# VieTech — Danh sách API nghiệp vụ (Giai đoạn 6)
+
+Tài liệu sinh từ code router (`backend/app/routers`). Chạy backend rồi mở `/docs` để xem schema chi tiết và thử API.
+
+## Quy ước
+
+- **Xác thực:** gửi `Authorization: Bearer <access_token>` (lấy từ `/auth/login`).
+- **Quyền:** `Công khai` không cần đăng nhập; `Công khai*` không cần đăng nhập nhưng Staff/Admin đăng nhập xem thêm dữ liệu ẩn (ví dụ `active_only=false`); `Đăng nhập` cần token (Service kiểm tra role và chủ sở hữu); `Staff/Admin` là mọi route `/admin/...`, Customer bị từ chối 403 trước khi vào Service.
+- **Lỗi:** body `{"detail": "<thông báo tiếng Việt>", "code": "<mã lỗi>"}`. 400 vi phạm nghiệp vụ, 401 chưa đăng nhập, 403 không có quyền, 404 không tìm thấy, 409 trùng dữ liệu, 422 dữ liệu gửi lên sai, 429 quá giới hạn, 502 lỗi cổng thanh toán.
+- **Phân trang:** `page` (≥ 1), `page_size` (1–100, thống kê tồn kho 1–200); kết quả `{Items, Total, Page, PageSize}`.
+- **Tham số `status`** là bộ lọc trạng thái (tên query `status`).
+- **Ngày giờ** gửi lên phải kèm múi giờ, ví dụ `2026-10-01T00:00:00+07:00` (thiếu múi giờ → 422). Tham số `date_from`/`date_to` của thống kê là ngày lịch Việt Nam `YYYY-MM-DD`, tính cả hai đầu.
+- **Token hết hạn:** route `Công khai*` vẫn kiểm tra token nếu có gửi; token sai/hết hạn trả 401 (frontend làm mới token hoặc gọi lại không kèm token).
+- Tên trường JSON giữ đúng tên cột (PascalCase), ví dụ `ProductVariantId`, `Quantity`.
+
+## Tài khoản: sổ địa chỉ, thông báo
+
+| Method | Đường dẫn | Quyền | Body | Query | Trả về | Service |
+|---|---|---|---|---|---|---|
+| GET | `/users/me/addresses` | Đăng nhập |  |  | `list[AddressResponse]` | `list_addresses` |
+| GET | `/users/me/addresses/{address_id}` | Đăng nhập |  |  | `AddressResponse` | `get_address` |
+| POST | `/users/me/addresses` | Đăng nhập | `AddressCreate` |  | `AddressResponse` | `create_address` |
+| PATCH | `/users/me/addresses/{address_id}` | Đăng nhập | `AddressUpdate` |  | `AddressResponse` | `update_address` |
+| DELETE | `/users/me/addresses/{address_id}` | Đăng nhập |  |  | `204` | `delete_address` |
+| GET | `/users/me/notifications` | Đăng nhập |  | is_read, page, page_size | `PageResponse[NotificationResponse]` | `list_notifications` |
+| GET | `/users/me/notifications/unread-count` | Đăng nhập |  |  | `NotificationCountResponse` | `count_unread` |
+| POST | `/users/me/notifications/read-all` | Đăng nhập |  |  | `NotificationCountResponse` | `mark_all_read` |
+| POST | `/users/me/notifications/{notification_id}/read` | Đăng nhập |  |  | `NotificationResponse` | `mark_read` |
+
+## Sản phẩm, danh mục, thương hiệu
+
+| Method | Đường dẫn | Quyền | Body | Query | Trả về | Service |
+|---|---|---|---|---|---|---|
+| GET | `/categories` | Công khai* |  | active_only, parent_id, roots_only | `list[CategoryResponse]` | `list_categories` |
+| GET | `/categories/slug/{slug}` | Công khai* |  | active_only | `CategoryResponse` | `get_category_by_slug` |
+| GET | `/categories/{category_id}` | Công khai* |  | active_only | `CategoryResponse` | `get_category` |
+| GET | `/brands` | Công khai* |  | active_only | `list[BrandResponse]` | `list_brands` |
+| GET | `/brands/slug/{slug}` | Công khai* |  | active_only | `BrandResponse` | `get_brand_by_slug` |
+| GET | `/brands/{brand_id}` | Công khai* |  | active_only | `BrandResponse` | `get_brand` |
+| GET | `/products` | Công khai |  | keyword, category_id, brand_id, page, page_size | `PageResponse[ProductSummary]` | `search_products` |
+| GET | `/products/slug/{slug}` | Công khai |  |  | `ProductDetailResponse` | `get_product_detail_by_slug` |
+| GET | `/products/{product_id}` | Công khai |  |  | `ProductDetailResponse` | `get_product_detail` |
+| GET | `/products/{product_id}/images` | Công khai |  |  | `list[ProductImageResponse]` | `list_images` |
+| POST | `/admin/categories` | Staff/Admin | `CategoryCreate` |  | `CategoryResponse` | `create_category` |
+| PATCH | `/admin/categories/{category_id}` | Staff/Admin | `CategoryUpdate` |  | `CategoryResponse` | `update_category` |
+| DELETE | `/admin/categories/{category_id}` | Staff/Admin |  |  | `204` | `delete_category` |
+| POST | `/admin/brands` | Staff/Admin | `BrandCreate` |  | `BrandResponse` | `create_brand` |
+| PATCH | `/admin/brands/{brand_id}` | Staff/Admin | `BrandUpdate` |  | `BrandResponse` | `update_brand` |
+| DELETE | `/admin/brands/{brand_id}` | Staff/Admin |  |  | `204` | `delete_brand` |
+| GET | `/admin/products` | Staff/Admin |  | keyword, category_id, brand_id, status, include_deleted, page, page_size | `PageResponse[AdminProductResponse]` | `admin_list_products` |
+| GET | `/admin/products/{product_id}` | Staff/Admin |  |  | `AdminProductDetailResponse` | `admin_get_product` |
+| POST | `/admin/products` | Staff/Admin | `ProductCreate` |  | `AdminProductResponse` | `create_product` |
+| PATCH | `/admin/products/{product_id}` | Staff/Admin | `ProductUpdate` |  | `AdminProductResponse` | `update_product` |
+| DELETE | `/admin/products/{product_id}` | Staff/Admin |  |  | `204` | `delete_product` |
+| GET | `/admin/products/{product_id}/variants` | Staff/Admin |  | include_deleted | `list[AdminProductVariantResponse]` | `list_variants` |
+| GET | `/admin/variants/{variant_id}` | Staff/Admin |  |  | `AdminProductVariantResponse` | `get_variant` |
+| POST | `/admin/variants` | Staff/Admin | `ProductVariantCreate` |  | `AdminProductVariantResponse` | `create_variant` |
+| PATCH | `/admin/variants/{variant_id}` | Staff/Admin | `ProductVariantUpdate` |  | `AdminProductVariantResponse` | `update_variant` |
+| DELETE | `/admin/variants/{variant_id}` | Staff/Admin |  |  | `204` | `delete_variant` |
+| POST | `/admin/products/{product_id}/images` | Staff/Admin | `ProductImageCreate` |  | `ProductImageResponse` | `add_image` |
+| PATCH | `/admin/products/{product_id}/images/{image_id}` | Staff/Admin | `ProductImageUpdate` |  | `ProductImageResponse` | `update_image` |
+| DELETE | `/admin/products/{product_id}/images/{image_id}` | Staff/Admin |  |  | `204` | `delete_image` |
+| GET | `/admin/variants/{variant_id}/serials` | Staff/Admin |  | status, page, page_size | `PageResponse[ProductSerialResponse]` | `list_serials` |
+| GET | `/admin/serials/lookup` | Staff/Admin |  | serial_number | `ProductSerialResponse` | `get_by_serial_number` |
+| GET | `/admin/serials/{serial_id}` | Staff/Admin |  |  | `ProductSerialResponse` | `get_serial` |
+| POST | `/admin/serials` | Staff/Admin | `ProductSerialCreate` |  | `ProductSerialResponse` | `create_serial` |
+| PATCH | `/admin/serials/{serial_id}` | Staff/Admin | `ProductSerialUpdate` |  | `ProductSerialResponse` | `update_serial` |
+| DELETE | `/admin/serials/{serial_id}` | Staff/Admin |  |  | `204` | `delete_serial` |
+
+## Yêu thích và giỏ hàng
+
+| Method | Đường dẫn | Quyền | Body | Query | Trả về | Service |
+|---|---|---|---|---|---|---|
+| GET | `/wishlist` | Đăng nhập |  |  | `WishlistDetailResponse` | `get_wishlist` |
+| POST | `/wishlist/items` | Đăng nhập | `WishlistItemCreate` |  | `WishlistItemDetailResponse` | `add_item` |
+| DELETE | `/wishlist/items/{wishlist_item_id}` | Đăng nhập |  |  | `204` | `remove_item` |
+| DELETE | `/wishlist/products/{product_id}` | Đăng nhập |  |  | `204` | `remove_product` |
+| GET | `/cart` | Đăng nhập |  |  | `CartSummaryResponse` | `get_cart` |
+| POST | `/cart/items` | Đăng nhập | `CartItemCreate` |  | `CartSummaryResponse` | `add_item` |
+| PATCH | `/cart/items/{cart_item_id}` | Đăng nhập | `CartItemUpdate` |  | `CartSummaryResponse` | `update_item` |
+| PUT | `/cart/selection` | Đăng nhập | `CartSelectAll` |  | `CartSummaryResponse` | `set_all_selected` |
+| DELETE | `/cart/items/{cart_item_id}` | Đăng nhập |  |  | `CartSummaryResponse` | `remove_item` |
+
+## Đơn hàng và vận chuyển
+
+| Method | Đường dẫn | Quyền | Body | Query | Trả về | Service |
+|---|---|---|---|---|---|---|
+| GET | `/shipping-methods` | Công khai* |  | active_only | `list[ShippingMethodResponse]` | `list_shipping_methods` |
+| GET | `/shipping-methods/{shipping_method_id}` | Công khai* |  |  | `ShippingMethodResponse` | `get_shipping_method` |
+| POST | `/orders` | Đăng nhập | `OrderCreate` |  | `OrderDetailResponse` | `create_order` |
+| GET | `/orders` | Đăng nhập |  | order_code, order_status, ordered_from, ordered_to, page, page_size | `PageResponse[OrderSummary]` | `search_customer_orders` |
+| GET | `/orders/items/{order_item_id}` | Đăng nhập |  |  | `OrderItemResponse` | `get_customer_order_item` |
+| GET | `/orders/{order_id}` | Đăng nhập |  |  | `OrderDetailResponse` | `get_order` |
+| GET | `/orders/{order_id}/history` | Đăng nhập |  |  | `list[OrderStatusHistoryResponse]` | `get_order_status_history` |
+| POST | `/orders/{order_id}/cancel` | Đăng nhập | `OrderCancelRequest` |  | `OrderDetailResponse` | `cancel_customer_order` |
+| POST | `/admin/shipping-methods` | Staff/Admin | `ShippingMethodCreate` |  | `ShippingMethodResponse` | `create_shipping_method` |
+| PATCH | `/admin/shipping-methods/{shipping_method_id}` | Staff/Admin | `ShippingMethodUpdate` |  | `ShippingMethodResponse` | `update_shipping_method` |
+| DELETE | `/admin/shipping-methods/{shipping_method_id}` | Staff/Admin |  |  | `204` | `delete_shipping_method` |
+| GET | `/admin/orders` | Staff/Admin |  | order_code, customer_id, assigned_staff_id, order_status, payment_status, ordered_from, ordered_to, page, page_size | `PageResponse[AdminOrderResponse]` | `admin_list_orders` |
+| GET | `/admin/orders/{order_id}` | Staff/Admin |  |  | `AdminOrderDetailResponse` | `admin_get_order` |
+| GET | `/admin/orders/{order_id}/history` | Staff/Admin |  |  | `list[AdminOrderStatusHistoryResponse]` | `admin_get_order_status_history` |
+| GET | `/admin/orders/{order_id}/cogs` | Staff/Admin |  |  | `OrderCogsResponse` | `get_order_cogs` |
+| POST | `/admin/orders/{order_id}/status` | Staff/Admin | `OrderStatusUpdate` |  | `AdminOrderDetailResponse` | `update_order_status` |
+| POST | `/admin/orders/{order_id}/confirm-cod-delivery` | Staff/Admin | `CodDeliveryConfirm` |  | `AdminOrderDetailResponse` | `confirm_cod_delivery` |
+| PATCH | `/admin/orders/{order_id}` | Staff/Admin | `OrderAdminUpdate` |  | `AdminOrderDetailResponse` | `update_order_admin_info` |
+| GET | `/admin/orders/{order_id}/serials` | Staff/Admin |  |  | `list[OrderItemSerialsResponse]` | `get_order_serials` |
+| POST | `/admin/orders/{order_id}/serials` | Staff/Admin | `OrderSerialAssign` |  | `list[OrderItemSerialsResponse]` | `assign_order_serials` |
+| DELETE | `/admin/orders/{order_id}/serials/{serial_number}` | Staff/Admin |  |  | `list[OrderItemSerialsResponse]` | `release_order_serial` |
+| GET | `/admin/shipment-returns` | Staff/Admin |  | status, page, page_size | `PageResponse[ShipmentReturnResponse]` | `list_shipment_returns` |
+| GET | `/admin/orders/{order_id}/shipment-return` | Staff/Admin |  |  | `ShipmentReturnResponse` | `get_shipment_return` |
+| POST | `/admin/orders/{order_id}/shipment-return/receive` | Staff/Admin | `ShipmentReturnReceive` |  | `ShipmentReturnResponse` | `receive_shipment_return` |
+
+## Thanh toán và hoàn tiền
+
+| Method | Đường dẫn | Quyền | Body | Query | Trả về | Service |
+|---|---|---|---|---|---|---|
+| GET | `/payment-methods` | Công khai* |  | active_only | `list[PaymentMethodResponse]` | `list_payment_methods` |
+| GET | `/payment-methods/{payment_method_id}` | Công khai* |  |  | `PaymentMethodResponse` | `get_payment_method` |
+| POST | `/orders/{order_id}/payments/qr` | Đăng nhập |  |  | `PaymentTransactionResponse` | `create_qr_payment` |
+| GET | `/orders/{order_id}/payments` | Đăng nhập |  |  | `list[PaymentTransactionResponse]` | `list_order_transactions` |
+| POST | `/payments/{payment_transaction_id}/cancel` | Đăng nhập |  |  | `PaymentTransactionResponse` | `cancel_qr_payment` |
+| POST | `/admin/payment-methods` | Staff/Admin | `PaymentMethodCreate` |  | `PaymentMethodResponse` | `create_payment_method` |
+| PATCH | `/admin/payment-methods/{payment_method_id}` | Staff/Admin | `PaymentMethodUpdate` |  | `PaymentMethodResponse` | `update_payment_method` |
+| DELETE | `/admin/payment-methods/{payment_method_id}` | Staff/Admin |  |  | `204` | `delete_payment_method` |
+| GET | `/admin/payment-transactions` | Staff/Admin |  | status, payment_method_id, transaction_type, page, page_size | `PageResponse[AdminPaymentTransactionResponse]` | `admin_list_transactions` |
+| GET | `/admin/orders/{order_id}/payments` | Staff/Admin |  |  | `list[AdminPaymentTransactionResponse]` | `admin_list_order_transactions` |
+| POST | `/admin/orders/{order_id}/payments/cod` | Staff/Admin |  |  | `AdminPaymentTransactionResponse` | `record_cod_payment` |
+| GET | `/admin/refunds/awaiting-orders` | Staff/Admin |  | page, page_size | `PageResponse[AdminOrderResponse]` | `list_orders_awaiting_refund` |
+| GET | `/admin/orders/{order_id}/refund-sources` | Staff/Admin |  |  | `list[RefundSourceResponse]` | `list_refund_sources` |
+| POST | `/admin/orders/{order_id}/refunds` | Staff/Admin | `OrderRefundCreate` |  | `AdminPaymentTransactionResponse` | `refund_order` |
+| POST | `/admin/refunds/{refund_transaction_id}/resolve` | Staff/Admin | `RefundResolution` |  | `AdminPaymentTransactionResponse` | `resolve_pending_refund` |
+| GET | `/admin/payment-reconciliations` | Staff/Admin |  | status, issue_type, order_id, page, page_size | `PageResponse[PaymentReconciliationResponse]` | `list_reconciliations` |
+| POST | `/admin/payment-reconciliations/{reconciliation_id}/resolve` | Staff/Admin | `PaymentReconciliationResolve` |  | `PaymentReconciliationResponse` | `resolve_reconciliation` |
+
+## Khuyến mãi và mã giảm giá
+
+| Method | Đường dẫn | Quyền | Body | Query | Trả về | Service |
+|---|---|---|---|---|---|---|
+| GET | `/cart/coupon-preview` | Đăng nhập |  | code | `CouponPreviewResponse` | `preview_cart_coupon` |
+| GET | `/admin/promotions` | Staff/Admin |  | status, page, page_size | `PageResponse[AdminPromotionResponse]` | `list_promotions` |
+| GET | `/admin/promotions/{promotion_id}` | Staff/Admin |  |  | `AdminPromotionDetailResponse` | `get_promotion` |
+| POST | `/admin/promotions` | Staff/Admin | `PromotionCreate` |  | `AdminPromotionDetailResponse` | `create_promotion` |
+| PATCH | `/admin/promotions/{promotion_id}` | Staff/Admin | `PromotionUpdate` |  | `AdminPromotionDetailResponse` | `update_promotion` |
+| PUT | `/admin/promotions/{promotion_id}/targets` | Staff/Admin | `PromotionTargetsUpdate` |  | `AdminPromotionDetailResponse` | `update_targets` |
+| POST | `/admin/promotions/{promotion_id}/cancel` | Staff/Admin |  |  | `AdminPromotionDetailResponse` | `cancel_promotion` |
+| DELETE | `/admin/promotions/{promotion_id}` | Staff/Admin |  |  | `204` | `delete_promotion` |
+| GET | `/admin/promotions/{promotion_id}/coupons` | Staff/Admin |  | is_active | `list[AdminCouponResponse]` | `list_coupons` |
+| GET | `/admin/coupons/{coupon_id}` | Staff/Admin |  |  | `AdminCouponResponse` | `get_coupon` |
+| POST | `/admin/coupons` | Staff/Admin | `CouponCreate` |  | `AdminCouponResponse` | `create_coupon` |
+| PATCH | `/admin/coupons/{coupon_id}` | Staff/Admin | `CouponUpdate` |  | `AdminCouponResponse` | `update_coupon` |
+| DELETE | `/admin/coupons/{coupon_id}` | Staff/Admin |  |  | `204` | `delete_coupon` |
+
+## Nhập hàng và kho
+
+| Method | Đường dẫn | Quyền | Body | Query | Trả về | Service |
+|---|---|---|---|---|---|---|
+| GET | `/admin/suppliers` | Staff/Admin |  | active_only, page, page_size | `PageResponse[SupplierResponse]` | `list_suppliers` |
+| GET | `/admin/suppliers/{supplier_id}` | Staff/Admin |  |  | `SupplierResponse` | `get_supplier` |
+| POST | `/admin/suppliers` | Staff/Admin | `SupplierCreate` |  | `SupplierResponse` | `create_supplier` |
+| PATCH | `/admin/suppliers/{supplier_id}` | Staff/Admin | `SupplierUpdate` |  | `SupplierResponse` | `update_supplier` |
+| DELETE | `/admin/suppliers/{supplier_id}` | Staff/Admin |  |  | `204` | `delete_supplier` |
+| GET | `/admin/purchase-orders` | Staff/Admin |  | code, status, supplier_id, created_by_user_id, page, page_size | `PageResponse[PurchaseOrderResponse]` | `list_purchase_orders` |
+| GET | `/admin/purchase-orders/{purchase_order_id}` | Staff/Admin |  |  | `PurchaseOrderDetailResponse` | `get_purchase_order` |
+| POST | `/admin/purchase-orders` | Staff/Admin | `PurchaseOrderCreate` |  | `PurchaseOrderDetailResponse` | `create_purchase_order` |
+| PATCH | `/admin/purchase-orders/{purchase_order_id}` | Staff/Admin | `PurchaseOrderUpdate` |  | `PurchaseOrderDetailResponse` | `update_purchase_order` |
+| POST | `/admin/purchase-orders/{purchase_order_id}/items` | Staff/Admin | `PurchaseOrderItemCreate` |  | `PurchaseOrderDetailResponse` | `add_item` |
+| PATCH | `/admin/purchase-orders/{purchase_order_id}/items/{purchase_order_item_id}` | Staff/Admin | `PurchaseOrderItemUpdate` |  | `PurchaseOrderDetailResponse` | `update_item` |
+| DELETE | `/admin/purchase-orders/{purchase_order_id}/items/{purchase_order_item_id}` | Staff/Admin |  |  | `PurchaseOrderDetailResponse` | `remove_item` |
+| POST | `/admin/purchase-orders/{purchase_order_id}/resubmit` | Staff/Admin |  |  | `PurchaseOrderDetailResponse` | `resubmit_purchase_order` |
+| POST | `/admin/purchase-orders/{purchase_order_id}/decision` | Staff/Admin | `PurchaseOrderDecision` |  | `PurchaseOrderDetailResponse` | `decide_purchase_order` |
+| POST | `/admin/purchase-orders/{purchase_order_id}/cancel` | Staff/Admin |  |  | `PurchaseOrderDetailResponse` | `cancel_purchase_order` |
+| POST | `/admin/purchase-orders/{purchase_order_id}/receive` | Staff/Admin | `PurchaseOrderReceive` |  | `PurchaseOrderDetailResponse` | `receive_items` |
+| POST | `/admin/purchase-orders/{purchase_order_id}/close` | Staff/Admin | `PurchaseOrderClose` |  | `PurchaseOrderDetailResponse` | `close_purchase_order` |
+| GET | `/admin/purchase-orders/{purchase_order_id}/receipts` | Staff/Admin |  |  | `list[PurchaseReceiptResponse]` | `list_receipts` |
+| GET | `/admin/inventory/low-stock` | Staff/Admin |  | page, page_size | `PageResponse[LowStockVariantResponse]` | `list_low_stock` |
+| GET | `/admin/inventory/adjustments` | Staff/Admin |  | variant_id, adjustment_type, page, page_size | `PageResponse[StockAdjustmentResponse]` | `list_adjustments` |
+| POST | `/admin/variants/{variant_id}/stock-opening` | Staff/Admin | `StockOpeningCreate` |  | `StockAdjustmentResponse` | `declare_opening` |
+| POST | `/admin/variants/{variant_id}/stock-adjustments` | Staff/Admin | `StockAdjustmentCreate` |  | `StockAdjustmentResponse` | `adjust_stock` |
+
+## Đánh giá
+
+| Method | Đường dẫn | Quyền | Body | Query | Trả về | Service |
+|---|---|---|---|---|---|---|
+| GET | `/products/{product_id}/reviews` | Công khai |  | rating, page, page_size | `PageResponse[ReviewResponse]` | `list_product_reviews` |
+| GET | `/reviews/mine` | Đăng nhập |  | page, page_size | `PageResponse[ReviewResponse]` | `list_my_reviews` |
+| POST | `/reviews` | Đăng nhập | `ReviewCreate` |  | `ReviewResponse` | `create_review` |
+| PATCH | `/reviews/{review_id}` | Đăng nhập | `ReviewUpdate` |  | `ReviewResponse` | `update_review` |
+| GET | `/admin/products/{product_id}/reviews` | Staff/Admin |  | include_deleted, page, page_size | `PageResponse[AdminReviewResponse]` | `admin_list_product_reviews` |
+| GET | `/admin/reviews/{review_id}` | Staff/Admin |  |  | `AdminReviewResponse` | `admin_get_review` |
+| POST | `/admin/reviews/{review_id}/hide` | Staff/Admin | `ReviewDeleteRequest` |  | `AdminReviewResponse` | `moderate_review` |
+
+## Chat
+
+| Method | Đường dẫn | Quyền | Body | Query | Trả về | Service |
+|---|---|---|---|---|---|---|
+| POST | `/conversations` | Đăng nhập | `ConversationCreate` |  | `ConversationResponse` | `start_conversation` |
+| GET | `/conversations` | Đăng nhập |  | status, page, page_size | `PageResponse[ConversationResponse]` | `list_my_conversations` |
+| GET | `/conversations/{conversation_id}` | Đăng nhập |  |  | `ConversationDetailResponse` | `get_conversation` |
+| GET | `/conversations/{conversation_id}/messages` | Đăng nhập |  | page, page_size | `PageResponse[MessageResponse]` | `list_messages` |
+| POST | `/conversations/{conversation_id}/messages` | Đăng nhập | `MessageCreate` |  | `MessageResponse` | `send_message` |
+| POST | `/conversations/{conversation_id}/close` | Đăng nhập |  |  | `ConversationResponse` | `close_conversation` |
+| GET | `/admin/conversations` | Staff/Admin |  | status, mode, page, page_size | `PageResponse[AdminConversationResponse]` | `admin_list_conversations` |
+| GET | `/admin/conversations/unassigned` | Staff/Admin |  | page, page_size | `PageResponse[AdminConversationResponse]` | `list_unassigned_conversations` |
+| GET | `/admin/conversations/assigned` | Staff/Admin |  | status, page, page_size | `PageResponse[AdminConversationResponse]` | `list_assigned_conversations` |
+| POST | `/admin/conversations/{conversation_id}/claim` | Staff/Admin |  |  | `AdminConversationResponse` | `claim_conversation` |
+| GET | `/admin/conversations/{conversation_id}` | Staff/Admin |  |  | `AdminConversationDetailResponse` | `get_conversation` |
+| GET | `/admin/conversations/{conversation_id}/messages` | Staff/Admin |  | page, page_size | `PageResponse[AdminMessageResponse]` | `list_messages` |
+| POST | `/admin/conversations/{conversation_id}/messages` | Staff/Admin | `MessageCreate` |  | `AdminMessageResponse` | `send_message` |
+| POST | `/admin/conversations/{conversation_id}/close` | Staff/Admin |  |  | `AdminConversationResponse` | `close_conversation` |
+
+## Bảo hành và đổi trả
+
+| Method | Đường dẫn | Quyền | Body | Query | Trả về | Service |
+|---|---|---|---|---|---|---|
+| POST | `/warranty-requests` | Đăng nhập | `WarrantyRequestCreate` |  | `WarrantyRequestDetailResponse` | `create_warranty_request` |
+| GET | `/warranty-requests` | Đăng nhập |  | status, page, page_size | `PageResponse[WarrantyRequestResponse]` | `list_my_warranty_requests` |
+| GET | `/warranty-requests/{request_id}` | Đăng nhập |  |  | `WarrantyRequestDetailResponse` | `get_my_warranty_request` |
+| POST | `/warranty-requests/{request_id}/cancel` | Đăng nhập | `Union (tùy chọn)` |  | `WarrantyRequestDetailResponse` | `cancel_warranty_request` |
+| POST | `/return-requests` | Đăng nhập | `ReturnRequestCreate` |  | `ReturnRequestDetailResponse` | `create_return_request` |
+| GET | `/return-requests` | Đăng nhập |  | status, page, page_size | `PageResponse[ReturnRequestResponse]` | `list_my_return_requests` |
+| GET | `/return-requests/{request_id}` | Đăng nhập |  |  | `ReturnRequestDetailResponse` | `get_my_return_request` |
+| POST | `/return-requests/{request_id}/cancel` | Đăng nhập | `Union (tùy chọn)` |  | `ReturnRequestDetailResponse` | `cancel_return_request` |
+| GET | `/admin/warranty-requests` | Staff/Admin |  | status, eligibility_status, customer_id, assigned_staff_id, supplier_id, page, page_size | `PageResponse[AdminWarrantyRequestResponse]` | `list_warranty_requests` |
+| GET | `/admin/warranty-requests/{request_id}` | Staff/Admin |  |  | `AdminWarrantyRequestDetailResponse` | `get_warranty_request` |
+| POST | `/admin/warranty-requests/{request_id}/receive` | Staff/Admin | `Union (tùy chọn)` |  | `AdminWarrantyRequestDetailResponse` | `receive_warranty_request` |
+| POST | `/admin/warranty-requests/{request_id}/inspect` | Staff/Admin | `WarrantyEligibilityUpdate` |  | `AdminWarrantyRequestDetailResponse` | `inspect_warranty_request` |
+| POST | `/admin/warranty-requests/{request_id}/hand-over` | Staff/Admin | `WarrantyHandoverCreate` |  | `AdminWarrantyRequestDetailResponse` | `hand_over_warranty_request` |
+| POST | `/admin/warranty-requests/{request_id}/start-processing` | Staff/Admin | `Union (tùy chọn)` |  | `AdminWarrantyRequestDetailResponse` | `start_warranty_processing` |
+| POST | `/admin/warranty-requests/{request_id}/propose-result` | Staff/Admin | `WarrantyResultProposal` |  | `AdminWarrantyRequestDetailResponse` | `propose_warranty_result` |
+| POST | `/admin/warranty-requests/{request_id}/approve-result` | Staff/Admin | `Union (tùy chọn)` |  | `AdminWarrantyRequestDetailResponse` | `approve_warranty_result` |
+| POST | `/admin/warranty-requests/{request_id}/reject-result` | Staff/Admin | `WarrantyResultRejection` |  | `AdminWarrantyRequestDetailResponse` | `reject_warranty_result` |
+| POST | `/admin/warranty-requests/{request_id}/reject` | Staff/Admin | `ServiceRequestRejection` |  | `AdminWarrantyRequestDetailResponse` | `reject_warranty_request` |
+| POST | `/admin/warranty-requests/{request_id}/complete` | Staff/Admin | `Union (tùy chọn)` |  | `AdminWarrantyRequestDetailResponse` | `complete_warranty_request` |
+| GET | `/admin/return-requests` | Staff/Admin |  | status, request_type, customer_id, assigned_staff_id, page, page_size | `PageResponse[AdminReturnRequestResponse]` | `list_return_requests` |
+| GET | `/admin/return-requests/{request_id}` | Staff/Admin |  |  | `AdminReturnRequestDetailResponse` | `get_return_request` |
+| POST | `/admin/return-requests/{request_id}/accept` | Staff/Admin | `Union (tùy chọn)` |  | `AdminReturnRequestDetailResponse` | `accept_return_request` |
+| POST | `/admin/return-requests/{request_id}/reject` | Staff/Admin | `ServiceRequestRejection` |  | `AdminReturnRequestDetailResponse` | `reject_return_request` |
+| POST | `/admin/return-requests/{request_id}/start-receiving` | Staff/Admin | `Union (tùy chọn)` |  | `AdminReturnRequestDetailResponse` | `start_return_receiving` |
+| POST | `/admin/return-requests/{request_id}/receive` | Staff/Admin | `ReturnGoodsReceive` |  | `AdminReturnRequestDetailResponse` | `receive_return_goods` |
+| POST | `/admin/return-requests/{request_id}/inspect` | Staff/Admin | `ReturnInspection` |  | `AdminReturnRequestDetailResponse` | `inspect_return_goods` |
+| POST | `/admin/return-requests/{request_id}/approve` | Staff/Admin | `ReturnApproval` |  | `AdminReturnRequestDetailResponse` | `approve_return_request` |
+| POST | `/admin/return-requests/{request_id}/refund` | Staff/Admin | `Union (tùy chọn)` |  | `AdminReturnRequestDetailResponse` | `refund_return_request` |
+| POST | `/admin/return-requests/{request_id}/confirm-refund` | Staff/Admin |  |  | `AdminReturnRequestDetailResponse` | `confirm_return_refund` |
+
+## Tin tức và banner
+
+| Method | Đường dẫn | Quyền | Body | Query | Trả về | Service |
+|---|---|---|---|---|---|---|
+| GET | `/news` | Công khai |  | page, page_size | `PageResponse[NewsArticleSummary]` | `list_published_articles` |
+| GET | `/news/{slug}` | Công khai |  |  | `NewsArticleResponse` | `get_published_article` |
+| GET | `/banners` | Công khai |  |  | `list[BannerResponse]` | `list_display_banners` |
+| GET | `/admin/news` | Staff/Admin |  | status, page, page_size | `PageResponse[AdminNewsArticleSummary]` | `admin_list_articles` |
+| GET | `/admin/news/{article_id}` | Staff/Admin |  |  | `AdminNewsArticleResponse` | `admin_get_article` |
+| POST | `/admin/news` | Staff/Admin | `NewsArticleCreate` |  | `AdminNewsArticleResponse` | `create_article` |
+| PATCH | `/admin/news/{article_id}` | Staff/Admin | `NewsArticleUpdate` |  | `AdminNewsArticleResponse` | `update_article` |
+| POST | `/admin/news/{article_id}/publish` | Staff/Admin |  |  | `AdminNewsArticleResponse` | `publish_article` |
+| POST | `/admin/news/{article_id}/hide` | Staff/Admin |  |  | `AdminNewsArticleResponse` | `hide_article` |
+| GET | `/admin/banners` | Staff/Admin |  | is_active | `list[AdminBannerResponse]` | `admin_list_banners` |
+| GET | `/admin/banners/{banner_id}` | Staff/Admin |  |  | `AdminBannerResponse` | `admin_get_banner` |
+| POST | `/admin/banners` | Staff/Admin | `BannerCreate` |  | `AdminBannerResponse` | `create_banner` |
+| PATCH | `/admin/banners/{banner_id}` | Staff/Admin | `BannerUpdate` |  | `AdminBannerResponse` | `update_banner` |
+| POST | `/admin/banners/{banner_id}/activate` | Staff/Admin |  |  | `AdminBannerResponse` | `activate_banner` |
+| POST | `/admin/banners/{banner_id}/deactivate` | Staff/Admin |  |  | `AdminBannerResponse` | `deactivate_banner` |
+
+## Thống kê
+
+| Method | Đường dẫn | Quyền | Body | Query | Trả về | Service |
+|---|---|---|---|---|---|---|
+| GET | `/admin/statistics/orders` | Staff/Admin |  | date_from, date_to | `OrderStatisticsResponse` | `order_statistics` |
+| GET | `/admin/statistics/revenue` | Staff/Admin |  | date_from, date_to | `RevenueStatisticsResponse` | `revenue_statistics` |
+| GET | `/admin/statistics/cogs` | Staff/Admin |  | date_from, date_to | `CogsStatisticsResponse` | `cogs_statistics` |
+| GET | `/admin/statistics/top-products` | Staff/Admin |  | date_from, date_to, rank_by, limit | `list[TopProductResponse]` | `top_products` |
+| GET | `/admin/statistics/inventory` | Staff/Admin |  | page, page_size | `InventoryStatisticsResponse` | `inventory_statistics` |
+
+## Điểm vào máy-với-máy (không dành cho frontend)
+
+- `POST /webhooks/sepay`: webhook SePay, xác thực HMAC; trả 503 cho tới khi cấu hình `SEPAY_*`.
+- `POST /internal/orders/expire-unpaid-qr`, `POST /internal/payment-webhooks/process`: cho cron, header `X-Internal-Secret`; ẩn khỏi `/docs`.
+- Chi tiết: `docs/internal-endpoints.md`.
+
+## Không mở qua API
+
+- Use case nội bộ không mở cho client: `record_ai_reply`, `notify`, `change_stock`, `apply_bank_transfer` (chỉ qua webhook SePay), `handle_payment_callback`, `create_return_refund`, `apply_coupon_to_order`, `release_coupon_usage`, `receive_purchase_lines`.
+- API Auth/hồ sơ/quản lý tài khoản của Giai đoạn 5 xem `docs/auth-spec.md`.

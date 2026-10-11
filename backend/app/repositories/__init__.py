@@ -4,7 +4,6 @@ from .base import BaseRepository
 from .user import (
     AddressRepository,
     NotificationRepository,
-    OtpChallengeRepository,
     UserRepository,
 )
 from .catalog import (
@@ -79,7 +78,6 @@ __all__ = [
     "AddressRepository",
     "NotificationRepository",
     "UserRepository",
-    "OtpChallengeRepository",
     "BrandRepository",
     "CategoryRepository",
     "ProductImageRepository",

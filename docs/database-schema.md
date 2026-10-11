@@ -863,23 +863,11 @@ Index `("PurchaseOrderId", "ReceivedAt")`. RLS bật, REVOKE quyền của anon/
 
 Index `("PurchaseOrderItemId")`. Chỉ ghi thêm (trigger `TR_PurchaseReceiptItems_AppendOnly`). Các lần nhận trước migration không có lịch sử (không suy đoán dữ liệu cũ).
 
-### 3.45. OtpChallenges
+### 3.45. OtpChallenges (đã bỏ)
 
-Bảng bổ sung của giai đoạn 4 cho OTP theo tài khoản và mục đích. Thêm bởi migration `a7c3e9d1f285` (**đã áp dụng vào database ngày 11/10/2026**). Khi tích hợp, người dùng chọn chính sách Auth/RBAC giai đoạn 5: API hiện tại không dùng bảng này; đăng ký chờ xác minh ở state store, reset mật khẩu và đổi email dùng HMAC trong `Users.OtpCode`/`OtpExpiredAt`. Thời hạn và giới hạn OTP đang hoạt động được quy định tại `auth-spec.md`.
+Bảng OTP theo tài khoản và mục đích của giai đoạn 4, thêm bởi migration `a7c3e9d1f285` và **bỏ bởi migration `3d9f987f3c6f` ngày 11/10/2026** (database đã áp dụng). Auth giai đoạn 5 không dùng bảng này: yêu cầu đăng ký chờ xác minh, bộ đếm thử sai, thời gian chờ gửi lại và giới hạn số lần gửi nằm trong kho trạng thái; OTP reset mật khẩu/đổi email lưu HMAC và hạn trong `Users.OtpCode`/`OtpExpiredAt`. Chính sách OTP xem `auth-spec.md`.
 
-| Column | Type | NN | Default | Ràng buộc |
-|---|---|---|---|---|
-| OtpChallengeId | uuid | x | gen_random_uuid() | PK |
-| UserId | uuid | x | | FK → Users, ON DELETE CASCADE |
-| Purpose | varchar(20) | x | | CHECK IN (Registration, PasswordReset) |
-| CodeHash | varchar(255) | x | | Bản băm OTP (PasswordHasher); không lưu OTP văn bản thuần |
-| ExpiresAt | timestamptz | x | | CreatedAt + 5 phút |
-| FailedAttempts | integer | x | 0 | CHECK >= 0; mang sang lần gửi lại (trong 1 giờ, chưa dùng, chưa bị khóa) |
-| LockedUntil | timestamptz | | | Thời điểm hết khóa của challenge; chính sách cũ giai đoạn 4 là 15 phút, không áp dụng cho API Auth giai đoạn 5 |
-| ConsumedAt | timestamptz | | | Đã xác minh thành công (dùng một lần) |
-| CreatedAt | timestamptz | x | now() | Dùng cho giới hạn 60 giây/lần và 5 lần/giờ |
-
-Index `("UserId", "Purpose", "CreatedAt")`. RLS bật, REVOKE quyền của anon/authenticated. Thiết kế OTP cũ của giai đoạn 4 khóa dòng Users khi gửi/xác minh. API Auth giai đoạn 5 tiếp tục dùng `Users.OtpCode`/`OtpExpiredAt` để lưu HMAC và hạn OTP reset mật khẩu/đổi email. Khi migration `a7c3e9d1f285` được áp dụng, câu lệnh UPDATE xóa mọi giá trị đang có trong hai cột này một lần; OTP reset mật khẩu hoặc đổi email đang chờ khi đó mất hiệu lực và cần gửi lại. Các cột được giữ nguyên để Auth giai đoạn 5 tiếp tục sử dụng.
+Lưu ý lịch sử: khi `a7c3e9d1f285` được áp dụng, câu lệnh UPDATE đã xóa một lần mọi giá trị trong `Users.OtpCode`/`OtpExpiredAt`; các cột này vẫn được Auth giai đoạn 5 sử dụng. Downgrade của `3d9f987f3c6f` tạo lại bảng rỗng và không đụng tới `Users`.
 
 ---
 
@@ -908,7 +896,7 @@ Index `("UserId", "Purpose", "CreatedAt")`. RLS bật, REVOKE quyền của anon
 | ProductSerials, StockAdjustmentSerials (mới) | Thêm trạng thái `WrittenOff`; bảng serial thuộc phiếu điều chỉnh In/Out (migration `8b7e3d1c5a29`, đã áp dụng 11/10/2026). |
 | ShipmentReturns, ShipmentReturnItems (mới) | Hàng của đơn hủy khi đang giao chờ quay về kho; nhận lại + kiểm tra mới nhập tồn (migration `5d1f9a3c7e64`, đã áp dụng 11/10/2026). |
 | PurchaseOrders, PurchaseReceipts, PurchaseReceiptItems (mới) | Trạng thái `Closed` + `ClosedByUserId`/`ClosedAt`/`CloseReason` (CHECK `Closed_Consistent`: Closed ⇔ có thời điểm và lý do không rỗng); lịch sử nhận hàng chỉ ghi thêm (migration `e2b8c4f6a913`, đã áp dụng 11/10/2026). |
-| OtpChallenges (mới), Users | Bảng challenge bổ sung từ giai đoạn 4 (migration `a7c3e9d1f285`, đã áp dụng 11/10/2026); API Auth giai đoạn 5 vẫn dùng state đăng ký và HMAC trong `Users.OtpCode`/`OtpExpiredAt`, theo quyết định tích hợp. |
+| OtpChallenges (mới, đã bỏ), Users | Bảng challenge bổ sung từ giai đoạn 4 (migration `a7c3e9d1f285`, đã áp dụng 11/10/2026; bỏ bởi `3d9f987f3c6f` cùng ngày); API Auth giai đoạn 5 vẫn dùng state đăng ký và HMAC trong `Users.OtpCode`/`OtpExpiredAt`, theo quyết định tích hợp. |
 | Conversations, Messages | CHECK cho Mode/SenderType/MessageType, tin AI không gắn người dùng; partial UNIQUE một hội thoại Open mỗi Customer (migration `c8d2f4a6b1e3`, đã áp dụng 11/10/2026). |
 | WarrantyRequests, ServiceRequestAttachments | Thêm cột Admin duyệt kết quả và máy thay thế; CHECK ResultType/FileType và nhất quán duyệt/hoàn tất/đổi máy; partial UNIQUE một yêu cầu đang xử lý mỗi serial / dòng đơn không serial (migration `d4f7b2e9a6c1`, đã áp dụng 11/10/2026). |
 | ReturnRequests | Thêm serial/số lượng trả, kết quả kiểm tra, căn cứ và duyệt số tiền, liên kết giao dịch hoàn tiền (UNIQUE); CHECK RequestType và nhất quán kiểm tra/duyệt/hoàn tiền/hoàn tất; partial UNIQUE một yêu cầu đang xử lý mỗi serial (migration `f3b8d1a5c7e2`, đã áp dụng 11/10/2026). |

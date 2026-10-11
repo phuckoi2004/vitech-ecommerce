@@ -121,3 +121,9 @@ class PageResponse(ResponseSchema, Generic[T]):
     Total: NonNegativeInt
     Page: PositiveInt
     PageSize: PositiveInt
+
+
+class InternalJobResponse(ResponseSchema):
+    """Kết quả một lần chạy tác vụ nội bộ (cron): số bản ghi đã xử lý."""
+
+    Processed: NonNegativeInt

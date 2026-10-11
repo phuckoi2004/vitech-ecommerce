@@ -28,6 +28,7 @@ Hạng thành viên và tích điểm không thuộc phạm vi triển khai củ
 | `README.md` | Tổng quan dự án, công nghệ, kiến trúc và quy tắc phát triển |
 | `docs/business-requirements.md` | Đặc tả nghiệp vụ, quy trình xử lý và quy tắc của các chức năng |
 | `docs/database-schema.md` | Nguồn chính thức về database schema |
+| `docs/api-endpoints.md` | Danh sách API nghiệp vụ giai đoạn 6: đường dẫn, quyền, body, kết quả (sinh từ router) |
 | `docs/internal-endpoints.md` | Tài liệu về các điểm vào nội bộ và giới hạn sử dụng |
 | `docs/auth-spec.md` | Chính sách Auth/RBAC giai đoạn 5 đã được chọn khi tích hợp giai đoạn 4 |
 | `docs/auth-rbac.md` | Bảng quyền và phạm vi quản lý tài khoản |
@@ -205,11 +206,15 @@ VieTech/
 │   │   ├── repositories/
 │   │   ├── services/
 │   │   ├── routers/
-│   │   │   ├── customer/         # hiện chỉ có .gitkeep (Stage 6)
-│   │   │   ├── admin/            # đã có API quản lý tài khoản
-│   │   │   ├── auth.py
-│   │   │   ├── users.py
-│   │   │   └── webhooks.py       # chưa đăng ký trong main.py
+│   │   │   ├── admin/users.py    # quản lý tài khoản (giai đoạn 5)
+│   │   │   ├── auth.py, users.py # Auth, hồ sơ, sổ địa chỉ, thông báo
+│   │   │   ├── catalog.py, wishlist_cart.py, orders.py, payments.py, promotions.py,
+│   │   │   ├── purchasing.py, reviews.py, chat.py, service_requests.py, content.py,
+│   │   │   ├── statistics.py     # API nghiệp vụ giai đoạn 6 (router công khai + admin_router)
+│   │   │   ├── dependencies.py   # Actor, phân trang, cung cấp Service, chặn /admin cho Staff/Admin
+│   │   │   ├── errors.py         # ServiceError → HTTP
+│   │   │   ├── internal.py       # endpoint cho cron (X-Internal-Secret), ẩn khỏi /docs
+│   │   │   └── webhooks.py       # webhook SePay (503 cho tới khi cấu hình SEPAY_*)
 │   │   ├── database.py
 │   │   └── main.py
 │   │
@@ -305,7 +310,7 @@ Các nguyên tắc:
 
 Khi tích hợp giai đoạn 4/5, phát hiện hai revision trùng ID (`b5d3a7c912e4`, `213feab4a632`) và nhánh local `61f7b0a38d92`. Người dùng đã duyệt phương án bỏ file trùng, giữ lịch sử hai nhánh và thêm merge revision `c6a4e2b8d901` sau SePay. Graph sau tích hợp có 21 file, một root và một head. Chi tiết và các guard xử lý ancestor có thể chưa chạy nằm trong `docs/stage4-stage5-integration.md`.
 
-**Trạng thái database thực tế (kiểm tra 11/10/2026):** đã chạy `alembic upgrade head` lên database Supabase; `alembic_version` = `c6a4e2b8d901` (head). Database có đủ 45 bảng của Models (cộng `alembic_version`), không thiếu/thừa bảng hoặc cột so với Models; RLS bật trên mọi bảng. Dữ liệu tài khoản có sẵn được giữ nguyên.
+**Trạng thái database thực tế (kiểm tra 11/10/2026):** đã chạy `alembic upgrade head` lên database Supabase; `alembic_version` = `3d9f987f3c6f` (head, sau migration bỏ `OtpChallenges`). Database có đủ 44 bảng của Models (cộng `alembic_version`), không thiếu/thừa bảng hoặc cột so với Models; RLS bật trên mọi bảng. Dữ liệu tài khoản có sẵn được giữ nguyên.
 
 Lịch sử: theo trạng thái dự án đã được rà soát trước khi commit Stage 4 (trước khi chạy migration):
 
@@ -354,11 +359,15 @@ e6a2d9c4b8f1 *  bảo hành: người đề xuất, ghi chú nội bộ
 a9f4c2e7b513 *  xác nhận hoàn tiền (người lập, người xác nhận, bằng chứng)
     ↓
 b81569bc34b0 *  webhook SePay, đối soát UnmatchedPayment (cuối nhánh giai đoạn 4)
+    ↓ (gộp với nhánh Auth 61f7b0a38d92)
+c6a4e2b8d901    merge giai đoạn 4 và Auth, kiểm tra lại CHECK AccountStatus/TransactionType
+    ↓
+3d9f987f3c6f    bỏ bảng OtpChallenges (Auth giai đoạn 5 không dùng)
 ```
 
 Migration `a9f4c2e7b513` bổ sung thông tin phục vụ quy trình xác nhận hoàn tiền trong `PaymentTransactions`, gồm người lập, người xác nhận, thời điểm xác nhận, nguồn xác nhận, bằng chứng và ghi chú.
 
-SePay `b81569bc34b0` là cuối nhánh nghiệp vụ giai đoạn 4. Khi tích hợp giai đoạn 5, người dùng đã xác nhận merge revision `c6a4e2b8d901` đứng sau cả `b81569bc34b0` và `61f7b0a38d92`, kiểm tra/bổ sung CHECK AccountStatus và TransactionType. Nếu bổ sung migration tiếp theo, phải kiểm tra dependency và xác nhận lại cách duy trì chuỗi trước khi thực hiện.
+SePay `b81569bc34b0` là cuối nhánh nghiệp vụ giai đoạn 4. Khi tích hợp giai đoạn 5, người dùng đã xác nhận merge revision `c6a4e2b8d901` đứng sau cả `b81569bc34b0` và `61f7b0a38d92`, kiểm tra/bổ sung CHECK AccountStatus và TransactionType. Ngày 11/10/2026, người dùng chọn giữ cơ chế OTP của giai đoạn 5 và bỏ bảng `OtpChallenges` bằng migration mới `3d9f987f3c6f` (head hiện tại; downgrade tạo lại bảng rỗng). Nếu bổ sung migration tiếp theo, phải kiểm tra dependency và xác nhận lại cách duy trì chuỗi trước khi thực hiện.
 
 Một số migration có điều kiện dừng khi dữ liệu cũ không thể được chuyển đổi an toàn. Cần đọc docstring và nội dung từng migration trước khi triển khai.
 
@@ -373,9 +382,8 @@ Danh sách dưới đây tóm tắt các nhóm bảng của hệ thống. Thuộ
 - `Users`
 - `Addresses`
 - `Notifications`
-- `OtpChallenges`
 
-`OtpChallenges` là bảng bổ sung của giai đoạn 4; API Auth giai đoạn 5 hiện dùng state cho đăng ký và HMAC trong `Users.OtpCode` cho reset mật khẩu/đổi email. Xem `docs/auth-spec.md`. Migration `a7c3e9d1f285` đã được áp dụng ngày 11/10/2026; bảng có trên database nhưng API Auth giai đoạn 5 không dùng.
+OTP dùng cơ chế của Auth giai đoạn 5: yêu cầu đăng ký chờ xác minh và bộ đếm nằm trong kho trạng thái, OTP reset mật khẩu/đổi email lưu HMAC trong `Users.OtpCode`. Bảng `OtpChallenges` của giai đoạn 4 đã được bỏ ngày 11/10/2026 (migration `3d9f987f3c6f`). Xem `docs/auth-spec.md`.
 
 ### 6.2. Quản lý danh mục và sản phẩm
 
@@ -473,7 +481,7 @@ Hội thoại của khách hàng với chatbot AI hoặc với nhân viên. Ràn
 - `NewsArticles`
 - `Banners`
 
-Tổng số bảng theo tài liệu và báo cáo kiểm tra hiện tại là 45 bảng. Khi thay đổi schema, phải xác minh lại số lượng và cấu trúc thực tế thay vì dựa vào con số cố định này.
+Tổng số bảng theo tài liệu và báo cáo kiểm tra hiện tại là 44 bảng. Khi thay đổi schema, phải xác minh lại số lượng và cấu trúc thực tế thay vì dựa vào con số cố định này.
 
 ---
 
@@ -682,25 +690,28 @@ Giai đoạn 4 được lấy từ commit `01bc0e2`; giai đoạn 5 được gi�
 - Có API Auth/RBAC, hồ sơ và quản lý tài khoản cùng giao diện xác thực giai đoạn 5; hướng dẫn tại `docs/auth-setup.md`.
 - Bổ sung xử lý đơn hàng, vận chuyển, thanh toán, hoàn tiền, kho, nhập hàng, đánh giá, hội thoại chat, bảo hành, đổi trả, nội dung và thống kê.
 - Hội thoại chat mới có nghiệp vụ lưu trữ/phân công; chưa tích hợp nhà cung cấp AI.
-- Mã tích hợp SePay (`backend/app/integrations/sepay.py`, `backend/app/routers/webhooks.py`) đã có nhưng chưa được đăng ký và kích hoạt trong ứng dụng.
+- Mã tích hợp SePay (`backend/app/integrations/sepay.py`, `backend/app/routers/webhooks.py`) đã được đăng ký trong ứng dụng (giai đoạn 6) nhưng chưa kích hoạt: cần điền cấu hình `SEPAY_*` và đăng ký URL webhook trên SePay.
 - Bổ sung bộ kiểm thử tự động.
 - Bổ sung tài liệu nghiệp vụ, schema và điểm vào nội bộ.
 - Commit Stage 4 tại commit `9489aac`.
-- Đã áp dụng toàn bộ migration lên database Supabase (head `c6a4e2b8d901`).
+- Đã áp dụng toàn bộ migration lên database Supabase (head `3d9f987f3c6f`, gồm migration bỏ bảng `OtpChallenges` không dùng).
+- Giới hạn gửi OTP: ngoài chờ 60 giây giữa hai lần gửi, tối đa 5 lần mỗi giờ cho mỗi email và mục đích (`AUTH_SEND_LIMIT`, `AUTH_SEND_WINDOW`).
+- Stage 6 (11/10/2026): Router/API cho toàn bộ Service nghiệp vụ — 199 thao tác trong 11 router mới và `users.py` (xem `docs/api-endpoints.md`). Mọi route `/admin/...` chỉ cho Staff/Admin; Router chỉ gọi đúng một Service, không chứa nghiệp vụ. Đã đăng ký webhook SePay (`/webhooks/sepay`) và endpoint nội bộ cho cron (`/internal/orders/expire-unpaid-qr`, `/internal/payment-webhooks/process`).
 - Chuẩn bị cho Stage 6: dependency `get_current_actor`/`get_optional_actor` (`backend/app/core/dependencies.py`) tạo `Actor` từ người dùng đã xác thực; lỗi nghiệp vụ `ServiceError` được chuyển thành HTTP 4xx/502 (`backend/app/routers/errors.py`).
 
 ### Kết quả kiểm thử được báo cáo
 
-- Backend (11/10/2026): 799 test và 628 subtest đạt, gồm các test graph/SQL migration offline; bộ test dùng SQLite/bộ nhớ, không kết nối PostgreSQL thật.
+- Backend (11/10/2026): 830 test và 628 subtest đạt (gồm test router nghiệp vụ: nối Service, chặn `/admin`, và luồng HTTP đầy đủ với Service thật trên database giả), gồm các test graph/SQL migration offline; bộ test dùng SQLite/bộ nhớ, không kết nối PostgreSQL thật.
 - Frontend (11/10/2026): 37 test đạt, lint đạt, build đạt với `npm run build -- --configLoader native` trong môi trường Windows hiện tại.
 - Trước tích hợp, giai đoạn 4 báo cáo 684 test chạy thành công bằng `unittest` và đã chạy lặp lại.
 - Chưa có integration test xác nhận toàn bộ hệ thống trên PostgreSQL thật.
 - Migration đã chạy thành công trên database Supabase (11/10/2026); cấu trúc bảng/cột đã được đối chiếu với Models.
+- Đã gọi thử các API công khai chỉ đọc (danh mục, thương hiệu, sản phẩm, banner, tin tức, phương thức vận chuyển/thanh toán) trên Supabase: trả 200/404 đúng; API cần đăng nhập trả 401 khi không có token. Các API ghi dữ liệu chưa được chạy trên database thật.
 
 ### Công việc tiếp theo
 
 - Hoàn thiện và kiểm thử tích hợp Authentication và Authorization trên staging.
-- Stage 6: Router/API cho các nghiệp vụ mua bán, kho, thanh toán và các nhóm còn lại.
+- Stage 6 còn lại: kiểm thử các API ghi dữ liệu trên PostgreSQL thật (database staging); điền cấu hình SePay và `INTERNAL_CRON_SECRET`, đăng ký webhook trên SePay và lịch cron khi triển khai (xem `docs/internal-endpoints.md`).
 - Tích hợp Frontend với các API nghiệp vụ.
 - Kiểm thử tích hợp trên môi trường staging.
 - Phát triển AI Chatbot và Product Recommendation Engine theo kế hoạch.

@@ -60,6 +60,12 @@ class CartItemUpdate(RequestSchema):
     IsSelected: bool | None = None
 
 
+class CartSelectAll(RequestSchema):
+    """Chọn hoặc bỏ chọn mọi dòng giỏ hàng để đặt hàng."""
+
+    IsSelected: bool
+
+
 class CartItemResponse(ResponseSchema):
     CartItemId: uuid.UUID
     ProductVariantId: uuid.UUID

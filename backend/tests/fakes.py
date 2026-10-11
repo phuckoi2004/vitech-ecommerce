@@ -31,7 +31,6 @@ from app.models import (
     Order,
     OrderItem,
     OrderStatusHistory,
-    OtpChallenge,
     PaymentMethod,
     PaymentTransaction,
     Product,
@@ -306,6 +305,17 @@ class FakeAddressRepo(FakeRepo):
 
 class FakeNotificationRepo(FakeRepo):
     model = Notification
+
+    def _mine(self, user_id, is_read):
+        return self._rows(lambda n: n.UserId == user_id and (is_read is None or n.IsRead == is_read))
+
+    def list_by_user(self, user_id, *, is_read=None, offset=None, limit=None):
+        rows = sorted(self._mine(user_id, is_read), key=lambda n: n.CreatedAt or 0, reverse=True)
+        start = offset or 0
+        return rows[start:start + limit] if limit is not None else rows[start:]
+
+    def count_by_user(self, user_id, *, is_read=None):
+        return len(self._mine(user_id, is_read))
 
 
 class FakeProductRepo(FakeRepo):
@@ -590,18 +600,6 @@ class FakeReviewImageRepo(FakeRepo):
 
     def list_by_review(self, review_id):
         return sorted(self._rows(lambda i: i.ReviewId == review_id), key=lambda i: i.DisplayOrder)
-
-
-class FakeOtpChallengeRepo(FakeRepo):
-    model = OtpChallenge
-
-    def latest_for(self, user_id, purpose):
-        rows = sorted(self._rows(lambda c: c.UserId == user_id and c.Purpose == purpose),
-                      key=lambda c: (c.CreatedAt, str(c.OtpChallengeId)))
-        return rows[-1] if rows else None
-
-    def count_sent_since(self, user_id, purpose, since):
-        return len(self._rows(lambda c: c.UserId == user_id and c.Purpose == purpose and c.CreatedAt > since))
 
 
 class FakePurchaseReceiptRepo(FakeRepo):

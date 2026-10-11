@@ -90,6 +90,14 @@ class AdminPaymentTransactionResponse(PaymentTransactionResponse):
     ResolutionNote: str | None
 
 
+class OrderRefundCreate(RequestSchema):
+    """Staff/Admin hoàn tiền thủ công cho đơn. Bỏ Amount = hoàn toàn bộ số còn có thể hoàn;
+    bỏ PaymentTransactionId = server tự chọn khoản thanh toán gốc."""
+
+    Amount: Money | None = None
+    PaymentTransactionId: uuid.UUID | None = None
+
+
 class RefundResolution(RequestSchema):
     """Admin (khác người tạo giao dịch) xác nhận thủ công kết quả Refund đang Pending.
 

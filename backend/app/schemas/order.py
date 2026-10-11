@@ -112,6 +112,14 @@ class OrderPaymentStatusUpdate(RequestSchema):
     PaymentStatus: PaymentStatusValue
 
 
+class CodDeliveryConfirm(RequestSchema):
+    """Staff/Admin xác nhận đơn COD đã giao và đã thu đủ tiền; ghi chú tùy chọn vào lịch sử trạng thái."""
+
+    NULLABLE_FIELDS = frozenset({"Note"})
+
+    Note: str | None = None
+
+
 class OrderAdminUpdate(RequestSchema):
     NULLABLE_FIELDS = frozenset({"AssignedStaffId", "InternalNote"})
 
@@ -122,6 +130,13 @@ class OrderAdminUpdate(RequestSchema):
 # ---------------------------------------------------------------------------
 # Orders - response
 # ---------------------------------------------------------------------------
+
+
+class OrderCogsResponse(ResponseSchema):
+    """Tổng giá vốn của đơn (Σ UnitCost × Quantity, theo giá vốn chụp lúc bán)."""
+
+    OrderId: uuid.UUID
+    Cogs: Money
 
 
 class OrderItemResponse(ResponseSchema):

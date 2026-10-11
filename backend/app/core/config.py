@@ -26,6 +26,9 @@ class AuthSettings:
     block_ttl: int = 180
     failure_window: int = 900
     resend_interval: int = 60
+    # At most send_limit OTP emails per purpose and recipient within send_window seconds.
+    send_limit: int = 5
+    send_window: int = 3600
     state_backend: str = "memory"
     redis_url: str = ""
     app_env: str = "development"
@@ -61,7 +64,7 @@ class AuthSettings:
             self.access_ttl, self.customer_session_ttl, self.internal_session_ttl,
             self.internal_idle_ttl, self.signup_otp_ttl, self.reset_otp_ttl, self.reset_grant_ttl,
             self.email_otp_ttl, self.failure_limit, self.block_ttl,
-            self.failure_window, self.resend_interval, self.smtp_timeout,
+            self.failure_window, self.resend_interval, self.send_limit, self.send_window, self.smtp_timeout,
         )
         if any(not isinstance(value, int) or value <= 0 for value in durations):
             raise AuthConfigurationError()
@@ -103,6 +106,8 @@ def get_auth_settings() -> AuthSettings:
         "block_ttl": ("AUTH_BLOCK_TTL", 180),
         "failure_window": ("AUTH_FAILURE_WINDOW", 900),
         "resend_interval": ("AUTH_RESEND_INTERVAL", 60),
+        "send_limit": ("AUTH_SEND_LIMIT", 5),
+        "send_window": ("AUTH_SEND_WINDOW", 3600),
         "smtp_port": ("SMTP_PORT", 587),
         "smtp_timeout": ("SMTP_TIMEOUT", 10),
     }

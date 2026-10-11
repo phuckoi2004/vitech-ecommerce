@@ -1,7 +1,8 @@
 """Router nhận webhook từ cổng thanh toán (không dùng JWT người dùng; nguồn gửi xác thực bằng HMAC).
 
-CHƯA được đăng ký trong app/main.py. Khi bật: ``app.include_router(webhooks.router)`` và cấu hình SePay gửi
-webhook (Content-Type JSON, xác thực HMAC-SHA256) tới POST {base_url}/webhooks/sepay.
+Đã đăng ký trong app/main.py (giai đoạn 6). Khi thiếu SEPAY_WEBHOOK_SECRET/SEPAY_ACCOUNT_NUMBER, mọi request nhận
+503 và không được xử lý. Để bật: điền cấu hình SePay và cấu hình SePay gửi webhook (Content-Type JSON, xác thực
+HMAC-SHA256) tới POST {base_url}/webhooks/sepay.
 Router chỉ chuyển raw body + headers sang ``handle_sepay_webhook``; nghiệp vụ nằm ở PaymentWebhookService.
 """
 

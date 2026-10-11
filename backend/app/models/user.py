@@ -38,9 +38,6 @@ if TYPE_CHECKING:
 
 USER_ROLES = ("Customer", "Staff", "Admin")
 ACCOUNT_STATUSES = ("Active", "Locked")
-OTP_PURPOSE_REGISTRATION = "Registration"
-OTP_PURPOSE_PASSWORD_RESET = "PasswordReset"
-OTP_PURPOSES = (OTP_PURPOSE_REGISTRATION, OTP_PURPOSE_PASSWORD_RESET)
 
 
 class User(Base):
@@ -236,36 +233,3 @@ class Notification(Base):
     )
 
     user: Mapped[User] = relationship(back_populates="notifications", foreign_keys=[UserId])
-
-
-class OtpChallenge(Base):
-    """Lịch sử OTP theo tài khoản + mục đích từ Giai đoạn 4 (migration a7c3e9d1f285).
-
-    Bảng chỉ lưu bản băm OTP, cùng số lần sai và thời hạn khóa. Model được giữ để bảo toàn lịch sử migration;
-    Auth/RBAC Giai đoạn 5 hiện dùng Users.OtpCode/OtpExpiredAt kết hợp state store, không dùng bảng này.
-    """
-
-    __tablename__ = "OtpChallenges"
-    __table_args__ = (
-        check_in("Purpose", OTP_PURPOSES, "Purpose_Valid"),
-        CheckConstraint('"FailedAttempts" >= 0', name="FailedAttempts_NonNegative"),
-    )
-
-    OtpChallengeId: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
-    )
-    UserId: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("Users.UserId", ondelete="CASCADE"), nullable=False
-    )
-    Purpose: Mapped[str] = mapped_column(String(20), nullable=False)
-    CodeHash: Mapped[str] = mapped_column(String(255), nullable=False)
-    ExpiresAt: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    FailedAttempts: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
-    LockedUntil: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    ConsumedAt: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    CreatedAt: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, server_default=text("now()")
-    )
-
-
-Index("IX_OtpChallenges_UserId_Purpose_CreatedAt", OtpChallenge.UserId, OtpChallenge.Purpose, OtpChallenge.CreatedAt)

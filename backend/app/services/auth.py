@@ -108,6 +108,14 @@ class AuthService:
             if sent:
                 remaining = max(1, int(sent["until"] - self.now()) + 1)
                 raise AuthError(429, "Vui lòng chờ trước khi yêu cầu mã mới", {"Retry-After": str(remaining)})
+            quota_key = f"otp-quota:{purpose}:{identity}"
+            quota = self.state.get(quota_key)
+            if not quota or self.now() - quota["window_start"] >= self.settings.send_window:
+                quota = {"window_start": self.now(), "count": 0}
+            if quota["count"] >= self.settings.send_limit:
+                remaining = max(1, math.ceil(quota["window_start"] + self.settings.send_window - self.now()))
+                raise AuthError(429, "Đã gửi mã quá số lần cho phép. Vui lòng thử lại sau",
+                                {"Retry-After": str(remaining)})
             challenge_id = uuid.uuid4().hex
             code = f"{secrets.randbelow(1_000_000):06d}"
             record = {"purpose": purpose, "email": email, "identity": identity, "payload": payload,
@@ -120,6 +128,10 @@ class AuthService:
                 record["digest"] = digest
             self.state.put(f"challenge:{challenge_id}", record, 1800)
             self.state.put(f"otp-send:{purpose}:{identity}", {"until": self.now() + self.settings.resend_interval}, self.settings.resend_interval)
+            # Count only emails that were actually sent; the window starts at the first send.
+            quota["count"] += 1
+            self.state.put(quota_key, quota,
+                           max(1, math.ceil(quota["window_start"] + self.settings.send_window - self.now())))
             # Only the newest challenge for this identity/purpose can be used.
             self.state.put(f"otp-current:{purpose}:{identity}", {"id": challenge_id}, 1800)
         return {"message": "Đã gửi mã xác minh qua email", "challenge_id": challenge_id,

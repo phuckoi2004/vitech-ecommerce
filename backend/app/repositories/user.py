@@ -1,15 +1,14 @@
-"""Repositories cho Users, Addresses, Notifications, OtpChallenges.
+"""Repositories cho Users, Addresses, Notifications.
 
 Không xử lý mật khẩu/OTP và không log dữ liệu nhạy cảm.
 """
 
 import re
 import uuid
-from datetime import datetime
 
 from sqlalchemy import func, or_, select
 
-from app.models import Address, Notification, OtpChallenge, User
+from app.models import Address, Notification, User
 
 from .base import BaseRepository
 
@@ -116,26 +115,6 @@ class UserRepository(BaseRepository[User]):
             .with_for_update()
         )
         return self._scalars_for_update(stmt)
-
-
-class OtpChallengeRepository(BaseRepository[OtpChallenge]):
-    """Các lần gửi OTP (chỉ bản băm). Caller khóa dòng Users trước khi đọc/ghi để xử lý đồng thời an toàn."""
-
-    model = OtpChallenge
-
-    def latest_for(self, user_id: uuid.UUID, purpose: str) -> OtpChallenge | None:
-        stmt = (
-            select(OtpChallenge)
-            .where(OtpChallenge.UserId == user_id, OtpChallenge.Purpose == purpose)
-            .order_by(OtpChallenge.CreatedAt.desc(), OtpChallenge.OtpChallengeId.desc())
-            .limit(1)
-        )
-        return self.session.scalars(stmt).first()
-
-    def count_sent_since(self, user_id: uuid.UUID, purpose: str, since: datetime) -> int:
-        return self.count(
-            OtpChallenge.UserId == user_id, OtpChallenge.Purpose == purpose, OtpChallenge.CreatedAt > since
-        )
 
 
 class AddressRepository(BaseRepository[Address]):

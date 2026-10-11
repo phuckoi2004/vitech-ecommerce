@@ -420,3 +420,62 @@ def test_wrong_current_password_is_rate_limited(auth):
     clock.advance(180)
     service.change_password(user, right)
     assert verify_password("Changed8!", user.PasswordHash)
+
+
+def isolated_sender(mailer=None, **overrides):
+    clock = Clock()
+    settings = AuthSettings(jwt_secret="isolated-test-key-" * 4, app_env="test", **overrides)
+    mailer = mailer or CapturingMailer()
+    runtime = SimpleNamespace(settings=settings, state=MemoryStateStore(clock), mailer=mailer)
+    return AuthService(None, runtime, clock), clock, settings, mailer
+
+
+def test_otp_sends_are_capped_per_hour_for_each_purpose_and_recipient():
+    service, clock, settings, mailer = isolated_sender()
+    assert (settings.send_limit, settings.send_window) == (5, 3600)
+    first_sent_at = clock()
+    for _ in range(settings.send_limit):
+        service._send("password_reset", "staff@example.com", {}, settings.reset_otp_ttl)
+        clock.advance(settings.resend_interval)
+    blocked = error_status(429, service._send, "password_reset", "staff@example.com", {}, settings.reset_otp_ttl)
+    expected_wait = first_sent_at + settings.send_window - clock()
+    assert int(blocked.headers["Retry-After"]) == pytest.approx(expected_wait, abs=1)
+    assert len(mailer.messages) == settings.send_limit
+    # Other recipients and other purposes keep their own quota; the address is case-insensitive.
+    service._send("password_reset", "other@example.com", {}, settings.reset_otp_ttl)
+    service._send("signup", "staff@example.com", {}, settings.signup_otp_ttl)
+    error_status(429, service._send, "password_reset", "STAFF@example.com", {}, settings.reset_otp_ttl)
+    # A new window opens one hour after the first send.
+    clock.advance(expected_wait)
+    service._send("password_reset", "staff@example.com", {}, settings.reset_otp_ttl)
+
+
+def test_failed_email_delivery_does_not_use_the_send_quota():
+    class FailingMailer(CapturingMailer):
+        def __init__(self):
+            super().__init__()
+            self.fail = True
+
+        def send_otp(self, email, code, purpose, ttl):
+            if self.fail:
+                raise AuthError(503, "Dịch vụ email chưa sẵn sàng")
+            super().send_otp(email, code, purpose, ttl)
+
+    mailer = FailingMailer()
+    service, clock, settings, _ = isolated_sender(mailer, send_limit=2)
+    for _ in range(3):
+        error_status(503, service._send, "password_reset", "staff@example.com", {}, settings.reset_otp_ttl)
+    mailer.fail = False
+    service._send("password_reset", "staff@example.com", {}, settings.reset_otp_ttl)
+    clock.advance(settings.resend_interval)
+    service._send("password_reset", "staff@example.com", {}, settings.reset_otp_ttl)
+    clock.advance(settings.resend_interval)
+    error_status(429, service._send, "password_reset", "staff@example.com", {}, settings.reset_otp_ttl)
+
+
+@pytest.mark.parametrize("field", ["send_limit", "send_window"])
+def test_send_quota_settings_must_be_positive(field):
+    from app.core.errors import AuthConfigurationError
+
+    with pytest.raises(AuthConfigurationError):
+        AuthSettings(jwt_secret="isolated-test-key-" * 4, app_env="test", **{field: 0})

@@ -44,6 +44,7 @@ Schema tiếp tục theo [database-schema.md](database-schema.md) và các model
 | Phạm vi bộ đếm | Mặc định riêng cho đăng nhập và từng mục đích OTP; không dùng chung bộ đếm với khóa tài khoản quản trị. |
 | Cửa sổ đếm | Mặc định cấu hình **15 phút**. |
 | Gửi lại OTP | Mặc định tối thiểu **60 giây**; mã mới vô hiệu mã cũ, không xóa hạn chế thử sai đang còn hiệu lực. |
+| Số lần gửi | Tối đa **5 lần mỗi giờ** cho mỗi email và mục đích (tính từ lần gửi đầu trong cửa sổ); vượt giới hạn trả 429 kèm `Retry-After`. Lần gửi email thất bại không bị tính. Cấu hình `AUTH_SEND_LIMIT`, `AUTH_SEND_WINDOW`. |
 
 OTP gắn với một yêu cầu, tài khoản/định danh và mục đích cụ thể (đăng ký, reset mật khẩu, đổi email). Không được dùng OTP đăng ký để reset mật khẩu. Chỉ giữ digest có khóa bí mật; không ghi mã vào log hoặc trả mã trong API thật. Việc kiểm tra và tiêu thụ OTP phải bảo đảm một mã chỉ được dùng một lần, kể cả yêu cầu đồng thời.
 

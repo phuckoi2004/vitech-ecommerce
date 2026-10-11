@@ -165,3 +165,9 @@ class NotificationResponse(ResponseSchema):
     IsRead: bool
     ReadAt: datetime | None
     CreatedAt: datetime
+
+
+class NotificationCountResponse(ResponseSchema):
+    """Số thông báo: chưa đọc (đếm) hoặc vừa được đánh dấu đã đọc."""
+
+    Count: NonNegativeInt

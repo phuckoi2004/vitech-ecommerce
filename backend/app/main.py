@@ -10,8 +10,25 @@ from .core.config import get_auth_settings
 from .core.dependencies import get_runtime
 from .core.errors import AuthError
 from .database import test_database_connection
-from .routers import auth, users
+from .routers import (
+    auth,
+    catalog,
+    chat,
+    content,
+    internal,
+    orders,
+    payments,
+    promotions,
+    purchasing,
+    reviews,
+    service_requests,
+    statistics,
+    users,
+    webhooks,
+    wishlist_cart,
+)
 from .routers.admin import users as admin_users
+from .routers.dependencies import get_return_policy
 from .routers.errors import service_error_handler
 from .services.exceptions import ServiceError
 
@@ -20,6 +37,8 @@ from .services.exceptions import ServiceError
 async def lifespan(app: FastAPI):
     # Fail at startup, not on the first login: validates settings and connects the state store.
     app.dependency_overrides.get(get_runtime, get_runtime)()
+    # Same for business settings read per request (an invalid RETURN_WINDOW_DAYS raises ValueError here).
+    app.dependency_overrides.get(get_return_policy, get_return_policy)()
     yield
 
 
@@ -33,6 +52,17 @@ app.add_middleware(CORSMiddleware, allow_origins=cors_origins, allow_credentials
 app.include_router(auth.router)
 app.include_router(users.router)
 app.include_router(admin_users.router)
+
+# Stage 6 business APIs: public/customer routers, then /admin routers (Staff/Admin only).
+for module in (catalog, wishlist_cart, orders, payments, promotions, reviews, chat, service_requests, content):
+    app.include_router(module.router)
+for module in (catalog, orders, payments, promotions, purchasing, reviews, chat, service_requests, content,
+               statistics):
+    app.include_router(module.admin_router)
+# Machine-to-machine entry points: SePay webhook (HMAC; 503 until SEPAY_* is configured) and cron jobs
+# (shared secret; 503 until INTERNAL_CRON_SECRET is configured).
+app.include_router(webhooks.router)
+app.include_router(internal.router)
 
 
 @app.exception_handler(AuthError)
@@ -59,7 +89,9 @@ async def database_error_handler(request: Request, error: SQLAlchemyError):
 @app.middleware("http")
 async def prevent_auth_caching(request: Request, call_next):
     response = await call_next(request)
-    if request.url.path.startswith(("/auth", "/users", "/admin/users")):
+    # Personal and internal data must not be cached by browsers or proxies.
+    private_paths = ("/auth", "/users", "/admin", "/internal", "/webhooks")
+    if request.url.path.startswith(private_paths) or "authorization" in request.headers:
         response.headers["Cache-Control"] = "no-store"
     return response
 

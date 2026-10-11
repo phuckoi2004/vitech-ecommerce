@@ -17,7 +17,7 @@ from .service_request import (
     ServiceRequestHistory,
     WarrantyRequest,
 )
-from .user import Address, Notification, OtpChallenge, User
+from .user import Address, Notification, User
 from .wishlist_cart import Cart, CartItem, Wishlist, WishlistItem
 
 __all__ = [
@@ -26,7 +26,6 @@ __all__ = [
     "User",
     "Address",
     "Notification",
-    "OtpChallenge",
     # catalog
     "Category",
     "Brand",

@@ -24,7 +24,7 @@ Thay đổi trong repository (đã chạy trên database ngày 11/10/2026):
 5. Thêm merge revision `c6a4e2b8d901` có hai parent `61f7b0a38d92` và `b81569bc34b0`. Upgrade kiểm tra/bổ sung lại CHECK AccountStatus và TransactionType: DB từng chạy revision `213` local có thể chưa chạy hai ancestor này. Downgrade giữ CHECK của ancestor.
 6. Kiểm tra graph và SQL offline: 21 file, một root, một head, không ID trùng; không kết nối database.
 
-SePay `b81569bc34b0` vẫn là migration cuối thêm nghiệp vụ trong nhánh giai đoạn 4; head Alembic sau ghép là `c6a4e2b8d901`. Người dùng đã xác nhận thay đổi này theo mục 5.4 README.
+SePay `b81569bc34b0` vẫn là migration cuối thêm nghiệp vụ trong nhánh giai đoạn 4; head Alembic sau ghép là `c6a4e2b8d901`. Ngày 11/10/2026, migration `3d9f987f3c6f` bỏ bảng `OtpChallenges` không dùng và trở thành head mới (22 file). Người dùng đã xác nhận thay đổi này theo mục 5.4 README.
 
 ```text
 ... → 9b10f42fc70d → 213feab4a632 ┬→ 61f7b0a38d92 ─────────────┐

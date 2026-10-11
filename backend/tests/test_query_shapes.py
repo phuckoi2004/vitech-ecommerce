@@ -15,7 +15,6 @@ from app.repositories import (
     NewsArticleRepository,
     ConversationRepository,
     OrderRepository,
-    OtpChallengeRepository,
     PaymentTransactionRepository,
     ProductSerialRepository,
     ProductVariantRepository,
@@ -140,18 +139,6 @@ class AggregateQueryShapeTest(unittest.TestCase):
         self.assertIn('"Conversations"."Mode" = %(Mode_1)s', queue)
         self.assertIn('"Conversations"."AssignedStaffId" IS NULL', count)
         self.assertEqual(session.statements[0].compile(dialect=postgresql.dialect()).params["Status_1"], "Open")
-
-    def test_otp_queries_use_latest_send_and_window_count(self):
-        session = RecordingSession()
-        repo = OtpChallengeRepository(session)
-        repo.latest_for(uuid.uuid4(), "Registration")
-        repo.count_sent_since(uuid.uuid4(), "Registration", datetime(2026, 1, 1, tzinfo=timezone.utc))
-        latest, count = (sql(s) for s in session.statements)
-        self.assertIn('ORDER BY "OtpChallenges"."CreatedAt" DESC, "OtpChallenges"."OtpChallengeId" DESC', latest)
-        self.assertIn("LIMIT %(param_1)s", latest)
-        self.assertIn('"OtpChallenges"."Purpose" = %(Purpose_1)s', latest)
-        self.assertIn("count(*)", count)
-        self.assertIn('"OtpChallenges"."CreatedAt" > %(CreatedAt_1)s', count)
 
     def test_warranty_open_request_queries_match_partial_unique_indexes(self):
         """Đợt 5.4: điều kiện 'đang xử lý' trong truy vấn trùng với WHERE của UX_WarrantyRequests_*_Open."""
