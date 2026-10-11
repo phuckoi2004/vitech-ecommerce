@@ -5,8 +5,9 @@ Revises: 213feab4a632
 
 An existing, matching CK_Users_AccountStatus_Valid is adopted without recreating it.
 Unknown definitions and invalid data require explicit review; no user data is rewritten.
-Downgrade removes this named check even if it existed before this revision. It refuses
-to remove an unexpected definition and leaves all user data unchanged.
+After reconciling the migration histories, dd773e03e503 owns this named check.
+Downgrade therefore retains it: removing this validation revision must not undo
+an ancestor's constraint or change user data.
 """
 
 from typing import Sequence, Union
@@ -92,9 +93,6 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    _lock_users()
-    op.execute(_guarded_sql("""
-    IF constraint_exists THEN
-        ALTER TABLE public."Users" DROP CONSTRAINT "CK_Users_AccountStatus_Valid";
-    END IF;
-"""))
+    # dd773e03e503 remains applied below 213feab4a632 in the canonical history.
+    # It owns the constraint and removes it when that ancestor is downgraded.
+    pass

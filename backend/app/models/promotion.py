@@ -158,6 +158,7 @@ class Coupon(Base):
     CreatedByUserId: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("Users.UserId", ondelete="RESTRICT"), nullable=False
     )
+    # Unique không phân biệt hoa thường: UX_Coupons_Code_Lower trên lower("Code").
     Code: Mapped[str] = mapped_column(String(50), nullable=False)
     Name: Mapped[str] = mapped_column(String(255), nullable=False)
     UsageLimit: Mapped[int | None] = mapped_column(Integer, nullable=True)
@@ -176,5 +177,5 @@ class Coupon(Base):
     )
 
 
-# Code unique không phân biệt hoa thường.
+# Mã coupon unique không phân biệt hoa thường.
 Index("UX_Coupons_Code_Lower", func.lower(Coupon.Code), unique=True)

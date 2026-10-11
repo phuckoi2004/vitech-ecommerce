@@ -1,14 +1,15 @@
-"""Repositories cho Suppliers, PurchaseOrders, PurchaseOrderItems.
+"""Repositories cho Suppliers, PurchaseOrders, PurchaseOrderItems, PurchaseReceipts (lịch sử nhận hàng).
 
 Không cập nhật tồn kho hoặc CostPrice (thuộc Service).
 """
 
 import uuid
+from typing import Any, NoReturn
 
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
-from app.models import PurchaseOrder, PurchaseOrderItem, Supplier
+from app.models import PurchaseOrder, PurchaseOrderItem, PurchaseReceipt, PurchaseReceiptItem, Supplier
 
 from .base import BaseRepository
 
@@ -53,8 +54,18 @@ class PurchaseOrderRepository(BaseRepository[PurchaseOrder]):
         )
         return self.session.scalars(stmt).one_or_none()
 
-    def _filters(self, status: str | None, supplier_id: uuid.UUID | None, created_by_user_id: uuid.UUID | None) -> list:
+    def _filters(
+        self,
+        status: str | None,
+        supplier_id: uuid.UUID | None,
+        created_by_user_id: uuid.UUID | None,
+        code_contains: str | None = None,
+    ) -> list:
         conditions = []
+        if code_contains:
+            # Tìm theo mã phiếu, không phân biệt hoa thường; escape ký tự đặc biệt của LIKE.
+            escaped = code_contains.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+            conditions.append(PurchaseOrder.PurchaseOrderCode.ilike(f"%{escaped}%", escape="\\"))
         if status is not None:
             conditions.append(PurchaseOrder.Status == status)
         if supplier_id is not None:
@@ -69,11 +80,12 @@ class PurchaseOrderRepository(BaseRepository[PurchaseOrder]):
         status: str | None = None,
         supplier_id: uuid.UUID | None = None,
         created_by_user_id: uuid.UUID | None = None,
+        code_contains: str | None = None,
         offset: int | None = None,
         limit: int | None = None,
     ) -> list[PurchaseOrder]:
         return self.get_all(
-            *self._filters(status, supplier_id, created_by_user_id),
+            *self._filters(status, supplier_id, created_by_user_id, code_contains),
             order_by=(PurchaseOrder.CreatedAt.desc(), PurchaseOrder.PurchaseOrderId),
             offset=offset,
             limit=limit,
@@ -85,8 +97,9 @@ class PurchaseOrderRepository(BaseRepository[PurchaseOrder]):
         status: str | None = None,
         supplier_id: uuid.UUID | None = None,
         created_by_user_id: uuid.UUID | None = None,
+        code_contains: str | None = None,
     ) -> int:
-        return self.count(*self._filters(status, supplier_id, created_by_user_id))
+        return self.count(*self._filters(status, supplier_id, created_by_user_id, code_contains))
 
 
 class PurchaseOrderItemRepository(BaseRepository[PurchaseOrderItem]):
@@ -106,8 +119,41 @@ class PurchaseOrderItemRepository(BaseRepository[PurchaseOrderItem]):
             PurchaseOrderItem.PurchaseOrderId == purchase_order_id,
         )
 
+    def has_received_for_variant(self, variant_id: uuid.UUID) -> bool:
+        """Biến thể đã từng nhận hàng mua vào (giá vốn đã được xác lập qua nhập hàng)."""
+        return self.exists(PurchaseOrderItem.ProductVariantId == variant_id, PurchaseOrderItem.ReceivedQuantity > 0)
+
     def list_by_variant(self, variant_id: uuid.UUID) -> list[PurchaseOrderItem]:
         return self.get_all(
             PurchaseOrderItem.ProductVariantId == variant_id,
             order_by=(PurchaseOrderItem.PurchaseOrderItemId,),
         )
+
+
+class PurchaseReceiptRepository(BaseRepository[PurchaseReceipt]):
+    """Lịch sử nhận hàng: chỉ ghi thêm (database trigger cũng chặn sửa/xóa)."""
+
+    model = PurchaseReceipt
+
+    def list_by_purchase_order(self, purchase_order_id: uuid.UUID) -> list[PurchaseReceipt]:
+        return self.get_all(
+            PurchaseReceipt.PurchaseOrderId == purchase_order_id,
+            order_by=(PurchaseReceipt.ReceivedAt, PurchaseReceipt.PurchaseReceiptId),
+            options=(selectinload(PurchaseReceipt.items),),
+        )
+
+    def update(self, obj: PurchaseReceipt, values: Any) -> NoReturn:
+        raise PermissionError("Lịch sử nhận hàng chỉ được ghi thêm")
+
+    def delete(self, obj: PurchaseReceipt) -> NoReturn:
+        raise PermissionError("Lịch sử nhận hàng chỉ được ghi thêm")
+
+
+class PurchaseReceiptItemRepository(BaseRepository[PurchaseReceiptItem]):
+    model = PurchaseReceiptItem
+
+    def update(self, obj: PurchaseReceiptItem, values: Any) -> NoReturn:
+        raise PermissionError("Lịch sử nhận hàng chỉ được ghi thêm")
+
+    def delete(self, obj: PurchaseReceiptItem) -> NoReturn:
+        raise PermissionError("Lịch sử nhận hàng chỉ được ghi thêm")

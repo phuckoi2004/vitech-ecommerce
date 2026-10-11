@@ -1,6 +1,13 @@
-"""Account profile and administration with transaction and object-level checks."""
+# -*- coding: utf-8 -*-
+"""Phase 5 account policies with Phase 4 address and notification use cases.
+
+Auth workflows and OTP policy live in ``app.services.auth.AuthService``.
+UserService keeps the ORM/runtime contract used by current account HTTP routes.
+AddressService and NotificationService use authenticated Actor values for business use cases.
+"""
 
 import uuid
+from collections.abc import Callable
 from datetime import datetime, timezone
 from typing import Any
 
@@ -11,11 +18,16 @@ from app.core.errors import AuthError
 from app.core.rbac import has_permission
 from app.core.security import hash_password
 from app.core.storage import AvatarStorage, detect_image_type
-from app.models import Address, User
-from app.repositories.user import AddressRepository, UserRepository
+from app.models import Address, Notification, User
+from app.repositories.user import AddressRepository, NotificationRepository, UserRepository
+from app.schemas import AddressCreate, AddressResponse, AddressUpdate, NotificationResponse, PageResponse
 from app.schemas.account import (
     AdminUserPage, DefaultAddressUpdate, InternalUserCreate, ManagedUserUpdate, ProfileUpdate,
 )
+
+from .actor import ANY_ROLE, CUSTOMER_ONLY, Actor, require_role
+from .base import BaseService, utc_now
+from .exceptions import NotFoundError
 
 
 class UserService:
@@ -185,3 +197,138 @@ class UserService:
         self.runtime.sessions.revoke_user(target.UserId)
         self.users.update(target, {"IsDeleted": True, "OtpCode": None, "OtpExpiredAt": None})
         self._commit(target)
+
+
+class AddressService(BaseService):
+    """Sổ địa chỉ nhận hàng của người dùng."""
+
+    def __init__(self, session: Session, *, clock: Callable[[], datetime] = utc_now) -> None:
+        super().__init__(session, clock=clock)
+        self.addresses = AddressRepository(session)
+
+    def list_addresses(self, actor: Actor) -> list[AddressResponse]:
+        require_role(actor, *CUSTOMER_ONLY)
+        return [AddressResponse.model_validate(a) for a in self.addresses.list_by_user(actor.user_id)]
+
+    def get_address(self, actor: Actor, address_id: uuid.UUID) -> AddressResponse:
+        require_role(actor, *CUSTOMER_ONLY)
+        return AddressResponse.model_validate(self._get_owned(actor.user_id, address_id))
+
+    def create_address(self, actor: Actor, data: AddressCreate) -> AddressResponse:
+        require_role(actor, *CUSTOMER_ONLY)
+        user_id = actor.user_id
+        with self.transaction():
+            values = data.model_dump(exclude_unset=True)
+            if values.get("IsDefault"):
+                self._clear_default(user_id)
+            address = self.addresses.create({**values, "UserId": user_id})
+            self.addresses.flush()
+            return AddressResponse.model_validate(address)
+
+    def update_address(self, actor: Actor, address_id: uuid.UUID, data: AddressUpdate) -> AddressResponse:
+        require_role(actor, *CUSTOMER_ONLY)
+        with self.transaction():
+            address = self._get_owned(actor.user_id, address_id)
+            values = data.model_dump(exclude_unset=True)
+            if values.get("IsDefault"):
+                self._clear_default(actor.user_id, keep=address)
+            self.addresses.update(address, values)
+            self.addresses.flush()
+            return AddressResponse.model_validate(address)
+
+    def delete_address(self, actor: Actor, address_id: uuid.UUID) -> None:
+        """Xóa mềm; Orders.AddressId vẫn tham chiếu được địa chỉ cũ."""
+        require_role(actor, *CUSTOMER_ONLY)
+        with self.transaction():
+            address = self._get_owned(actor.user_id, address_id)
+            address.IsDeleted = True
+            address.IsDefault = False
+
+    def _get_owned(self, user_id: uuid.UUID, address_id: uuid.UUID) -> Address:
+        address = self.addresses.get_by_id_and_user(address_id, user_id)
+        if address is None or address.IsDeleted:
+            raise NotFoundError("Không tìm thấy địa chỉ", code="address_not_found")
+        return address
+
+    def _clear_default(self, user_id: uuid.UUID, keep: Address | None = None) -> None:
+        """Mỗi người dùng chỉ có một địa chỉ mặc định."""
+        for other in self.addresses.list_default_by_user(user_id):
+            if other is not keep:
+                other.IsDefault = False
+
+
+class NotificationService(BaseService):
+    """Thông báo của người dùng. ``notify`` dùng cho Service khác, tham gia transaction của use case gọi nó."""
+
+    def __init__(self, session: Session, *, clock: Callable[[], datetime] = utc_now) -> None:
+        super().__init__(session, clock=clock)
+        self.notifications = NotificationRepository(session)
+
+    def list_notifications(
+        self, actor: Actor, *, is_read: bool | None = None, page: int = 1, page_size: int = 20
+    ) -> PageResponse[NotificationResponse]:
+        """Thông báo của chính người dùng đăng nhập."""
+        require_role(actor, *ANY_ROLE)
+        user_id = actor.user_id
+        offset, limit = self._page_args(page, page_size)
+        items = self.notifications.list_by_user(user_id, is_read=is_read, offset=offset, limit=limit)
+        return PageResponse[NotificationResponse](
+            Items=[NotificationResponse.model_validate(n) for n in items],
+            Total=self.notifications.count_by_user(user_id, is_read=is_read),
+            Page=page,
+            PageSize=page_size,
+        )
+
+    def count_unread(self, actor: Actor) -> int:
+        require_role(actor, *ANY_ROLE)
+        return self.notifications.count_by_user(actor.user_id, is_read=False)
+
+    def mark_read(self, actor: Actor, notification_id: uuid.UUID) -> NotificationResponse:
+        require_role(actor, *ANY_ROLE)
+        with self.transaction():
+            notification = self.notifications.get_one(
+                Notification.NotificationId == notification_id, Notification.UserId == actor.user_id
+            )
+            if notification is None:
+                raise NotFoundError("Không tìm thấy thông báo", code="notification_not_found")
+            if not notification.IsRead:
+                notification.IsRead = True
+                notification.ReadAt = self.now()
+            self.notifications.flush()
+            return NotificationResponse.model_validate(notification)
+
+    def mark_all_read(self, actor: Actor) -> int:
+        require_role(actor, *ANY_ROLE)
+        with self.transaction():
+            unread = self.notifications.list_by_user(actor.user_id, is_read=False)
+            now = self.now()
+            for notification in unread:
+                notification.IsRead = True
+                notification.ReadAt = now
+            return len(unread)
+
+    def notify(
+        self,
+        user_id: uuid.UUID,
+        *,
+        title: str,
+        content: str,
+        notification_type: str,
+        action_url: str | None = None,
+        reference_type: str | None = None,
+        reference_id: uuid.UUID | None = None,
+    ) -> Notification:
+        """Tạo thông báo cho ``user_id`` (người nhận) trong transaction của use case gọi nó (không gọi từ Router)."""
+        self.require_enclosing_use_case()
+        with self.transaction():
+            return self.notifications.create(
+                {
+                    "UserId": user_id,
+                    "Title": title,
+                    "Content": content,
+                    "NotificationType": notification_type,
+                    "ActionUrl": action_url,
+                    "ReferenceType": reference_type,
+                    "ReferenceId": reference_id,
+                }
+            )

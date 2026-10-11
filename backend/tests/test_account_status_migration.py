@@ -67,9 +67,8 @@ def test_offline_upgrade_guards_existing_checks_and_bad_data_without_rewriting_u
     assert ':existing_definition' not in sql
 
 
-def test_offline_downgrade_removes_only_the_guarded_named_check_without_changing_users():
+def test_offline_downgrade_retains_the_check_adopted_from_the_other_migration_branch():
     sql = render(migration.downgrade)
-    assert 'DROP CONSTRAINT "CK_Users_AccountStatus_Valid"' in sql
-    assert "IF constraint_exists THEN" in sql and "unexpected definition" in sql
-    assert sql.index('existing_definition NOT IN') < sql.index('DROP CONSTRAINT')
-    assert not re.search(r'\b(?:UPDATE|DELETE|INSERT)\b', sql)
+    # dd773e03e503 owns this CHECK in the canonical shared ancestry. Removing
+    # the local validation revision must not remove another revision's guard.
+    assert not re.search(r'\b(?:ALTER|UPDATE|DELETE|INSERT|DROP|LOCK)\b', sql)

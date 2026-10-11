@@ -9,7 +9,7 @@ Schema tiếp tục theo [database-schema.md](database-schema.md) và các model
 ## 1. Phạm vi
 
 - Backend FastAPI xác thực qua bảng `Users` trong Supabase PostgreSQL; frontend React/Vite đã có Auth riêng cho khách hàng và khu vực nội bộ, cùng trang hồ sơ và quản lý tài khoản nội bộ.
-- Giai đoạn 5 gồm Auth, hồ sơ cá nhân, quản lý tài khoản, dependency xác thực và phân quyền, kiểm thử các luồng này. Source hiện có thêm API đọc/lưu địa chỉ mặc định phục vụ hồ sơ; CRUD địa chỉ đầy đủ thuộc UserService của Giai đoạn 4. Các service thanh toán, nhập hàng, đổi trả hoặc chatbot thuộc giai đoạn tương ứng.
+- Giai đoạn 5 gồm Auth, hồ sơ cá nhân, quản lý tài khoản, dependency xác thực và phân quyền, kiểm thử các luồng này. Source hiện có thêm API đọc/lưu địa chỉ mặc định phục vụ hồ sơ; CRUD địa chỉ đầy đủ thuộc AddressService của Giai đoạn 4. Các service thanh toán, nhập hàng, đổi trả hoặc chatbot thuộc giai đoạn tương ứng.
 - Customer có giao diện riêng với Staff/Admin. Giai đoạn 8 tiếp tục hoàn thiện hai khu vực và các thao tác nghiệp vụ, gọi chung backend/database; khu vực nội bộ không có đăng ký công khai.
 - Hạng thành viên, tích điểm và username không thuộc phạm vi. `FullName` là họ tên, không phải định danh đăng nhập.
 - Router xử lý HTTP, Service áp dụng nghiệp vụ và transaction, Repository truy cập dữ liệu. Backend kiểm tra quyền và phạm vi bản ghi ở từng thao tác.
@@ -30,7 +30,7 @@ Schema tiếp tục theo [database-schema.md](database-schema.md) và các model
 | Quên mật khẩu | Form chỉ nhận email đã đăng ký (quyết định 10/10/2026). OTP khôi phục gửi tới email gắn với tài khoản, không triển khai SMS. |
 | Đổi email | Xác minh mật khẩu hiện tại và OTP gửi tới email mới trước khi thay `Users.Email`; kiểm tra lại trùng email khi cập nhật. |
 | Hồ sơ | Cho đổi thông tin cá nhân được phép; không nhận `Role`, `AccountStatus`, `IsDeleted`, tổng chi tiêu hoặc OTP qua API sửa hồ sơ. |
-| Địa chỉ | API hiện có đọc/lưu địa chỉ mặc định của chính chủ. CRUD đầy đủ thuộc UserService của Giai đoạn 4; địa chỉ mặc định phải thuộc tài khoản đó. |
+| Địa chỉ | API hiện có đọc/lưu địa chỉ mặc định của chính chủ. CRUD đầy đủ thuộc AddressService của Giai đoạn 4; địa chỉ mặc định phải thuộc tài khoản đó. |
 
 ## 3. OTP và giới hạn thử sai
 

@@ -1,6 +1,9 @@
 """Repositories cho NewsArticles, Banners."""
 
 import uuid
+from datetime import datetime
+
+from sqlalchemy import or_
 
 from app.models import Banner, NewsArticle
 
@@ -40,3 +43,12 @@ class BannerRepository(BaseRepository[Banner]):
     def list_banners(self, *, is_active: bool | None = None) -> list[Banner]:
         conditions = [] if is_active is None else [Banner.IsActive.is_(is_active)]
         return self.get_all(*conditions, order_by=(Banner.DisplayOrder, Banner.BannerId))
+
+    def list_displayable(self, at: datetime) -> list[Banner]:
+        """Banner đang hiển thị tại ``at``: IsActive và at nằm trong [StartDate, EndDate] (mốc NULL = không giới hạn)."""
+        return self.get_all(
+            Banner.IsActive.is_(True),
+            or_(Banner.StartDate.is_(None), Banner.StartDate <= at),
+            or_(Banner.EndDate.is_(None), Banner.EndDate >= at),
+            order_by=(Banner.DisplayOrder, Banner.BannerId),
+        )

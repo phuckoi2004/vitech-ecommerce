@@ -6,15 +6,17 @@ UnitCost (giá vốn tại thời điểm bán), InternalNote, AssignedStaffId c
 import uuid
 from datetime import datetime
 
-from pydantic import model_validator
+from pydantic import Field, model_validator
 
 from .common import (
     Money,
+    NonNegativeInt,
     OrderStatusValue,
     PaymentStatusValue,
     PositiveInt,
     RequestSchema,
     ResponseSchema,
+    SerialNumberValue,
     relation_field,
     varchar,
 )
@@ -99,6 +101,14 @@ class OrderStatusUpdate(RequestSchema):
 
 
 class OrderPaymentStatusUpdate(RequestSchema):
+    """KHÔNG nối trực tiếp vào API như lệnh đặt PaymentStatus (đợt 5.10; hiện không Service nào dùng).
+
+    PaymentStatus chỉ đổi qua nghiệp vụ có bằng chứng/kiểm soát: callback/webhook cổng thanh toán đã xác minh
+    (PaymentService), xác nhận thu COD (OrderService.confirm_cod_delivery), hủy đơn và hoàn tiền (PaymentService).
+    Đặt trực tiếp Paid/Refunded sẽ bỏ qua giao dịch PaymentTransactions và đối soát. Test tests/test_status_schema_guard
+    chặn việc dùng schema này ngoài app/schemas.
+    """
+
     PaymentStatus: PaymentStatusValue
 
 
@@ -192,3 +202,79 @@ class AdminOrderResponse(OrderResponse):
 class AdminOrderDetailResponse(AdminOrderResponse):
     Items: list[AdminOrderItemResponse] = relation_field("items")
     StatusHistories: list[AdminOrderStatusHistoryResponse] = relation_field("status_histories")
+
+# ---------------------------------------------------------------------------
+# ShipmentReturns: hàng của đơn hủy khi đang giao, chờ quay về kho
+# ---------------------------------------------------------------------------
+
+
+class ShipmentReturnItemReceive(RequestSchema):
+    """Kết quả kiểm tra một dòng đơn KHÔNG quản lý serial: số nhập lại kho + số hỏng = số đã giao đi."""
+
+    OrderItemId: uuid.UUID
+    RestockedQuantity: NonNegativeInt
+    DamagedQuantity: NonNegativeInt
+
+
+class ShipmentReturnReceive(RequestSchema):
+    """Staff/Admin xác nhận đã nhận lại hàng và kết quả kiểm tra thực tế (phải khai đủ mọi đơn vị hàng).
+
+    Items: dòng đơn không quản lý serial. RestockedSerialNumbers / DamagedSerialNumbers: serial đạt (nhập lại kho)
+    và serial hỏng (Returned, không nhập tồn) — mọi serial của hồ sơ phải nằm đúng một trong hai danh sách.
+    """
+
+    NULLABLE_FIELDS = frozenset({"Note"})
+
+    Items: list[ShipmentReturnItemReceive] = Field(default_factory=list)
+    RestockedSerialNumbers: list[SerialNumberValue] = Field(default_factory=list)
+    DamagedSerialNumbers: list[SerialNumberValue] = Field(default_factory=list)
+    Note: str | None = None
+
+
+class ShipmentReturnItemResponse(ResponseSchema):
+    ShipmentReturnItemId: uuid.UUID
+    OrderItemId: uuid.UUID
+    ProductSerialId: uuid.UUID | None
+    ExpectedQuantity: int
+    RestockedQuantity: int | None
+    DamagedQuantity: int | None
+
+
+class ShipmentReturnResponse(ResponseSchema):
+    """Staff/Admin: hồ sơ hàng chờ quay về (AwaitingReturn) hoặc đã nhận lại (Received)."""
+
+    ShipmentReturnId: uuid.UUID
+    OrderId: uuid.UUID
+    Status: str
+    CreatedByUserId: uuid.UUID | None
+    CreatedAt: datetime
+    ReceivedByUserId: uuid.UUID | None
+    ReceivedAt: datetime | None
+    Note: str | None
+    Items: list[ShipmentReturnItemResponse] = relation_field("items")
+
+# ---------------------------------------------------------------------------
+# Gán Serial/IMEI thực tế khi đóng gói
+# ---------------------------------------------------------------------------
+
+
+class OrderItemSerialAssign(RequestSchema):
+    """Serial/IMEI Staff quét/chọn cho một dòng đơn (biến thể quản lý serial)."""
+
+    OrderItemId: uuid.UUID
+    SerialNumbers: list[SerialNumberValue] = Field(min_length=1)
+
+
+class OrderSerialAssign(RequestSchema):
+    Items: list[OrderItemSerialAssign] = Field(min_length=1)
+
+
+class OrderItemSerialsResponse(ResponseSchema):
+    """Serial/IMEI đang gắn với một dòng đơn (Reserved khi đóng gói, Sold sau khi giao)."""
+
+    OrderItemId: uuid.UUID
+    ProductVariantId: uuid.UUID
+    Sku: str
+    Quantity: int
+    IsSerialTracked: bool
+    SerialNumbers: list[str]

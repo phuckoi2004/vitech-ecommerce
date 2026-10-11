@@ -2,13 +2,40 @@
 
 import uuid
 from collections.abc import Collection
+from typing import NamedTuple
 
-from sqlalchemy import exists, select
+from sqlalchemy import exists, func, or_, select
 from sqlalchemy.orm import joinedload, selectinload
 
-from app.models import Brand, Category, Product, ProductImage, ProductSerial, ProductVariant
+from app.models import (
+    Brand,
+    Category,
+    OrderItem,
+    Product,
+    ProductImage,
+    ProductSerial,
+    ProductVariant,
+    ReturnRequest,
+    ShipmentReturn,
+    ShipmentReturnItem,
+    WarrantyRequest,
+)
+from app.models.service_request import RETURN_OPEN_STATUSES, WARRANTY_OPEN_STATUSES
+from app.models.shipment import SHIPMENT_RETURN_AWAITING
 
 from .base import BaseRepository
+
+SERIAL_WRITTEN_OFF = "WrittenOff"
+
+
+class SerialTrackingUsage(NamedTuple):
+    """Dữ liệu của biến thể ràng buộc việc tắt IsSerialTracked (số lượng; 0 = không có)."""
+
+    active_serials: int  # serial có Status khác WrittenOff
+    order_items: int  # dòng đơn hàng của biến thể, mọi trạng thái đơn
+    open_warranty_requests: int
+    open_return_requests: int
+    awaiting_shipment_returns: int  # phiếu hàng hoàn vận chuyển chưa nhận có dòng của biến thể
 
 
 class CategoryRepository(BaseRepository[Category]):
@@ -99,8 +126,13 @@ class ProductRepository(BaseRepository[Product]):
         brand_id: uuid.UUID | None,
         status: str | None,
         include_deleted: bool,
+        name_contains: str | None = None,
     ) -> list:
         conditions = []
+        if name_contains:
+            # Tìm theo tên, không phân biệt hoa thường; escape ký tự đặc biệt của LIKE.
+            escaped = name_contains.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+            conditions.append(Product.Name.ilike(f"%{escaped}%", escape="\\"))
         if category_ids:
             conditions.append(Product.CategoryId.in_(category_ids))
         if brand_id is not None:
@@ -118,12 +150,13 @@ class ProductRepository(BaseRepository[Product]):
         brand_id: uuid.UUID | None = None,
         status: str | None = None,
         include_deleted: bool = False,
+        name_contains: str | None = None,
         offset: int | None = None,
         limit: int | None = None,
     ) -> list[Product]:
         """Danh sách sản phẩm (không load relationship)."""
         return self.get_all(
-            *self._filters(category_ids, brand_id, status, include_deleted),
+            *self._filters(category_ids, brand_id, status, include_deleted, name_contains),
             order_by=(Product.CreatedAt.desc(), Product.ProductId),
             offset=offset,
             limit=limit,
@@ -136,8 +169,9 @@ class ProductRepository(BaseRepository[Product]):
         brand_id: uuid.UUID | None = None,
         status: str | None = None,
         include_deleted: bool = False,
+        name_contains: str | None = None,
     ) -> int:
-        return self.count(*self._filters(category_ids, brand_id, status, include_deleted))
+        return self.count(*self._filters(category_ids, brand_id, status, include_deleted, name_contains))
 
 
 class ProductVariantRepository(BaseRepository[ProductVariant]):
@@ -158,6 +192,47 @@ class ProductVariantRepository(BaseRepository[ProductVariant]):
             conditions.append(ProductVariant.IsDeleted.is_(False))
         return self.get_all(*conditions, order_by=(ProductVariant.VariantName, ProductVariant.ProductVariantId))
 
+    @staticmethod
+    def _low_stock_filters() -> list:
+        # Cảnh báo khi StockQuantity <= MinStockLevel; ngưỡng 0 = không cảnh báo (business-requirements 8.5).
+        return [
+            ProductVariant.MinStockLevel > 0,
+            ProductVariant.StockQuantity <= ProductVariant.MinStockLevel,
+            ProductVariant.IsDeleted.is_(False),
+        ]
+
+    def list_low_stock(self, *, offset: int | None = None, limit: int | None = None) -> list[ProductVariant]:
+        return self.get_all(
+            *self._low_stock_filters(),
+            order_by=(ProductVariant.StockQuantity, ProductVariant.Sku),
+            offset=offset,
+            limit=limit,
+        )
+
+    def count_low_stock(self) -> int:
+        return self.count(*self._low_stock_filters())
+
+    def serial_tracking_usage(self, variant_id: uuid.UUID) -> SerialTrackingUsage:
+        """Đếm serial chưa loại bỏ, dòng đơn và quy trình đang mở của biến thể trong một câu SELECT (subquery vô hướng)."""
+        lines = select(OrderItem.OrderItemId).where(OrderItem.ProductVariantId == variant_id)
+
+        def count(entity, *where):
+            return select(func.count()).select_from(entity).where(*where).scalar_subquery()
+
+        stmt = select(
+            count(ProductSerial, ProductSerial.ProductVariantId == variant_id,
+                  ProductSerial.Status != SERIAL_WRITTEN_OFF),
+            count(OrderItem, OrderItem.ProductVariantId == variant_id),
+            count(WarrantyRequest, WarrantyRequest.OrderItemId.in_(lines),
+                  WarrantyRequest.Status.in_(WARRANTY_OPEN_STATUSES)),
+            count(ReturnRequest, ReturnRequest.OrderItemId.in_(lines), ReturnRequest.Status.in_(RETURN_OPEN_STATUSES)),
+            select(func.count(ShipmentReturn.ShipmentReturnId.distinct()))
+            .join(ShipmentReturnItem, ShipmentReturnItem.ShipmentReturnId == ShipmentReturn.ShipmentReturnId)
+            .where(ShipmentReturnItem.OrderItemId.in_(lines), ShipmentReturn.Status == SHIPMENT_RETURN_AWAITING)
+            .scalar_subquery(),
+        )
+        return SerialTrackingUsage(*self.session.execute(stmt).one())
+
     def get_many_by_ids(self, variant_ids: Collection[uuid.UUID], *, with_product: bool = False) -> list[ProductVariant]:
         if not variant_ids:
             return []
@@ -174,7 +249,7 @@ class ProductVariantRepository(BaseRepository[ProductVariant]):
             .order_by(ProductVariant.ProductVariantId)
             .with_for_update()
         )
-        return list(self.session.scalars(stmt))
+        return self._scalars_for_update(stmt)
 
 
 class ProductImageRepository(BaseRepository[ProductImage]):
@@ -193,8 +268,25 @@ class ProductImageRepository(BaseRepository[ProductImage]):
 class ProductSerialRepository(BaseRepository[ProductSerial]):
     model = ProductSerial
 
+    def has_return_history(self, product_serial_id: uuid.UUID) -> bool:
+        """Serial từng thuộc yêu cầu đổi/trả hoặc hồ sơ hàng hoàn vận chuyển (mọi trạng thái)."""
+        stmt = select(
+            or_(
+                exists().where(ReturnRequest.ProductSerialId == product_serial_id),
+                exists().where(ShipmentReturnItem.ProductSerialId == product_serial_id),
+            )
+        )
+        return bool(self.session.scalar(stmt))
+
     def get_by_serial_number(self, serial_number: str) -> ProductSerial | None:
         return self.get_one(ProductSerial.SerialNumber == serial_number)
+
+    def find_existing_serial_numbers(self, serial_numbers: Collection[str]) -> set[str]:
+        """Các SerialNumber đã tồn tại (so khớp chính xác, phân biệt hoa thường như UNIQUE của database)."""
+        if not serial_numbers:
+            return set()
+        stmt = select(ProductSerial.SerialNumber).where(ProductSerial.SerialNumber.in_(list(serial_numbers)))
+        return set(self.session.scalars(stmt))
 
     def exists_by_serial_number(self, serial_number: str, exclude_id: uuid.UUID | None = None) -> bool:
         conditions = [ProductSerial.SerialNumber == serial_number]
@@ -223,5 +315,41 @@ class ProductSerialRepository(BaseRepository[ProductSerial]):
             conditions.append(ProductSerial.Status == status)
         return self.count(*conditions)
 
+    def list_for_update(self, variant_id: uuid.UUID, *, status: str, limit: int) -> list[ProductSerial]:
+        """Khóa tối đa ``limit`` serial của biến thể theo trạng thái (FOR UPDATE SKIP LOCKED).
+
+        Bỏ qua các dòng đang bị transaction khác khóa để hai đơn xử lý đồng thời không lấy trùng serial.
+        """
+        stmt = (
+            select(ProductSerial)
+            .where(ProductSerial.ProductVariantId == variant_id, ProductSerial.Status == status)
+            .order_by(ProductSerial.SerialNumber)
+            .limit(limit)
+            .with_for_update(skip_locked=True)
+        )
+        return self._scalars_for_update(stmt)
+
     def list_by_order_item(self, order_item_id: uuid.UUID) -> list[ProductSerial]:
         return self.get_all(ProductSerial.OrderItemId == order_item_id, order_by=(ProductSerial.SerialNumber,))
+
+    def list_by_order_item_for_update(self, order_item_id: uuid.UUID) -> list[ProductSerial]:
+        """Khóa các serial của một dòng đơn (thứ tự SerialNumber) trước khi đổi trạng thái/ngày bảo hành."""
+        stmt = (
+            select(ProductSerial)
+            .where(ProductSerial.OrderItemId == order_item_id)
+            .order_by(ProductSerial.SerialNumber)
+            .with_for_update()
+        )
+        return self._scalars_for_update(stmt)
+
+    def list_by_serial_numbers_for_update(self, serial_numbers: Collection[str]) -> list[ProductSerial]:
+        """Khóa các serial theo SerialNumber (so khớp chính xác, thứ tự SerialNumber để hạn chế deadlock)."""
+        if not serial_numbers:
+            return []
+        stmt = (
+            select(ProductSerial)
+            .where(ProductSerial.SerialNumber.in_(list(serial_numbers)))
+            .order_by(ProductSerial.SerialNumber)
+            .with_for_update()
+        )
+        return self._scalars_for_update(stmt)

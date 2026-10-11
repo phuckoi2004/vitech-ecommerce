@@ -6,7 +6,8 @@ Không quyết định coupon có hợp lệ để áp dụng hay không (thuộ
 import uuid
 from collections.abc import Collection
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select
+from sqlalchemy.exc import MultipleResultsFound
 from sqlalchemy.orm import joinedload, selectinload
 
 from app.models import Coupon, Promotion, PromotionCategory, PromotionProduct
@@ -101,19 +102,28 @@ class PromotionCategoryRepository(BaseRepository[PromotionCategory]):
 class CouponRepository(BaseRepository[Coupon]):
     model = Coupon
 
+    @staticmethod
+    def _code_matches(code: str):
+        # Khớp unique index UX_Coupons_Code_Lower: lower("Code").
+        return func.lower(Coupon.Code) == func.lower(code)
+
     def get_by_code(self, code: str, *, with_promotion: bool = False) -> Coupon | None:
-        """Khớp chính xác Code (UNIQUE phân biệt hoa thường theo schema hiện tại)."""
-        stmt = select(Coupon).where(Coupon.Code == code)
+        """Tìm theo Code, không phân biệt hoa thường."""
+        stmt = select(Coupon).where(self._code_matches(code))
         if with_promotion:
             stmt = stmt.options(joinedload(Coupon.promotion))
         return self.session.scalars(stmt).one_or_none()
 
     def get_by_code_for_update(self, code: str) -> Coupon | None:
         """Khóa dòng coupon trước khi Service tăng UsedCount."""
-        return self.session.scalars(select(Coupon).where(Coupon.Code == code).with_for_update()).one_or_none()
+        locked = self._scalars_for_update(select(Coupon).where(self._code_matches(code)).with_for_update())
+        if len(locked) > 1:
+            # Không xảy ra khi có unique index UX_Coupons_Code_Lower; giữ hành vi của one_or_none().
+            raise MultipleResultsFound("Nhiều coupon cùng mã")
+        return locked[0] if locked else None
 
     def exists_by_code(self, code: str, exclude_id: uuid.UUID | None = None) -> bool:
-        conditions = [Coupon.Code == code]
+        conditions = [self._code_matches(code)]
         if exclude_id is not None:
             conditions.append(Coupon.CouponId != exclude_id)
         return self.exists(*conditions)
