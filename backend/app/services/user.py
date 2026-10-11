@@ -27,7 +27,7 @@ from app.schemas.account import (
 
 from .actor import ANY_ROLE, CUSTOMER_ONLY, Actor, require_role
 from .base import BaseService, utc_now
-from .exceptions import NotFoundError
+from .exceptions import NotFoundError, PermissionDeniedError
 
 
 class UserService:
@@ -111,8 +111,8 @@ class UserService:
             storage.delete(previous)
         return user
 
-    def _default_address_of(self, user: User) -> Address | None:
-        defaults = self.addresses.list_default_by_user(user.UserId)
+    def _default_address_of(self, user: User, *, populate_existing: bool = False) -> Address | None:
+        defaults = self.addresses.list_default_by_user(user.UserId, populate_existing=populate_existing)
         return defaults[0] if defaults else None
 
     def get_default_address(self, actor: User) -> Address | None:
@@ -127,17 +127,23 @@ class UserService:
     def save_default_address(self, actor: User, payload: DefaultAddressUpdate) -> Address:
         self._require_active(actor)
         self._require_customer(actor)
-        address = self._default_address_of(actor)
-        values = payload.model_dump()
-        if address is None:
-            address = self.addresses.create({
-                **values, "AddressId": uuid.uuid4(), "UserId": actor.UserId,
-                "ReceiverName": actor.FullName, "ReceiverPhone": actor.PhoneNumber,
-                "IsDefault": True, "IsDeleted": False,
-            })
-        else:
-            self.addresses.update(address, values)
         try:
+            # Both address APIs serialize on the same owner row, even when no address exists yet.
+            owner = self.users.get_by_id_for_update(actor.UserId)
+            if owner is None:
+                raise AuthError(403, "Tài khoản không được phép thực hiện thao tác này.")
+            self._require_active(owner)
+            self._require_customer(owner)
+            address = self._default_address_of(owner, populate_existing=True)
+            values = payload.model_dump()
+            if address is None:
+                address = self.addresses.create({
+                    **values, "AddressId": uuid.uuid4(), "UserId": owner.UserId,
+                    "ReceiverName": owner.FullName, "ReceiverPhone": owner.PhoneNumber,
+                    "IsDefault": True, "IsDeleted": False,
+                })
+            else:
+                self.addresses.update(address, values)
             self.db.commit()
             self.db.refresh(address)
         except Exception:
@@ -220,6 +226,7 @@ class AddressService(BaseService):
 
     def __init__(self, session: Session, *, clock: Callable[[], datetime] = utc_now) -> None:
         super().__init__(session, clock=clock)
+        self.users = UserRepository(session)
         self.addresses = AddressRepository(session)
 
     def list_addresses(self, actor: Actor) -> list[AddressResponse]:
@@ -234,6 +241,7 @@ class AddressService(BaseService):
         require_role(actor, *CUSTOMER_ONLY)
         user_id = actor.user_id
         with self.transaction():
+            self._lock_owner(user_id)
             values = data.model_dump(exclude_unset=True)
             if values.get("IsDefault"):
                 self._clear_default(user_id)
@@ -244,7 +252,8 @@ class AddressService(BaseService):
     def update_address(self, actor: Actor, address_id: uuid.UUID, data: AddressUpdate) -> AddressResponse:
         require_role(actor, *CUSTOMER_ONLY)
         with self.transaction():
-            address = self._get_owned(actor.user_id, address_id)
+            self._lock_owner(actor.user_id)
+            address = self._get_owned(actor.user_id, address_id, populate_existing=True)
             values = data.model_dump(exclude_unset=True)
             if values.get("IsDefault"):
                 self._clear_default(actor.user_id, keep=address)
@@ -256,21 +265,33 @@ class AddressService(BaseService):
         """Xóa mềm; Orders.AddressId vẫn tham chiếu được địa chỉ cũ."""
         require_role(actor, *CUSTOMER_ONLY)
         with self.transaction():
-            address = self._get_owned(actor.user_id, address_id)
+            self._lock_owner(actor.user_id)
+            address = self._get_owned(actor.user_id, address_id, populate_existing=True)
             address.IsDeleted = True
             address.IsDefault = False
 
-    def _get_owned(self, user_id: uuid.UUID, address_id: uuid.UUID) -> Address:
-        address = self.addresses.get_by_id_and_user(address_id, user_id)
+    def _lock_owner(self, user_id: uuid.UUID) -> None:
+        """Keep the owner lock until the use case commits; recheck authorization after waiting."""
+        owner = self.users.get_by_id_for_update(user_id)
+        if owner is None or owner.IsDeleted or owner.AccountStatus != "Active" or owner.Role != "Customer":
+            raise PermissionDeniedError("Tài khoản không được phép thay đổi địa chỉ.")
+
+    def _get_owned(self, user_id: uuid.UUID, address_id: uuid.UUID, *, populate_existing: bool = False) -> Address:
+        if populate_existing:
+            address = self.addresses.get_by_id_and_user(address_id, user_id, populate_existing=True)
+        else:
+            address = self.addresses.get_by_id_and_user(address_id, user_id)
         if address is None or address.IsDeleted:
             raise NotFoundError("Không tìm thấy địa chỉ", code="address_not_found")
         return address
 
     def _clear_default(self, user_id: uuid.UUID, keep: Address | None = None) -> None:
         """Mỗi người dùng chỉ có một địa chỉ mặc định."""
-        for other in self.addresses.list_default_by_user(user_id):
+        for other in self.addresses.list_default_by_user(user_id, populate_existing=True):
             if other is not keep:
                 other.IsDefault = False
+        # With autoflush disabled, clear old defaults before inserting or marking the replacement.
+        self.addresses.flush()
 
 
 class NotificationService(BaseService):

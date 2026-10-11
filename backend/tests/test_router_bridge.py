@@ -89,6 +89,16 @@ def test_optional_actor_is_none_without_token_but_rejects_a_bad_token(probe_clie
     assert probe.get("/optional", headers=authorization(token)).json() == {"role": "Customer"}
 
 
+@pytest.mark.parametrize("header", ["Basic Zm9vOmJhcg==", "Bearer", "Bearer "])
+def test_unrecognized_or_empty_credentials_are_anonymous_only_on_optional_auth(probe_client, header):
+    _, probe, _ = probe_client
+    headers = {"Authorization": header}
+    optional = probe.get("/optional", headers=headers)
+    assert optional.status_code == 200
+    assert optional.json() == {"role": None}
+    assert probe.get("/actor", headers=headers).status_code == 401
+
+
 def test_service_role_check_becomes_403_and_missing_actor_401(probe_client):
     client, probe, engine = probe_client
     customer = seed_user(engine, "Customer")

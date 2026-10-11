@@ -6,11 +6,12 @@ kiểm tra cấu trúc ở tests/test_statistics_queries.py; không chứng minh
 
 import unittest
 import uuid
-from datetime import date, datetime, timezone
+from datetime import date, datetime, time, timedelta, timezone
 from decimal import Decimal
 
 from app.models import Order, OrderItem, ProductSerial, ReturnRequest
 from app.services import BusinessRuleError, PermissionDeniedError, statistics_period
+from app.services.warranty_period import VIETNAM_TZ
 
 from tests.fakes import Factory, FakeSession, InMemoryDB, statistics_service
 
@@ -94,6 +95,41 @@ class AccessAndPeriodTest(StatisticsTestBase):
             with self.subTest(date_from=date_from, date_to=date_to):
                 self.assert_error(BusinessRuleError, "invalid_statistics_period",
                                   lambda f=date_from, t=date_to: self.svc.order_statistics(self.a(self.admin), f, t))
+
+    def test_minimum_date_rejected_before_any_statistics_query(self):
+        class UnexpectedQuery:
+            def __getattr__(self, name):
+                raise AssertionError(f"Invalid period reached statistics repository: {name}")
+
+        self.svc.stats = UnexpectedQuery()
+        for user in (self.staff, self.admin):
+            for date_to in (date.min, date(1, 1, 2), OCT_31):
+                for method_name in ("order_statistics", "revenue_statistics", "cogs_statistics", "top_products"):
+                    with self.subTest(role=user.Role, date_to=date_to, method=method_name):
+                        method = getattr(self.svc, method_name)
+                        self.assert_error(BusinessRuleError, "invalid_statistics_period",
+                                          lambda m=method, t=date_to: m(self.a(user), date.min, t))
+
+    def test_first_representable_day_keeps_vietnam_calendar_boundaries(self):
+        first_day = date.min + timedelta(days=1)
+        start, end = statistics_period(first_day, first_day)
+        self.assertEqual(start.tzinfo, timezone.utc)
+        self.assertEqual(end.tzinfo, timezone.utc)
+        self.assertEqual(start.astimezone(VIETNAM_TZ), datetime.combine(first_day, time.min, tzinfo=VIETNAM_TZ))
+        self.assertEqual(end.astimezone(VIETNAM_TZ), datetime.combine(
+            first_day + timedelta(days=1), time.min, tzinfo=VIETNAM_TZ))
+        self.assertEqual(end - start, timedelta(days=1))
+        response = self.svc.order_statistics(self.a(self.admin), first_day, first_day)
+        self.assertEqual((response.Period.StartsAt, response.Period.EndsBefore), (start, end))
+        self.assertEqual(response.TotalOrders, 0)
+
+    def test_last_day_below_date_max_is_supported_and_max_is_still_rejected(self):
+        last_day = date.max - timedelta(days=1)
+        self.assertEqual(statistics_period(last_day, last_day),
+                         (utc(9999, 12, 29, 17, 0), utc(9999, 12, 30, 17, 0)))
+        with self.assertRaises(BusinessRuleError) as caught:
+            statistics_period(last_day, date.max)
+        self.assertEqual(caught.exception.code, "invalid_statistics_period")
 
     def test_boundary_moments(self):
         inside = (utc(2026, 9, 30, 17, 0), utc(2026, 10, 31, 16, 59, 59, 999999))  # 00:00 01/10, 23:59:59.999999 31/10 VN

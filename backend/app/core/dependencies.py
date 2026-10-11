@@ -74,9 +74,12 @@ def get_optional_actor(
     db: Session = Depends(get_db),
     runtime: AuthRuntime = Depends(get_runtime),
 ) -> Actor | None:
-    """For public use cases that show more to signed-in staff: no token means anonymous (None).
+    """For public use cases that show more to signed-in staff.
 
-    A token that is sent but invalid, expired or revoked is still rejected rather than treated as anonymous.
+    No recognized nonempty Bearer credential means anonymous (None); this includes
+    missing Authorization, other schemes such as Basic, and an empty Bearer header.
+    A recognized Bearer token that is invalid, expired or revoked raises 401.
+    Required-auth use cases use get_current_user and require a valid Bearer token.
     """
     if credentials is None:
         return None

@@ -126,14 +126,18 @@ class AddressRepository(BaseRepository[Address]):
             conditions.append(Address.IsDeleted.is_(False))
         return self.get_all(*conditions, order_by=(Address.IsDefault.desc(), Address.AddressId))
 
-    def get_by_id_and_user(self, address_id: uuid.UUID, user_id: uuid.UUID) -> Address | None:
-        return self.get_one(Address.AddressId == address_id, Address.UserId == user_id)
+    def get_by_id_and_user(
+        self, address_id: uuid.UUID, user_id: uuid.UUID, *, populate_existing: bool = False,
+    ) -> Address | None:
+        stmt = select(Address).where(Address.AddressId == address_id, Address.UserId == user_id)
+        return self.session.scalars(stmt.execution_options(populate_existing=populate_existing)).one_or_none()
 
-    def list_default_by_user(self, user_id: uuid.UUID) -> list[Address]:
+    def list_default_by_user(self, user_id: uuid.UUID, *, populate_existing: bool = False) -> list[Address]:
         """Các địa chỉ đang IsDefault của user (chưa xóa); Service quyết định giữ một địa chỉ mặc định."""
-        return self.get_all(
+        stmt = select(Address).where(
             Address.UserId == user_id, Address.IsDefault.is_(True), Address.IsDeleted.is_(False)
         )
+        return list(self.session.scalars(stmt.execution_options(populate_existing=populate_existing)))
 
 
 class NotificationRepository(BaseRepository[Notification]):

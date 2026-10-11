@@ -29,6 +29,8 @@ Hạng thành viên và tích điểm không thuộc phạm vi triển khai củ
 | `docs/business-requirements.md` | Đặc tả nghiệp vụ, quy trình xử lý và quy tắc của các chức năng |
 | `docs/database-schema.md` | Nguồn chính thức về database schema |
 | `docs/api-endpoints.md` | Danh sách API nghiệp vụ giai đoạn 6: đường dẫn, quyền, body, kết quả (sinh từ router) |
+| `docs/stage6-concurrency-fixes.md` | Sửa checkout trùng giỏ, bảo vệ database test và ghi địa chỉ mặc định đồng thời |
+| `docs/stage6-postgres-validation.md` | Kết quả 17 ca PostgreSQL giai đoạn 6, phạm vi bảo hành/coupon/chat/nội dung và lệnh chạy |
 | `docs/internal-endpoints.md` | Tài liệu về các điểm vào nội bộ và giới hạn sử dụng |
 | `docs/auth-spec.md` | Chính sách Auth/RBAC giai đoạn 5 đã được chọn khi tích hợp giai đoạn 4 |
 | `docs/auth-rbac.md` | Bảng quyền và phạm vi quản lý tài khoản |
@@ -617,7 +619,20 @@ nghiệp vụ đầy đủ tiếp tục được triển khai ở giai đoạn t
   ..\.venv\Scripts\python.exe -m pytest tests
   ```
 
-- Bộ test chạy trên fake/in-memory, không kết nối database và không gọi cổng thanh toán thật.
+- Bộ test mặc định chạy trên fake/in-memory, không kết nối database và không gọi cổng thanh toán thật.
+- Integration test trên PostgreSQL thật (`tests/test_postgres_integration.py`, `tests/test_postgres_concurrency.py`)
+  chỉ chạy khi bật cờ, dùng một
+  database **riêng cho test** (`TEST_DATABASE_URL` trong `backend/.env`, ví dụ project Supabase staging đã chạy
+  `alembic upgrade head`). Test xóa sạch dữ liệu database đó trước và sau khi chạy, và từ chối chạy nếu
+  `TEST_DATABASE_URL` trùng database của `DATABASE_URL`:
+
+  ```powershell
+  $env:RUN_POSTGRES_TESTS = "1"; ..\.venv\Scripts\python.exe -m pytest tests\test_postgres_integration.py tests\test_postgres_concurrency.py -v
+  Remove-Item Env:RUN_POSTGRES_TESTS
+  ```
+
+- Chạy migration lên database test: đặt tạm `DATABASE_URL` bằng giá trị `TEST_DATABASE_URL` trong phiên terminal
+  rồi chạy `alembic upgrade head` (Alembic ưu tiên biến môi trường hơn `backend/.env`).
 - Phân biệt kết quả unit test, kiểm tra tĩnh và integration test.
 - Không tuyên bố đã kiểm thử với PostgreSQL thật nếu chỉ chạy test bằng fake hoặc kiểm tra offline.
 - Báo cáo rõ những phần chưa thể kiểm thử.
@@ -698,20 +713,27 @@ Giai đoạn 4 được lấy từ commit `01bc0e2`; giai đoạn 5 được gi�
 - Giới hạn gửi OTP: ngoài chờ 60 giây giữa hai lần gửi, tối đa 5 lần mỗi giờ cho mỗi email và mục đích (`AUTH_SEND_LIMIT`, `AUTH_SEND_WINDOW`).
 - Stage 6 (11/10/2026): Router/API cho toàn bộ Service nghiệp vụ — 199 thao tác trong 11 router mới và `users.py` (xem `docs/api-endpoints.md`). Mọi route `/admin/...` chỉ cho Staff/Admin; Router chỉ gọi đúng một Service, không chứa nghiệp vụ. Đã đăng ký webhook SePay (`/webhooks/sepay`) và endpoint nội bộ cho cron (`/internal/orders/expire-unpaid-qr`, `/internal/payment-webhooks/process`).
 - Chuẩn bị cho Stage 6: dependency `get_current_actor`/`get_optional_actor` (`backend/app/core/dependencies.py`) tạo `Actor` từ người dùng đã xác thực; lỗi nghiệp vụ `ServiceError` được chuyển thành HTTP 4xx/502 (`backend/app/routers/errors.py`).
+- Sau rà soát Stage 6 (11/10/2026): checkout và sửa giỏ dùng chung khóa Cart; hai API ghi địa chỉ dùng chung khóa User; integration test PostgreSQL kiểm tra đích database và cờ opt-in trước khi ghi/xóa dữ liệu. Chi tiết tại `docs/stage6-concurrency-fixes.md`; các sửa này không cần migration mới.
+- Sửa giới hạn ngày thống kê (11/10/2026): `date_from=0001-01-01` trả 400 với mã `invalid_statistics_period` trước truy vấn; các ngày hợp lệ sát biên và cách tính ngày Việt Nam được giữ nguyên.
+- Chốt phần API và kiểm thử Stage 6 (12/10/2026): đồng bộ mô tả quyền đổi/trả/bảo hành và xác thực tùy chọn; thêm workflow PostgreSQL cho bảo hành, coupon, chat, tin tức và banner. SePay/cron vận hành để sau theo yêu cầu; chi tiết tại `docs/stage6-postgres-validation.md`.
 
 ### Kết quả kiểm thử được báo cáo
 
-- Backend (11/10/2026): 830 test và 628 subtest đạt (gồm test router nghiệp vụ: nối Service, chặn `/admin`, và luồng HTTP đầy đủ với Service thật trên database giả), gồm các test graph/SQL migration offline; bộ test dùng SQLite/bộ nhớ, không kết nối PostgreSQL thật.
+- Backend sau hoàn thiện test Stage 6 (12/10/2026): **952 test và 657 subtest đạt**, trong 27,52 giây. Bộ test mặc định dùng SQLite/bộ nhớ và các kiểm tra SQL/migration offline; **17 ca PostgreSQL** bỏ qua khi không bật cờ.
+- PostgreSQL mở rộng Stage 6 (12/10/2026): **17/17 ca đạt** trên database test riêng, PostgreSQL 17.11, head `3d9f987f3c6f`, trong 280,12 giây. Đã kiểm thử bảo hành sửa chữa/đổi máy có serial, coupon, chat, tin tức/banner, ngày thống kê vượt giới hạn cùng các luồng API và đồng thời hiện có. Kiểm tra sau cleanup: 44 bảng nghiệp vụ không còn dữ liệu test; revision migration giữ nguyên. Xem `docs/stage6-postgres-validation.md`.
+- PostgreSQL sau sửa ba lỗi (11/10/2026): **8/8 ca đạt** trên database test riêng, PostgreSQL 17.11, head `3d9f987f3c6f`, trong 101,80 giây. Đã kiểm chứng hai checkout cùng giỏ chỉ tạo một đơn và các cặp API ghi địa chỉ đồng thời chỉ giữ một mặc định. Kiểm tra sau cleanup: 44 bảng nghiệp vụ không còn dữ liệu test; revision migration giữ nguyên. Chi tiết và lệnh chạy tại `docs/stage6-concurrency-fixes.md`.
+- Integration test trên PostgreSQL thật (11/10/2026, Supabase staging PostgreSQL 17, chạy 2 lần liên tiếp): 5/5 đạt qua HTTP với đăng nhập JWT thật — đăng ký bằng OTP email; tạo danh mục/sản phẩm, lập–duyệt–nhận phiếu nhập (tồn kho, giá vốn); đơn COD từ giỏ hàng → giao → thu tiền → đánh giá → trả 1 sản phẩm → hoàn tiền thủ công → hoàn tất đơn → thống kê doanh thu khớp từng số; hai khách cùng mua sản phẩm cuối cùng (khóa dòng: một đơn thành công, đơn kia bị từ chối vì hết hàng); cron hủy đơn QR quá hạn và hoàn tồn kho đúng một lần.
 - Frontend (11/10/2026): 37 test đạt, lint đạt, build đạt với `npm run build -- --configLoader native` trong môi trường Windows hiện tại.
 - Trước tích hợp, giai đoạn 4 báo cáo 684 test chạy thành công bằng `unittest` và đã chạy lặp lại.
-- Chưa có integration test xác nhận toàn bộ hệ thống trên PostgreSQL thật.
+- Chưa chạy tích hợp thực tế: gửi email OTP qua SMTP, upload avatar lên Supabase Storage, Redis, cổng SePay (QR, webhook, hoàn tiền qua cổng). Workflow bảo hành, coupon, chat và nội dung đã được kiểm thử trên PostgreSQL test thật ngày 12/10/2026.
 - Migration đã chạy thành công trên database Supabase (11/10/2026); cấu trúc bảng/cột đã được đối chiếu với Models.
-- Đã gọi thử các API công khai chỉ đọc (danh mục, thương hiệu, sản phẩm, banner, tin tức, phương thức vận chuyển/thanh toán) trên Supabase: trả 200/404 đúng; API cần đăng nhập trả 401 khi không có token. Các API ghi dữ liệu chưa được chạy trên database thật.
+- Đã gọi thử các API công khai chỉ đọc (danh mục, thương hiệu, sản phẩm, banner, tin tức, phương thức vận chuyển/thanh toán) trên Supabase: trả 200/404 đúng; API cần đăng nhập trả 401 khi không có token. Các API ghi dữ liệu được chạy trên database staging riêng, không ghi vào database chính.
 
 ### Công việc tiếp theo
 
 - Hoàn thiện và kiểm thử tích hợp Authentication và Authorization trên staging.
-- Stage 6 còn lại: kiểm thử các API ghi dữ liệu trên PostgreSQL thật (database staging); điền cấu hình SePay và `INTERNAL_CRON_SECRET`, đăng ký webhook trên SePay và lịch cron khi triển khai (xem `docs/internal-endpoints.md`).
+- Phần API và kiểm thử Stage 6 đã hoàn thành trong phạm vi hiện tại; lưu các bản sửa/test mới vào Git trước khi chuyển sang tích hợp Frontend.
+- SePay và cron để sau theo yêu cầu người dùng: điền cấu hình SePay và `INTERNAL_CRON_SECRET`, đăng ký webhook trên SePay và lịch cron khi triển khai (xem `docs/internal-endpoints.md`).
 - Tích hợp Frontend với các API nghiệp vụ.
 - Kiểm thử tích hợp trên môi trường staging.
 - Phát triển AI Chatbot và Product Recommendation Engine theo kế hoạch.

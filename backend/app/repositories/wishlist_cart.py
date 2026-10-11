@@ -44,15 +44,27 @@ class CartRepository(BaseRepository[Cart]):
             stmt = stmt.options(selectinload(Cart.items))
         return self.session.scalars(stmt).one_or_none()
 
+    def get_by_user_for_update(self, user_id: uuid.UUID) -> Cart | None:
+        """Khóa giỏ trước khi đọc/ghi CartItems; checkout và mọi thao tác giỏ dùng cùng khóa này."""
+        rows = self._scalars_for_update(select(Cart).where(Cart.UserId == user_id).with_for_update())
+        return rows[0] if rows else None
+
 
 class CartItemRepository(BaseRepository[CartItem]):
     model = CartItem
 
     def get_by_cart_and_variant(self, cart_id: uuid.UUID, variant_id: uuid.UUID) -> CartItem | None:
-        return self.get_one(CartItem.CartId == cart_id, CartItem.ProductVariantId == variant_id)
+        return self._fresh_one(select(CartItem).where(
+            CartItem.CartId == cart_id, CartItem.ProductVariantId == variant_id))
 
     def get_by_id_and_cart(self, cart_item_id: uuid.UUID, cart_id: uuid.UUID) -> CartItem | None:
-        return self.get_one(CartItem.CartItemId == cart_item_id, CartItem.CartId == cart_id)
+        return self._fresh_one(select(CartItem).where(
+            CartItem.CartItemId == cart_item_id, CartItem.CartId == cart_id))
+
+    def _fresh_one(self, stmt) -> CartItem | None:
+        # Sau khi chờ khóa Cart, identity map có thể vẫn chứa số lượng/trạng thái cũ.
+        self.session.flush()
+        return self.session.scalars(stmt.execution_options(populate_existing=True)).one_or_none()
 
     def list_by_cart(
         self, cart_id: uuid.UUID, *, is_selected: bool | None = None, with_variant: bool = False
@@ -62,4 +74,7 @@ class CartItemRepository(BaseRepository[CartItem]):
         if is_selected is not None:
             conditions.append(CartItem.IsSelected.is_(is_selected))
         options = (selectinload(CartItem.product_variant).selectinload(ProductVariant.product),) if with_variant else ()
-        return self.get_all(*conditions, order_by=(CartItem.AddedAt, CartItem.CartItemId), options=options)
+        self.session.flush()
+        stmt = select(CartItem).where(*conditions).order_by(CartItem.AddedAt, CartItem.CartItemId).options(*options)
+        # populate_existing truyền xuống selectinload để giá/tồn và Product cũng được nạp lại.
+        return list(self.session.scalars(stmt.execution_options(populate_existing=True)))

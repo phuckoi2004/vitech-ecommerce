@@ -169,6 +169,17 @@ def test_statistics_respond_with_their_schemas(flow):
     assert bad.status_code == 400 and bad.json()["code"] == "invalid_statistics_period"
 
 
+@pytest.mark.parametrize("role", ["Staff", "Admin"])
+@pytest.mark.parametrize("report", ["orders", "revenue", "cogs", "top-products"])
+def test_statistics_date_before_utc_minimum_returns_400(flow, role, report):
+    client, _, factory, as_user = flow
+    as_user(factory.user(role))
+    response = client.get(f"/admin/statistics/{report}",
+                          params={"date_from": "0001-01-01", "date_to": "2026-10-31"})
+    assert response.status_code == 400, response.text
+    assert response.json()["code"] == "invalid_statistics_period"
+
+
 def test_unknown_ids_return_404_with_a_code(flow):
     _, _, f, as_user = flow
     client = as_user(f.user("Admin"))

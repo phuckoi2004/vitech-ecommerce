@@ -35,7 +35,8 @@ Không có thao tác quản trị khóa/xóa/đổi role chính mình. Hồ sơ 
 | Giỏ hàng, yêu thích, đặt/thanh toán | Chính mình | Không thay Customer | Không thay Customer |
 | Xem/tìm đơn hàng | Đơn của mình | Toàn hệ thống theo báo cáo | Toàn hệ thống |
 | Xử lý đơn hàng | Hủy đơn mình theo điều kiện | Theo workflow và phạm vi được giao | Theo workflow |
-| Bảo hành/đổi trả | Yêu cầu và theo dõi của mình | Tiếp nhận/xử lý; duyệt hoặc từ chối đổi trả | Tiếp nhận/xử lý; duyệt hoặc từ chối đổi trả |
+| Bảo hành | Yêu cầu và theo dõi của mình | Tiếp nhận/kiểm tra/xử lý; đề xuất kết quả; hoàn tất sau duyệt | Như Staff; duyệt/từ chối kết quả và từ chối yêu cầu theo trạng thái |
+| Đổi/trả | Yêu cầu và theo dõi của mình | Tiếp nhận/nhận hàng/kiểm tra; từ chối trước khi nhận hàng | Như Staff; duyệt số tiền hoàn; từ chối sau khi nhận hàng |
 | Cấu hình phương thức thanh toán | Không | Không (chỉ xem danh sách) | Có |
 | Hoàn tiền | Nhận kết quả của mình | Thực hiện hoàn tiền | Thực hiện hoàn tiền; xác nhận thủ công giao dịch đang chờ |
 | Xuất báo cáo | Không | Không | Có |
@@ -77,7 +78,7 @@ Mỗi chức năng quản trị có đủ năm thao tác **Xem / Thêm / Sửa �
 
 Quyết định 09/10/2026: mã giảm giá thuộc Khuyến mãi; **Xuất báo cáo** chỉ Admin; **Hoàn tiền** cấp cho Staff và Admin; Phương thức vận chuyển do Admin quản lý, Staff xem.
 
-**Quyết định 11/10/2026:** quyền Staff trong bảng trên được đồng bộ theo kiểm tra quyền của các Service giai đoạn 4; ngoại lệ duy nhất là Staff được xem thống kê. Các bước duyệt (phiếu nhập, xác nhận hoàn tiền thủ công, duyệt bảo hành/đổi trả, đăng tin) vẫn chỉ Admin trong Service.
+**Quyết định 11/10/2026:** quyền Staff trong bảng trên được đồng bộ theo kiểm tra quyền của các Service giai đoạn 4; ngoại lệ duy nhất là Staff được xem thống kê. Duyệt phiếu nhập, xác nhận hoàn tiền thủ công, duyệt/từ chối kết quả bảo hành, duyệt số tiền hoàn đổi/trả và đăng tin chỉ Admin trong Service. Với đổi/trả, Staff/Admin tiếp nhận yêu cầu (`Pending → Approved`) trước khi nhận hàng; trạng thái `Approved` ở bước này chưa phải quyết định về tiền. Staff/Admin được từ chối trước khi nhận hàng; chỉ Admin được từ chối sau khi nhận hàng.
 
 **Quyền cố định (quyết định 09/10/2026):** quyền của cả ba vai trò được khai báo trong `backend/app/core/rbac.py` và không có giao diện hay API để thay đổi. Muốn đổi quyền phải sửa code, chạy lại test và triển khai lại.
 

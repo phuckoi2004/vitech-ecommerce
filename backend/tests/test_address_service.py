@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime, timezone
 
 import pytest
-from sqlalchemy import create_engine, event
+from sqlalchemy import create_engine, event, text
 from sqlalchemy.orm import Session
 
 from app.models import Address, User
@@ -60,6 +60,21 @@ def test_customer_manages_own_addresses_and_switches_the_default(address_context
     service.delete_address(owner, first.AddressId)
     assert [address.AddressId for address in service.list_addresses(owner)] == [second.AddressId]
     assert db.get(Address, first.AddressId).IsDeleted
+
+
+def test_switch_flushes_old_default_before_inserting_or_promoting_another(address_context):
+    db, service = address_context
+    # Test-only uniqueness makes write ordering observable; production uses the shared owner lock.
+    db.execute(text('CREATE UNIQUE INDEX "UX_Test_Address_Default" ON "Addresses" ("UserId") '
+                    'WHERE "IsDefault" = 1 AND "IsDeleted" = 0'))
+    db.commit()
+    owner = add_actor(db, "Customer")
+    first = service.create_address(owner, new_address(default=True))
+    second = service.create_address(owner, new_address("Second", default=True))
+    service.update_address(owner, first.AddressId, AddressUpdate(IsDefault=True))
+    addresses = service.list_addresses(owner)
+    assert [address.AddressId for address in addresses if address.IsDefault] == [first.AddressId]
+    assert not service.get_address(owner, second.AddressId).IsDefault
 
 
 def test_customer_cannot_read_change_or_delete_someone_elses_address(address_context):

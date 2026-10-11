@@ -69,8 +69,12 @@ def statistics_period(date_from: date, date_to: date) -> tuple[datetime, datetim
         raise BusinessRuleError("Ngày bắt đầu phải trước hoặc bằng ngày kết thúc", code="invalid_statistics_period")
     if date_to == date.max:
         raise BusinessRuleError("Ngày kết thúc vượt giới hạn", code="invalid_statistics_period")
-    start = datetime.combine(date_from, time.min, tzinfo=VIETNAM_TZ).astimezone(timezone.utc)
-    end = datetime.combine(date_to + timedelta(days=1), time.min, tzinfo=VIETNAM_TZ).astimezone(timezone.utc)
+    try:
+        start = datetime.combine(date_from, time.min, tzinfo=VIETNAM_TZ).astimezone(timezone.utc)
+        end = datetime.combine(date_to + timedelta(days=1), time.min, tzinfo=VIETNAM_TZ).astimezone(timezone.utc)
+    except OverflowError:
+        # 00:00 ngày 0001-01-01 ở Việt Nam tương ứng năm 0 UTC, ngoài giới hạn datetime.
+        raise BusinessRuleError("Khoảng thời gian vượt giới hạn", code="invalid_statistics_period") from None
     return start, end
 
 

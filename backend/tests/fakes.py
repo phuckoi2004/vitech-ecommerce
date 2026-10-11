@@ -325,6 +325,9 @@ class FakeProductRepo(FakeRepo):
 class FakeVariantRepo(FakeRepo):
     model = ProductVariant
 
+    def get_by_id_for_update(self, id_, *, with_product=False):
+        return super().get_by_id_for_update(id_)
+
     def _low(self):
         rows = self._rows(lambda v: v.MinStockLevel > 0 and v.StockQuantity <= v.MinStockLevel and not v.IsDeleted)
         return sorted(rows, key=lambda v: (v.StockQuantity, v.Sku))
@@ -414,9 +417,18 @@ class FakeCartRepo(FakeRepo):
         rows = self._rows(lambda c: c.UserId == user_id)
         return rows[0] if rows else None
 
+    def get_by_user_for_update(self, user_id):
+        cart = self.get_by_user(user_id)
+        return self.get_by_id_for_update(cart.CartId) if cart is not None else None
+
 
 class FakeCartItemRepo(FakeRepo):
     model = CartItem
+
+    def create(self, values):
+        item = super().create(values)
+        item.product_variant = self.db.get(ProductVariant, item.ProductVariantId)
+        return item
 
     def list_by_cart(self, cart_id, *, is_selected=None, with_variant=False):
         return self._rows(lambda i: i.CartId == cart_id and (is_selected is None or i.IsSelected == is_selected))

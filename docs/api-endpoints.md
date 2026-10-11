@@ -9,8 +9,8 @@ Tài liệu sinh từ code router (`backend/app/routers`). Chạy backend rồi 
 - **Lỗi:** body `{"detail": "<thông báo tiếng Việt>", "code": "<mã lỗi>"}`. 400 vi phạm nghiệp vụ, 401 chưa đăng nhập, 403 không có quyền, 404 không tìm thấy, 409 trùng dữ liệu, 422 dữ liệu gửi lên sai, 429 quá giới hạn, 502 lỗi cổng thanh toán.
 - **Phân trang:** `page` (≥ 1), `page_size` (1–100, thống kê tồn kho 1–200); kết quả `{Items, Total, Page, PageSize}`.
 - **Tham số `status`** là bộ lọc trạng thái (tên query `status`).
-- **Ngày giờ** gửi lên phải kèm múi giờ, ví dụ `2026-10-01T00:00:00+07:00` (thiếu múi giờ → 422). Tham số `date_from`/`date_to` của thống kê là ngày lịch Việt Nam `YYYY-MM-DD`, tính cả hai đầu.
-- **Token hết hạn:** route `Công khai*` vẫn kiểm tra token nếu có gửi; token sai/hết hạn trả 401 (frontend làm mới token hoặc gọi lại không kèm token).
+- **Ngày giờ** gửi lên phải kèm múi giờ, ví dụ `2026-10-01T00:00:00+07:00` (thiếu múi giờ → 422). Tham số `date_from`/`date_to` của thống kê là ngày lịch Việt Nam `YYYY-MM-DD`, tính cả hai đầu. Khoảng ngày đảo ngược hoặc vượt giới hạn khi đổi sang UTC (ví dụ `date_from=0001-01-01`, `date_to=9999-12-31`) trả 400 với mã `invalid_statistics_period`.
+- **Đăng nhập tùy chọn:** route `Công khai*` kiểm tra Bearer token có giá trị; token sai/hết hạn/bị thu hồi trả 401 (frontend làm mới token hoặc gọi lại không kèm token). Không có header Authorization, header Basic hoặc Bearer rỗng được xử lý như khách chưa đăng nhập. Route bắt buộc đăng nhập vẫn trả 401 khi thiếu Bearer token hợp lệ.
 - Tên trường JSON giữ đúng tên cột (PascalCase), ví dụ `ProductVariantId`, `Quantity`.
 
 ## Tài khoản: sổ địa chỉ, thông báo

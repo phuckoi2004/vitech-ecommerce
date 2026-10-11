@@ -111,6 +111,8 @@ class WishlistService(BaseService):
 
 
 class CartService(BaseService):
+    """Mọi thao tác khóa Cart trước khi đọc/ghi dòng giỏ, cùng thứ tự khóa với checkout."""
+
     def __init__(self, session: Session, *, clock: Callable[[], datetime] = utc_now) -> None:
         super().__init__(session, clock=clock)
         self.carts = CartRepository(session)
@@ -130,10 +132,10 @@ class CartService(BaseService):
         """Thêm biến thể vào giỏ; nếu đã có thì cộng dồn Quantity (không tạo dòng trùng)."""
         require_role(actor, *CUSTOMER_ONLY)
         with self.transaction():
-            variant = self.variants.get_by_id(data.ProductVariantId)
+            cart = self._get_or_create(actor.user_id)
+            variant = self.variants.get_by_id_for_update(data.ProductVariantId, with_product=True)
             if not is_variant_sellable(variant):
                 raise NotFoundError("Không tìm thấy sản phẩm hoặc sản phẩm không còn bán", code="variant_not_available")
-            cart = self._get_or_create(actor.user_id)
             item = self.items.get_by_cart_and_variant(cart.CartId, variant.ProductVariantId)
             quantity = data.Quantity + (item.Quantity if item else 0)
             self._ensure_stock(variant.StockQuantity, quantity)
@@ -162,7 +164,7 @@ class CartService(BaseService):
             cart, item = self._get_owned_item(actor.user_id, cart_item_id)
             values = data.model_dump(exclude_unset=True)
             if "Quantity" in values:
-                variant = self.variants.get_by_id(item.ProductVariantId)
+                variant = self.variants.get_by_id_for_update(item.ProductVariantId, with_product=True)
                 if not is_variant_sellable(variant):
                     raise BusinessRuleError("Sản phẩm không còn bán", code="variant_not_available")
                 self._ensure_stock(variant.StockQuantity, values["Quantity"])
@@ -191,7 +193,7 @@ class CartService(BaseService):
     # ------------------------------------------------------------------ helpers
 
     def _get_or_create(self, user_id: uuid.UUID) -> Cart:
-        cart = self.carts.get_by_user(user_id)
+        cart = self.carts.get_by_user_for_update(user_id)
         if cart is not None:
             return cart
         try:
@@ -200,13 +202,15 @@ class CartService(BaseService):
                 self.carts.flush()
         except IntegrityError:
             # Request khác vừa tạo cart cho cùng user (UNIQUE UserId).
-            cart = self.carts.get_by_user(user_id)
+            cart = self.carts.get_by_user_for_update(user_id)
             if cart is None:
                 raise
-        return cart
+            return cart
+        # Giỏ vừa tạo cũng theo hợp đồng khóa chung, trước khi đọc bất kỳ CartItem nào.
+        return self.carts.get_by_user_for_update(user_id)
 
     def _get_owned_item(self, user_id: uuid.UUID, cart_item_id: uuid.UUID) -> tuple[Cart, CartItem]:
-        cart = self.carts.get_by_user(user_id)
+        cart = self.carts.get_by_user_for_update(user_id)
         item = self.items.get_by_id_and_cart(cart_item_id, cart.CartId) if cart else None
         if item is None:
             raise NotFoundError("Không tìm thấy sản phẩm trong giỏ hàng", code="cart_item_not_found")

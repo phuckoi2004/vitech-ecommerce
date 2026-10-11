@@ -177,6 +177,15 @@ class ProductRepository(BaseRepository[Product]):
 class ProductVariantRepository(BaseRepository[ProductVariant]):
     model = ProductVariant
 
+    def get_by_id_for_update(self, id_: uuid.UUID, *, with_product: bool = False) -> ProductVariant | None:
+        """Khóa biến thể; luồng giỏ hàng còn nạp lại Product để kiểm tra trạng thái bán hiện tại."""
+        if not with_product:
+            return super().get_by_id_for_update(id_)
+        stmt = (select(ProductVariant).where(ProductVariant.ProductVariantId == id_)
+                .options(selectinload(ProductVariant.product)).with_for_update(of=ProductVariant))
+        rows = self._scalars_for_update(stmt)
+        return rows[0] if rows else None
+
     def get_by_sku(self, sku: str) -> ProductVariant | None:
         return self.get_one(ProductVariant.Sku == sku)
 

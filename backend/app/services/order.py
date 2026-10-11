@@ -203,7 +203,8 @@ class OrderService(BaseService):
     def create_order(self, actor: Actor, data: OrderCreate) -> OrderDetailResponse:
         """Customer tạo đơn từ các CartItem đang được chọn trong giỏ của chính mình.
 
-        Trong MỘT transaction: khóa biến thể (FOR UPDATE, thứ tự id) → kiểm tra còn bán và tồn kho →
+        Trong MỘT transaction: khóa Cart trước khi đọc các dòng chọn → khóa biến thể (FOR UPDATE, thứ tự id) →
+        kiểm tra còn bán và tồn kho →
         tính giá ở server → áp coupon (khóa coupon) → tạo Order, OrderItems → trừ tồn kho →
         xóa CartItem đã đặt → ghi OrderStatusHistory → tạo thông báo. Lỗi ở bất kỳ bước nào: rollback toàn bộ.
         """
@@ -211,7 +212,7 @@ class OrderService(BaseService):
         customer_id = actor.user_id
         with self.transaction():
             customer = self._get_customer(customer_id)
-            cart = self.carts.get_by_user(customer_id)
+            cart = self.carts.get_by_user_for_update(customer_id)
             selected = self.cart_items.list_by_cart(cart.CartId, is_selected=True) if cart else []
             if not selected:
                 raise BusinessRuleError("Giỏ hàng chưa có sản phẩm được chọn", code="cart_empty")
