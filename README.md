@@ -31,6 +31,7 @@ Hạng thành viên và tích điểm không thuộc phạm vi triển khai củ
 | `docs/api-endpoints.md` | Danh sách API nghiệp vụ giai đoạn 6: đường dẫn, quyền, body, kết quả (sinh từ router) |
 | `docs/stage6-concurrency-fixes.md` | Sửa checkout trùng giỏ, bảo vệ database test và ghi địa chỉ mặc định đồng thời |
 | `docs/stage6-postgres-validation.md` | Kết quả 17 ca PostgreSQL giai đoạn 6, phạm vi bảo hành/coupon/chat/nội dung và lệnh chạy |
+| `docs/stage7-api-testing.md` | Giai đoạn 7: kiểm thử API qua HTTP theo 13 domain, ma trận mã lỗi 401/403/404/409/422/nghiệp vụ và cách chạy |
 | `docs/internal-endpoints.md` | Tài liệu về các điểm vào nội bộ và giới hạn sử dụng |
 | `docs/auth-spec.md` | Chính sách Auth/RBAC giai đoạn 5 đã được chọn khi tích hợp giai đoạn 4 |
 | `docs/auth-rbac.md` | Bảng quyền và phạm vi quản lý tài khoản |
@@ -631,6 +632,16 @@ nghiệp vụ đầy đủ tiếp tục được triển khai ở giai đoạn t
   Remove-Item Env:RUN_POSTGRES_TESTS
   ```
 
+- Kiểm thử API giai đoạn 7 (`tests/api/`, 13 domain): gọi API qua `TestClient` với đăng nhập JWT thật trên cùng
+  database test; mỗi test chạy trong một transaction và được rollback nên không để lại dữ liệu. Chạy cùng cờ trên:
+
+  ```powershell
+  $env:RUN_POSTGRES_TESTS = "1"; ..\.venv\Scripts\python.exe -m pytest tests\api -v
+  Remove-Item Env:RUN_POSTGRES_TESTS
+  ```
+
+  `tests/test_api_matrix.py` (chạy trong bộ mặc định) bảo đảm mỗi domain luôn có đủ nhóm thành công, 401, 403,
+  404, 409, 422 và lỗi nghiệp vụ. Chi tiết tại `docs/stage7-api-testing.md`.
 - Chạy migration lên database test: đặt tạm `DATABASE_URL` bằng giá trị `TEST_DATABASE_URL` trong phiên terminal
   rồi chạy `alembic upgrade head` (Alembic ưu tiên biến môi trường hơn `backend/.env`).
 - Phân biệt kết quả unit test, kiểm tra tĩnh và integration test.
@@ -717,8 +728,11 @@ Giai đoạn 4 được lấy từ commit `01bc0e2`; giai đoạn 5 được gi�
 - Sửa giới hạn ngày thống kê (11/10/2026): `date_from=0001-01-01` trả 400 với mã `invalid_statistics_period` trước truy vấn; các ngày hợp lệ sát biên và cách tính ngày Việt Nam được giữ nguyên.
 - Chốt phần API và kiểm thử Stage 6 (12/10/2026): đồng bộ mô tả quyền đổi/trả/bảo hành và xác thực tùy chọn; thêm workflow PostgreSQL cho bảo hành, coupon, chat, tin tức và banner. SePay/cron vận hành để sau theo yêu cầu; chi tiết tại `docs/stage6-postgres-validation.md`.
 
+- Stage 7 — API Testing (12/10/2026): 92 test API qua HTTP (`TestClient`, đăng nhập JWT thật) cho 13 domain Auth, User, Product, Cart, Order, Payment, Promotion, Purchase, Review, Warranty, Return, Chat, Content; mỗi domain có luồng thành công và các nhóm lỗi 401, 403, 404, 409, 422, lỗi nghiệp vụ. Chạy trên PostgreSQL test, mỗi test một transaction được rollback; khóa độc quyền database test cho mỗi lượt chạy. Chi tiết và ma trận tại `docs/stage7-api-testing.md`.
+
 ### Kết quả kiểm thử được báo cáo
 
+- Toàn bộ backend sau Stage 7 (12/10/2026), một lượt chạy có bật PostgreSQL: **1064 test và 657 subtest đạt**, 0 lỗi, trong 12 phút 39 giây — 955 test mặc định (gồm kiểm tra cấu trúc ma trận API), 17 ca PostgreSQL giai đoạn 6 và 92 test API giai đoạn 7, trên database test riêng (PostgreSQL 17.11, head `3d9f987f3c6f`). Bộ test API cũng được một lượt rà soát độc lập chạy riêng: 92/92 đạt.
 - Backend sau hoàn thiện test Stage 6 (12/10/2026): **952 test và 657 subtest đạt**, trong 27,52 giây. Bộ test mặc định dùng SQLite/bộ nhớ và các kiểm tra SQL/migration offline; **17 ca PostgreSQL** bỏ qua khi không bật cờ.
 - PostgreSQL mở rộng Stage 6 (12/10/2026): **17/17 ca đạt** trên database test riêng, PostgreSQL 17.11, head `3d9f987f3c6f`, trong 280,12 giây. Đã kiểm thử bảo hành sửa chữa/đổi máy có serial, coupon, chat, tin tức/banner, ngày thống kê vượt giới hạn cùng các luồng API và đồng thời hiện có. Kiểm tra sau cleanup: 44 bảng nghiệp vụ không còn dữ liệu test; revision migration giữ nguyên. Xem `docs/stage6-postgres-validation.md`.
 - PostgreSQL sau sửa ba lỗi (11/10/2026): **8/8 ca đạt** trên database test riêng, PostgreSQL 17.11, head `3d9f987f3c6f`, trong 101,80 giây. Đã kiểm chứng hai checkout cùng giỏ chỉ tạo một đơn và các cặp API ghi địa chỉ đồng thời chỉ giữ một mặc định. Kiểm tra sau cleanup: 44 bảng nghiệp vụ không còn dữ liệu test; revision migration giữ nguyên. Chi tiết và lệnh chạy tại `docs/stage6-concurrency-fixes.md`.
@@ -732,7 +746,7 @@ Giai đoạn 4 được lấy từ commit `01bc0e2`; giai đoạn 5 được gi�
 ### Công việc tiếp theo
 
 - Hoàn thiện và kiểm thử tích hợp Authentication và Authorization trên staging.
-- Phần API và kiểm thử Stage 6 đã hoàn thành trong phạm vi hiện tại; lưu các bản sửa/test mới vào Git trước khi chuyển sang tích hợp Frontend.
+- Stage 6 (API) và Stage 7 (kiểm thử API) đã hoàn thành trong phạm vi hiện tại; lưu các thay đổi vào Git trước khi chuyển sang tích hợp Frontend.
 - SePay và cron để sau theo yêu cầu người dùng: điền cấu hình SePay và `INTERNAL_CRON_SECRET`, đăng ký webhook trên SePay và lịch cron khi triển khai (xem `docs/internal-endpoints.md`).
 - Tích hợp Frontend với các API nghiệp vụ.
 - Kiểm thử tích hợp trên môi trường staging.

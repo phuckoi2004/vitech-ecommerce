@@ -109,7 +109,7 @@ def _truncate(engine):
 
 
 @pytest.fixture(scope="module")
-def pg():
+def pg(request):
     if not POSTGRES_TESTS_ENABLED:
         pytest.skip("set RUN_POSTGRES_TESTS=1 to run against TEST_DATABASE_URL")
     test_url, main_url = _setting("TEST_DATABASE_URL"), _setting("DATABASE_URL")
@@ -117,13 +117,15 @@ def pg():
         require_separate_test_database(test_url, main_url)
     except UnsafePostgresTestDatabase as error:
         pytest.fail(str(error), pytrace=False)
+    request.getfixturevalue("postgres_test_lock")  # one PostgreSQL test run at a time on this database
     engine = create_engine(test_url, pool_pre_ping=True)
     head = ScriptDirectory.from_config(Config(str(BACKEND / "alembic.ini"))).get_current_head()
     with engine.connect() as conn:
         version = conn.execute(text("select version_num from alembic_version")).scalar()
     if version != head:
         engine.dispose()
-        pytest.skip(f"test database is at {version}, expected {head}: run alembic upgrade head on it first")
+        pytest.fail(f"test database is at {version}, expected {head}: run alembic upgrade head on it first",
+                    pytrace=False)
     _truncate(engine)
 
     settings = AuthSettings(jwt_secret="integration" * 6, app_env="test")

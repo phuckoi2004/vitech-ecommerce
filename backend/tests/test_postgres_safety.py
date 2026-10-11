@@ -124,6 +124,16 @@ def test_credentials_do_not_form_part_of_generic_database_identity():
                               setting="second")
 
 
+class LockRecorder:
+    """Stands in for pytest's request: records when the run lock fixture is taken."""
+
+    def __init__(self, calls):
+        self.calls = calls
+
+    def getfixturevalue(self, name):
+        self.calls.append(name)
+
+
 def load_fixture_function(name, namespace):
     """Compile only the production function, avoiding its app/.env imports."""
     tree = ast.parse(SOURCE.read_text(encoding="utf-8"))
@@ -153,7 +163,7 @@ def test_fixture_refuses_unsafe_targets_before_creating_any_test_engine(main, te
     }
     fixture = load_fixture_function("pg", namespace)
     with pytest.raises(pytest.fail.Exception, match="refusing PostgreSQL writes or TRUNCATE"):
-        next(fixture())
+        next(fixture(LockRecorder(calls)))
     assert calls == []
 
 
@@ -167,7 +177,7 @@ def test_disabled_fixture_does_not_read_settings_or_create_an_engine():
     }
     fixture = load_fixture_function("pg", namespace)
     with pytest.raises(pytest.skip.Exception, match="RUN_POSTGRES_TESTS=1"):
-        next(fixture())
+        next(fixture(LockRecorder([])))
 
 
 def test_fixture_reaches_engine_creation_only_after_separation_is_checked():
@@ -193,8 +203,9 @@ def test_fixture_reaches_engine_creation_only_after_separation_is_checked():
     }
     fixture = load_fixture_function("pg", namespace)
     with pytest.raises(ReachedEngine):
-        next(fixture())
-    assert calls == ["guard", "engine"]
+        next(fixture(LockRecorder(calls)))
+    # The run lock (a connection to the test database) is only taken after the offline guard passed.
+    assert calls == ["guard", "postgres_test_lock", "engine"]
 
 
 def test_truncate_quotes_names_and_qualifies_the_public_schema():
