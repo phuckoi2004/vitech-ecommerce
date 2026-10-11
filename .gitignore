@@ -38,7 +38,8 @@ backend/.env
 coverage/
 .pytest_cache/
 pytest-cache-files-*/
-output/auth-preview/
+# Báo cáo kiểm thử và ảnh chụp được lưu local.
+/output/
 
 # Temporary files
 frontend/__tmp/
