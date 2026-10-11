@@ -4,7 +4,7 @@ Tài liệu này là **SOURCE OF TRUTH** cho database schema của VieTech.
 Nền tảng: `VieTech.docx` (mục 3.4.3) + các quyết định đã chốt của người dùng.
 Khi khác với `VieTech.docx`, tài liệu này được ưu tiên (quyết định trực tiếp của người dùng).
 
-Trạng thái: **chưa áp dụng vào database**, **chưa có SQLAlchemy Models**.
+Schema được ánh xạ bằng SQLAlchemy và quản lý phiên bản qua Alembic. Trạng thái database đang dùng cần đối chiếu với các migration đã áp dụng.
 
 ---
 
@@ -53,7 +53,7 @@ Ký hiệu trong các bảng dưới: **NN** = NOT NULL, **PK** = Primary Key, *
 | `Conversations.Status` | Open, Closed |
 | `NewsArticles.Status` | Draft, Published, Hidden |
 | `Promotions.DiscountType` | Percentage, FixedAmount |
-| `Users.Role` | Customer, Staff, Admin, SuperAdmin (theo `VieTech.docx` và `README.md`) |
+| `Users.Role` | Customer, Staff, Admin (theo quyết định trực tiếp của người dùng) |
 | `OrderStatusHistories.OldStatus` / `NewStatus` | Cùng tập giá trị với `Orders.OrderStatus` |
 
 ---
@@ -72,11 +72,11 @@ Ký hiệu trong các bảng dưới: **NN** = NOT NULL, **PK** = Primary Key, *
 | Gender | varchar(10) | | | |
 | DateOfBirth | date | | | |
 | AvatarUrl | varchar(500) | | | |
-| Role | varchar(20) | x | | CHECK Role IN (Customer, Staff, Admin, SuperAdmin) |
-| AccountStatus | varchar(20) | x | | |
+| Role | varchar(20) | x | | CHECK Role IN (Customer, Staff, Admin) |
+| AccountStatus | varchar(20) | x | | CHECK AccountStatus IN (Active, Locked) |
 | IsEmailVerified | boolean | x | false | |
-| OtpCode | varchar(10) | | | |
-| OtpExpiredAt | timestamptz | | | |
+| OtpCode | varchar(10) | | | 10 ký tự hex đầu của HMAC-SHA256 của OTP đang chờ, không lưu mã gốc |
+| OtpExpiredAt | timestamptz | | | Hạn của OTP đang chờ; cả hai về NULL khi đã dùng |
 | LockReason | text | | | |
 | LockedUntil | timestamptz | | | |
 | TotalSpent | numeric(15,2) | x | 0 | CHECK TotalSpent >= 0 |
@@ -386,7 +386,7 @@ Coupon chỉ lưu thông tin mã coupon và tham chiếu Promotion (bắt buộc
 | CouponId | uuid | x | gen_random_uuid() | PK |
 | PromotionId | uuid | x | | FK → Promotions, ON DELETE RESTRICT |
 | CreatedByUserId | uuid | x | | FK → Users, ON DELETE RESTRICT |
-| Code | varchar(50) | x | | UQ |
+| Code | varchar(50) | x | | UQ không phân biệt hoa thường: `UNIQUE INDEX ON "Coupons"(lower("Code"))` |
 | Name | varchar(255) | x | | |
 | UsageLimit | integer | | | CHECK UsageLimit >= 0 |
 | UsedCount | integer | x | 0 | CHECK UsedCount >= 0 |

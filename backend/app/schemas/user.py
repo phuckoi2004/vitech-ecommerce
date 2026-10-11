@@ -5,7 +5,7 @@ Không response schema nào chứa PasswordHash, OtpCode, OtpExpiredAt.
 
 import uuid
 from datetime import date, datetime
-from typing import Annotated
+from typing import Annotated, Literal
 
 from pydantic import Field
 
@@ -36,9 +36,9 @@ class UserRegister(RequestSchema):
 
 
 class AdminUserCreate(UserRegister):
-    """Quản trị viên tạo tài khoản (ví dụ tài khoản nhân viên)."""
+    """Quản trị viên chỉ tạo tài khoản nhân viên."""
 
-    Role: UserRole
+    Role: Literal["Staff"] = "Staff"
     AccountStatus: varchar(20)
 
 
@@ -60,11 +60,10 @@ class PasswordChange(RequestSchema):
 
 
 class AdminUserUpdate(RequestSchema):
-    """Phân quyền và khóa/mở khóa tài khoản (PATCH)."""
+    """Khóa/mở khóa tài khoản (PATCH), không đổi vai trò."""
 
     NULLABLE_FIELDS = frozenset({"LockReason", "LockedUntil"})
 
-    Role: UserRole | None = None
     AccountStatus: varchar(20) | None = None
     LockReason: str | None = None
     LockedUntil: datetime | None = None

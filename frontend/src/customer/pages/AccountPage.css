@@ -1,0 +1,148 @@
+.cacc-page { display: flex; flex-direction: column; gap: 16px; padding: 24px 0 40px; }
+
+.cacc-card { border: 1px solid #e6e9f0; border-radius: 14px; background: #fff; }
+
+.cacc-avatar { display: grid; place-items: center; flex-shrink: 0; overflow: hidden; border-radius: 50%; color: #6b8ac9; background: #eef3fc; font-weight: 700; }
+.cacc-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.cacc-avatar.is-medium { width: 52px; height: 52px; font-size: 20px; }
+.cacc-avatar.is-large { width: 92px; height: 92px; border: 4px solid #fff; font-size: 34px; }
+
+/* Summary: avatar, name and phone. */
+.cacc-summary { display: flex; align-items: center; gap: 16px; padding: 18px 22px; }
+.cacc-summary-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.cacc-summary-text strong { font-size: 17px; }
+.cacc-summary-text .cacc-phone { color: #6b768a; font-size: 13px; }
+
+/* Masked phone number with a show/hide toggle. */
+.cacc-phone { display: inline-flex; align-items: center; gap: 6px; }
+.cacc-phone > span { font-variant-numeric: tabular-nums; letter-spacing: 0.02em; }
+.cacc-eye { display: grid; place-items: center; width: 26px; height: 26px; padding: 0; border: 0; border-radius: 6px; color: #6b768a; background: transparent; cursor: pointer; }
+.cacc-eye:hover { color: #17243d; background: #e9edf4; }
+.cacc-eye:focus-visible { outline: 3px solid #df7b80; outline-offset: 1px; }
+.cacc-eye svg { width: 16px; height: 16px; }
+
+.cacc-body { display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 16px; align-items: start; }
+
+.cacc-menu { display: flex; flex-direction: column; gap: 4px; padding: 10px; }
+.cacc-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 0;
+  border-radius: 10px;
+  color: #17243d;
+  background: transparent;
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+
+/* Only the current item shows the red vertical bar. */
+.cacc-menu-item::before { content: ""; align-self: stretch; width: 3px; flex-shrink: 0; border-radius: 2px; background: transparent; }
+.cacc-menu-item:hover { background: #f6f8fc; }
+.cacc-menu-item.is-active { color: #d53239; background: #fff1f1; font-weight: 600; }
+.cacc-menu-item.is-active::before { background: #d53239; }
+/* Sign-out sits under the sections, set apart by a divider. */
+.cacc-menu-item.is-logout { margin-top: 4px; border-top: 1px solid #eef1f6; border-radius: 0 0 10px 10px; color: #d53239; }
+.cacc-menu-item.is-logout:hover:not(:disabled) { background: #fff5f5; }
+.cacc-menu-item:disabled { cursor: wait; opacity: 0.6; }
+
+/* Change-password dialog. Tailwind's reset removes the auto margin that centers it. */
+.cacc-dialog {
+  width: min(440px, calc(100vw - 32px));
+  margin: auto;
+  padding: 28px 26px 26px;
+  border: 0;
+  border-radius: 16px;
+  color: #17243d;
+  background: #fff;
+  box-shadow: 0 20px 50px rgb(23 36 61 / 22%);
+  font-family: "Segoe UI", Arial, sans-serif;
+}
+
+.cacc-dialog::backdrop { background: rgb(17 26 52 / 45%); }
+.cacc-dialog h2 { margin: 0; font-size: 20px; font-weight: 700; }
+.cacc-dialog-lead { margin: 6px 0 0; color: #6b768a; font-size: 13px; line-height: 1.5; }
+.cacc-dialog-body { display: flex; flex-direction: column; gap: 14px; margin-top: 18px; }
+.cacc-dialog .cacc-actions .cacc-button { flex: 1; }
+
+.cacc-panel { padding: 24px 26px 28px; }
+.cacc-panel-heading h1 { margin: 0; font-size: 22px; font-weight: 700; }
+.cacc-panel-heading p { margin: 6px 0 0; color: #6b768a; font-size: 13px; }
+.cacc-placeholder { margin: 20px 0 0; color: #6b768a; font-size: 14px; }
+
+.cacc-profile { display: grid; grid-template-columns: 170px minmax(0, 1fr); gap: 22px; margin-top: 20px; }
+.cacc-photo { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 22px 12px; border-radius: 12px; background: #eef3fc; align-self: start; }
+
+.cacc-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 18px; }
+.cacc-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.cacc-field-label { color: #6b768a; font-size: 12px; }
+.cacc-input {
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 12px;
+  border: 1px solid #dfe3eb;
+  border-radius: 8px;
+  outline: none;
+  color: #17243d;
+  background: #fff;
+  font: inherit;
+  font-size: 14px;
+  transition: border-color 160ms, box-shadow 160ms;
+}
+
+.cacc-input:focus { border-color: #d95b60; box-shadow: 0 0 0 3px rgb(213 50 57 / 8%); }
+.cacc-input:disabled { color: #8491a4; background: #fbfcfe; cursor: not-allowed; }
+.cacc-input:read-only:not(select) { color: #6b768a; background: #f4f6fa; }
+.cacc-input::placeholder { color: #a0a9b8; }
+
+.cacc-photo-frame { position: relative; display: inline-flex; }
+.cacc-photo-busy { position: absolute; inset: 0; display: grid; place-items: center; border-radius: 50%; color: #d53239; background: rgb(255 255 255 / 70%); }
+
+.cacc-notice { margin: 16px 0 0; padding: 10px 12px; border: 1px solid #f5dcdf; border-radius: 9px; color: #b9313b; background: #fff4f4; font-size: 13px; }
+.cacc-notice.is-success { border-color: #d6ecdf; color: #2a805b; background: #f1faf5; }
+
+.cacc-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 22px; }
+
+.cacc-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 8px 20px;
+  border: 1px solid #d53239;
+  border-radius: 8px;
+  color: #fff;
+  background: #d53239;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 160ms;
+}
+
+.cacc-button:hover:not(:disabled) { background: #c12831; }
+.cacc-button:disabled { cursor: not-allowed; opacity: 0.55; }
+.cacc-button .spinner { width: 15px; height: 15px; margin-right: 8px; }
+.cacc-button.is-outline { color: #d53239; background: #fff; }
+.cacc-button.is-outline:hover:not(:disabled) { background: #fff5f5; }
+.cacc-button.is-small { min-height: 34px; padding: 6px 16px; font-size: 13px; }
+.cacc-button:focus-visible, .cacc-menu-item:focus-visible { outline: 3px solid #df7b80; outline-offset: 2px; }
+
+.cacc-loading { display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 320px; color: #6b768a; font-size: 14px; }
+.cacc-loading .spinner { color: #d53239; }
+
+@media (max-width: 860px) {
+  .cacc-body { grid-template-columns: minmax(0, 1fr); }
+  .cacc-menu { flex-direction: row; overflow-x: auto; }
+  .cacc-menu-item { flex-shrink: 0; }
+}
+
+@media (max-width: 600px) {
+  .cacc-page { padding: 16px 0 28px; }
+  .cacc-panel { padding: 20px 16px 22px; }
+  .cacc-profile, .cacc-fields { grid-template-columns: minmax(0, 1fr); }
+  .cacc-actions .cacc-button { flex: 1; }
+}

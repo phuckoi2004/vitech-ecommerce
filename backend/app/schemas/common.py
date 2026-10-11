@@ -33,7 +33,7 @@ def varchar(length: int) -> Any:
 # Giá trị hợp lệ của các cột status (khớp CHECK trong docs/database-schema.md)
 # ---------------------------------------------------------------------------
 
-UserRole = Literal["Customer", "Staff", "Admin", "SuperAdmin"]
+UserRole = Literal["Customer", "Staff", "Admin"]
 OrderStatusValue = Literal["Pending", "Confirmed", "Processing", "Shipping", "Delivered", "Completed", "Cancelled"]
 PaymentStatusValue = Literal["Pending", "Paid", "Failed", "Refunded", "Cancelled"]
 ProductStatus = Literal["Draft", "Active", "Inactive", "Discontinued"]

@@ -16,9 +16,15 @@ Hệ thống gồm:
 - AI Chatbot tư vấn sản phẩm.
 - Product Recommendation Engine.
 
+Hạng thành viên và tích điểm không thuộc phạm vi triển khai của VieTech.
+
 Tài liệu đặc tả:
 
 - `docs/database-schema.md`: **SOURCE OF TRUTH** cho database schema.
+- `docs/auth-spec.md`: đặc tả Giai đoạn 5 và các chính sách Auth/RBAC.
+- `docs/auth-rbac.md`: bảng quyền theo vai trò và phạm vi quản lý tài khoản.
+- `docs/requirements-revision.md`: nội dung nghiệp vụ đã chỉnh sau rà soát báo cáo.
+- `docs/auth-setup.md`: chạy Auth API, cấu hình SMTP/Redis và khởi tạo Admin đầu tiên.
 - `VieTech.docx`: tài liệu tham khảo về nghiệp vụ, yêu cầu, ERD và thiết kế tổng thể.
 
 ---
@@ -290,9 +296,27 @@ Hệ thống có các role:
 - Customer
 - Staff
 - Admin
-- SuperAdmin
 
 Sử dụng RBAC để kiểm soát quyền truy cập theo role.
+
+### Giai đoạn 5 — Auth/RBAC
+
+Backend đã có API đăng ký/OTP, đăng nhập, refresh/logout, quên/reset/đổi mật khẩu,
+đổi email qua OTP, hồ sơ, avatar, địa chỉ mặc định và quản lý tài khoản.
+Xem `docs/auth-setup.md` để chạy và cấu hình.
+
+OTP đăng ký chỉ tạo Customer sau xác minh; không có đăng ký công khai Staff/Admin.
+Admin chỉ xem/quản lý Customer/Staff và tạo Staff; không tạo hoặc quản lý Admin khác,
+không nâng/hạ role. Admin đầu tiên tạo bằng `python -m app.cli.create_admin`;
+quyền được kiểm tra ở backend.
+Phiên nội bộ và khách hàng tách theo portal. Mã OTP và refresh token không trả trong JSON.
+
+Chế độ phát triển dùng state trong bộ nhớ với một worker. Production yêu cầu Redis;
+gửi OTP thực tế yêu cầu SMTP. Frontend có đăng nhập/khôi phục mật khẩu cho
+Staff/Admin tại `/admin/login`, hồ sơ và quản lý tài khoản nội bộ. Khách hàng dùng
+`/dang-nhap`, `/dang-ky`, `/quen-mat-khau` và `/tai-khoan`; form quên mật khẩu chỉ nhận email.
+Hướng dẫn chạy nằm trong `docs/auth-setup.md`. Các thao tác mua bán và giao diện
+nghiệp vụ đầy đủ tiếp tục được triển khai ở giai đoạn tương ứng.
 
 ---
 

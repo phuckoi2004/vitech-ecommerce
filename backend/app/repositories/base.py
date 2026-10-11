@@ -37,7 +37,7 @@ class BaseRepository(Generic[ModelT]):
 
     def get_by_id_for_update(self, id_: Any) -> ModelT | None:
         """Lấy theo primary key và khóa dòng (SELECT ... FOR UPDATE) trong transaction hiện tại."""
-        return self.session.get(self.model, id_, with_for_update=True)
+        return self.session.get(self.model, id_, with_for_update=True, populate_existing=True)
 
     def get_one(self, *where: ColumnElement[bool]) -> ModelT | None:
         """Lấy một dòng theo điều kiện; lỗi MultipleResultsFound nếu có nhiều hơn một dòng."""
