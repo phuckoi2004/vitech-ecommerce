@@ -72,15 +72,19 @@ class AccountTests(unittest.TestCase):
         self.assertLessEqual(ROLE_PERMISSIONS["Staff"], ROLE_PERMISSIONS["Admin"])
         for role in ("Staff", "Admin"):
             for permission in ("chat:create", "chat:view", "purchases:view", "purchases:create",
-                               "purchase_history:view", "suppliers:view", "orders:update"):
+                               "purchases:update", "purchases:delete", "purchase_history:view",
+                               "suppliers:view", "orders:update", "payment_methods:view",
+                               "revenue_reports:view", "order_reports:view"):
                 self.assertTrue(has_permission(role, permission), (role, permission))
-        for permission in ("purchases:update", "purchases:delete", "products:create",
-                           "promotions:view", "suppliers:create", "payment_methods:update",
-                           "inventory:update", "users:manage"):
+        # Stage 4 service rules: these stay Admin-only.
+        for permission in ("products:create", "promotions:view", "suppliers:create",
+                           "payment_methods:update", "inventory:update", "users:manage",
+                           "refunds:update", "refunds:delete", "reviews:view", "reviews:delete",
+                           "news:view", "news:create", "banners:view", "banners:create"):
             self.assertFalse(has_permission("Staff", permission), permission)
             self.assertTrue(has_permission("Admin", permission), permission)
-        # Decisions of 09/10/2026: refunds for Staff and Admin, exports for Admin only.
-        for action in ("view", "create", "update", "delete"):
+        # Staff performs refunds (view/create); exports are Admin-only (decision 09/10/2026).
+        for action in ("view", "create"):
             self.assertTrue(has_permission("Staff", f"refunds:{action}"))
         for function in ADMIN_FUNCTIONS:
             self.assertFalse(has_permission("Staff", f"{function}:export"), function)

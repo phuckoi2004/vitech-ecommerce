@@ -1,4 +1,4 @@
-"""Statistics service (đợt 5.6): thống kê quản trị chỉ đọc cho Admin.
+"""Statistics service (đợt 5.6): thống kê quản trị chỉ đọc cho Staff/Admin.
 
 Nguồn nghiệp vụ: docs/business-requirements.md mục 15 (Admin xem số đơn, doanh thu, hàng bán; chỉ tính đơn/trạng thái
 phù hợp định nghĩa doanh thu; Decimal; tránh N+1/tải toàn bảng) và quy tắc đã thống nhất ở đợt 5.1 (mục 5.6):
@@ -9,7 +9,7 @@ phù hợp định nghĩa doanh thu; Decimal; tránh N+1/tải toàn bảng) và
 Khoảng thời gian: ngày lịch Việt Nam, tính cả DateFrom và DateTo → khoảng UTC nửa mở [00:00 DateFrom, 00:00 ngày sau
 DateTo) (giờ Việt Nam), dùng thống nhất cho mọi truy vấn. Đơn hàng lọc theo OrderedAt; doanh thu/giá vốn/sản phẩm theo
 DeliveredAt. Chỉ đọc: không đổi trạng thái đơn, thanh toán hay tồn kho. Tổng hợp trong SQL (StatisticsRepository).
-Chỉ Admin (Staff "xem thống kê theo quyền được cấp" chưa có quy định cụ thể → chưa mở).
+Staff/Admin được xem theo ma trận Auth/RBAC giai đoạn 5; xuất báo cáo vẫn chỉ Admin.
 """
 
 from collections.abc import Callable
@@ -32,7 +32,7 @@ from app.schemas import (
     TopProductResponse,
 )
 
-from .actor import ADMIN_ONLY, Actor, require_role
+from .actor import STAFF_OR_ADMIN, Actor, require_role
 from .base import BaseService, utc_now
 from .exceptions import BusinessRuleError
 from .warranty_period import VIETNAM_TZ
@@ -160,7 +160,7 @@ class StatisticsService(BaseService):
 
     def inventory_statistics(self, actor: Actor, *, page: int = 1, page_size: int = 50) -> InventoryStatisticsResponse:
         """Tồn khả dụng theo biến thể và số serial theo trạng thái (biến thể quản lý serial). Không đổi tồn kho."""
-        require_role(actor, *ADMIN_ONLY)
+        require_role(actor, *STAFF_OR_ADMIN)
         offset, limit = self._page_args(page, page_size)
         rows = self.stats.list_inventory(offset=offset, limit=limit)
         counts = self.stats.serial_status_counts([row.product_variant_id for row in rows])
@@ -195,7 +195,7 @@ class StatisticsService(BaseService):
         )
 
     def _period(self, actor: Actor, date_from: date, date_to: date) -> tuple[StatisticsPeriod, datetime, datetime]:
-        require_role(actor, *ADMIN_ONLY)
+        require_role(actor, *STAFF_OR_ADMIN)
         start, end = statistics_period(date_from, date_to)
         return StatisticsPeriod(DateFrom=date_from, DateTo=date_to, StartsAt=start, EndsBefore=end), start, end
 

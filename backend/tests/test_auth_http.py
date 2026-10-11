@@ -271,6 +271,14 @@ def test_admin_reads_a_customer_default_address_and_other_roles_cannot(http_cont
     # A customer without a saved address returns null rather than an error.
     no_address = client.get(f"/admin/users/{other['id']}/default-address", headers=admin_headers)
     assert no_address.status_code == 200 and no_address.json() is None
+    # Staff accounts have no address book (Phase 4 rule): saving is refused, reading returns null.
+    staff_headers = authorization(login(client, staff["email"], "admin").json()["access_token"])
+    assert client.get("/users/me/default-address", headers=staff_headers).status_code == 403
+    assert client.put("/users/me/default-address", headers=staff_headers, json={
+        "Province": "Hà Nội", "Ward": "Phường A", "DetailAddress": "1"}).status_code == 403
+    assert client.get("/users/me/default-address", headers=admin_headers).status_code == 403
+    staff_address = client.get(f"/admin/users/{staff['id']}/default-address", headers=admin_headers)
+    assert staff_address.status_code == 200 and staff_address.json() is None
     # Admin accounts stay outside the managed scope, like the detail endpoint.
     assert client.get(f"/admin/users/{admin['id']}/default-address", headers=admin_headers).status_code == 404
     assert client.get(f"/admin/users/{uuid.uuid4()}/default-address", headers=admin_headers).status_code == 404
@@ -278,7 +286,6 @@ def test_admin_reads_a_customer_default_address_and_other_roles_cannot(http_cont
     assert client.delete(f"/admin/users/{customer['id']}", headers=admin_headers).status_code == 204
     assert client.get(f"/admin/users/{customer['id']}/default-address", headers=admin_headers).json()["Province"] == "Hà Nội"
 
-    staff_headers = authorization(login(client, staff["email"], "admin").json()["access_token"])
     other_headers = authorization(login(client, other["email"]).json()["access_token"])
     for headers in (staff_headers, other_headers):
         assert client.get(f"/admin/users/{customer['id']}/default-address", headers=headers).status_code == 403

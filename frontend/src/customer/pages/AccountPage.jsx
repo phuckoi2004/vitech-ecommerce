@@ -141,6 +141,8 @@ function ProfileSection({ session, onLeave }) {
   // undefined while the saved address is loading; null when the customer has none.
   const [address, setAddress] = useState(undefined)
   const [form, setForm] = useState(null)
+  const [loadError, setLoadError] = useState('')
+  const [reload, setReload] = useState(0)
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [notice, setNotice] = useState(null)
@@ -151,10 +153,18 @@ function ProfileSection({ session, onLeave }) {
   useEffect(() => {
     let active = true
     withAccessToken(getDefaultAddress)
-      .catch(() => null)
       .then((saved) => { if (active) setAddress(saved) })
+      .catch((failure) => { if (active) setLoadError(failure.message) })
     return () => { active = false }
-  }, [withAccessToken])
+  }, [withAccessToken, reload])
+
+  if (loadError) return <>
+    <p className="cacc-notice" role="alert">{loadError}</p>
+    <button type="button" className="cacc-button is-outline" onClick={() => {
+      setLoadError('')
+      setReload((value) => value + 1)
+    }}>Thử lại</button>
+  </>
 
   // Fill the form once the address arrives; later saves reset it from the server copy.
   if (!form && address !== undefined) setForm(formFrom(user, address))

@@ -36,8 +36,8 @@ class ProfileTests(unittest.TestCase):
         self.db = Session(self.engine, autoflush=False)
         self.service = UserService(self.db, SimpleNamespace(sessions=Mock()))
         identity = uuid.uuid4()
-        self.user = User(UserId=identity, FullName="Admin VieTech", Email=f"{identity}@example.com",
-                         PhoneNumber="0912345678", PasswordHash="test-hash", Role="Admin",
+        self.user = User(UserId=identity, FullName="Khách VieTech", Email=f"{identity}@example.com",
+                         PhoneNumber="0912345678", PasswordHash="test-hash", Role="Customer",
                          AccountStatus="Active", IsEmailVerified=True, TotalSpent=Decimal("0"),
                          TotalOrders=0, IsDeleted=False)
         self.db.add(self.user)
@@ -164,7 +164,7 @@ class ProfileTests(unittest.TestCase):
         first = self.service.save_default_address(self.user, DefaultAddressUpdate(
             Province=" Hà Nội ", Ward="Phường Hoàn Kiếm", DetailAddress="123 Đường ABC"))
         self.assertEqual((first.Province, first.ReceiverName, first.ReceiverPhone, first.IsDefault),
-                         ("Hà Nội", "Admin VieTech", "0912345678", True))
+                         ("Hà Nội", "Khách VieTech", "0912345678", True))
         second = self.service.save_default_address(self.user, DefaultAddressUpdate(
             Province="TP. Hồ Chí Minh", Ward="Phường Bến Nghé", DetailAddress="1 Lê Lợi"))
         self.assertEqual(second.AddressId, first.AddressId)
@@ -176,6 +176,19 @@ class ProfileTests(unittest.TestCase):
             DefaultAddressUpdate(Province="Hà Nội", Ward="  ", DetailAddress="123")
         with self.assertRaises(ValidationError):
             DefaultAddressUpdate(Province="Hà Nội", DetailAddress="123")
+
+    def test_staff_and_admin_have_no_address_book(self):
+        for role in ("Staff", "Admin"):
+            self.user.Role = role
+            self.db.commit()
+            with self.subTest(role=role):
+                for call in (lambda: self.service.get_default_address(self.user),
+                             lambda: self.service.save_default_address(self.user, DefaultAddressUpdate(
+                                 Province="Hà Nội", Ward="Phường A", DetailAddress="123"))):
+                    with self.assertRaises(AuthError) as caught:
+                        call()
+                    self.assertEqual(caught.exception.status_code, 403)
+        self.assertEqual(self.db.query(Address).count(), 0)
 
     def test_locked_account_cannot_change_avatar_or_address(self):
         self.user.AccountStatus = "Locked"

@@ -218,7 +218,6 @@ VieTech/
 │   ├── alembic.ini
 │   ├── tests/
 │   ├── .env                      # bí mật, bị .gitignore, không commit
-│   ├── .env.example
 │   ├── auth.env.example          # biến cấu hình Auth/SMTP/Redis mẫu
 │   ├── requirements.txt
 │   └── requirements-dev.txt
@@ -263,7 +262,7 @@ Quy định bảo mật:
 
 - Không hard-code database credentials trong source code.
 - Không commit `backend/.env` hoặc các file chứa bí mật.
-- `backend/.env.example` chỉ chứa giá trị mẫu và không được chứa credentials thật.
+- `backend/auth.env.example` chỉ chứa giá trị mẫu và không được chứa credentials thật.
 - Không in hoặc tiết lộ thông tin kết nối trong log, response API hoặc báo cáo.
 - Chỉ kết nối database thực tế khi được yêu cầu hoặc cho phép.
 
@@ -304,13 +303,15 @@ Các nguyên tắc:
 
 ### 5.4. Trạng thái migration hiện tại
 
-Khi tích hợp giai đoạn 4/5, phát hiện hai revision trùng ID (`b5d3a7c912e4`, `213feab4a632`) và nhánh local `61f7b0a38d92`. Người dùng đã duyệt phương án bỏ file trùng, giữ lịch sử hai nhánh và thêm merge revision `c6a4e2b8d901` sau SePay. Graph sau tích hợp có 21 file, một root và một head. Chi tiết và các guard xử lý ancestor có thể chưa chạy nằm trong `docs/stage4-stage5-integration.md`; chưa chạy migration trên database thật.
+Khi tích hợp giai đoạn 4/5, phát hiện hai revision trùng ID (`b5d3a7c912e4`, `213feab4a632`) và nhánh local `61f7b0a38d92`. Người dùng đã duyệt phương án bỏ file trùng, giữ lịch sử hai nhánh và thêm merge revision `c6a4e2b8d901` sau SePay. Graph sau tích hợp có 21 file, một root và một head. Chi tiết và các guard xử lý ancestor có thể chưa chạy nằm trong `docs/stage4-stage5-integration.md`.
 
-Theo trạng thái dự án đã được rà soát trước khi commit Stage 4:
+**Trạng thái database thực tế (kiểm tra 11/10/2026):** đã chạy `alembic upgrade head` lên database Supabase; `alembic_version` = `c6a4e2b8d901` (head). Database có đủ 45 bảng của Models (cộng `alembic_version`), không thiếu/thừa bảng hoặc cột so với Models; RLS bật trên mọi bảng. Dữ liệu tài khoản có sẵn được giữ nguyên.
+
+Lịch sử: theo trạng thái dự án đã được rà soát trước khi commit Stage 4 (trước khi chạy migration):
 
 - Chuỗi migration gồm 19 file, tuyến tính, một root (`2cb2e7418b06`) và một head (`b81569bc34b0`); không có revision trùng hoặc dependency bị thiếu.
 - 2 file đã có trong lịch sử Git trước Stage 4 (`2cb2e7418b06`, `4ee28b0095ef`); 17 file còn lại được bổ sung trong commit Stage 4 (`9489aac`).
-- `docs/database-schema.md` ghi các migration từ `763f153af842` trở đi là chưa áp dụng. Trạng thái của các migration trước đó trên database thực tế chưa được ghi nhận, phải kiểm tra bằng `alembic_version`.
+- Khi đó `docs/database-schema.md` ghi các migration từ `763f153af842` trở đi là chưa áp dụng (đã cập nhật sau khi áp dụng ngày 11/10/2026). Trước mỗi lần chạy migration vẫn phải kiểm tra `alembic_version` trên database.
 - Chưa có migration nào trong 17 file mới được áp dụng hoặc kiểm thử trên PostgreSQL thật. Các kiểm tra offline (đọc tĩnh chuỗi revision, phát lại thao tác so với Model) không thay thế cho việc kiểm thử trên database thực tế.
 
 Toàn bộ chuỗi migration (`*` = bổ sung trong Stage 4):
@@ -374,7 +375,7 @@ Danh sách dưới đây tóm tắt các nhóm bảng của hệ thống. Thuộ
 - `Notifications`
 - `OtpChallenges`
 
-`OtpChallenges` là bảng bổ sung của giai đoạn 4; API Auth giai đoạn 5 hiện dùng state cho đăng ký và HMAC trong `Users.OtpCode` cho reset mật khẩu/đổi email. Xem `docs/auth-spec.md`. Migration `a7c3e9d1f285` chưa được áp dụng theo trạng thái đã ghi nhận.
+`OtpChallenges` là bảng bổ sung của giai đoạn 4; API Auth giai đoạn 5 hiện dùng state cho đăng ký và HMAC trong `Users.OtpCode` cho reset mật khẩu/đổi email. Xem `docs/auth-spec.md`. Migration `a7c3e9d1f285` đã được áp dụng ngày 11/10/2026; bảng có trên database nhưng API Auth giai đoạn 5 không dùng.
 
 ### 6.2. Quản lý danh mục và sản phẩm
 
@@ -389,7 +390,7 @@ Danh sách dưới đây tóm tắt các nhóm bảng của hệ thống. Thuộ
 
 `StockAdjustments` lưu lịch sử điều chỉnh tồn kho. `StockAdjustmentSerials` ghi nhận serial thuộc phiếu điều chỉnh In/Out.
 
-Các migration liên quan gồm `763f153af842` và `8b7e3d1c5a29`; chưa được áp dụng theo trạng thái đã ghi nhận.
+Các migration liên quan gồm `763f153af842` và `8b7e3d1c5a29`; đã được áp dụng ngày 11/10/2026.
 
 ### 6.3. Quản lý yêu thích và giỏ hàng
 
@@ -407,7 +408,7 @@ Các migration liên quan gồm `763f153af842` và `8b7e3d1c5a29`; chưa đượ
 - `ShipmentReturns`
 - `ShipmentReturnItems`
 
-`ShipmentReturns` và `ShipmentReturnItems` hỗ trợ ghi nhận hàng của đơn đã hủy trong quá trình giao hàng cần quay về kho. Migration `5d1f9a3c7e64` chưa được áp dụng theo trạng thái đã ghi nhận.
+`ShipmentReturns` và `ShipmentReturnItems` hỗ trợ ghi nhận hàng của đơn đã hủy trong quá trình giao hàng cần quay về kho. Migration `5d1f9a3c7e64` đã được áp dụng ngày 11/10/2026.
 
 ### 6.5. Quản lý thanh toán và đối soát
 
@@ -429,7 +430,7 @@ Các migration liên quan gồm:
 - `d3326a8fbc5c`: đối soát thanh toán.
 - `b81569bc34b0`: sự kiện webhook SePay và các thay đổi liên quan.
 
-Các migration này chưa được áp dụng theo trạng thái đã ghi nhận.
+Các migration này đã được áp dụng ngày 11/10/2026.
 
 ### 6.6. Quản lý khuyến mãi
 
@@ -446,7 +447,7 @@ Các migration này chưa được áp dụng theo trạng thái đã ghi nhận
 - `PurchaseReceipts`
 - `PurchaseReceiptItems`
 
-Các bảng phiếu nhận hàng ghi nhận lịch sử từng lần nhận hàng. Migration `e2b8c4f6a913` chưa được áp dụng theo trạng thái đã ghi nhận.
+Các bảng phiếu nhận hàng ghi nhận lịch sử từng lần nhận hàng. Migration `e2b8c4f6a913` đã được áp dụng ngày 11/10/2026.
 
 ### 6.8. Quản lý đánh giá
 
@@ -458,7 +459,7 @@ Các bảng phiếu nhận hàng ghi nhận lịch sử từng lần nhận hàn
 - `Conversations`
 - `Messages`
 
-Hội thoại của khách hàng với chatbot AI hoặc với nhân viên. Ràng buộc mỗi khách hàng tối đa một hội thoại đang mở và CHECK cho chế độ/loại tin nhắn thuộc migration `c8d2f4a6b1e3` (chưa áp dụng theo trạng thái đã ghi nhận).
+Hội thoại của khách hàng với chatbot AI hoặc với nhân viên. Ràng buộc mỗi khách hàng tối đa một hội thoại đang mở và CHECK cho chế độ/loại tin nhắn thuộc migration `c8d2f4a6b1e3` (đã áp dụng ngày 11/10/2026).
 
 ### 6.10. Quản lý bảo hành và đổi trả
 
@@ -669,7 +670,7 @@ Không tự ý suy đoán hoặc âm thầm thay đổi yêu cầu để làm ch
 
 ## 11. Trạng thái phát triển dự án
 
-Giai đoạn 4 được lấy từ commit `01bc0e2`; giai đoạn 5 được giữ từ checkpoint local `935281a`. Khi tích hợp, người dùng chọn giữ chính sách Auth/RBAC giai đoạn 5 và đưa các nghiệp vụ giai đoạn 4 vào.
+Giai đoạn 4 được lấy từ commit `01bc0e2`; giai đoạn 5 được giữ từ checkpoint local `935281a`. Khi tích hợp, người dùng chọn giữ chính sách Auth (tài khoản, đăng nhập, OTP, phiên) giai đoạn 5 và đưa các nghiệp vụ giai đoạn 4 vào. Quyền của các Service nghiệp vụ giữ theo giai đoạn 4, ngoại lệ Staff được xem thống kê; ma trận `backend/app/core/rbac.py` đã được đồng bộ theo các quyền này. Sổ địa chỉ chỉ dành cho Customer.
 
 ### Đã hoàn thành
 
@@ -685,14 +686,16 @@ Giai đoạn 4 được lấy từ commit `01bc0e2`; giai đoạn 5 được gi�
 - Bổ sung bộ kiểm thử tự động.
 - Bổ sung tài liệu nghiệp vụ, schema và điểm vào nội bộ.
 - Commit Stage 4 tại commit `9489aac`.
+- Đã áp dụng toàn bộ migration lên database Supabase (head `c6a4e2b8d901`).
+- Chuẩn bị cho Stage 6: dependency `get_current_actor`/`get_optional_actor` (`backend/app/core/dependencies.py`) tạo `Actor` từ người dùng đã xác thực; lỗi nghiệp vụ `ServiceError` được chuyển thành HTTP 4xx/502 (`backend/app/routers/errors.py`).
 
 ### Kết quả kiểm thử được báo cáo
 
-- Kiểm tra tích hợp local sau ghép migration: 780 test backend và 619 subtest đạt, gồm 12 test graph/SQL migration offline; không kết nối PostgreSQL thật.
-- Frontend: 35 test đạt, lint đạt, build đạt với `npm run build -- --configLoader native` trong môi trường Windows hiện tại.
+- Backend (11/10/2026): 799 test và 628 subtest đạt, gồm các test graph/SQL migration offline; bộ test dùng SQLite/bộ nhớ, không kết nối PostgreSQL thật.
+- Frontend (11/10/2026): 37 test đạt, lint đạt, build đạt với `npm run build -- --configLoader native` trong môi trường Windows hiện tại.
 - Trước tích hợp, giai đoạn 4 báo cáo 684 test chạy thành công bằng `unittest` và đã chạy lặp lại.
 - Chưa có integration test xác nhận toàn bộ hệ thống trên PostgreSQL thật.
-- Các migration mới chưa được áp dụng vào database thật.
+- Migration đã chạy thành công trên database Supabase (11/10/2026); cấu trúc bảng/cột đã được đối chiếu với Models.
 
 ### Công việc tiếp theo
 
@@ -700,7 +703,6 @@ Giai đoạn 4 được lấy từ commit `01bc0e2`; giai đoạn 5 được gi�
 - Stage 6: Router/API cho các nghiệp vụ mua bán, kho, thanh toán và các nhóm còn lại.
 - Tích hợp Frontend với các API nghiệp vụ.
 - Kiểm thử tích hợp trên môi trường staging.
-- Kiểm tra và áp dụng migration theo quy trình được phê duyệt.
 - Phát triển AI Chatbot và Product Recommendation Engine theo kế hoạch.
 
 Trạng thái trên là mốc tiến độ đã ghi nhận, không thay thế việc kiểm tra Git và source code thực tế trước mỗi task.

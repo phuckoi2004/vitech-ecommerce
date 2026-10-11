@@ -558,6 +558,9 @@ class ProductImageService(BaseService):
         self.products = ProductRepository(session)
 
     def list_images(self, product_id: uuid.UUID) -> list[ProductImageResponse]:
+        # Public image reads follow the same boundary as product detail reads.
+        if not is_product_sellable(self.products.get_by_id(product_id)):
+            raise NotFoundError("Không tìm thấy sản phẩm", code="product_not_found")
         return [ProductImageResponse.model_validate(i) for i in self.images.list_by_product(product_id)]
 
     def add_image(self, actor: Actor, product_id: uuid.UUID, data: ProductImageCreate) -> ProductImageResponse:

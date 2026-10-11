@@ -66,7 +66,7 @@
 
 ## 4. Tài khoản và xác thực
 
-Khi tích hợp giai đoạn 4 và 5, người dùng chọn giữ chính sách Auth/RBAC giai đoạn 5. `auth-spec.md` và `auth-rbac.md` quy định chi tiết chính sách tài khoản đang áp dụng; các nghiệp vụ khác tiếp tục theo tài liệu này. Luồng tài khoản/OTP cũ trong Service Layer giai đoạn 4 được thay thế bằng `AuthService` và `UserService` giai đoạn 5.
+Khi tích hợp giai đoạn 4 và 5, người dùng chọn giữ chính sách Auth/RBAC giai đoạn 5. `auth-spec.md` và `auth-rbac.md` quy định chi tiết chính sách tài khoản đang áp dụng; các nghiệp vụ khác tiếp tục theo tài liệu này. Luồng tài khoản/OTP cũ trong Service Layer giai đoạn 4 được thay thế bằng `AuthService` và `UserService` giai đoạn 5. Quyền của các Service nghiệp vụ giai đoạn 4 (sản phẩm, đơn hàng, nhập hàng, nội dung, đánh giá, thanh toán, sổ địa chỉ...) giữ nguyên theo giai đoạn 4 như mô tả trong tài liệu này. Ngoại lệ: Staff được xem thống kê (mục 15).
 
 ### Đăng ký
 1. Khách nhập họ tên, email, số điện thoại và mật khẩu.
@@ -264,7 +264,7 @@ Khi tích hợp giai đoạn 4 và 5, người dùng chọn giữ chính sách A
 ## 15. Thống kê, nội dung và quảng cáo
 
 ### Thống kê
-- Admin xem tổng số hàng bán, số đơn, doanh thu và đơn gần đây; lọc theo khoảng thời gian và các tiêu chí được Repository hỗ trợ.
+- Staff/Admin xem tổng số hàng bán, số đơn, doanh thu và đơn gần đây; lọc theo khoảng thời gian và các tiêu chí được Repository hỗ trợ.
 - Chỉ tính các đơn/trạng thái phù hợp với định nghĩa doanh thu hiện hành. Không suy ra doanh thu từ mọi đơn đã tạo.
 - Dùng Decimal cho tổng tiền; tránh truy vấn N+1 và truy vấn toàn bộ dữ liệu không cần thiết.
 

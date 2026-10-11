@@ -2,11 +2,11 @@
 
 ## Chính sách đã chọn
 
-Giữ Auth/RBAC giai đoạn 5 theo quyết định trực tiếp của người dùng; đưa các service nghiệp vụ giai đoạn 4 vào. API tài khoản dùng `AuthService` và `UserService` giai đoạn 5; `AddressService` và `NotificationService` của giai đoạn 4 được giữ để các service nghiệp vụ sử dụng.
+Giữ Auth/RBAC giai đoạn 5 theo quyết định trực tiếp của người dùng; đưa các service nghiệp vụ giai đoạn 4 vào. API tài khoản dùng `AuthService` và `UserService` giai đoạn 5; `AddressService` và `NotificationService` của giai đoạn 4 được giữ để các service nghiệp vụ sử dụng. Quyền (role) trong các service nghiệp vụ giai đoạn 4 giữ nguyên như giai đoạn 4; ngoại lệ duy nhất là Staff được xem thống kê. Ma trận `core/rbac.py` đã được đồng bộ theo các quyền này (11/10/2026).
 
 ## Phương án xử lý lịch sử migration đã được duyệt
 
-Ngày 11/10/2026, người dùng xác nhận áp dụng phương án này trong project, kiểm thử offline; chưa chạy migration lên database và chưa commit.
+Ngày 11/10/2026, người dùng xác nhận áp dụng phương án này trong project, kiểm thử offline. Ngày 11/10/2026 đã chạy `alembic upgrade head` lên database Supabase (từ `61f7b0a38d92` lên `c6a4e2b8d901`), sau đó đối chiếu bảng/cột với Models: không thiếu, không thừa.
 
 Hai nhánh dùng chung revision ID nhưng có implementation hoặc parent khác nhau:
 
@@ -15,7 +15,7 @@ Hai nhánh dùng chung revision ID nhưng có implementation hoặc parent khác
 | `b5d3a7c912e4` | Chuyển SuperAdmin sang Admin rồi thay CHECK | Chỉ thay CHECK |
 | `213feab4a632` | Parent `b5d3a7c912e4` | Parent `9b10f42fc70d` |
 
-Thay đổi trong repository, chưa chạy trên database:
+Thay đổi trong repository (đã chạy trên database ngày 11/10/2026):
 
 1. Giữ một file `b5d3a7c912e4` với logic chuyển role local, bỏ file trùng ID.
 2. Giữ `213feab4a632` với parent của giai đoạn 4; bỏ file local trùng ID. Giữ nguyên các dependency còn lại của giai đoạn 4.
@@ -37,8 +37,8 @@ Trước khi chạy migration thật, phải đối chiếu revision và metadat
 
 ## Kết quả kiểm tra local
 
-- Backend: `..\.venv\Scripts\python.exe -m pytest tests -q --tb=short` từ thư mục `backend`: 780 test và 619 subtest đạt, gồm 12 test migration offline.
+- Backend: `..\.venv\Scripts\python.exe -m pytest tests -q --tb=short` từ thư mục `backend`: 799 test và 628 subtest đạt (11/10/2026), gồm các test migration offline.
 - Graph: 21 revision duy nhất, một root `2cb2e7418b06`, một head `c6a4e2b8d901`; đã kiểm tra đường nâng cấp từ `61f7b0a38d92`, `b81569bc34b0`, `213feab4a632` và base.
-- Frontend: 35 test đạt, lint đạt, build đạt với `npm run build -- --configLoader native` trong môi trường Windows hiện tại.
-- Không chạy migration hoặc truy vấn database thật. PostgreSQL, Redis/SMTP và các cổng tích hợp thật chưa được kiểm thử trong lần tích hợp này.
+- Frontend: 37 test đạt, lint đạt, build đạt với `npm run build -- --configLoader native` trong môi trường Windows hiện tại.
+- Migration đã chạy trên database Supabase ngày 11/10/2026 và cấu trúc đã được đối chiếu với Models. Bộ test tự động vẫn dùng SQLite/bộ nhớ; Redis/SMTP và các cổng tích hợp thật chưa được kiểm thử.
 - Chưa stage/commit; các file đã xử lý conflict cần được đưa vào index trước khi tạo commit merge.

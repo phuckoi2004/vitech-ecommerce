@@ -12,6 +12,8 @@ from .core.errors import AuthError
 from .database import test_database_connection
 from .routers import auth, users
 from .routers.admin import users as admin_users
+from .routers.errors import service_error_handler
+from .services.exceptions import ServiceError
 
 
 @asynccontextmanager
@@ -36,6 +38,10 @@ app.include_router(admin_users.router)
 @app.exception_handler(AuthError)
 async def auth_error_handler(request: Request, error: AuthError):
     return JSONResponse(status_code=error.status_code, content={"detail": error.message}, headers=error.headers)
+
+
+# Business errors from Stage 4 services become 4xx/502 responses instead of 500.
+app.add_exception_handler(ServiceError, service_error_handler)
 
 
 @app.exception_handler(RequestValidationError)

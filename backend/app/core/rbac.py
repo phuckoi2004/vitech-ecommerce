@@ -1,8 +1,10 @@
 """Role permissions. Resource ownership is checked by each service.
 
 Every admin function has the same five actions (`<function>:view|create|update|delete|export`).
-The permissions below follow the report tables 3.2–3.38 and the decisions of 09/10/2026. They are
-fixed in code: there is no screen or API that changes them.
+Staff permissions mirror the role checks of the Stage 4 services (decision of 11/10/2026), plus
+Staff read access to statistics. Workflow approvals (purchase approval, refund confirmation,
+warranty/return approval, article publishing) stay Admin-only inside the services. They are fixed
+in code: there is no screen or API that changes them.
 """
 
 from types import MappingProxyType
@@ -23,13 +25,13 @@ ADMIN_FUNCTIONS = (
     "brands",            # B3.13
     "promotions",        # B3.14, including coupons
     "suppliers",         # B3.16
-    "purchases",         # B3.17 (update: edit/approve/reject, delete: cancel)
+    "purchases",         # B3.17 (update: edit/resubmit, approve/reject Admin-only; delete: cancel)
     "purchase_history",  # B3.18
     "inventory",         # B3.19 (update: alert threshold)
     "shipping_methods",  # B3.21 (shipping options customers choose)
     "orders",            # B3.25–3.26, 3.29 (update: status, cancel)
     "payment_methods",   # B3.23
-    "refunds",           # B3.22, 3.28 (decision 09/10/2026: Staff and Admin)
+    "refunds",           # B3.22, 3.28 (create: perform a refund; manual confirmation Admin-only)
     "warranties",        # B3.27
     "returns",           # B3.28
     "revenue_reports",   # B3.30
@@ -49,18 +51,15 @@ def _grant(name: str, *actions: str) -> set[str]:
     return {f"{name}:{action}" for action in actions}
 
 
-# Exports belong to Admin by default (decision 09/10/2026).
+# Exports belong to Admin (decision 09/10/2026). Reviews, news and banners are Admin-only (Stage 4).
 _STAFF_DEFAULT = frozenset(set().union(
     _grant("products", "view"), _grant("categories", "view"), _grant("brands", "view"),
-    _grant("suppliers", "view"), _grant("purchases", "view", "create"),
+    _grant("suppliers", "view"), _grant("purchases", "view", "create", "update", "delete"),
     _grant("purchase_history", "view"), _grant("inventory", "view"),
     _grant("shipping_methods", "view"), _grant("orders", "view", "update"),
-    _grant("refunds", "view", "create", "update", "delete"),
+    _grant("payment_methods", "view"), _grant("refunds", "view", "create"),
     _grant("warranties", "view", "update"), _grant("returns", "view", "update"),
     _grant("revenue_reports", "view"), _grant("order_reports", "view"),
-    _grant("reviews", "view", "delete"),
-    _grant("news", "view", "create", "update", "delete"),
-    _grant("banners", "view", "create", "update", "delete"),
     _grant("chat", "view", "create"),
 ))
 

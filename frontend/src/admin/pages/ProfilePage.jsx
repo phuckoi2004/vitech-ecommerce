@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import {
-  AVATAR_MAX_BYTES, AVATAR_TYPES, changePassword, getDefaultAddress, getProfile,
-  saveDefaultAddress, updateProfile, uploadAvatar,
+  AVATAR_MAX_BYTES, AVATAR_TYPES, changePassword, getProfile, updateProfile, uploadAvatar,
 } from '../../lib/account-api.js'
 import Icon from '../components/Icon.jsx'
 import PasswordField, { PasswordRules } from '../components/PasswordField.jsx'
@@ -10,17 +9,14 @@ import { Avatar } from '../layouts/AdminLayout.jsx'
 import './ProfilePage.css'
 
 const GENDERS = ['Nam', 'Nữ', 'Khác']
-const ADDRESS_FIELDS = ['Province', 'Ward', 'DetailAddress']
 
-function formFrom(profile, address) {
+// Staff/Admin have no address book (Phase 4 rule); only Customers save a delivery address.
+function formFrom(profile) {
   return {
     FullName: profile.FullName ?? '',
     PhoneNumber: profile.PhoneNumber ?? '',
     Gender: profile.Gender ?? '',
     DateOfBirth: profile.DateOfBirth ?? '',
-    Province: address?.Province ?? '',
-    Ward: address?.Ward ?? '',
-    DetailAddress: address?.DetailAddress ?? '',
   }
 }
 
@@ -33,11 +29,6 @@ function profileChanges(form, profile) {
     DateOfBirth: form.DateOfBirth || null,
   }
   return Object.fromEntries(Object.entries(next).filter(([key, value]) => value !== (profile[key] ?? null)))
-}
-
-function addressChange(form, address) {
-  const next = Object.fromEntries(ADDRESS_FIELDS.map((key) => [key, form[key].trim()]))
-  return ADDRESS_FIELDS.some((key) => next[key] !== (address?.[key] ?? '')) ? next : null
 }
 
 function Notice({ notice }) {
@@ -120,7 +111,6 @@ function ChangePasswordDialog({ open, onClose, auth }) {
 export default function ProfilePage({ auth }) {
   const { withAccessToken, updateUser } = auth
   const [profile, setProfile] = useState(null)
-  const [address, setAddress] = useState(null)
   const [form, setForm] = useState(null)
   const [loadError, setLoadError] = useState('')
   const [reload, setReload] = useState(0)
@@ -133,11 +123,10 @@ export default function ProfilePage({ auth }) {
 
   useEffect(() => {
     let active = true
-    Promise.all([withAccessToken(getProfile), withAccessToken(getDefaultAddress)]).then(([user, saved]) => {
+    withAccessToken(getProfile).then((user) => {
       if (!active) return
       setProfile(user)
-      setAddress(saved)
-      setForm(formFrom(user, saved))
+      setForm(formFrom(user))
       updateUser(user)
     }).catch((failure) => {
       if (active) setLoadError(failure.message)
@@ -152,8 +141,7 @@ export default function ProfilePage({ auth }) {
   if (!form) return <div className="profile-loading" role="status"><span className="spinner" />Đang tải thông tin…</div>
 
   const changes = profileChanges(form, profile)
-  const newAddress = addressChange(form, address)
-  const dirty = Object.keys(changes).length > 0 || newAddress !== null
+  const dirty = Object.keys(changes).length > 0
   const busy = saving || uploading
   const genders = form.Gender && !GENDERS.includes(form.Gender) ? [...GENDERS, form.Gender] : GENDERS
 
@@ -170,26 +158,15 @@ export default function ProfilePage({ auth }) {
     if (!form.FullName.trim()) return setNotice({ type: 'error', text: 'Họ và tên không được để trống.' })
     if (!form.PhoneNumber.trim()) return setNotice({ type: 'error', text: 'Số điện thoại không được để trống.' })
     if (form.DateOfBirth && form.DateOfBirth > today) return setNotice({ type: 'error', text: 'Ngày sinh không được ở tương lai.' })
-    if (newAddress && ADDRESS_FIELDS.some((key) => !newAddress[key])) {
-      return setNotice({ type: 'error', text: 'Địa chỉ cần đủ Tỉnh/Thành phố, Phường/Xã và địa chỉ chi tiết.' })
-    }
     setSaving(true)
-    let user = profile
-    let saved = address
     try {
-      if (Object.keys(changes).length) {
-        user = await withAccessToken((token) => updateProfile(token, changes))
-        setProfile(user)
-        updateUser(user)
-      }
-      if (newAddress) {
-        saved = await withAccessToken((token) => saveDefaultAddress(token, newAddress))
-        setAddress(saved)
-      }
-      setForm(formFrom(user, saved))
+      const user = await withAccessToken((token) => updateProfile(token, changes))
+      setProfile(user)
+      updateUser(user)
+      setForm(formFrom(user))
       setNotice({ type: 'success', text: 'Đã lưu thay đổi.' })
     } catch (failure) {
-      // Keep what the user typed; whatever was already saved is reflected in profile/address.
+      // Keep what the user typed so it can be corrected and saved again.
       setNotice({ type: 'error', text: failure.message })
     } finally {
       setSaving(false)
@@ -248,19 +225,6 @@ export default function ProfilePage({ auth }) {
               {genders.map((gender) => <option key={gender} value={gender}>{gender}</option>)}
             </select>
           </Field>
-
-          <fieldset className="profile-address">
-            <legend>Địa chỉ</legend>
-            <Field id="profile-province" label="Tỉnh/Thành phố">
-              <input id="profile-province" className="profile-input" value={form.Province} onChange={edit('Province')} maxLength={100} placeholder="Hà Nội" disabled={busy} />
-            </Field>
-            <Field id="profile-ward" label="Phường/Xã">
-              <input id="profile-ward" className="profile-input" value={form.Ward} onChange={edit('Ward')} maxLength={100} placeholder="Phường Hoàn Kiếm" disabled={busy} />
-            </Field>
-            <Field id="profile-detail" label="Địa chỉ chi tiết">
-              <input id="profile-detail" className="profile-input" value={form.DetailAddress} onChange={edit('DetailAddress')} maxLength={255} placeholder="Số nhà, tên đường" autoComplete="street-address" disabled={busy} />
-            </Field>
-          </fieldset>
         </div>
       </div>
 

@@ -30,7 +30,7 @@ Schema tiếp tục theo [database-schema.md](database-schema.md) và các model
 | Quên mật khẩu | Form chỉ nhận email đã đăng ký (quyết định 10/10/2026). OTP khôi phục gửi tới email gắn với tài khoản, không triển khai SMS. |
 | Đổi email | Xác minh mật khẩu hiện tại và OTP gửi tới email mới trước khi thay `Users.Email`; kiểm tra lại trùng email khi cập nhật. |
 | Hồ sơ | Cho đổi thông tin cá nhân được phép; không nhận `Role`, `AccountStatus`, `IsDeleted`, tổng chi tiêu hoặc OTP qua API sửa hồ sơ. |
-| Địa chỉ | API hiện có đọc/lưu địa chỉ mặc định của chính chủ. CRUD đầy đủ thuộc AddressService của Giai đoạn 4; địa chỉ mặc định phải thuộc tài khoản đó. |
+| Địa chỉ | Theo Giai đoạn 4, chỉ Customer có sổ địa chỉ. API hiện có đọc/lưu địa chỉ mặc định của chính chủ (Customer); Staff/Admin nhận 403. CRUD đầy đủ thuộc AddressService của Giai đoạn 4; địa chỉ mặc định phải thuộc tài khoản đó. |
 
 ## 3. OTP và giới hạn thử sai
 
@@ -132,10 +132,10 @@ Prefix URL theo cấu hình router; request dữ liệu nghiệp vụ dùng Pasc
 | `GET /auth/me` | Người dùng công khai và danh sách quyền hiện tại. |
 | `GET/PATCH /users/me` | Xem/sửa hồ sơ cá nhân. |
 | `PUT /users/me/avatar` | Upload ảnh avatar; chỉ dọn ảnh cũ có đường dẫn chuẩn thuộc chính chủ. |
-| `GET/PUT /users/me/default-address` | Đọc/lưu địa chỉ mặc định của chính chủ. |
+| `GET/PUT /users/me/default-address` | Customer đọc/lưu địa chỉ mặc định của chính mình; Staff/Admin nhận 403. |
 | `GET/POST /admin/users` | Admin xem Customer/Staff (lọc `role`, `account_status`, `search` theo họ tên/email/số điện thoại, `deleted_only` cho tài khoản đã xóa mềm); tạo Staff với `Role=Staff`, không tạo Admin. |
 | `GET /admin/users/{id}` | Admin xem chi tiết một Customer/Staff; tài khoản Admin hoặc đã xóa mềm trả 404 (xem tài khoản đã xóa với `include_deleted=true`). |
-| `GET /admin/users/{id}/default-address` | Admin xem địa chỉ mặc định của một Customer/Staff (kể cả tài khoản đã xóa mềm); trả `null` khi chưa có, tài khoản Admin trả 404. |
+| `GET /admin/users/{id}/default-address` | Admin xem địa chỉ mặc định của một Customer (kể cả tài khoản đã xóa mềm); trả `null` khi chưa có hoặc khi là tài khoản Staff, tài khoản Admin trả 404. |
 | `PATCH/DELETE /admin/users/{id}` | Admin sửa/khóa/mở khóa hoặc xóa mềm Customer/Staff; không đổi role hay thao tác tài khoản Admin. |
 
 Action response dùng `message`, `challenge_id`, `expires_in`, `resend_after` khi phù hợp, không trả mã OTP. Schema OpenAPI thực tế là contract chi tiết để frontend tích hợp; tài liệu vận hành nằm ở [auth-setup.md](auth-setup.md).

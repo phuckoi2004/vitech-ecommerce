@@ -71,13 +71,19 @@ class AccessAndPeriodTest(StatisticsTestBase):
             lambda a: self.svc.inventory_statistics(a),
         ]
 
-    def test_only_admin_can_read_statistics(self):
+    def test_customer_cannot_read_statistics(self):
         for index, call in enumerate(self.calls()):
-            for user in (self.staff, self.customer):
+            for user in (self.customer,):
                 with self.subTest(call=index, role=user.Role):
                     self.assert_error(PermissionDeniedError, "permission_denied", lambda c=call, u=user: c(self.a(u)))
             with self.subTest(call=index, role=None):
                 self.assert_error(PermissionDeniedError, "authentication_required", lambda c=call: c(None))
+
+    def test_staff_and_admin_read_every_statistic(self):
+        for user in (self.staff, self.admin):
+            for index, call in enumerate(self.calls()):
+                with self.subTest(call=index, role=user.Role):
+                    call(self.a(user))
 
     def test_period_is_vietnam_calendar_days_inclusive_as_half_open_utc(self):
         start, end = statistics_period(OCT_1, OCT_31)

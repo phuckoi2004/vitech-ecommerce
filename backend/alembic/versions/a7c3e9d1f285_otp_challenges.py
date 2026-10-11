@@ -5,13 +5,15 @@ Revises: e2b8c4f6a913
 Create Date: 2026-10-10 16:00:00.000000
 
 CHƯA ÁP DỤNG vào database. Bảng này phục vụ account service cũ của Stage 4;
-Auth Giai đoạn 5 dùng kho trạng thái riêng, không dùng OtpChallenges.
+Auth Giai đoạn 5 không dùng OtpChallenges: đăng ký dùng kho trạng thái, còn OTP
+reset mật khẩu/đổi email tiếp tục lưu HMAC và hạn trong Users.OtpCode/OtpExpiredAt.
 Migration SePay (b81569bc34b0) đặt sau migration này.
 
 - OtpChallenges: mỗi lần gửi OTP (UserId, Purpose Registration/PasswordReset, CodeHash, ExpiresAt, FailedAttempts,
   LockedUntil, ConsumedAt, CreatedAt). Không lưu OTP dạng văn bản thuần.
-- Xóa OTP văn bản thuần còn lưu ở Users.OtpCode/OtpExpiredAt (cột giữ nguyên theo thiết kế, không còn được dùng).
-  Người dùng đang chờ xác minh cần yêu cầu gửi lại OTP (OTP cũ chỉ có hạn 5 phút).
+- Xóa mọi giá trị đang có ở Users.OtpCode/OtpExpiredAt một lần khi upgrade, gồm cả HMAC
+  của Auth Giai đoạn 5. Các cột được giữ nguyên để tiếp tục dùng. OTP reset mật khẩu/đổi
+  email đang chờ lúc áp dụng migration mất hiệu lực và phải yêu cầu gửi lại.
 Downgrade: xóa bảng OtpChallenges (dữ liệu OTP tạm thời; OTP đang chờ phải gửi lại).
 """
 from typing import Sequence, Union
@@ -55,7 +57,8 @@ def upgrade() -> None:
     # Viết thủ công: security hardening cho Supabase Data API (giống các bảng khác).
     op.execute(f'ALTER TABLE "{TABLE}" ENABLE ROW LEVEL SECURITY')
     op.execute(f'REVOKE ALL PRIVILEGES ON TABLE "{TABLE}" FROM {DATA_API_ROLES}')
-    # Không giữ OTP văn bản thuần (cơ chế cũ).
+    # Dọn giá trị đang có một lần, gồm OTP legacy và HMAC Phase 5 đang chờ.
+    # Cột vẫn dùng cho OTP reset/đổi email; người dùng cần gửi lại sau migration.
     op.execute('UPDATE "Users" SET "OtpCode" = NULL, "OtpExpiredAt" = NULL WHERE "OtpCode" IS NOT NULL OR "OtpExpiredAt" IS NOT NULL')
 
 

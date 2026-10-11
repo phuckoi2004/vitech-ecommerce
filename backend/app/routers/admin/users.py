@@ -43,8 +43,7 @@ def get_user(user_id: uuid.UUID, actor: Actor, db: Database, runtime: Runtime,
 
 @router.get("/{user_id}/default-address", response_model=AddressResponse | None)
 def get_default_address(user_id: uuid.UUID, actor: Actor, db: Database, runtime: Runtime):
-    service = UserService(db, runtime)
-    return service.get_default_address(service.get_user(actor, user_id, include_deleted=True))
+    return UserService(db, runtime).get_user_default_address(actor, user_id)
 
 
 @router.post("", response_model=AdminUserResponse, status_code=status.HTTP_201_CREATED)

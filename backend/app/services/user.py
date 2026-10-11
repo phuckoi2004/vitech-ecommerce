@@ -74,6 +74,12 @@ class UserService:
         if actor.IsDeleted or actor.AccountStatus != "Active":
             raise AuthError(403, "Tài khoản không được phép thực hiện thao tác này.")
 
+    @staticmethod
+    def _require_customer(actor: User) -> None:
+        # Phase 4 rule (AddressService): only Customers have an address book.
+        if actor.Role != "Customer":
+            raise AuthError(403, "Chỉ tài khoản khách hàng có địa chỉ giao hàng.")
+
     def update_profile(self, actor: User, payload: ProfileUpdate) -> User:
         self._require_active(actor)
         values = payload.model_dump(exclude_unset=True)
@@ -105,13 +111,23 @@ class UserService:
             storage.delete(previous)
         return user
 
-    def get_default_address(self, actor: User) -> Address | None:
-        defaults = self.addresses.list_default_by_user(actor.UserId)
+    def _default_address_of(self, user: User) -> Address | None:
+        defaults = self.addresses.list_default_by_user(user.UserId)
         return defaults[0] if defaults else None
+
+    def get_default_address(self, actor: User) -> Address | None:
+        self._require_customer(actor)
+        return self._default_address_of(actor)
+
+    def get_user_default_address(self, actor: User, user_id: uuid.UUID) -> Address | None:
+        """Admin reads a managed account's default address; Staff accounts have none."""
+        target = self.get_user(actor, user_id, include_deleted=True)
+        return self._default_address_of(target) if target.Role == "Customer" else None
 
     def save_default_address(self, actor: User, payload: DefaultAddressUpdate) -> Address:
         self._require_active(actor)
-        address = self.get_default_address(actor)
+        self._require_customer(actor)
+        address = self._default_address_of(actor)
         values = payload.model_dump()
         if address is None:
             address = self.addresses.create({

@@ -43,22 +43,22 @@ Ký hiệu trong các bảng dưới: **NN** = NOT NULL, **PK** = Primary Key, *
 | `Orders.OrderStatus` | Pending, Confirmed, Processing, Shipping, Delivered, Completed, Cancelled |
 | `Orders.PaymentStatus` | Pending, Paid, Failed, Refunded, Cancelled |
 | `Products.Status` | Draft, Active, Inactive, Discontinued |
-| `ProductSerials.Status` | Available, Reserved, Sold, Warranty, Returned, WrittenOff (WrittenOff: migration `8b7e3d1c5a29`, chưa áp dụng) |
+| `ProductSerials.Status` | Available, Reserved, Sold, Warranty, Returned, WrittenOff (WrittenOff: migration `8b7e3d1c5a29`, đã áp dụng 11/10/2026) |
 | `Promotions.Status` | Draft, Scheduled, Active, Expired, Cancelled |
-| `PurchaseOrders.Status` | Pending, Approved, Rejected, Receiving, Completed, Cancelled, Closed (Closed: migration `e2b8c4f6a913`, chưa áp dụng) |
+| `PurchaseOrders.Status` | Pending, Approved, Rejected, Receiving, Completed, Cancelled, Closed (Closed: migration `e2b8c4f6a913`, đã áp dụng 11/10/2026) |
 | `PaymentTransactions.Status` | Pending, Success, Failed, Cancelled, Refunded |
 | `PaymentTransactions.TransactionType` | Payment, Refund |
-| `PaymentTransactions.ResolutionSource` | Gateway, Manual; NULL = chưa có kết quả hoặc dữ liệu cũ; chỉ với Refund `Success`/`Failed` (CHECK: migration `a9f4c2e7b513`, chưa áp dụng) |
+| `PaymentTransactions.ResolutionSource` | Gateway, Manual; NULL = chưa có kết quả hoặc dữ liệu cũ; chỉ với Refund `Success`/`Failed` (CHECK: migration `a9f4c2e7b513`, đã áp dụng 11/10/2026) |
 | `WarrantyRequests.EligibilityStatus` | Pending, Eligible, Ineligible |
 | `WarrantyRequests.Status` | New, Rejected, HandedOver, Processing, Completed, Cancelled |
-| `WarrantyRequests.ResultType` | Repaired, ProductReplaced, PartReplaced, NotRepairable (CHECK: migration `d4f7b2e9a6c1`, chưa áp dụng) |
-| `ServiceRequestAttachments.FileType` | Image, Video (CHECK: migration `d4f7b2e9a6c1`, chưa áp dụng) |
+| `WarrantyRequests.ResultType` | Repaired, ProductReplaced, PartReplaced, NotRepairable (CHECK: migration `d4f7b2e9a6c1`, đã áp dụng 11/10/2026) |
+| `ServiceRequestAttachments.FileType` | Image, Video (CHECK: migration `d4f7b2e9a6c1`, đã áp dụng 11/10/2026) |
 | `ReturnRequests.Status` | Pending, Approved, Rejected, Receiving, Processing, Completed, Cancelled |
-| `ReturnRequests.RequestType` | Exchange, Return (CHECK: migration `f3b8d1a5c7e2`, chưa áp dụng) |
+| `ReturnRequests.RequestType` | Exchange, Return (CHECK: migration `f3b8d1a5c7e2`, đã áp dụng 11/10/2026) |
 | `Conversations.Status` | Open, Closed |
-| `Conversations.Mode` | AI, Staff (CHECK: migration `c8d2f4a6b1e3`, chưa áp dụng) |
-| `Messages.SenderType` | Customer, Staff, AI (CHECK: migration `c8d2f4a6b1e3`, chưa áp dụng) |
-| `Messages.MessageType` | Text, Image, Product (CHECK: migration `c8d2f4a6b1e3`, chưa áp dụng) |
+| `Conversations.Mode` | AI, Staff (CHECK: migration `c8d2f4a6b1e3`, đã áp dụng 11/10/2026) |
+| `Messages.SenderType` | Customer, Staff, AI (CHECK: migration `c8d2f4a6b1e3`, đã áp dụng 11/10/2026) |
+| `Messages.MessageType` | Text, Image, Product (CHECK: migration `c8d2f4a6b1e3`, đã áp dụng 11/10/2026) |
 | `NewsArticles.Status` | Draft, Published, Hidden |
 | `Promotions.DiscountType` | Percentage, FixedAmount |
 | `Users.Role` | Customer, Staff, Admin (theo quyết định trực tiếp của người dùng) |
@@ -183,7 +183,7 @@ Ký hiệu trong các bảng dưới: **NN** = NOT NULL, **PK** = Primary Key, *
 | MinStockLevel | integer | x | 0 | CHECK MinStockLevel >= 0 |
 | IsActive | boolean | x | true | |
 | IsDeleted | boolean | x | false | |
-| IsSerialTracked | boolean | x | false | Biến thể quản lý Serial/IMEI (thêm bởi migration `763f153af842`, chưa áp dụng) |
+| IsSerialTracked | boolean | x | false | Biến thể quản lý Serial/IMEI (thêm bởi migration `763f153af842`, đã áp dụng 11/10/2026) |
 
 `StockQuantity` và `CostPrice` không sửa qua CRUD biến thể: chỉ thay đổi qua đơn hàng, nhận hàng (giá vốn bình quân gia quyền), khai báo tồn đầu kỳ và điều chỉnh kho (`StockAdjustments`).
 
@@ -215,7 +215,7 @@ Thời hạn bảo hành (Service Layer `app/services/warranty_period.py`, đợ
 - Số tháng lấy từ `OrderItems.WarrantyMonths` (chụp lúc mua); `0` = không bảo hành (`WarrantyStartDate`/`WarrantyEndDate` đều NULL).
 - Máy ban đầu: `WarrantyStartDate` = ngày lịch Việt Nam của `Orders.DeliveredAt`; `WarrantyEndDate` = bắt đầu + số tháng − 1 ngày; vượt cuối tháng đích thì lấy ngày cuối tháng đích trước khi trừ 1 ngày (31/01/2027 + 1 tháng → 27/02/2027).
 - Còn bảo hành khi `WarrantyStartDate <= ngày (lịch Việt Nam) <= WarrantyEndDate`.
-- Máy thay thế: thời hạn mới từ ngày Staff xác nhận bàn giao máy thay thế cho khách; không ghi đè ngày của serial cũ. Liên kết và thời điểm bàn giao lưu ở `WarrantyRequests.ReplacementProductSerialId` / `ReplacementHandedOverAt` / `ReplacementHandedOverByUserId` (migration `d4f7b2e9a6c1`, chưa áp dụng; `HandedOverAt` là bàn giao cho trung tâm bảo hành). Serial thay thế: `Sold`, gắn `OrderItemId` của dòng đơn gốc; serial cũ chuyển `Returned` (đã thu về, không phải hàng bán được — đợt 5.4.1), giữ ngày bảo hành và `OrderItemId`.
+- Máy thay thế: thời hạn mới từ ngày Staff xác nhận bàn giao máy thay thế cho khách; không ghi đè ngày của serial cũ. Liên kết và thời điểm bàn giao lưu ở `WarrantyRequests.ReplacementProductSerialId` / `ReplacementHandedOverAt` / `ReplacementHandedOverByUserId` (migration `d4f7b2e9a6c1`, đã áp dụng 11/10/2026; `HandedOverAt` là bàn giao cho trung tâm bảo hành). Serial thay thế: `Sold`, gắn `OrderItemId` của dòng đơn gốc; serial cũ chuyển `Returned` (đã thu về, không phải hàng bán được — đợt 5.4.1), giữ ngày bảo hành và `OrderItemId`.
 
 Sửa số Serial/IMEI nhập nhầm (`ProductSerialService.update_serial`, đợt 5.10 — không đổi schema): chỉ serial `Available`, chưa gắn dòng đơn và chưa có lịch sử ở `WarrantyRequests`, `ReturnRequests` hoặc `ShipmentReturnItems` (mọi trạng thái); serial đã bán rồi trả về/nhập lại tồn giữ số gốc. Serial `Returned` (máy cũ thu về khi đổi bảo hành, hàng hỏng của hàng hoàn vận chuyển) hiện chưa có luồng xử lý tiếp (sửa để bán lại hay loại bỏ): điều chỉnh kho chỉ nhận serial mới (tăng) hoặc serial `Available` (giảm), nên không thể chuyển `Returned` thành `Available`/`WrittenOff` qua đó.
 - `Products.WarrantyMonths`/`OrderItems.WarrantyMonths` không có CHECK >= 0 trong database; Schema và Service chặn giá trị âm.
@@ -370,15 +370,15 @@ COGS:
 | ResponseData | jsonb | | | |
 | PaidAt | timestamptz | | | |
 | CreatedAt | timestamptz | x | now() | |
-| RefundOfPaymentTransactionId | uuid | | | FK → PaymentTransactions, ON DELETE RESTRICT — khoản Payment gốc của giao dịch Refund (migration `4c2d9e7a1f53`, chưa áp dụng) |
-| CreatedByUserId | uuid | | | FK → Users, ON DELETE RESTRICT — người lập giao dịch Refund (migration `a9f4c2e7b513`, chưa áp dụng) |
+| RefundOfPaymentTransactionId | uuid | | | FK → PaymentTransactions, ON DELETE RESTRICT — khoản Payment gốc của giao dịch Refund (migration `4c2d9e7a1f53`, đã áp dụng 11/10/2026) |
+| CreatedByUserId | uuid | | | FK → Users, ON DELETE RESTRICT — người lập giao dịch Refund (migration `a9f4c2e7b513`, đã áp dụng 11/10/2026) |
 | ResolvedByUserId | uuid | | | FK → Users, ON DELETE RESTRICT — Admin xác nhận thủ công |
 | ResolvedAt | timestamptz | | | Thời điểm ghi kết quả (cổng hoặc thủ công) |
 | ResolutionSource | varchar(20) | | | CHECK IN (Gateway, Manual) |
 | EvidenceReference | varchar(255) | | | Mã tham chiếu bằng chứng của xác nhận thủ công |
 | ResolutionNote | text | | | Ghi chú của xác nhận thủ công |
 
-Liên kết hoàn tiền (migration `4c2d9e7a1f53`, **chưa áp dụng**):
+Liên kết hoàn tiền (migration `4c2d9e7a1f53`, **đã áp dụng 11/10/2026**):
 - CHECK `(TransactionType = 'Refund' AND RefundOfPaymentTransactionId IS NOT NULL) OR (TransactionType <> 'Refund' AND RefundOfPaymentTransactionId IS NULL)`.
 - Trigger `TR_PaymentTransactions_RefundSource`: nguồn phải là giao dịch `Payment` cùng `OrderId`; liên kết không đổi sau khi tạo; Payment đã có Refund không đổi loại/đơn.
 - Index `("RefundOfPaymentTransactionId")`.
@@ -387,7 +387,7 @@ Liên kết hoàn tiền (migration `4c2d9e7a1f53`, **chưa áp dụng**):
 - Khoản Payment gốc giữ `Status = Success` sau khi được hoàn (khoản thu đã xảy ra); giá trị `Refunded` của `PaymentTransactions.Status` hiện **không được sử dụng** — trạng thái hoàn của khoản gốc suy ra từ các Refund liên kết.
 - Upgrade dừng nếu đã có giao dịch Refund cũ (chưa có liên kết, không suy đoán); downgrade dừng nếu đã có Refund liên kết.
 
-Xác nhận kết quả Refund (đợt 5.11, phương án D2; migration `a9f4c2e7b513`, **chưa áp dụng**):
+Xác nhận kết quả Refund (đợt 5.11, phương án D2; migration `a9f4c2e7b513`, **đã áp dụng 11/10/2026**):
 - Mọi giao dịch Refund tạo ở `Pending` với `CreatedByUserId` (Staff/Admin lập). Chỉ chuyển `Success`/`Failed` theo một trong hai cách: cổng thanh toán trả kết quả (`ResolutionSource = Gateway`, `ResolvedAt`; bằng chứng là `GatewayTransactionCode`/`ResponseData` của cổng, không có người xác nhận) hoặc Admin **khác người tạo** xác nhận thủ công (`ResolutionSource = Manual`, `ResolvedByUserId`, `ResolvedAt`, `EvidenceReference` và `ResolutionNote` bắt buộc; không ghi vào `GatewayTransactionCode`/`ResponseData`).
 - Hoàn trực tiếp không qua cổng (ví dụ COD) và cổng không có API hoàn tiền (SePay) chỉ thành `Success` qua xác nhận thủ công. `Pending`/`Failed` không phải đã hoàn: không tính vào tiền đã hoàn, không đổi `Orders.PaymentStatus`, yêu cầu trả hàng chưa hoàn tất.
 - Chỉ giao dịch còn `Pending` mới ghi được kết quả (khóa Order rồi giao dịch); kết quả cổng đến sau xác nhận thủ công (hoặc ngược lại) không ghi đè. Xác nhận thủ công `Success` kiểm tra lại tổng Refund `Success` không vượt số đã thu của đơn và của khoản nguồn.
@@ -474,7 +474,7 @@ Coupon chỉ lưu thông tin mã coupon và tham chiếu Promotion (bắt buộc
 | RejectReason | text | | | |
 | CreatedAt | timestamptz | x | now() | |
 | DecidedAt | timestamptz | | | |
-| ClosedByUserId | uuid | | | FK → Users, ON DELETE SET NULL (migration `e2b8c4f6a913`, chưa áp dụng) |
+| ClosedByUserId | uuid | | | FK → Users, ON DELETE SET NULL (migration `e2b8c4f6a913`, đã áp dụng 11/10/2026) |
 | ClosedAt | timestamptz | | | Thời điểm Admin đóng phiếu còn thiếu |
 | CloseReason | text | | | Lý do đóng; CHECK Closed ⇔ ClosedAt và CloseReason (không rỗng) có giá trị |
 
@@ -531,7 +531,7 @@ CHECK `"ReceivedQuantity" <= "OrderedQuantity"` (kết hợp CHECK ReceivedQuant
 | CreatedAt | timestamptz | x | now() | |
 | ClosedAt | timestamptz | | | |
 
-`UNIQUE INDEX "UX_Conversations_CustomerId_Open" ON "Conversations"("CustomerId") WHERE "Status" = 'Open'`: mỗi Customer tối đa một hội thoại Open (migration `c8d2f4a6b1e3`, chưa áp dụng; upgrade dừng nếu dữ liệu cũ vi phạm — không tự đóng/xóa hội thoại).
+`UNIQUE INDEX "UX_Conversations_CustomerId_Open" ON "Conversations"("CustomerId") WHERE "Status" = 'Open'`: mỗi Customer tối đa một hội thoại Open (migration `c8d2f4a6b1e3`, đã áp dụng 11/10/2026; upgrade dừng nếu dữ liệu cũ vi phạm — không tự đóng/xóa hội thoại).
 
 Dữ liệu trả cho Customer (đợt 5.10): không có `AssignedStaffId`; tin nhắn của nhân viên/AI không kèm `Messages.SenderUserId` (định danh nhân viên là nội bộ, như `AssignedStaffId` ở Orders/WarrantyRequests/ReturnRequests). Staff/Admin dùng schema `Admin*` đầy đủ.
 
@@ -549,7 +549,7 @@ Dữ liệu trả cho Customer (đợt 5.10): không có `AssignedStaffId`; tin 
 | IsRead | boolean | x | false | |
 | SentAt | timestamptz | x | now() | |
 
-- CHECK `SenderType <> 'AI' OR SenderUserId IS NULL`: tin AI không gắn tài khoản người dùng (migration `c8d2f4a6b1e3`, chưa áp dụng).
+- CHECK `SenderType <> 'AI' OR SenderUserId IS NULL`: tin AI không gắn tài khoản người dùng (migration `c8d2f4a6b1e3`, đã áp dụng 11/10/2026).
 - Metadata (ChatService): Image `{"ImageUrl": "https://..."}`; Product `{"ProductId", "ProductName", "Slug"}` do server ghi sau khi kiểm tra sản phẩm đang hiển thị; Text không có Metadata.
 - Content tối đa 5.000 ký tự sau khi bỏ khoảng trắng đầu/cuối (Schema + ChatService, không tự cắt ngắn; không áp cho URL/Metadata). Không có thao tác cập nhật hội thoại tổng quát: AssignedStaffId chỉ đổi qua `claim_conversation`, Status qua `close_conversation` (Customer đóng hội thoại của mình; Staff/Admin đóng hội thoại được gán cho mình), Mode không đổi sau khi mở.
 
@@ -584,11 +584,11 @@ Dữ liệu trả cho Customer (đợt 5.10): không có `AssignedStaffId`; tin 
 | ResultProposedByUserId | uuid | | | FK → Users, ON DELETE SET NULL — người đề xuất kết quả (migration `e6a2d9c4b8f1`) |
 | ResultProposedAt | timestamptz | | | (migration `e6a2d9c4b8f1`) |
 
-Năm cột cuối, CHECK và index dưới đây: migration `d4f7b2e9a6c1` (chưa áp dụng; upgrade dừng nếu dữ liệu cũ có ResultType/FileType ngoài danh sách, yêu cầu `Completed` chưa có thông tin duyệt, hoặc nhiều yêu cầu đang xử lý cho cùng serial/dòng đơn — không tự sửa dữ liệu).
+Năm cột cuối, CHECK và index dưới đây: migration `d4f7b2e9a6c1` (đã áp dụng 11/10/2026; upgrade dừng nếu dữ liệu cũ có ResultType/FileType ngoài danh sách, yêu cầu `Completed` chưa có thông tin duyệt, hoặc nhiều yêu cầu đang xử lý cho cùng serial/dòng đơn — không tự sửa dữ liệu).
 - CHECK `Replacement_OnlyProductReplaced`: `ReplacementProductSerialId`/`ReplacementHandedOverAt` chỉ có khi `ResultType = 'ProductReplaced'`.
 - CHECK `Approval_RequiresResult`: có `ResultApprovedAt` thì phải có `ResultType`.
 - CHECK `Completed_RequiresApprovedResult`: `Completed` cần `CompletedAt`, `ResultType`, `ResultApprovedAt`; đổi máy cần thêm `ReplacementHandedOverAt`.
-- Migration `e6a2d9c4b8f1` (chưa áp dụng; upgrade DỪNG nếu đã có dòng mang `ResultType` vì không xác định được người đề xuất): CHECK `Proposal_Recorded` (`ResultType IS NULL OR ResultProposedAt IS NOT NULL`); CHECK `Approval_NotByProposer` (người duyệt khác người đề xuất; bỏ qua khi một trong hai đã bị SET NULL).
+- Migration `e6a2d9c4b8f1` (đã áp dụng 11/10/2026; upgrade DỪNG nếu đã có dòng mang `ResultType` vì không xác định được người đề xuất): CHECK `Proposal_Recorded` (`ResultType IS NULL OR ResultProposedAt IS NOT NULL`); CHECK `Approval_NotByProposer` (người duyệt khác người đề xuất; bỏ qua khi một trong hai đã bị SET NULL).
 - `UNIQUE INDEX "UX_WarrantyRequests_Serial_Open" ("ProductSerialId") WHERE "ProductSerialId" IS NOT NULL AND "Status" IN ('New', 'HandedOver', 'Processing')`; `UNIQUE INDEX "UX_WarrantyRequests_OrderItem_Open_NoSerial" ("OrderItemId") WHERE "ProductSerialId" IS NULL AND "Status" IN (...)`: mỗi serial / mỗi dòng đơn không quản lý serial tối đa một yêu cầu đang xử lý.
 
 Luồng xử lý (WarrantyService, đợt 5.4; mỗi bước ghi `ServiceRequestHistories` — bước không đổi Status ghi OldStatus = NewStatus):
@@ -629,7 +629,7 @@ Luồng xử lý (WarrantyService, đợt 5.4; mỗi bước ghi `ServiceRequest
 | CompensationApprovedByUserId | uuid | | | FK → Users, ON DELETE SET NULL |
 | RefundPaymentTransactionId | uuid | | | FK → PaymentTransactions, ON DELETE RESTRICT, UQ — giao dịch Refund của yêu cầu |
 
-Chín cột cuối, CHECK và index dưới đây: migration `f3b8d1a5c7e2` (chưa áp dụng; upgrade DỪNG nếu đã có dòng ReturnRequests vì không xác định được serial/số lượng của dữ liệu cũ; downgrade dừng nếu đã có dòng).
+Chín cột cuối, CHECK và index dưới đây: migration `f3b8d1a5c7e2` (đã áp dụng 11/10/2026; upgrade DỪNG nếu đã có dòng ReturnRequests vì không xác định được serial/số lượng của dữ liệu cũ; downgrade dừng nếu đã có dòng).
 - CHECK `Inspection_Consistent`: RestockedQuantity/DamagedQuantity cùng NULL, hoặc >= 0 và cộng lại = Quantity; `Inspection_RequiresReceipt`: chỉ có sau khi `ReceivedAt`.
 - CHECK `Approval_RequiresAssessment`: duyệt cần CompensationAmount và kết quả kiểm tra; `Refund_RequiresApprovedReturn`: liên kết hoàn tiền chỉ cho Return đã duyệt; `Completed_RequiresApproval`: Completed cần `CompletedAt` và đã duyệt.
 - `UNIQUE INDEX "UX_ReturnRequests_Serial_Open" ("ProductSerialId") WHERE "ProductSerialId" IS NOT NULL AND "Status" IN ('Pending', 'Approved', 'Receiving', 'Processing')`: mỗi serial tối đa một yêu cầu đổi/trả đang xử lý.
@@ -649,7 +649,7 @@ Luồng xử lý (ReturnService, đợt 5.4; mỗi bước ghi `ServiceRequestHi
 | WarrantyRequestId | uuid | | | FK → WarrantyRequests, ON DELETE CASCADE |
 | ReturnRequestId | uuid | | | FK → ReturnRequests, ON DELETE CASCADE |
 | FileUrl | varchar(500) | x | | URL https do client đã tải lên (Service kiểm tra) |
-| FileType | varchar(20) | x | | CHECK IN (Image, Video) — migration `d4f7b2e9a6c1`, chưa áp dụng |
+| FileType | varchar(20) | x | | CHECK IN (Image, Video) — migration `d4f7b2e9a6c1`, đã áp dụng 11/10/2026 |
 | UploadedAt | timestamptz | x | now() | |
 
 CHECK `num_nonnulls("WarrantyRequestId", "ReturnRequestId") = 1` (thuộc đúng một loại yêu cầu).
@@ -716,7 +716,7 @@ Nghiệp vụ (ContentService, đợt 5.5; không đổi schema):
 
 ### 3.37. StockAdjustments
 
-Lịch sử khai báo tồn đầu kỳ (Opening) và điều chỉnh kho thủ công của Admin. Thêm bởi migration `763f153af842` (**chưa áp dụng vào database**). Không phải sổ kho đầy đủ: nhập/bán vẫn truy vết qua PurchaseOrderItems/OrderItems.
+Lịch sử khai báo tồn đầu kỳ (Opening) và điều chỉnh kho thủ công của Admin. Thêm bởi migration `763f153af842` (**đã áp dụng vào database ngày 11/10/2026**). Không phải sổ kho đầy đủ: nhập/bán vẫn truy vết qua PurchaseOrderItems/OrderItems.
 
 | Column | Type | NN | Default | Ràng buộc |
 |---|---|---|---|---|
@@ -738,14 +738,14 @@ Lịch sử khai báo tồn đầu kỳ (Opening) và điều chỉnh kho thủ 
 
 ### 3.38. PaymentReconciliations
 
-Khoản thanh toán bất thường cần Staff/Admin đối soát thủ công (không tự hoàn tiền). Thêm bởi migration `d3326a8fbc5c` (**chưa áp dụng vào database**).
+Khoản thanh toán bất thường cần Staff/Admin đối soát thủ công (không tự hoàn tiền). Thêm bởi migration `d3326a8fbc5c` (**đã áp dụng vào database ngày 11/10/2026**).
 
 | Column | Type | NN | Default | Ràng buộc |
 |---|---|---|---|---|
 | PaymentReconciliationId | uuid | x | gen_random_uuid() | PK |
 | OrderId | uuid | | | FK → Orders, ON DELETE RESTRICT — NULL chỉ với `UnmatchedPayment` |
 | PaymentTransactionId | uuid | | | FK → PaymentTransactions, ON DELETE RESTRICT — NULL chỉ với `UnmatchedPayment` |
-| PaymentWebhookEventId | uuid | | | FK → PaymentWebhookEvents, ON DELETE RESTRICT (migration `b81569bc34b0`, chưa áp dụng) |
+| PaymentWebhookEventId | uuid | | | FK → PaymentWebhookEvents, ON DELETE RESTRICT (migration `b81569bc34b0`, đã áp dụng 11/10/2026) |
 | IssueType | varchar(30) | x | | CHECK IN (AmountMismatch, DuplicatePayment, PaymentAfterCancellation, UnmatchedPayment) |
 | GatewayTransactionCode | varchar(100) | x | | Mã giao dịch của cổng trong callback |
 | ExpectedAmount | numeric(15,2) | | | CHECK >= 0 — NULL chỉ với `UnmatchedPayment` |
@@ -763,11 +763,11 @@ Khoản thanh toán bất thường cần Staff/Admin đối soát thủ công (
 - Bảng trên là trạng thái sau toàn bộ chuỗi migration; phiên bản ban đầu (`d3326a8fbc5c`) có `OrderId`/`PaymentTransactionId`/`ExpectedAmount` NOT NULL và chưa có `UnmatchedPayment`/`PaymentWebhookEventId` (xem đoạn dưới).
 - Index `("Status", "CreatedAt")`, `("OrderId")`. RLS bật, REVOKE quyền của anon/authenticated.
 
-Thay đổi bởi migration `b81569bc34b0` (**chưa áp dụng**): thêm IssueType `UnmatchedPayment` (tiền vào không xác định được duy nhất một đơn/giao dịch); `OrderId`, `PaymentTransactionId`, `ExpectedAmount` cho phép NULL **chỉ** với `UnmatchedPayment` (CHECK `IssueType = 'UnmatchedPayment' OR (OrderId IS NOT NULL AND PaymentTransactionId IS NOT NULL AND ExpectedAmount IS NOT NULL)`); thêm `PaymentWebhookEventId uuid NULL` FK → PaymentWebhookEvents, ON DELETE RESTRICT. Với SePay, `GatewayTransactionCode` = `sepay:{AccountNumber}:{id}`.
+Thay đổi bởi migration `b81569bc34b0` (**đã áp dụng 11/10/2026**): thêm IssueType `UnmatchedPayment` (tiền vào không xác định được duy nhất một đơn/giao dịch); `OrderId`, `PaymentTransactionId`, `ExpectedAmount` cho phép NULL **chỉ** với `UnmatchedPayment` (CHECK `IssueType = 'UnmatchedPayment' OR (OrderId IS NOT NULL AND PaymentTransactionId IS NOT NULL AND ExpectedAmount IS NOT NULL)`); thêm `PaymentWebhookEventId uuid NULL` FK → PaymentWebhookEvents, ON DELETE RESTRICT. Với SePay, `GatewayTransactionCode` = `sepay:{AccountNumber}:{id}`.
 
 ### 3.39. PaymentWebhookEvents
 
-Giao dịch ngân hàng nhận từ webhook (hiện tại: SePay), lưu bền vững trước khi xử lý nghiệp vụ. Thêm bởi migration `b81569bc34b0` (**chưa áp dụng vào database**). `Payload` chứa dữ liệu cá nhân (tên/nội dung chuyển khoản): không ghi log.
+Giao dịch ngân hàng nhận từ webhook (hiện tại: SePay), lưu bền vững trước khi xử lý nghiệp vụ. Thêm bởi migration `b81569bc34b0` (**đã áp dụng vào database ngày 11/10/2026**). `Payload` chứa dữ liệu cá nhân (tên/nội dung chuyển khoản): không ghi log.
 
 | Column | Type | NN | Default | Ràng buộc |
 |---|---|---|---|---|
@@ -792,7 +792,7 @@ Giao dịch ngân hàng nhận từ webhook (hiện tại: SePay), lưu bền v�
 
 ### 3.40. StockAdjustmentSerials
 
-Serial/IMEI thuộc từng phiếu điều chỉnh kho. Thêm bởi migration `8b7e3d1c5a29` (**chưa áp dụng vào database**).
+Serial/IMEI thuộc từng phiếu điều chỉnh kho. Thêm bởi migration `8b7e3d1c5a29` (**đã áp dụng vào database ngày 11/10/2026**).
 
 | Column | Type | NN | Default | Ràng buộc |
 |---|---|---|---|---|
@@ -807,7 +807,7 @@ Serial/IMEI thuộc từng phiếu điều chỉnh kho. Thêm bởi migration `8
 
 ### 3.41. ShipmentReturns
 
-Hàng của đơn bị hủy khi đang giao (`Shipping`), chờ quay về kho. Thêm bởi migration `5d1f9a3c7e64` (**chưa áp dụng vào database**).
+Hàng của đơn bị hủy khi đang giao (`Shipping`), chờ quay về kho. Thêm bởi migration `5d1f9a3c7e64` (**đã áp dụng vào database ngày 11/10/2026**).
 
 | Column | Type | NN | Default | Ràng buộc |
 |---|---|---|---|---|
@@ -840,7 +840,7 @@ Index `("Status", "CreatedAt")`. RLS bật, REVOKE quyền của anon/authentica
 
 ### 3.43. PurchaseReceipts
 
-Mỗi lần nhận hàng thực tế của phiếu nhập. Thêm bởi migration `e2b8c4f6a913` (**chưa áp dụng vào database**). Chỉ ghi thêm (trigger `TR_PurchaseReceipts_AppendOnly`).
+Mỗi lần nhận hàng thực tế của phiếu nhập. Thêm bởi migration `e2b8c4f6a913` (**đã áp dụng vào database ngày 11/10/2026**). Chỉ ghi thêm (trigger `TR_PurchaseReceipts_AppendOnly`).
 
 | Column | Type | NN | Default | Ràng buộc |
 |---|---|---|---|---|
@@ -865,7 +865,7 @@ Index `("PurchaseOrderItemId")`. Chỉ ghi thêm (trigger `TR_PurchaseReceiptIte
 
 ### 3.45. OtpChallenges
 
-Bảng bổ sung của giai đoạn 4 cho OTP theo tài khoản và mục đích. Thêm bởi migration `a7c3e9d1f285` (**chưa áp dụng vào database**). Khi tích hợp, người dùng chọn chính sách Auth/RBAC giai đoạn 5: API hiện tại không dùng bảng này; đăng ký chờ xác minh ở state store, reset mật khẩu và đổi email dùng HMAC trong `Users.OtpCode`/`OtpExpiredAt`. Thời hạn và giới hạn OTP đang hoạt động được quy định tại `auth-spec.md`.
+Bảng bổ sung của giai đoạn 4 cho OTP theo tài khoản và mục đích. Thêm bởi migration `a7c3e9d1f285` (**đã áp dụng vào database ngày 11/10/2026**). Khi tích hợp, người dùng chọn chính sách Auth/RBAC giai đoạn 5: API hiện tại không dùng bảng này; đăng ký chờ xác minh ở state store, reset mật khẩu và đổi email dùng HMAC trong `Users.OtpCode`/`OtpExpiredAt`. Thời hạn và giới hạn OTP đang hoạt động được quy định tại `auth-spec.md`.
 
 | Column | Type | NN | Default | Ràng buộc |
 |---|---|---|---|---|
@@ -879,7 +879,7 @@ Bảng bổ sung của giai đoạn 4 cho OTP theo tài khoản và mục đích
 | ConsumedAt | timestamptz | | | Đã xác minh thành công (dùng một lần) |
 | CreatedAt | timestamptz | x | now() | Dùng cho giới hạn 60 giây/lần và 5 lần/giờ |
 
-Index `("UserId", "Purpose", "CreatedAt")`. RLS bật, REVOKE quyền của anon/authenticated. UserService khóa dòng Users khi gửi/xác minh. `Users.OtpCode`/`OtpExpiredAt` giữ theo thiết kế nhưng không còn được dùng (migration xóa giá trị cũ).
+Index `("UserId", "Purpose", "CreatedAt")`. RLS bật, REVOKE quyền của anon/authenticated. Thiết kế OTP cũ của giai đoạn 4 khóa dòng Users khi gửi/xác minh. API Auth giai đoạn 5 tiếp tục dùng `Users.OtpCode`/`OtpExpiredAt` để lưu HMAC và hạn OTP reset mật khẩu/đổi email. Khi migration `a7c3e9d1f285` được áp dụng, câu lệnh UPDATE xóa mọi giá trị đang có trong hai cột này một lần; OTP reset mật khẩu hoặc đổi email đang chờ khi đó mất hiệu lực và cần gửi lại. Các cột được giữ nguyên để Auth giai đoạn 5 tiếp tục sử dụng.
 
 ---
 
@@ -900,23 +900,23 @@ Index `("UserId", "Purpose", "CreatedAt")`. RLS bật, REVOKE quyền của anon
 | PurchaseOrderItems | CHECK `ReceivedQuantity <= OrderedQuantity`. |
 | Toàn bộ | `timestamp` → `timestamptz`; thêm default cho PK, CreatedAt, UpdatedAt, boolean, counter; thêm CHECK cho status và giá trị số; thêm ON DELETE cho mọi FK. |
 | ServiceRequestAttachments, ServiceRequestHistories | Thêm CHECK thuộc đúng một trong WarrantyRequest / ReturnRequest. |
-| ProductVariants | Thêm `IsSerialTracked boolean NOT NULL DEFAULT false` (migration `763f153af842`, chưa áp dụng). |
-| StockAdjustments (mới) | Lịch sử Opening/điều chỉnh kho thủ công (migration `763f153af842`, chưa áp dụng). |
-| PaymentReconciliations (mới) | Đối soát thanh toán sai số tiền/trùng/đến sau khi hủy (migration `d3326a8fbc5c`, chưa áp dụng). |
-| PaymentReconciliations | Thêm `UnmatchedPayment`, cột tham chiếu NULL theo CHECK, `PaymentWebhookEventId` (migration `b81569bc34b0`, chưa áp dụng). |
-| PaymentWebhookEvents (mới) | Sự kiện webhook ngân hàng (SePay), idempotent theo nhà cung cấp + tài khoản + id (migration `b81569bc34b0`, chưa áp dụng). |
-| ProductSerials, StockAdjustmentSerials (mới) | Thêm trạng thái `WrittenOff`; bảng serial thuộc phiếu điều chỉnh In/Out (migration `8b7e3d1c5a29`, chưa áp dụng). |
-| ShipmentReturns, ShipmentReturnItems (mới) | Hàng của đơn hủy khi đang giao chờ quay về kho; nhận lại + kiểm tra mới nhập tồn (migration `5d1f9a3c7e64`, chưa áp dụng). |
-| PurchaseOrders, PurchaseReceipts, PurchaseReceiptItems (mới) | Trạng thái `Closed` + `ClosedByUserId`/`ClosedAt`/`CloseReason` (CHECK `Closed_Consistent`: Closed ⇔ có thời điểm và lý do không rỗng); lịch sử nhận hàng chỉ ghi thêm (migration `e2b8c4f6a913`, chưa áp dụng). |
-| OtpChallenges (mới), Users | Bảng challenge bổ sung từ giai đoạn 4 (migration `a7c3e9d1f285`, chưa áp dụng); API Auth giai đoạn 5 vẫn dùng state đăng ký và HMAC trong `Users.OtpCode`/`OtpExpiredAt`, theo quyết định tích hợp. |
-| Conversations, Messages | CHECK cho Mode/SenderType/MessageType, tin AI không gắn người dùng; partial UNIQUE một hội thoại Open mỗi Customer (migration `c8d2f4a6b1e3`, chưa áp dụng). |
-| WarrantyRequests, ServiceRequestAttachments | Thêm cột Admin duyệt kết quả và máy thay thế; CHECK ResultType/FileType và nhất quán duyệt/hoàn tất/đổi máy; partial UNIQUE một yêu cầu đang xử lý mỗi serial / dòng đơn không serial (migration `d4f7b2e9a6c1`, chưa áp dụng). |
-| ReturnRequests | Thêm serial/số lượng trả, kết quả kiểm tra, căn cứ và duyệt số tiền, liên kết giao dịch hoàn tiền (UNIQUE); CHECK RequestType và nhất quán kiểm tra/duyệt/hoàn tiền/hoàn tất; partial UNIQUE một yêu cầu đang xử lý mỗi serial (migration `f3b8d1a5c7e2`, chưa áp dụng). |
-| WarrantyRequests, ServiceRequestHistories | Người/thời điểm đề xuất kết quả, CHECK người duyệt khác người đề xuất; ghi chú nội bộ `InternalNote` và dòng nội bộ `IsInternal` (migration `e6a2d9c4b8f1`, chưa áp dụng). |
-| PaymentTransactions | Thêm `RefundOfPaymentTransactionId` (FK tự tham chiếu), CHECK nhất quán Refund/nguồn, trigger nguồn hoàn (migration `4c2d9e7a1f53`, chưa áp dụng). Thứ tự nhánh giai đoạn 4: … → `d3326a8fbc5c` → `4c2d9e7a1f53` → `8b7e3d1c5a29` → `5d1f9a3c7e64` → `e2b8c4f6a913` → `a7c3e9d1f285` → `c8d2f4a6b1e3` → `d4f7b2e9a6c1` → `f3b8d1a5c7e2` → `e6a2d9c4b8f1` → `a9f4c2e7b513` → `b81569bc34b0`. |
-| PaymentTransactions | Thêm `CreatedByUserId`, `ResolvedByUserId` (FK → Users, RESTRICT), `ResolvedAt`, `ResolutionSource` (Gateway/Manual), `EvidenceReference`, `ResolutionNote`; CHECK xác nhận thủ công đủ bằng chứng và khác người lập (migration `a9f4c2e7b513`, chưa áp dụng). |
+| ProductVariants | Thêm `IsSerialTracked boolean NOT NULL DEFAULT false` (migration `763f153af842`, đã áp dụng 11/10/2026). |
+| StockAdjustments (mới) | Lịch sử Opening/điều chỉnh kho thủ công (migration `763f153af842`, đã áp dụng 11/10/2026). |
+| PaymentReconciliations (mới) | Đối soát thanh toán sai số tiền/trùng/đến sau khi hủy (migration `d3326a8fbc5c`, đã áp dụng 11/10/2026). |
+| PaymentReconciliations | Thêm `UnmatchedPayment`, cột tham chiếu NULL theo CHECK, `PaymentWebhookEventId` (migration `b81569bc34b0`, đã áp dụng 11/10/2026). |
+| PaymentWebhookEvents (mới) | Sự kiện webhook ngân hàng (SePay), idempotent theo nhà cung cấp + tài khoản + id (migration `b81569bc34b0`, đã áp dụng 11/10/2026). |
+| ProductSerials, StockAdjustmentSerials (mới) | Thêm trạng thái `WrittenOff`; bảng serial thuộc phiếu điều chỉnh In/Out (migration `8b7e3d1c5a29`, đã áp dụng 11/10/2026). |
+| ShipmentReturns, ShipmentReturnItems (mới) | Hàng của đơn hủy khi đang giao chờ quay về kho; nhận lại + kiểm tra mới nhập tồn (migration `5d1f9a3c7e64`, đã áp dụng 11/10/2026). |
+| PurchaseOrders, PurchaseReceipts, PurchaseReceiptItems (mới) | Trạng thái `Closed` + `ClosedByUserId`/`ClosedAt`/`CloseReason` (CHECK `Closed_Consistent`: Closed ⇔ có thời điểm và lý do không rỗng); lịch sử nhận hàng chỉ ghi thêm (migration `e2b8c4f6a913`, đã áp dụng 11/10/2026). |
+| OtpChallenges (mới), Users | Bảng challenge bổ sung từ giai đoạn 4 (migration `a7c3e9d1f285`, đã áp dụng 11/10/2026); API Auth giai đoạn 5 vẫn dùng state đăng ký và HMAC trong `Users.OtpCode`/`OtpExpiredAt`, theo quyết định tích hợp. |
+| Conversations, Messages | CHECK cho Mode/SenderType/MessageType, tin AI không gắn người dùng; partial UNIQUE một hội thoại Open mỗi Customer (migration `c8d2f4a6b1e3`, đã áp dụng 11/10/2026). |
+| WarrantyRequests, ServiceRequestAttachments | Thêm cột Admin duyệt kết quả và máy thay thế; CHECK ResultType/FileType và nhất quán duyệt/hoàn tất/đổi máy; partial UNIQUE một yêu cầu đang xử lý mỗi serial / dòng đơn không serial (migration `d4f7b2e9a6c1`, đã áp dụng 11/10/2026). |
+| ReturnRequests | Thêm serial/số lượng trả, kết quả kiểm tra, căn cứ và duyệt số tiền, liên kết giao dịch hoàn tiền (UNIQUE); CHECK RequestType và nhất quán kiểm tra/duyệt/hoàn tiền/hoàn tất; partial UNIQUE một yêu cầu đang xử lý mỗi serial (migration `f3b8d1a5c7e2`, đã áp dụng 11/10/2026). |
+| WarrantyRequests, ServiceRequestHistories | Người/thời điểm đề xuất kết quả, CHECK người duyệt khác người đề xuất; ghi chú nội bộ `InternalNote` và dòng nội bộ `IsInternal` (migration `e6a2d9c4b8f1`, đã áp dụng 11/10/2026). |
+| PaymentTransactions | Thêm `RefundOfPaymentTransactionId` (FK tự tham chiếu), CHECK nhất quán Refund/nguồn, trigger nguồn hoàn (migration `4c2d9e7a1f53`, đã áp dụng 11/10/2026). Thứ tự nhánh giai đoạn 4: … → `d3326a8fbc5c` → `4c2d9e7a1f53` → `8b7e3d1c5a29` → `5d1f9a3c7e64` → `e2b8c4f6a913` → `a7c3e9d1f285` → `c8d2f4a6b1e3` → `d4f7b2e9a6c1` → `f3b8d1a5c7e2` → `e6a2d9c4b8f1` → `a9f4c2e7b513` → `b81569bc34b0`. |
+| PaymentTransactions | Thêm `CreatedByUserId`, `ResolvedByUserId` (FK → Users, RESTRICT), `ResolvedAt`, `ResolutionSource` (Gateway/Manual), `EvidenceReference`, `ResolutionNote`; CHECK xác nhận thủ công đủ bằng chứng và khác người lập (migration `a9f4c2e7b513`, đã áp dụng 11/10/2026). |
 
-Khi tích hợp giai đoạn 4/5, người dùng đã duyệt merge revision `c6a4e2b8d901` với hai parent `61f7b0a38d92` (nhánh local từ `213feab4a632`) và `b81569bc34b0`. Revision ghép kiểm tra/bổ sung lại CHECK AccountStatus và TransactionType đã được đặc tả, không thêm bảng/cột hoặc sửa dữ liệu. Các guard dừng nếu định nghĩa CHECK hoặc dữ liệu không hợp lệ. Thay đổi mới được kiểm tra offline; chưa áp dụng vào database. Xem [chi tiết tích hợp](stage4-stage5-integration.md).
+Khi tích hợp giai đoạn 4/5, người dùng đã duyệt merge revision `c6a4e2b8d901` với hai parent `61f7b0a38d92` (nhánh local từ `213feab4a632`) và `b81569bc34b0`. Revision ghép kiểm tra/bổ sung lại CHECK AccountStatus và TransactionType đã được đặc tả, không thêm bảng/cột hoặc sửa dữ liệu. Các guard dừng nếu định nghĩa CHECK hoặc dữ liệu không hợp lệ. Toàn bộ chuỗi đã được áp dụng lên database Supabase ngày 11/10/2026 (head `c6a4e2b8d901`). Xem [chi tiết tích hợp](stage4-stage5-integration.md).
 
 ## 5. Nguồn dữ liệu thống kê (StatisticsService, đợt 5.6 — không đổi schema)
 

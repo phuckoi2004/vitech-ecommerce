@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import User
 from app.repositories.user import UserRepository
+from app.services.actor import Actor
 
 from .auth_state import StateStore, get_auth_state
 from .config import AuthSettings, get_auth_settings
@@ -60,6 +61,26 @@ def get_current_user(
     request.state.auth_session_id = claims["sid"]
     request.state.auth_portal = claims["portal"]
     return user
+
+
+def get_current_actor(user: User = Depends(get_current_user)) -> Actor:
+    """Actor for Stage 4 services, built only from the authenticated, active database user."""
+    return Actor(user_id=user.UserId, role=user.Role)
+
+
+def get_optional_actor(
+    request: Request,
+    credentials: HTTPAuthorizationCredentials | None = Depends(bearer),
+    db: Session = Depends(get_db),
+    runtime: AuthRuntime = Depends(get_runtime),
+) -> Actor | None:
+    """For public use cases that show more to signed-in staff: no token means anonymous (None).
+
+    A token that is sent but invalid, expired or revoked is still rejected rather than treated as anonymous.
+    """
+    if credentials is None:
+        return None
+    return get_current_actor(get_current_user(request, credentials, db, runtime))
 
 
 def require_permission(permission: str):
