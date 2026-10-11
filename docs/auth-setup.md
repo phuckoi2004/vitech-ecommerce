@@ -32,7 +32,7 @@ Mở PowerShell trong `E:\vitech-ecommerce\backend`. Dùng Python của `.venv` 
 
 Mở Swagger: <http://localhost:8000/docs>. Endpoint `/health/db` kiểm tra kết nối database; kết quả này không kiểm tra SMTP hoặc toàn bộ luồng Auth.
 
-Thêm cấu hình từ [auth.env.example](../backend/auth.env.example) vào `backend/.env`, cùng cấu hình database đang dùng. Các giá trị phát triển:
+Sao chép [auth.env.example](../backend/auth.env.example) thành `backend/.env` (hoặc thêm các biến còn thiếu vào `.env` đang có) rồi điền giá trị thật, gồm cả `DATABASE_URL`. Các giá trị phát triển:
 
 ```dotenv
 APP_ENV=development

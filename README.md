@@ -218,7 +218,7 @@ VieTech/
 │   ├── alembic.ini
 │   ├── tests/
 │   ├── .env                      # bí mật, bị .gitignore, không commit
-│   ├── auth.env.example          # biến cấu hình Auth/SMTP/Redis mẫu
+│   ├── auth.env.example          # mẫu backend/.env: database, Auth/SMTP/Redis, Storage, SePay
 │   ├── requirements.txt
 │   └── requirements-dev.txt
 │
