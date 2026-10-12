@@ -36,13 +36,15 @@ if TYPE_CHECKING:
     from .wishlist_cart import Cart, Wishlist
 
 
-USER_ROLES = ("Customer", "Staff", "Admin", "SuperAdmin")
+USER_ROLES = ("Customer", "Staff", "Admin")
+ACCOUNT_STATUSES = ("Active", "Locked")
 
 
 class User(Base):
     __tablename__ = "Users"
     __table_args__ = (
         check_in("Role", USER_ROLES, "Role_Valid"),
+        check_in("AccountStatus", ACCOUNT_STATUSES, "AccountStatus_Valid"),
         CheckConstraint('"TotalSpent" >= 0', name="TotalSpent_NonNegative"),
         CheckConstraint('"TotalOrders" >= 0', name="TotalOrders_NonNegative"),
     )

@@ -36,8 +36,13 @@ backend/.env
 
 # Testing
 coverage/
+.pytest_cache/
+pytest-cache-files-*/
+# Báo cáo kiểm thử và ảnh chụp được lưu local.
+/output/
 
 # Temporary files
+frontend/__tmp/
 *.tmp
 *.temp
 

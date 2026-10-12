@@ -7,6 +7,9 @@ Quy ước:
   SessionLocal dùng autoflush=False, nên truy vấn trong cùng transaction chỉ thấy object mới
   sau khi Service gọi ``flush()``.
 - Không có thông báo lỗi kiểu HTTP; không kiểm tra quyền.
+- Truy vấn khóa dòng (FOR UPDATE) luôn flush thay đổi đang chờ rồi dùng ``populate_existing``:
+  object đã có sẵn trong Session được nạp lại từ dòng vừa khóa, không dùng giá trị cũ
+  (ví dụ StockQuantity/UsedCount đọc trước khi transaction khác commit).
 """
 
 from collections.abc import Iterable, Mapping, Sequence
@@ -37,7 +40,13 @@ class BaseRepository(Generic[ModelT]):
 
     def get_by_id_for_update(self, id_: Any) -> ModelT | None:
         """Lấy theo primary key và khóa dòng (SELECT ... FOR UPDATE) trong transaction hiện tại."""
-        return self.session.get(self.model, id_, with_for_update=True)
+        self.session.flush()
+        return self.session.get(self.model, id_, with_for_update=True, populate_existing=True)
+
+    def _scalars_for_update(self, stmt: Any) -> list[ModelT]:
+        """Chạy câu SELECT đã có ``with_for_update``: flush trước, nạp lại object từ dòng vừa khóa."""
+        self.session.flush()
+        return list(self.session.scalars(stmt.execution_options(populate_existing=True)))
 
     def get_one(self, *where: ColumnElement[bool]) -> ModelT | None:
         """Lấy một dòng theo điều kiện; lỗi MultipleResultsFound nếu có nhiều hơn một dòng."""

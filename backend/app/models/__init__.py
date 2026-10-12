@@ -2,11 +2,15 @@ from .base import Base
 from .catalog import Brand, Category, Product, ProductImage, ProductSerial, ProductVariant
 from .chat import Conversation, Message
 from .content import Banner, NewsArticle
+from .inventory import StockAdjustment, StockAdjustmentSerial
 from .order import Order, OrderItem, OrderStatusHistory, ShippingMethod
 from .payment import PaymentMethod, PaymentTransaction
 from .promotion import Coupon, Promotion, PromotionCategory, PromotionProduct
-from .purchasing import PurchaseOrder, PurchaseOrderItem, Supplier
+from .payment_webhook import PaymentWebhookEvent
+from .reconciliation import PaymentReconciliation
+from .purchasing import PurchaseOrder, PurchaseOrderItem, PurchaseReceipt, PurchaseReceiptItem, Supplier
 from .review import Review, ReviewImage
+from .shipment import ShipmentReturn, ShipmentReturnItem
 from .service_request import (
     ReturnRequest,
     ServiceRequestAttachment,
@@ -29,6 +33,9 @@ __all__ = [
     "ProductVariant",
     "ProductImage",
     "ProductSerial",
+    # inventory
+    "StockAdjustment",
+    "StockAdjustmentSerial",
     # wishlist_cart
     "Wishlist",
     "WishlistItem",
@@ -36,12 +43,16 @@ __all__ = [
     "CartItem",
     # order
     "ShippingMethod",
+    "ShipmentReturn",
+    "ShipmentReturnItem",
     "Order",
     "OrderItem",
     "OrderStatusHistory",
     # payment
     "PaymentMethod",
     "PaymentTransaction",
+    "PaymentReconciliation",
+    "PaymentWebhookEvent",
     # promotion
     "Promotion",
     "PromotionProduct",
@@ -51,6 +62,8 @@ __all__ = [
     "Supplier",
     "PurchaseOrder",
     "PurchaseOrderItem",
+    "PurchaseReceipt",
+    "PurchaseReceiptItem",
     # review
     "Review",
     "ReviewImage",

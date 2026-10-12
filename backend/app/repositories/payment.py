@@ -1,6 +1,10 @@
 """Repositories cho PaymentMethods, PaymentTransactions. Không gọi cổng thanh toán."""
 
 import uuid
+from collections.abc import Sequence
+from decimal import Decimal
+
+from sqlalchemy import func, select
 
 from app.models import PaymentMethod, PaymentTransaction
 
@@ -38,6 +42,19 @@ class PaymentTransactionRepository(BaseRepository[PaymentTransaction]):
     def list_by_gateway_code(self, gateway_transaction_code: str) -> list[PaymentTransaction]:
         """GatewayTransactionCode không có UNIQUE trong schema nên trả về danh sách."""
         return self.get_all(PaymentTransaction.GatewayTransactionCode == gateway_transaction_code)
+
+    def sum_refunds_by_source(self, order_id: uuid.UUID, *, statuses: Sequence[str]) -> dict[uuid.UUID, Decimal]:
+        """Tổng tiền Refund theo khoản Payment gốc của một đơn, chỉ tính các trạng thái cho trước (SUM ở database)."""
+        stmt = (
+            select(PaymentTransaction.RefundOfPaymentTransactionId, func.sum(PaymentTransaction.Amount))
+            .where(
+                PaymentTransaction.OrderId == order_id,
+                PaymentTransaction.TransactionType == "Refund",
+                PaymentTransaction.Status.in_(tuple(statuses)),
+            )
+            .group_by(PaymentTransaction.RefundOfPaymentTransactionId)
+        )
+        return {source_id: Decimal(total) for source_id, total in self.session.execute(stmt)}
 
     def _filters(self, status: str | None, payment_method_id: uuid.UUID | None, transaction_type: str | None) -> list:
         conditions = []

@@ -168,3 +168,13 @@ class AdminCouponResponse(ResponseSchema):
     UsedCount: NonNegativeInt
     IsActive: bool
     CreatedAt: datetime
+
+
+class CouponPreviewResponse(ResponseSchema):
+    """Kết quả kiểm tra mã giảm giá trên giỏ hàng (chưa trừ lượt dùng; tính lại khi tạo đơn)."""
+
+    Code: str
+    PromotionId: uuid.UUID
+    Subtotal: Money
+    EligibleSubtotal: Money
+    DiscountAmount: Money

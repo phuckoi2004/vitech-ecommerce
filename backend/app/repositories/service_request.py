@@ -8,7 +8,8 @@ import uuid
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
-from app.models import ReturnRequest, ServiceRequestAttachment, ServiceRequestHistory, WarrantyRequest
+from app.models import OrderItem, ReturnRequest, ServiceRequestAttachment, ServiceRequestHistory, WarrantyRequest
+from app.models.service_request import RETURN_OPEN_STATUSES, WARRANTY_OPEN_STATUSES
 
 from .base import BaseRepository
 
@@ -47,6 +48,34 @@ class WarrantyRequestRepository(BaseRepository[WarrantyRequest]):
             WarrantyRequest.ProductSerialId == product_serial_id,
             order_by=(WarrantyRequest.RequestedAt.desc(), WarrantyRequest.WarrantyRequestId),
         )
+
+    def get_open_by_product_serial(self, product_serial_id: uuid.UUID) -> WarrantyRequest | None:
+        """Yêu cầu đang xử lý (New/HandedOver/Processing) của serial; tối đa một (UX_WarrantyRequests_Serial_Open)."""
+        return self.get_one(
+            WarrantyRequest.ProductSerialId == product_serial_id,
+            WarrantyRequest.Status.in_(WARRANTY_OPEN_STATUSES),
+        )
+
+    def get_open_by_order_item_without_serial(self, order_item_id: uuid.UUID) -> WarrantyRequest | None:
+        """Yêu cầu đang xử lý của dòng đơn không quản lý serial (UX_WarrantyRequests_OrderItem_Open_NoSerial)."""
+        return self.get_one(
+            WarrantyRequest.OrderItemId == order_item_id,
+            WarrantyRequest.ProductSerialId.is_(None),
+            WarrantyRequest.Status.in_(WARRANTY_OPEN_STATUSES),
+        )
+
+    def get_latest_replacement_handover(self, product_serial_id: uuid.UUID) -> WarrantyRequest | None:
+        """Yêu cầu gần nhất đã bàn giao serial này cho khách làm máy thay thế (ReplacementHandedOverAt có giá trị)."""
+        stmt = (
+            select(WarrantyRequest)
+            .where(
+                WarrantyRequest.ReplacementProductSerialId == product_serial_id,
+                WarrantyRequest.ReplacementHandedOverAt.is_not(None),
+            )
+            .order_by(WarrantyRequest.ReplacementHandedOverAt.desc(), WarrantyRequest.WarrantyRequestId)
+            .limit(1)
+        )
+        return self.session.scalars(stmt).first()
 
     def _filters(
         self,
@@ -126,6 +155,32 @@ class ReturnRequestRepository(BaseRepository[ReturnRequest]):
             order_by=(ReturnRequest.RequestedAt.desc(), ReturnRequest.ReturnRequestId),
         )
 
+    def list_refund_transaction_ids_for_order(self, order_id: uuid.UUID) -> set[uuid.UUID]:
+        """Giao dịch Refund đang liên kết với yêu cầu trả hàng của các dòng thuộc đơn (RefundPaymentTransactionId)."""
+        stmt = (
+            select(ReturnRequest.RefundPaymentTransactionId)
+            .join(OrderItem, OrderItem.OrderItemId == ReturnRequest.OrderItemId)
+            .where(OrderItem.OrderId == order_id, ReturnRequest.RefundPaymentTransactionId.is_not(None))
+        )
+        return set(self.session.scalars(stmt))
+
+    def list_open_request_codes_for_order(self, order_id: uuid.UUID) -> list[str]:
+        """Mã các yêu cầu đổi/trả đang xử lý (RETURN_OPEN_STATUSES) của các dòng thuộc đơn, theo RequestCode."""
+        stmt = (
+            select(ReturnRequest.RequestCode)
+            .join(OrderItem, OrderItem.OrderItemId == ReturnRequest.OrderItemId)
+            .where(OrderItem.OrderId == order_id, ReturnRequest.Status.in_(RETURN_OPEN_STATUSES))
+            .order_by(ReturnRequest.RequestCode)
+        )
+        return list(self.session.scalars(stmt))
+
+    def get_open_by_product_serial(self, product_serial_id: uuid.UUID) -> ReturnRequest | None:
+        """Yêu cầu đổi/trả đang xử lý (Pending/Approved/Receiving/Processing) của serial (UX_ReturnRequests_Serial_Open)."""
+        return self.get_one(
+            ReturnRequest.ProductSerialId == product_serial_id,
+            ReturnRequest.Status.in_(RETURN_OPEN_STATUSES),
+        )
+
     def _filters(
         self,
         customer_id: uuid.UUID | None,
@@ -189,16 +244,23 @@ class ServiceRequestAttachmentRepository(BaseRepository[ServiceRequestAttachment
 
 
 class ServiceRequestHistoryRepository(BaseRepository[ServiceRequestHistory]):
+    """Lịch sử yêu cầu. Mặc định chỉ trả dòng công khai; ``include_internal=True`` chỉ dùng cho Staff/Admin."""
+
     model = ServiceRequestHistory
 
-    def list_by_warranty_request(self, warranty_request_id: uuid.UUID) -> list[ServiceRequestHistory]:
+    def _list(self, condition, include_internal: bool) -> list[ServiceRequestHistory]:
+        conditions = [condition] if include_internal else [condition, ServiceRequestHistory.IsInternal.is_(False)]
         return self.get_all(
-            ServiceRequestHistory.WarrantyRequestId == warranty_request_id,
+            *conditions,
             order_by=(ServiceRequestHistory.ChangedAt, ServiceRequestHistory.ServiceRequestHistoryId),
         )
 
-    def list_by_return_request(self, return_request_id: uuid.UUID) -> list[ServiceRequestHistory]:
-        return self.get_all(
-            ServiceRequestHistory.ReturnRequestId == return_request_id,
-            order_by=(ServiceRequestHistory.ChangedAt, ServiceRequestHistory.ServiceRequestHistoryId),
-        )
+    def list_by_warranty_request(
+        self, warranty_request_id: uuid.UUID, *, include_internal: bool = False
+    ) -> list[ServiceRequestHistory]:
+        return self._list(ServiceRequestHistory.WarrantyRequestId == warranty_request_id, include_internal)
+
+    def list_by_return_request(
+        self, return_request_id: uuid.UUID, *, include_internal: bool = False
+    ) -> list[ServiceRequestHistory]:
+        return self._list(ServiceRequestHistory.ReturnRequestId == return_request_id, include_internal)

@@ -14,6 +14,10 @@ from .catalog import (
     ProductSerialRepository,
     ProductVariantRepository,
 )
+from .inventory import StockAdjustmentRepository, StockAdjustmentSerialRepository
+from .payment_webhook import PaymentWebhookEventRepository
+from .reconciliation import PaymentReconciliationRepository
+from .shipment import ShipmentReturnItemRepository, ShipmentReturnRepository
 from .wishlist_cart import (
     CartItemRepository,
     CartRepository,
@@ -39,6 +43,8 @@ from .promotion import (
 from .purchasing import (
     PurchaseOrderItemRepository,
     PurchaseOrderRepository,
+    PurchaseReceiptItemRepository,
+    PurchaseReceiptRepository,
     SupplierRepository,
 )
 from .review import (
@@ -59,9 +65,16 @@ from .content import (
     BannerRepository,
     NewsArticleRepository,
 )
+from .statistics import StatisticsRepository
 
 __all__ = [
     "BaseRepository",
+    "StockAdjustmentRepository",
+    "StockAdjustmentSerialRepository",
+    "PaymentReconciliationRepository",
+    "ShipmentReturnRepository",
+    "ShipmentReturnItemRepository",
+    "PaymentWebhookEventRepository",
     "AddressRepository",
     "NotificationRepository",
     "UserRepository",
@@ -87,6 +100,8 @@ __all__ = [
     "PromotionRepository",
     "PurchaseOrderItemRepository",
     "PurchaseOrderRepository",
+    "PurchaseReceiptRepository",
+    "PurchaseReceiptItemRepository",
     "SupplierRepository",
     "ReviewImageRepository",
     "ReviewRepository",
@@ -98,4 +113,5 @@ __all__ = [
     "WarrantyRequestRepository",
     "BannerRepository",
     "NewsArticleRepository",
+    "StatisticsRepository",
 ]

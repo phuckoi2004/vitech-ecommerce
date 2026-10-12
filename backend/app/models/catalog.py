@@ -33,7 +33,8 @@ if TYPE_CHECKING:
 
 
 PRODUCT_STATUSES = ("Draft", "Active", "Inactive", "Discontinued")
-PRODUCT_SERIAL_STATUSES = ("Available", "Reserved", "Sold", "Warranty", "Returned")
+# WrittenOff: đã loại khỏi tồn kho qua phiếu điều chỉnh giảm (StockAdjustmentSerials Out); migration 8b7e3d1c5a29.
+PRODUCT_SERIAL_STATUSES = ("Available", "Reserved", "Sold", "Warranty", "Returned", "WrittenOff")
 
 
 class Category(Base):
@@ -189,6 +190,10 @@ class ProductVariant(Base):
     MinStockLevel: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
     IsActive: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("true"))
     IsDeleted: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("false"))
+    # Biến thể quản lý Serial/IMEI: nhận hàng phải ghi đủ serial, bán hàng phải giữ serial.
+    IsSerialTracked: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default=text("false")
+    )
 
     product: Mapped[Product] = relationship(back_populates="variants", foreign_keys=[ProductId])
     serials: Mapped[list[ProductSerial]] = relationship(

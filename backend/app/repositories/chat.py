@@ -25,10 +25,21 @@ class ConversationRepository(BaseRepository[Conversation]):
     def get_by_id_and_customer(self, conversation_id: uuid.UUID, customer_id: uuid.UUID) -> Conversation | None:
         return self.get_one(Conversation.ConversationId == conversation_id, Conversation.CustomerId == customer_id)
 
+    def get_open_by_customer(self, customer_id: uuid.UUID) -> Conversation | None:
+        """Hội thoại đang Open của Customer (tối đa một: UX_Conversations_CustomerId_Open)."""
+        return self.get_one(Conversation.CustomerId == customer_id, Conversation.Status == "Open")
+
     def _filters(
-        self, customer_id: uuid.UUID | None, assigned_staff_id: uuid.UUID | None, status: str | None, mode: str | None
+        self,
+        customer_id: uuid.UUID | None,
+        assigned_staff_id: uuid.UUID | None,
+        status: str | None,
+        mode: str | None,
+        unassigned: bool = False,
     ) -> list:
         conditions = []
+        if unassigned:
+            conditions.append(Conversation.AssignedStaffId.is_(None))
         if customer_id is not None:
             conditions.append(Conversation.CustomerId == customer_id)
         if assigned_staff_id is not None:
@@ -46,11 +57,12 @@ class ConversationRepository(BaseRepository[Conversation]):
         assigned_staff_id: uuid.UUID | None = None,
         status: str | None = None,
         mode: str | None = None,
+        unassigned: bool = False,
         offset: int | None = None,
         limit: int | None = None,
     ) -> list[Conversation]:
         return self.get_all(
-            *self._filters(customer_id, assigned_staff_id, status, mode),
+            *self._filters(customer_id, assigned_staff_id, status, mode, unassigned),
             order_by=(Conversation.CreatedAt.desc(), Conversation.ConversationId),
             offset=offset,
             limit=limit,
@@ -63,8 +75,9 @@ class ConversationRepository(BaseRepository[Conversation]):
         assigned_staff_id: uuid.UUID | None = None,
         status: str | None = None,
         mode: str | None = None,
+        unassigned: bool = False,
     ) -> int:
-        return self.count(*self._filters(customer_id, assigned_staff_id, status, mode))
+        return self.count(*self._filters(customer_id, assigned_staff_id, status, mode, unassigned))
 
 
 class MessageRepository(BaseRepository[Message]):

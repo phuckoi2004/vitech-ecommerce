@@ -1,0 +1,225 @@
+.cauth-page {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  min-height: 100dvh;
+  color: #17243d;
+  background: #fff;
+  font-family: "Segoe UI", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Brand panel */
+.cauth-brand { display: flex; align-items: center; justify-content: center; padding: 48px 40px; background: #fff; }
+.cauth-brand-inner { display: flex; flex-direction: column; align-items: center; width: min(540px, 100%); text-align: center; }
+/* Raised a little above the mascot team. */
+.cauth-logo { position: relative; top: -24px; display: inline-flex; }
+.cauth-logo img { display: block; width: 220px; max-width: 100%; height: auto; }
+/* Mascot team: the large robot spans both rows of the middle column, a small robot sits in each corner. */
+.cauth-mascots {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 3fr) minmax(0, 1fr);
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  align-items: center;
+  justify-items: center;
+  gap: 8px 4px;
+  width: 100%;
+  margin-top: 20px;
+}
+
+.cauth-mascot { grid-column: 2; grid-row: 1 / 3; display: block; width: 100%; max-width: 330px; height: auto; transform-origin: 50% 90%; animation: cauth-mascot-float 4s ease-in-out infinite; }
+.cauth-mascot-small { display: block; width: 100%; max-width: 100px; height: auto; animation: cauth-mascot-float 4s ease-in-out infinite; }
+/* Offsets keep the small robots from bobbing in step with each other. */
+.cauth-mascot-small.is-top-left { grid-column: 1; grid-row: 1; align-self: start; animation-delay: -1s; }
+.cauth-mascot-small.is-bottom-left { grid-column: 1; grid-row: 2; align-self: end; animation-delay: -3s; }
+.cauth-mascot-small.is-top-right { grid-column: 3; grid-row: 1; align-self: start; animation-delay: -2s; }
+.cauth-mascot-small.is-bottom-right { grid-column: 3; grid-row: 2; align-self: end; animation-delay: -0.5s; }
+
+/* Gentle bob and sway; the global prefers-reduced-motion rule in App.css switches it off. */
+@keyframes cauth-mascot-float {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  25% { transform: translateY(-8px) rotate(-1.5deg); }
+  50% { transform: translateY(-12px) rotate(0deg); }
+  75% { transform: translateY(-8px) rotate(1.5deg); }
+}
+.cauth-slogan { margin: 16px 0 0; color: #1f3a8a; font-size: 18px; font-weight: 600; line-height: 1.5; }
+
+/* Form card */
+.cauth-main { display: flex; align-items: center; justify-content: center; padding: 32px 24px; }
+
+.cauth-card {
+  width: min(460px, 100%);
+  padding: 32px;
+  border: 1px solid #edf0f5;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 10px 30px rgb(23 36 61 / 7%);
+}
+
+.cauth-card h2, .cauth-panel h2 { margin: 0; font-size: 24px; font-weight: 700; }
+.cauth-lead { margin: 8px 0 0; color: #6b768a; font-size: 13px; line-height: 1.6; }
+.cauth-lead strong { color: #17243d; }
+
+.cauth-form { display: flex; flex-direction: column; gap: 14px; margin-top: 22px; }
+.cauth-field { display: flex; flex-direction: column; gap: 6px; }
+.cauth-field > label { font-size: 13px; font-weight: 600; }
+
+.cauth-input-wrap { position: relative; }
+
+.cauth-input {
+  box-sizing: border-box;
+  width: 100%;
+  height: 44px;
+  padding: 0 14px;
+  border: 1px solid #dfe4ec;
+  border-radius: 9px;
+  outline: none;
+  color: #24334c;
+  background: #fff;
+  font: inherit;
+  font-size: 14px;
+  transition: border-color 160ms, box-shadow 160ms;
+}
+
+.cauth-input:focus { border-color: #d95b60; box-shadow: 0 0 0 3px rgb(213 50 57 / 8%); }
+.cauth-input:disabled { color: #8491a4; background: #fbfcfe; cursor: not-allowed; }
+.cauth-input::placeholder { color: #a0a9b8; }
+.cauth-input.has-toggle { padding-right: 46px; }
+
+.cauth-toggle {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 8px;
+  color: #98a3b4;
+  background: transparent;
+  cursor: pointer;
+}
+
+.cauth-toggle:hover { color: #53627b; background: #f7f8fa; }
+.cauth-toggle svg { width: 18px; height: 18px; }
+
+.cauth-rules { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px; margin: -4px 0 0; padding: 0; color: #a0a9b8; font-size: 11px; list-style: none; }
+.cauth-rules li::before { content: "○ "; }
+.cauth-rules .is-met { color: #2a805b; }
+.cauth-rules .is-met::before { content: "✓ "; }
+
+.cauth-success { margin: 16px 0 0; padding: 10px 12px; border: 1px solid #d6ecdf; border-radius: 9px; color: #2a805b; background: #f1faf5; font-size: 13px; line-height: 1.6; }
+
+.cauth-error {
+  margin: 16px 0 0;
+  padding: 10px 12px;
+  border: 1px solid #f5dcdf;
+  border-radius: 9px;
+  color: #b9313b;
+  background: #fff4f4;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.cauth-submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 46px;
+  margin-top: 6px;
+  border: 0;
+  border-radius: 10px;
+  color: #fff;
+  background: #d53239;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 160ms;
+}
+
+.cauth-submit:hover:not(:disabled) { background: #c12831; }
+.cauth-submit:disabled { cursor: not-allowed; opacity: 0.6; }
+.cauth-submit .spinner { width: 15px; height: 15px; }
+
+.cauth-link { padding: 0; border: 0; color: #d53239; background: transparent; font: inherit; font-weight: 600; text-decoration: none; cursor: pointer; }
+.cauth-link:hover { text-decoration: underline; }
+.cauth-link:disabled { color: #b0b8c4; text-decoration: none; cursor: not-allowed; }
+.cauth-footer { margin: 20px 0 0; color: #6b768a; font-size: 13px; text-align: center; }
+
+.cauth-label { font-size: 13px; font-weight: 600; }
+.cauth-required { color: #d53239; }
+.cauth-row { display: flex; align-items: center; justify-content: flex-end; gap: 12px; margin-top: -2px; }
+.cauth-small { font-size: 12px; }
+.cauth-back { margin: 18px 0 0; }
+.cauth-back .cauth-link { display: inline-flex; align-items: center; gap: 6px; }
+.cauth-back svg { width: 14px; height: 14px; }
+
+/* Six one-digit OTP boxes. */
+.cauth-otp { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; }
+
+.cauth-otp-box {
+  box-sizing: border-box;
+  width: 100%;
+  height: 52px;
+  padding: 0;
+  border: 1px solid #dfe4ec;
+  border-radius: 10px;
+  outline: none;
+  color: #17243d;
+  background: #fff;
+  font: inherit;
+  font-size: 22px;
+  font-weight: 600;
+  text-align: center;
+  transition: border-color 160ms, box-shadow 160ms;
+}
+
+.cauth-otp-box::placeholder { color: #6b768a; font-size: 18px; }
+.cauth-otp-box:focus { border-color: #d95b60; box-shadow: 0 0 0 3px rgb(213 50 57 / 8%); }
+.cauth-otp-box:focus::placeholder { color: transparent; }
+.cauth-otp-box:disabled { background: #fbfcfe; cursor: not-allowed; }
+
+.cauth-hint { margin: 0; color: #6b768a; font-size: 12px; }
+.cauth-hint.is-expired { color: #b9313b; }
+
+.cauth-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 46px;
+  border: 1px solid #d53239;
+  border-radius: 10px;
+  color: #d53239;
+  background: #fff;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 160ms;
+}
+
+.cauth-secondary:hover:not(:disabled) { background: #fff5f5; }
+.cauth-secondary:disabled { border-color: #f1c4c6; color: #e08a8f; cursor: not-allowed; }
+.cauth-secondary:focus-visible { outline: 3px solid #df7b80; outline-offset: 2px; }
+
+.cauth-done { display: flex; flex-direction: column; align-items: center; text-align: center; }
+.cauth-done-icon { display: grid; place-items: center; width: 56px; height: 56px; margin-bottom: 16px; border-radius: 50%; color: #2a805b; background: #e8f6ee; }
+.cauth-done-icon svg { width: 28px; height: 28px; }
+.cauth-done .cauth-submit { margin-top: 24px; text-decoration: none; }
+
+.cauth-input:focus-visible, .cauth-toggle:focus-visible, .cauth-submit:focus-visible, .cauth-link:focus-visible { outline: 3px solid #df7b80; outline-offset: 2px; }
+
+@media (max-width: 860px) {
+  .cauth-page { grid-template-columns: minmax(0, 1fr); }
+  .cauth-brand { padding: 28px 20px 8px; background: transparent; }
+  .cauth-logo img { width: 150px; }
+  .cauth-mascots, .cauth-slogan { display: none; }
+  .cauth-main { align-items: flex-start; padding: 16px; }
+  .cauth-card { padding: 24px 20px; }
+  .cauth-otp { gap: 8px; }
+  .cauth-otp-box { height: 46px; font-size: 20px; }
+}

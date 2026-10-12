@@ -1,119 +1,197 @@
 # VieTech - Website bán hàng điện tử
 
-## 1. Tổng quan
+## 1. Tổng quan dự án
 
-VieTech là website thương mại điện tử kinh doanh các sản phẩm công nghệ và điện tử.
+VieTech là website thương mại điện tử kinh doanh các sản phẩm công nghệ và điện tử, hỗ trợ khách hàng tìm kiếm, lựa chọn và mua sắm sản phẩm trực tuyến; đồng thời cung cấp các chức năng quản trị hoạt động kinh doanh cho nhân viên và quản trị viên.
 
-Hệ thống gồm:
-- Quản lý tài khoản và phân quyền.
+### Các chức năng chính
+
+- Quản lý tài khoản, xác thực và phân quyền.
 - Quản lý danh mục, thương hiệu và sản phẩm.
-- Quản lý kho và giá vốn hàng bán (COGS).
-- Quản lý giỏ hàng và đơn hàng.
-- Quản lý thanh toán.
-- Quản lý khuyến mãi và mã giảm giá.
+- Quản lý kho hàng, serial/IMEI và giá vốn hàng bán (COGS).
+- Quản lý giỏ hàng, đơn hàng và vận chuyển.
+- Quản lý thanh toán, đối soát và hoàn tiền.
+- Quản lý nhà cung cấp, đơn đặt hàng nhập hàng và phiếu nhận hàng.
+- Quản lý chương trình khuyến mãi và mã giảm giá.
 - Quản lý đánh giá sản phẩm.
-- Quản lý bảo hành và đổi trả.
+- Quản lý bảo hành, đổi trả và bồi thường.
+- Quản lý nội dung website.
 - AI Chatbot tư vấn sản phẩm.
-- Product Recommendation Engine.
+- Product Recommendation Engine - hệ thống gợi ý sản phẩm.
 
-Tài liệu đặc tả:
+Hạng thành viên và tích điểm không thuộc phạm vi triển khai của VieTech.
 
-- `docs/database-schema.md`: **SOURCE OF TRUTH** cho database schema.
-- `VieTech.docx`: tài liệu tham khảo về nghiệp vụ, yêu cầu, ERD và thiết kế tổng thể.
+### Tài liệu dự án
+
+| Tài liệu | Mục đích |
+|---|---|
+| `README.md` | Tổng quan dự án, công nghệ, kiến trúc và quy tắc phát triển |
+| `docs/business-requirements.md` | Đặc tả nghiệp vụ, quy trình xử lý và quy tắc của các chức năng |
+| `docs/database-schema.md` | Nguồn chính thức về database schema |
+| `docs/api-endpoints.md` | Danh sách API nghiệp vụ giai đoạn 6: đường dẫn, quyền, body, kết quả (sinh từ router) |
+| `docs/stage6-concurrency-fixes.md` | Sửa checkout trùng giỏ, bảo vệ database test và ghi địa chỉ mặc định đồng thời |
+| `docs/stage6-postgres-validation.md` | Kết quả 17 ca PostgreSQL giai đoạn 6, phạm vi bảo hành/coupon/chat/nội dung và lệnh chạy |
+| `docs/stage7-api-testing.md` | Giai đoạn 7: kiểm thử API qua HTTP theo 13 domain, ma trận mã lỗi 401/403/404/409/422/nghiệp vụ và cách chạy |
+| `docs/internal-endpoints.md` | Tài liệu về các điểm vào nội bộ và giới hạn sử dụng |
+| `docs/auth-spec.md` | Chính sách Auth/RBAC giai đoạn 5 đã được chọn khi tích hợp giai đoạn 4 |
+| `docs/auth-rbac.md` | Bảng quyền và phạm vi quản lý tài khoản |
+| `docs/auth-setup.md` | Chạy Auth API, cấu hình SMTP/Redis và khởi tạo Admin đầu tiên |
+| `docs/requirements-revision.md` | Các quyết định nghiệp vụ sau rà soát báo cáo |
+| `VieTech.docx` | Tài liệu tham khảo về yêu cầu tổng thể, ERD và thiết kế ban đầu (file bị `.gitignore` loại khỏi repository, không có sẵn khi clone) |
 
 ---
 
-## 2. Công nghệ
+## 2. Công nghệ sử dụng
 
-### Frontend
+### 2.1. Frontend
+
 - React
 - Vite
 - Tailwind CSS
 
-### Backend
+### 2.2. Backend
+
 - Python
 - FastAPI
 - SQLAlchemy
+- Pydantic
 
-### Database
+### 2.3. Database
+
 - Supabase
 - PostgreSQL
 
-### Authentication
-- JWT
-- RBAC
+### 2.4. Authentication và Authorization
 
-### Version Control
+- JWT - API xác thực giai đoạn 5 đã có trong source code, cùng refresh session và CSRF.
+- RBAC - API tài khoản kiểm tra quyền theo `docs/auth-rbac.md`; Service Layer nghiệp vụ kiểm tra role qua `Actor`.
+
+### 2.5. Công cụ phát triển
+
 - Git
 - GitHub
+- Alembic - quản lý phiên bản thay đổi cấu trúc database.
 
 ---
 
-## 3. Kiến trúc Backend
+## 3. Kiến trúc hệ thống
 
-Backend sử dụng kiến trúc phân lớp:
+VieTech sử dụng kiến trúc Client–Server. Frontend giao tiếp với Backend thông qua HTTP API; Backend xử lý nghiệp vụ và truy cập PostgreSQL thông qua SQLAlchemy.
+
+### 3.1. Kiến trúc tổng thể
 
 ```text
-Router
-   ↓
-Service
-   ↓
-Repository
-   ↓
-Model
-   ↓
+Customer / Staff / Admin
+          |
+          v
+   Frontend React
+          |
+       HTTP API
+          |
+          v
+    Backend FastAPI
+          |
+    +-----+------+
+    |            |
+  Router       Schema
+    |
+  Service
+    |
+ Repository
+    |
+   Model
+    |
+ SQLAlchemy
+    |
+    v
 Supabase / PostgreSQL
 ```
 
-### Router
-Tiếp nhận HTTP request và trả response.
+AI Chatbot và Product Recommendation Engine là các thành phần nghiệp vụ dự kiến tích hợp vào hệ thống theo phạm vi triển khai tương ứng.
 
-### Service
-Xử lý logic nghiệp vụ.
+### 3.2. Các lớp Backend
 
-### Repository
-Truy vấn và thao tác với database.
+**Router**
 
-### Model
-SQLAlchemy ORM mapping với database.
+- Tiếp nhận HTTP request.
+- Xác thực dữ liệu đầu vào thông qua Schema.
+- Lấy thông tin người dùng và ngữ cảnh phân quyền.
+- Gọi Service tương ứng.
+- Chuyển kết quả hoặc lỗi nghiệp vụ thành HTTP response.
 
-### Schema
-Pydantic dùng để validate request/response.
+**Service**
+
+- Xử lý logic nghiệp vụ.
+- Kiểm tra điều kiện và trạng thái.
+- Kiểm soát quyền truy cập theo Actor và RBAC.
+- Điều phối nhiều Repository khi một nghiệp vụ liên quan đến nhiều bảng.
+- Quản lý các thao tác cần tính nhất quán giao dịch.
+
+**Repository**
+
+- Thực hiện truy vấn và thao tác dữ liệu.
+- Đóng gói các thao tác với SQLAlchemy.
+- Hạn chế việc truy vấn database trực tiếp từ Service.
+
+**Model**
+
+- Ánh xạ bảng PostgreSQL bằng SQLAlchemy ORM.
+- Khai báo cột, khóa, quan hệ và các cấu hình tương ứng với đặc tả database.
+
+**Schema**
+
+- Sử dụng Pydantic để kiểm tra dữ liệu request.
+- Định nghĩa cấu trúc response.
+- Kiểm soát dữ liệu được phép trả về cho từng nhóm người dùng.
+
+### 3.3. Quy tắc phụ thuộc
+
+Luồng phụ thuộc nghiệp vụ:
+
+```text
+Router → Service → Repository → Model
+```
+
+Schema được sử dụng tại ranh giới request/response. Service không tự ý thực hiện truy vấn SQL trực tiếp hoặc bỏ qua Repository để truy cập database.
+
+Các điểm vào nội bộ phục vụ callback, webhook hoặc tác vụ nền phải tuân theo thiết kế bảo mật riêng, không mặc nhiên được phép công khai thành API.
 
 ---
 
-## 4. Cấu trúc project
+## 4. Cấu trúc thư mục dự án
 
 ```text
 VieTech/
 ├── README.md
-├── VieTech.docx
+├── VieTech.docx                  # tài liệu tham khảo, bị .gitignore
 │
 ├── docs/
-│   └── database-schema.md       # SOURCE OF TRUTH cho database schema
+│   ├── business-requirements.md
+│   ├── database-schema.md
+│   └── internal-endpoints.md
 │
 ├── frontend/
 │   ├── public/
 │   ├── src/
-│   │   ├── customer/            # Giao diện khách hàng
+│   │   ├── customer/
 │   │   │   ├── pages/
 │   │   │   ├── components/
 │   │   │   ├── layouts/
 │   │   │   └── routes/
 │   │   │
-│   │   ├── admin/               # Giao diện nhân viên / quản trị viên
+│   │   ├── admin/
 │   │   │   ├── pages/
 │   │   │   ├── components/
 │   │   │   ├── layouts/
 │   │   │   └── routes/
 │   │   │
 │   │   ├── components/
-│   │   │   └── shared/          # Component dùng chung
+│   │   │   └── shared/
 │   │   │
 │   │   ├── services/
-│   │   │   └── api/             # Gọi API backend
+│   │   │   └── api/
 │   │   │
-│   │   ├── auth/                # Xác thực, JWT, phân quyền phía client
+│   │   ├── auth/
 │   │   ├── assets/
 │   │   ├── App.jsx
 │   │   └── main.jsx
@@ -124,121 +202,295 @@ VieTech/
 │
 ├── backend/
 │   ├── app/
-│   │   ├── core/                # Cấu hình, bảo mật, dependency dùng chung
-│   │   ├── models/              # SQLAlchemy Models
-│   │   ├── schemas/             # Pydantic Schemas
+│   │   ├── core/                 # cấu hình, bảo mật, session, RBAC
+│   │   ├── integrations/
+│   │   ├── models/
+│   │   ├── schemas/
 │   │   ├── repositories/
 │   │   ├── services/
 │   │   ├── routers/
-│   │   │   ├── customer/        # API cho khách hàng
-│   │   │   └── admin/           # API cho nhân viên / quản trị viên
-│   │   │
+│   │   │   ├── admin/users.py    # quản lý tài khoản (giai đoạn 5)
+│   │   │   ├── auth.py, users.py # Auth, hồ sơ, sổ địa chỉ, thông báo
+│   │   │   ├── catalog.py, wishlist_cart.py, orders.py, payments.py, promotions.py,
+│   │   │   ├── purchasing.py, reviews.py, chat.py, service_requests.py, content.py,
+│   │   │   ├── statistics.py     # API nghiệp vụ giai đoạn 6 (router công khai + admin_router)
+│   │   │   ├── dependencies.py   # Actor, phân trang, cung cấp Service, chặn /admin cho Staff/Admin
+│   │   │   ├── errors.py         # ServiceError → HTTP
+│   │   │   ├── internal.py       # endpoint cho cron (X-Internal-Secret), ẩn khỏi /docs
+│   │   │   └── webhooks.py       # webhook SePay (503 cho tới khi cấu hình SEPAY_*)
 │   │   ├── database.py
 │   │   └── main.py
 │   │
-│   ├── .env
-│   ├── .env.example
-│   └── requirements.txt
+│   ├── alembic/
+│   │   └── versions/
+│   ├── alembic.ini
+│   ├── tests/
+│   ├── .env                      # bí mật, bị .gitignore, không commit
+│   ├── auth.env.example          # mẫu backend/.env: database, Auth/SMTP/Redis, Storage, SePay
+│   ├── requirements.txt
+│   └── requirements-dev.txt
 │
 └── .gitignore
 ```
 
+Cấu trúc trên mô tả các nhóm thư mục chính. Một số thư mục hoặc module có thể tiếp tục được bổ sung theo tiến độ phát triển. Cần kiểm tra source code thực tế trước khi tạo mới hoặc thay đổi cấu trúc.
+
+### Vai trò các thư mục
+
+- `frontend/src/customer/`: giao diện dành cho khách hàng.
+- `frontend/src/admin/`: giao diện quản trị dành cho Staff và Admin theo quyền được cấp.
+- `frontend/src/services/api/`: các module giao tiếp với Backend.
+- `frontend/src/auth/`: quản lý trạng thái xác thực và quyền truy cập phía client.
+- `backend/app/core/`: cấu hình, bảo mật và các thành phần dùng chung.
+- `backend/app/models/`: SQLAlchemy Models.
+- `backend/app/schemas/`: Pydantic Schemas.
+- `backend/app/repositories/`: truy vấn và thao tác dữ liệu.
+- `backend/app/services/`: xử lý nghiệp vụ.
+- `backend/app/routers/`: các điểm tiếp nhận HTTP request.
+- `backend/app/integrations/`: tích hợp với hệ thống bên ngoài.
+- `backend/alembic/versions/`: các phiên bản migration.
+- `backend/tests/`: bộ kiểm thử tự động.
+- `docs/`: tài liệu đặc tả và hướng dẫn dự án.
+
 ---
 
-## 5. Database
+## 5. Database và quản lý migration
 
-Database sử dụng Supabase PostgreSQL.
+### 5.1. Nguyên tắc database
 
-Kết nối database thông qua biến môi trường:
+VieTech sử dụng Supabase PostgreSQL làm hệ quản trị cơ sở dữ liệu.
+
+Thông tin kết nối được cấu hình thông qua biến môi trường:
 
 ```text
 DATABASE_URL
 ```
 
-Không hard-code database credentials.
+Quy định bảo mật:
 
-`backend/.env` chứa thông tin bí mật và không được commit lên GitHub.
+- Không hard-code database credentials trong source code.
+- Không commit `backend/.env` hoặc các file chứa bí mật.
+- `backend/auth.env.example` chỉ chứa giá trị mẫu và không được chứa credentials thật.
+- Không in hoặc tiết lộ thông tin kết nối trong log, response API hoặc báo cáo.
+- Chỉ kết nối database thực tế khi được yêu cầu hoặc cho phép.
 
-Thiết kế database phải bám theo `docs/database-schema.md` (SOURCE OF TRUTH cho database schema).
+### 5.2. Nguồn chính thức về database schema
 
-`VieTech.docx` chỉ dùng để tham khảo nghiệp vụ, yêu cầu, ERD và thiết kế tổng thể.
-Khi `docs/database-schema.md` khác `VieTech.docx`, ưu tiên `docs/database-schema.md` khi triển khai database.
+`docs/database-schema.md` là **SOURCE OF TRUTH cho database schema**.
 
-Không tự ý:
-- Thêm hoặc xóa bảng.
-- Thêm hoặc xóa thuộc tính.
-- Đổi tên bảng hoặc column.
-- Thay đổi quan hệ giữa các bảng.
+Mọi thay đổi liên quan đến cấu trúc database phải đối chiếu tài liệu này, bao gồm:
 
-Nếu phát hiện mâu thuẫn giữa tài liệu và database thực tế, phải báo cáo trước khi thay đổi.
+- Tên bảng và tên cột.
+- Kiểu dữ liệu, giá trị mặc định và tính nullable.
+- Primary key, foreign key và quan hệ.
+- Unique constraint, CHECK constraint và index.
+- Quy tắc ON DELETE.
+- Các trạng thái và ràng buộc dữ liệu ở mức database.
+
+Không tự ý thêm, xóa, đổi tên bảng hoặc cột, hay thay đổi quan hệ giữa các bảng.
+
+Nếu phát hiện schema trong Model, migration hoặc database thực tế khác với đặc tả, phải báo cáo và xác định nguyên nhân trước khi sửa.
+
+### 5.3. Quản lý migration
+
+Migration nằm trong:
+
+```text
+backend/alembic/versions/
+```
+
+Các nguyên tắc:
+
+- Duy trì dependency migration theo lịch sử đã thống nhất; khi ghép nhánh dùng merge revision được phê duyệt để có một head.
+- Kiểm tra `revision` và `down_revision` trước khi thêm migration.
+- Không tạo revision trùng, thiếu dependency hoặc nhiều head ngoài chủ đích.
+- Không sửa migration đã được áp dụng trên môi trường dùng chung nếu chưa có kế hoạch xử lý phù hợp.
+- Không chạy migration khi chưa được yêu cầu.
+- Không mặc định database thực tế đang ở revision mới nhất.
+- Trước khi triển khai, kiểm tra `alembic_version`, dữ liệu hiện có và điều kiện tiền kiểm trên bản sao staging.
+
+### 5.4. Trạng thái migration hiện tại
+
+Khi tích hợp giai đoạn 4/5, phát hiện hai revision trùng ID (`b5d3a7c912e4`, `213feab4a632`) và nhánh local `61f7b0a38d92`. Người dùng đã duyệt phương án bỏ file trùng, giữ lịch sử hai nhánh và thêm merge revision `c6a4e2b8d901` sau SePay. Graph sau tích hợp có 21 file, một root và một head. Chi tiết và các guard xử lý ancestor có thể chưa chạy nằm trong `docs/stage4-stage5-integration.md`.
+
+**Trạng thái database thực tế (kiểm tra 11/10/2026):** đã chạy `alembic upgrade head` lên database Supabase; `alembic_version` = `3d9f987f3c6f` (head, sau migration bỏ `OtpChallenges`). Database có đủ 44 bảng của Models (cộng `alembic_version`), không thiếu/thừa bảng hoặc cột so với Models; RLS bật trên mọi bảng. Dữ liệu tài khoản có sẵn được giữ nguyên.
+
+Lịch sử: theo trạng thái dự án đã được rà soát trước khi commit Stage 4 (trước khi chạy migration):
+
+- Chuỗi migration gồm 19 file, tuyến tính, một root (`2cb2e7418b06`) và một head (`b81569bc34b0`); không có revision trùng hoặc dependency bị thiếu.
+- 2 file đã có trong lịch sử Git trước Stage 4 (`2cb2e7418b06`, `4ee28b0095ef`); 17 file còn lại được bổ sung trong commit Stage 4 (`9489aac`).
+- Khi đó `docs/database-schema.md` ghi các migration từ `763f153af842` trở đi là chưa áp dụng (đã cập nhật sau khi áp dụng ngày 11/10/2026). Trước mỗi lần chạy migration vẫn phải kiểm tra `alembic_version` trên database.
+- Chưa có migration nào trong 17 file mới được áp dụng hoặc kiểm thử trên PostgreSQL thật. Các kiểm tra offline (đọc tĩnh chuỗi revision, phát lại thao tác so với Model) không thay thế cho việc kiểm thử trên database thực tế.
+
+Toàn bộ chuỗi migration (`*` = bổ sung trong Stage 4):
+
+```text
+2cb2e7418b06    khởi tạo schema
+    ↓
+4ee28b0095ef    bảo mật bảng alembic_version
+    ↓
+b5d3a7c912e4 *  bỏ role SuperAdmin
+    ↓
+dd773e03e503 *  CHECK AccountStatus
+    ↓
+9b10f42fc70d *  CHECK TransactionType
+    ↓
+213feab4a632 *  mã coupon duy nhất, không phân biệt hoa thường
+    ↓
+763f153af842 *  tồn kho, điều chỉnh kho, quản lý serial
+    ↓
+d3326a8fbc5c *  đối soát thanh toán
+    ↓
+4c2d9e7a1f53 *  liên kết Refund với khoản thanh toán gốc
+    ↓
+8b7e3d1c5a29 *  serial WrittenOff, serial của phiếu điều chỉnh
+    ↓
+5d1f9a3c7e64 *  hàng hoàn vận chuyển
+    ↓
+e2b8c4f6a913 *  phiếu nhận hàng, trạng thái Closed
+    ↓
+a7c3e9d1f285 *  OTP
+    ↓
+c8d2f4a6b1e3 *  hội thoại đang mở, CHECK chat
+    ↓
+d4f7b2e9a6c1 *  bảo hành: máy thay thế, duyệt kết quả
+    ↓
+f3b8d1a5c7e2 *  đổi trả: serial, số lượng, bồi thường
+    ↓
+e6a2d9c4b8f1 *  bảo hành: người đề xuất, ghi chú nội bộ
+    ↓
+a9f4c2e7b513 *  xác nhận hoàn tiền (người lập, người xác nhận, bằng chứng)
+    ↓
+b81569bc34b0 *  webhook SePay, đối soát UnmatchedPayment (cuối nhánh giai đoạn 4)
+    ↓ (gộp với nhánh Auth 61f7b0a38d92)
+c6a4e2b8d901    merge giai đoạn 4 và Auth, kiểm tra lại CHECK AccountStatus/TransactionType
+    ↓
+3d9f987f3c6f    bỏ bảng OtpChallenges (Auth giai đoạn 5 không dùng)
+```
+
+Migration `a9f4c2e7b513` bổ sung thông tin phục vụ quy trình xác nhận hoàn tiền trong `PaymentTransactions`, gồm người lập, người xác nhận, thời điểm xác nhận, nguồn xác nhận, bằng chứng và ghi chú.
+
+SePay `b81569bc34b0` là cuối nhánh nghiệp vụ giai đoạn 4. Khi tích hợp giai đoạn 5, người dùng đã xác nhận merge revision `c6a4e2b8d901` đứng sau cả `b81569bc34b0` và `61f7b0a38d92`, kiểm tra/bổ sung CHECK AccountStatus và TransactionType. Ngày 11/10/2026, người dùng chọn giữ cơ chế OTP của giai đoạn 5 và bỏ bảng `OtpChallenges` bằng migration mới `3d9f987f3c6f` (head hiện tại; downgrade tạo lại bảng rỗng). Nếu bổ sung migration tiếp theo, phải kiểm tra dependency và xác nhận lại cách duy trì chuỗi trước khi thực hiện.
+
+Một số migration có điều kiện dừng khi dữ liệu cũ không thể được chuyển đổi an toàn. Cần đọc docstring và nội dung từng migration trước khi triển khai.
 
 ---
 
-## 6. Các nhóm bảng
+## 6. Các nhóm bảng trong database
 
-### Quản lý người dùng
-- Users
-- Addresses
-- Notifications
+Danh sách dưới đây tóm tắt các nhóm bảng của hệ thống. Thuộc tính, khóa, kiểu dữ liệu, constraint và quan hệ chính thức được xác định tại `docs/database-schema.md`.
 
-### Quản lý danh mục và sản phẩm
-- Categories
-- Brands
-- Products
-- ProductVariants
-- ProductImages
-- ProductSerials
+### 6.1. Quản lý người dùng
 
-### Quản lý yêu thích và giỏ hàng
-- Wishlists
-- WishlistItems
-- Carts
-- CartItems
+- `Users`
+- `Addresses`
+- `Notifications`
 
-### Quản lý đơn hàng và vận chuyển
-- ShippingMethods
-- Orders
-- OrderItems
-- OrderStatusHistories
+OTP dùng cơ chế của Auth giai đoạn 5: yêu cầu đăng ký chờ xác minh và bộ đếm nằm trong kho trạng thái, OTP reset mật khẩu/đổi email lưu HMAC trong `Users.OtpCode`. Bảng `OtpChallenges` của giai đoạn 4 đã được bỏ ngày 11/10/2026 (migration `3d9f987f3c6f`). Xem `docs/auth-spec.md`.
 
-### Quản lý thanh toán
-- PaymentMethods
-- PaymentTransactions
+### 6.2. Quản lý danh mục và sản phẩm
 
-### Quản lý khuyến mãi
-- Promotions
-- PromotionProducts
-- PromotionCategories
-- Coupons
+- `Categories`
+- `Brands`
+- `Products`
+- `ProductVariants`
+- `ProductImages`
+- `ProductSerials`
+- `StockAdjustments`
+- `StockAdjustmentSerials`
 
-### Quản lý nhà cung cấp và nhập hàng
-- Suppliers
-- PurchaseOrders
-- PurchaseOrderItems
+`StockAdjustments` lưu lịch sử điều chỉnh tồn kho. `StockAdjustmentSerials` ghi nhận serial thuộc phiếu điều chỉnh In/Out.
 
-### Quản lý đánh giá
-- Reviews
-- ReviewImages
+Các migration liên quan gồm `763f153af842` và `8b7e3d1c5a29`; đã được áp dụng ngày 11/10/2026.
 
-### Quản lý chatbot
-- Conversations
-- Messages
+### 6.3. Quản lý yêu thích và giỏ hàng
 
-### Quản lý bảo hành và đổi trả
-- WarrantyRequests
-- ReturnRequests
-- ServiceRequestAttachments
-- ServiceRequestHistories
+- `Wishlists`
+- `WishlistItems`
+- `Carts`
+- `CartItems`
 
-### Quản lý nội dung
-- NewsArticles
-- Banners
+### 6.4. Quản lý đơn hàng và vận chuyển
 
-Chi tiết thuộc tính, kiểu dữ liệu, khóa, default, CHECK, ON DELETE và các status được đặc tả trong `docs/database-schema.md`.
+- `ShippingMethods`
+- `Orders`
+- `OrderItems`
+- `OrderStatusHistories`
+- `ShipmentReturns`
+- `ShipmentReturnItems`
+
+`ShipmentReturns` và `ShipmentReturnItems` hỗ trợ ghi nhận hàng của đơn đã hủy trong quá trình giao hàng cần quay về kho. Migration `5d1f9a3c7e64` đã được áp dụng ngày 11/10/2026.
+
+### 6.5. Quản lý thanh toán và đối soát
+
+- `PaymentMethods`
+- `PaymentTransactions`
+- `PaymentReconciliations`
+- `PaymentWebhookEvents`
+
+`PaymentTransactions` lưu các giao dịch thanh toán và thông tin liên quan đến hoàn tiền.
+
+`PaymentReconciliations` ghi nhận các khoản thanh toán bất thường cần được đối soát.
+
+`PaymentWebhookEvents` lưu sự kiện nhận từ webhook thanh toán SePay. Tích hợp SePay hiện chưa được kích hoạt trong ứng dụng.
+
+Các migration liên quan gồm:
+
+- `4c2d9e7a1f53`: liên kết giao dịch Refund với khoản thanh toán gốc.
+- `a9f4c2e7b513`: thông tin xác nhận hoàn tiền.
+- `d3326a8fbc5c`: đối soát thanh toán.
+- `b81569bc34b0`: sự kiện webhook SePay và các thay đổi liên quan.
+
+Các migration này đã được áp dụng ngày 11/10/2026.
+
+### 6.6. Quản lý khuyến mãi
+
+- `Promotions`
+- `PromotionProducts`
+- `PromotionCategories`
+- `Coupons`
+
+### 6.7. Quản lý nhà cung cấp và nhập hàng
+
+- `Suppliers`
+- `PurchaseOrders`
+- `PurchaseOrderItems`
+- `PurchaseReceipts`
+- `PurchaseReceiptItems`
+
+Các bảng phiếu nhận hàng ghi nhận lịch sử từng lần nhận hàng. Migration `e2b8c4f6a913` đã được áp dụng ngày 11/10/2026.
+
+### 6.8. Quản lý đánh giá
+
+- `Reviews`
+- `ReviewImages`
+
+### 6.9. Quản lý chatbot
+
+- `Conversations`
+- `Messages`
+
+Hội thoại của khách hàng với chatbot AI hoặc với nhân viên. Ràng buộc mỗi khách hàng tối đa một hội thoại đang mở và CHECK cho chế độ/loại tin nhắn thuộc migration `c8d2f4a6b1e3` (đã áp dụng ngày 11/10/2026).
+
+### 6.10. Quản lý bảo hành và đổi trả
+
+- `WarrantyRequests`
+- `ReturnRequests`
+- `ServiceRequestAttachments`
+- `ServiceRequestHistories`
+
+### 6.11. Quản lý nội dung
+
+- `NewsArticles`
+- `Banners`
+
+Tổng số bảng theo tài liệu và báo cáo kiểm tra hiện tại là 44 bảng. Khi thay đổi schema, phải xác minh lại số lượng và cấu trúc thực tế thay vì dựa vào con số cố định này.
 
 ---
 
-## 7. Quan hệ chính
+## 7. Các quan hệ dữ liệu chính
+
+Các quan hệ dưới đây là phần tóm tắt để dễ hình dung. Cardinality, khóa ngoại và các quan hệ còn lại phải được xác nhận theo `docs/database-schema.md`.
 
 ```text
 Users 1 - N Addresses
@@ -279,52 +531,243 @@ Products 1 - N Reviews
 Reviews 1 - N ReviewImages
 ```
 
-Các quan hệ khác được xác định theo `docs/database-schema.md`.
+Các quan hệ bổ sung liên quan đến tồn kho, thanh toán, đối soát, nhập hàng, vận chuyển, bảo hành, đổi trả và các chức năng khác được xác định trong tài liệu schema chính thức.
+
+Không dùng danh sách tóm tắt này để tự tạo hoặc thay đổi khóa ngoại.
 
 ---
 
 ## 8. Người dùng và phân quyền
 
-Hệ thống có các role:
+Hệ thống có ba vai trò:
 
-- Customer
-- Staff
-- Admin
-- SuperAdmin
+- `Customer`: khách hàng.
+- `Staff`: nhân viên.
+- `Admin`: quản trị viên.
 
-Sử dụng RBAC để kiểm soát quyền truy cập theo role.
+VieTech sử dụng RBAC để kiểm soát quyền truy cập.
+
+Các nguyên tắc:
+
+- Backend là nơi thực thi kiểm tra quyền có tính bảo mật.
+- Không dựa vào việc ẩn nút hoặc ẩn trang trên Frontend để bảo vệ dữ liệu.
+- Kiểm tra quyền sở hữu tài nguyên trước khi cho phép khách hàng xem hoặc thay đổi dữ liệu.
+- Các thao tác quản trị phải xác minh role và quyền tương ứng.
+- Không sử dụng role `SuperAdmin`.
+- Các điểm vào nội bộ không có Actor phải được bảo vệ bằng cơ chế xác thực phù hợp với từng loại callback, webhook hoặc tác vụ nền; không được tự ý công khai.
+
+Quy tắc nghiệp vụ chung nằm trong `docs/business-requirements.md`. Chính sách tài khoản khi tích hợp giai đoạn 4/5 tuân theo `docs/auth-spec.md` và `docs/auth-rbac.md`, theo lựa chọn trực tiếp của người dùng.
+
+### Giai đoạn 5 — Auth/RBAC
+
+Backend đã có API đăng ký/OTP, đăng nhập, refresh/logout, quên/reset/đổi mật khẩu,
+đổi email qua OTP, hồ sơ, avatar, địa chỉ mặc định và quản lý tài khoản.
+Xem `docs/auth-setup.md` để chạy và cấu hình.
+
+OTP đăng ký chỉ tạo Customer sau xác minh; không có đăng ký công khai Staff/Admin.
+Admin chỉ xem/quản lý Customer/Staff và tạo Staff; không tạo hoặc quản lý Admin khác,
+không nâng/hạ role. Admin đầu tiên tạo bằng `python -m app.cli.create_admin`;
+quyền được kiểm tra ở backend.
+Phiên nội bộ và khách hàng tách theo portal. Mã OTP và refresh token không trả trong JSON.
+
+Chế độ phát triển dùng state trong bộ nhớ với một worker. Production yêu cầu Redis;
+gửi OTP thực tế yêu cầu SMTP. Frontend có đăng nhập/khôi phục mật khẩu cho
+Staff/Admin tại `/admin/login`, hồ sơ và quản lý tài khoản nội bộ. Khách hàng dùng
+`/dang-nhap`, `/dang-ky`, `/quen-mat-khau` và `/tai-khoan`; form quên mật khẩu chỉ nhận email.
+Hướng dẫn chạy nằm trong `docs/auth-setup.md`. Các thao tác mua bán và giao diện
+nghiệp vụ đầy đủ tiếp tục được triển khai ở giai đoạn tương ứng.
 
 ---
 
 ## 9. Quy tắc phát triển
 
+### 9.1. Đọc tài liệu trước khi thay đổi
+
 - Đọc `README.md` trước khi thực hiện task.
-- Đọc `docs/database-schema.md` khi task liên quan đến database.
-- Đọc `VieTech.docx` khi cần tham khảo nghiệp vụ, yêu cầu hoặc ERD.
+- Đọc `docs/database-schema.md` khi task liên quan đến database schema, Model, Repository có truy vấn dữ liệu, constraint hoặc migration.
+- Đọc `docs/business-requirements.md` khi task liên quan đến quy trình nghiệp vụ, điều kiện xử lý, trạng thái hoặc quyền hạn.
+- Đọc `docs/internal-endpoints.md` khi task liên quan đến callback, webhook hoặc các điểm vào nội bộ.
+- Đọc `VieTech.docx` khi cần tham khảo yêu cầu tổng thể, ERD hoặc thiết kế ban đầu.
 - Kiểm tra source code hiện tại trước khi sửa.
-- Kiểm tra database thực tế thông qua Supabase MCP khi cần.
-- Không tự ý thay đổi kiến trúc.
+
+### 9.2. Bảo vệ database và dữ liệu
+
 - Không tự ý thay đổi database schema.
+- Không tự ý chạy migration.
+- Không kết nối hoặc thay đổi database thật khi chưa được yêu cầu hoặc cho phép.
 - Không hard-code secret.
 - Không commit `.env`.
-- Không in hoặc tiết lộ database credentials.
-- Không chạy migration khi chưa được yêu cầu.
-- Nếu phát hiện mâu thuẫn hoặc thiếu thông tin, phải báo cáo trước khi thay đổi.
-- Ưu tiên thay đổi nhỏ, rõ ràng và đúng phạm vi task.
+- Không in hoặc tiết lộ credentials.
+- Nếu schema thực tế khác đặc tả, báo cáo sự khác biệt trước khi thay đổi.
+
+### 9.3. Bảo toàn kiến trúc
+
+- Tuân thủ kiến trúc Router → Service → Repository → Model.
+- Giữ ranh giới trách nhiệm giữa các lớp.
+- Không đưa logic nghiệp vụ phức tạp trực tiếp vào Router.
+- Không để Service tự ý truy vấn database ngoài Repository.
+- Không trả dữ liệu nội bộ hoặc thông tin nhạy cảm trong response.
+- Không mở điểm vào nội bộ thành API công khai nếu chưa được thiết kế và phê duyệt.
+
+### 9.4. Kiểm thử và thay đổi code
+
+- Ưu tiên thay đổi nhỏ, rõ ràng và đúng phạm vi.
+- Bổ sung hoặc cập nhật test khi thay đổi logic nghiệp vụ.
+- Chạy các bài kiểm thử phù hợp bằng môi trường hiện có.
+- Bộ test gồm `unittest` cho nghiệp vụ giai đoạn 4 và `pytest` cho Auth/RBAC giai đoạn 5. Cài dependency kiểm thử từ `backend/requirements-dev.txt`. Từ thư mục `backend`, dùng môi trường ảo ở thư mục gốc dự án:
+
+  ```powershell
+  ..\.venv\Scripts\python.exe -m pytest tests
+  ```
+
+- Bộ test mặc định chạy trên fake/in-memory, không kết nối database và không gọi cổng thanh toán thật.
+- Integration test trên PostgreSQL thật (`tests/test_postgres_integration.py`, `tests/test_postgres_concurrency.py`)
+  chỉ chạy khi bật cờ, dùng một
+  database **riêng cho test** (`TEST_DATABASE_URL` trong `backend/.env`, ví dụ project Supabase staging đã chạy
+  `alembic upgrade head`). Test xóa sạch dữ liệu database đó trước và sau khi chạy, và từ chối chạy nếu
+  `TEST_DATABASE_URL` trùng database của `DATABASE_URL`:
+
+  ```powershell
+  $env:RUN_POSTGRES_TESTS = "1"; ..\.venv\Scripts\python.exe -m pytest tests\test_postgres_integration.py tests\test_postgres_concurrency.py -v
+  Remove-Item Env:RUN_POSTGRES_TESTS
+  ```
+
+- Kiểm thử API giai đoạn 7 (`tests/api/`, 13 domain): gọi API qua `TestClient` với đăng nhập JWT thật trên cùng
+  database test; mỗi test chạy trong một transaction và được rollback nên không để lại dữ liệu. Chạy cùng cờ trên:
+
+  ```powershell
+  $env:RUN_POSTGRES_TESTS = "1"; ..\.venv\Scripts\python.exe -m pytest tests\api -v
+  Remove-Item Env:RUN_POSTGRES_TESTS
+  ```
+
+  `tests/test_api_matrix.py` (chạy trong bộ mặc định) bảo đảm mỗi domain luôn có đủ nhóm thành công, 401, 403,
+  404, 409, 422 và lỗi nghiệp vụ. Chi tiết tại `docs/stage7-api-testing.md`.
+- Chạy migration lên database test: đặt tạm `DATABASE_URL` bằng giá trị `TEST_DATABASE_URL` trong phiên terminal
+  rồi chạy `alembic upgrade head` (Alembic ưu tiên biến môi trường hơn `backend/.env`).
+- Phân biệt kết quả unit test, kiểm tra tĩnh và integration test.
+- Không tuyên bố đã kiểm thử với PostgreSQL thật nếu chỉ chạy test bằng fake hoặc kiểm tra offline.
+- Báo cáo rõ những phần chưa thể kiểm thử.
 
 ---
 
 ## 10. Source of Truth
 
-Khi thực hiện task, ưu tiên theo thứ tự:
+Mỗi tài liệu có phạm vi chính thức riêng. Không mặc định một tài liệu có thể thay thế toàn bộ các tài liệu còn lại.
 
-1. Yêu cầu trực tiếp của người dùng.
-2. `docs/database-schema.md` (database schema)
-3. `VieTech.docx` (nghiệp vụ, yêu cầu, ERD, thiết kế tổng thể)
-4. Database thực tế thông qua Supabase MCP.
-5. `README.md`
-6. Source code hiện tại.
+### 10.1. Thứ tự ưu tiên chung
 
-Riêng về database schema: khi `docs/database-schema.md` khác `VieTech.docx`, ưu tiên `docs/database-schema.md`.
+1. **Yêu cầu trực tiếp của người dùng:** xác định mục tiêu, phạm vi và quyết định của task hiện tại.
+2. **`docs/database-schema.md`:** nguồn chính thức cho cấu trúc database.
+3. **`docs/business-requirements.md`:** nguồn chính thức cho nghiệp vụ.
+   Với tài khoản và Auth/RBAC, dùng các quyết định đã chọn trong `docs/auth-spec.md` và `docs/auth-rbac.md`.
+4. **`VieTech.docx`:** tài liệu tham khảo về yêu cầu tổng thể, ERD và thiết kế ban đầu.
+5. **Database thực tế thông qua Supabase MCP:** dùng để xác minh trạng thái triển khai khi được yêu cầu hoặc cho phép.
+6. **`README.md`:** tổng quan dự án và quy tắc phát triển.
+7. **Source code hiện tại:** phản ánh cách hệ thống đang được triển khai, nhưng không mặc nhiên có nghĩa là mọi hành vi hiện tại đều đúng với đặc tả.
 
-Nếu có mâu thuẫn giữa các nguồn, **không tự ý quyết định**. Hãy báo cáo sự khác biệt và chờ xác nhận.
+### 10.2. Phạm vi của từng nguồn
+
+**`docs/database-schema.md`**
+
+Là nguồn chính thức về bảng, cột, kiểu dữ liệu, khóa, quan hệ, constraint, index và các quy tắc ở mức database.
+
+**`docs/business-requirements.md`**
+
+Là nguồn chính thức về chức năng, quy trình nghiệp vụ, điều kiện xử lý, trạng thái, quyền hạn và quy tắc của các chức năng.
+
+**`VieTech.docx`**
+
+Là tài liệu tham khảo về yêu cầu tổng thể, ERD và thiết kế ban đầu. Không dùng tài liệu này để tự ý ghi đè schema hoặc các quy tắc nghiệp vụ đã được cập nhật trong tài liệu chính thức.
+
+**Database thực tế thông qua Supabase MCP**
+
+Phản ánh trạng thái triển khai thực tế tại thời điểm kiểm tra. Không tự động thay thế đặc tả đã thống nhất và không được tự ý sửa dữ liệu hoặc schema khi chưa được phép.
+
+**`README.md` và source code**
+
+README cung cấp bối cảnh chung. Source code cho biết trạng thái triển khai hiện tại. Nếu code khác đặc tả, phải xác định đó là lỗi triển khai, thay đổi chưa cập nhật tài liệu hay quyết định đã được phê duyệt.
+
+### 10.3. Quy tắc xử lý mâu thuẫn
+
+Khi các nguồn mâu thuẫn nhau, phải báo cáo mâu thuẫn và chờ xác nhận trước khi thực hiện bất kỳ thay đổi nào có ảnh hưởng. Thứ tự ưu tiên dưới đây dùng để xác định nguồn cần đối chiếu, không phải để tự ý sửa cho các nguồn khớp nhau.
+
+- Mâu thuẫn về database schema: ưu tiên `docs/database-schema.md`.
+- Mâu thuẫn về nghiệp vụ: ưu tiên `docs/business-requirements.md`.
+- Mâu thuẫn về thiết kế tổng thể hoặc ERD ban đầu: đối chiếu `VieTech.docx` với các đặc tả chính thức hiện hành.
+- Mâu thuẫn giữa database thực tế và đặc tả: báo cáo trạng thái thực tế và đề xuất hướng xử lý, không tự động thay đổi một trong hai.
+- Mâu thuẫn giữa source code và tài liệu: xác định phạm vi ảnh hưởng và báo cáo trước khi sửa.
+- Nếu yêu cầu trực tiếp có vẻ mâu thuẫn với đặc tả đã thống nhất hoặc có ảnh hưởng đến dữ liệu, bảo mật hay kiến trúc, phải nêu rõ mâu thuẫn và chờ xác nhận trước khi thực hiện thay đổi có ảnh hưởng.
+
+Không tự ý suy đoán hoặc âm thầm thay đổi yêu cầu để làm cho các tài liệu khớp nhau.
+
+---
+
+## 11. Trạng thái phát triển dự án
+
+Giai đoạn 4 được lấy từ commit `01bc0e2`; giai đoạn 5 được giữ từ checkpoint local `935281a`. Khi tích hợp, người dùng chọn giữ chính sách Auth (tài khoản, đăng nhập, OTP, phiên) giai đoạn 5 và đưa các nghiệp vụ giai đoạn 4 vào. Quyền của các Service nghiệp vụ giữ theo giai đoạn 4, ngoại lệ Staff được xem thống kê; ma trận `backend/app/core/rbac.py` đã được đồng bộ theo các quyền này. Sổ địa chỉ chỉ dành cho Customer.
+
+### Đã hoàn thành
+
+- Khởi tạo repository Git và cấu trúc dự án.
+- Thiết lập nền tảng Backend FastAPI.
+- Xây dựng SQLAlchemy Models.
+- Xây dựng Pydantic Schemas và Repositories.
+- Triển khai Service Layer cho các nhóm nghiệp vụ chính.
+- Có API Auth/RBAC, hồ sơ và quản lý tài khoản cùng giao diện xác thực giai đoạn 5; hướng dẫn tại `docs/auth-setup.md`.
+- Bổ sung xử lý đơn hàng, vận chuyển, thanh toán, hoàn tiền, kho, nhập hàng, đánh giá, hội thoại chat, bảo hành, đổi trả, nội dung và thống kê.
+- Hội thoại chat mới có nghiệp vụ lưu trữ/phân công; chưa tích hợp nhà cung cấp AI.
+- Mã tích hợp SePay (`backend/app/integrations/sepay.py`, `backend/app/routers/webhooks.py`) đã được đăng ký trong ứng dụng (giai đoạn 6) nhưng chưa kích hoạt: cần điền cấu hình `SEPAY_*` và đăng ký URL webhook trên SePay.
+- Bổ sung bộ kiểm thử tự động.
+- Bổ sung tài liệu nghiệp vụ, schema và điểm vào nội bộ.
+- Commit Stage 4 tại commit `9489aac`.
+- Đã áp dụng toàn bộ migration lên database Supabase (head `3d9f987f3c6f`, gồm migration bỏ bảng `OtpChallenges` không dùng).
+- Giới hạn gửi OTP: ngoài chờ 60 giây giữa hai lần gửi, tối đa 5 lần mỗi giờ cho mỗi email và mục đích (`AUTH_SEND_LIMIT`, `AUTH_SEND_WINDOW`).
+- Stage 6 (11/10/2026): Router/API cho toàn bộ Service nghiệp vụ — 199 thao tác trong 11 router mới và `users.py` (xem `docs/api-endpoints.md`). Mọi route `/admin/...` chỉ cho Staff/Admin; Router chỉ gọi đúng một Service, không chứa nghiệp vụ. Đã đăng ký webhook SePay (`/webhooks/sepay`) và endpoint nội bộ cho cron (`/internal/orders/expire-unpaid-qr`, `/internal/payment-webhooks/process`).
+- Chuẩn bị cho Stage 6: dependency `get_current_actor`/`get_optional_actor` (`backend/app/core/dependencies.py`) tạo `Actor` từ người dùng đã xác thực; lỗi nghiệp vụ `ServiceError` được chuyển thành HTTP 4xx/502 (`backend/app/routers/errors.py`).
+- Sau rà soát Stage 6 (11/10/2026): checkout và sửa giỏ dùng chung khóa Cart; hai API ghi địa chỉ dùng chung khóa User; integration test PostgreSQL kiểm tra đích database và cờ opt-in trước khi ghi/xóa dữ liệu. Chi tiết tại `docs/stage6-concurrency-fixes.md`; các sửa này không cần migration mới.
+- Sửa giới hạn ngày thống kê (11/10/2026): `date_from=0001-01-01` trả 400 với mã `invalid_statistics_period` trước truy vấn; các ngày hợp lệ sát biên và cách tính ngày Việt Nam được giữ nguyên.
+- Chốt phần API và kiểm thử Stage 6 (12/10/2026): đồng bộ mô tả quyền đổi/trả/bảo hành và xác thực tùy chọn; thêm workflow PostgreSQL cho bảo hành, coupon, chat, tin tức và banner. SePay/cron vận hành để sau theo yêu cầu; chi tiết tại `docs/stage6-postgres-validation.md`.
+
+- Stage 7 — API Testing (12/10/2026): 92 test API qua HTTP (`TestClient`, đăng nhập JWT thật) cho 13 domain Auth, User, Product, Cart, Order, Payment, Promotion, Purchase, Review, Warranty, Return, Chat, Content; mỗi domain có luồng thành công và các nhóm lỗi 401, 403, 404, 409, 422, lỗi nghiệp vụ. Chạy trên PostgreSQL test, mỗi test một transaction được rollback; khóa độc quyền database test cho mỗi lượt chạy. Chi tiết và ma trận tại `docs/stage7-api-testing.md`.
+
+### Kết quả kiểm thử được báo cáo
+
+- Toàn bộ backend sau Stage 7 (12/10/2026), một lượt chạy có bật PostgreSQL: **1064 test và 657 subtest đạt**, 0 lỗi, trong 12 phút 39 giây — 955 test mặc định (gồm kiểm tra cấu trúc ma trận API), 17 ca PostgreSQL giai đoạn 6 và 92 test API giai đoạn 7, trên database test riêng (PostgreSQL 17.11, head `3d9f987f3c6f`). Bộ test API cũng được một lượt rà soát độc lập chạy riêng: 92/92 đạt.
+- Backend sau hoàn thiện test Stage 6 (12/10/2026): **952 test và 657 subtest đạt**, trong 27,52 giây. Bộ test mặc định dùng SQLite/bộ nhớ và các kiểm tra SQL/migration offline; **17 ca PostgreSQL** bỏ qua khi không bật cờ.
+- PostgreSQL mở rộng Stage 6 (12/10/2026): **17/17 ca đạt** trên database test riêng, PostgreSQL 17.11, head `3d9f987f3c6f`, trong 280,12 giây. Đã kiểm thử bảo hành sửa chữa/đổi máy có serial, coupon, chat, tin tức/banner, ngày thống kê vượt giới hạn cùng các luồng API và đồng thời hiện có. Kiểm tra sau cleanup: 44 bảng nghiệp vụ không còn dữ liệu test; revision migration giữ nguyên. Xem `docs/stage6-postgres-validation.md`.
+- PostgreSQL sau sửa ba lỗi (11/10/2026): **8/8 ca đạt** trên database test riêng, PostgreSQL 17.11, head `3d9f987f3c6f`, trong 101,80 giây. Đã kiểm chứng hai checkout cùng giỏ chỉ tạo một đơn và các cặp API ghi địa chỉ đồng thời chỉ giữ một mặc định. Kiểm tra sau cleanup: 44 bảng nghiệp vụ không còn dữ liệu test; revision migration giữ nguyên. Chi tiết và lệnh chạy tại `docs/stage6-concurrency-fixes.md`.
+- Integration test trên PostgreSQL thật (11/10/2026, Supabase staging PostgreSQL 17, chạy 2 lần liên tiếp): 5/5 đạt qua HTTP với đăng nhập JWT thật — đăng ký bằng OTP email; tạo danh mục/sản phẩm, lập–duyệt–nhận phiếu nhập (tồn kho, giá vốn); đơn COD từ giỏ hàng → giao → thu tiền → đánh giá → trả 1 sản phẩm → hoàn tiền thủ công → hoàn tất đơn → thống kê doanh thu khớp từng số; hai khách cùng mua sản phẩm cuối cùng (khóa dòng: một đơn thành công, đơn kia bị từ chối vì hết hàng); cron hủy đơn QR quá hạn và hoàn tồn kho đúng một lần.
+- Frontend (11/10/2026): 37 test đạt, lint đạt, build đạt với `npm run build -- --configLoader native` trong môi trường Windows hiện tại.
+- Trước tích hợp, giai đoạn 4 báo cáo 684 test chạy thành công bằng `unittest` và đã chạy lặp lại.
+- Chưa chạy tích hợp thực tế: gửi email OTP qua SMTP, upload avatar lên Supabase Storage, Redis, cổng SePay (QR, webhook, hoàn tiền qua cổng). Workflow bảo hành, coupon, chat và nội dung đã được kiểm thử trên PostgreSQL test thật ngày 12/10/2026.
+- Migration đã chạy thành công trên database Supabase (11/10/2026); cấu trúc bảng/cột đã được đối chiếu với Models.
+- Đã gọi thử các API công khai chỉ đọc (danh mục, thương hiệu, sản phẩm, banner, tin tức, phương thức vận chuyển/thanh toán) trên Supabase: trả 200/404 đúng; API cần đăng nhập trả 401 khi không có token. Các API ghi dữ liệu được chạy trên database staging riêng, không ghi vào database chính.
+
+### Công việc tiếp theo
+
+- Hoàn thiện và kiểm thử tích hợp Authentication và Authorization trên staging.
+- Stage 6 (API) và Stage 7 (kiểm thử API) đã hoàn thành trong phạm vi hiện tại; lưu các thay đổi vào Git trước khi chuyển sang tích hợp Frontend.
+- SePay và cron để sau theo yêu cầu người dùng: điền cấu hình SePay và `INTERNAL_CRON_SECRET`, đăng ký webhook trên SePay và lịch cron khi triển khai (xem `docs/internal-endpoints.md`).
+- Tích hợp Frontend với các API nghiệp vụ.
+- Kiểm thử tích hợp trên môi trường staging.
+- Phát triển AI Chatbot và Product Recommendation Engine theo kế hoạch.
+
+Trạng thái trên là mốc tiến độ đã ghi nhận, không thay thế việc kiểm tra Git và source code thực tế trước mỗi task.
+
+---
+
+## 12. Quy trình thực hiện task
+
+Khi nhận một task mới, thực hiện theo thứ tự:
+
+1. Đọc yêu cầu trực tiếp và xác định phạm vi.
+2. Đọc các tài liệu liên quan, đặc biệt là `docs/business-requirements.md` và `docs/database-schema.md` khi cần.
+3. Kiểm tra source code và các thay đổi đang tồn tại.
+4. Xác định các file dự kiến sửa, ảnh hưởng đến kiến trúc và rủi ro dữ liệu.
+5. Nếu phát hiện mâu thuẫn hoặc thiếu thông tin quan trọng, báo cáo trước khi sửa.
+6. Thực hiện thay đổi nhỏ nhất đáp ứng yêu cầu.
+7. Bổ sung hoặc cập nhật test.
+8. Chạy kiểm thử phù hợp trong môi trường hiện có.
+9. Báo cáo file đã thay đổi, kết quả kiểm thử, vấn đề còn lại và bước tiếp theo.
+
+Không tự ý mở rộng phạm vi task, thay đổi schema hoặc thực hiện thao tác có ảnh hưởng đến database ngoài phạm vi đã được cho phép.

@@ -5,11 +5,20 @@ Không response schema nào chứa PasswordHash, OtpCode, OtpExpiredAt.
 
 import uuid
 from datetime import date, datetime
-from typing import Annotated
+from typing import Annotated, Literal
 
 from pydantic import Field
 
-from .common import EmailAddress, Money, NonNegativeInt, RequestSchema, ResponseSchema, UserRole, varchar
+from .common import (
+    AccountStatusValue,
+    EmailAddress,
+    Money,
+    NonNegativeInt,
+    RequestSchema,
+    ResponseSchema,
+    UserRole,
+    varchar,
+)
 
 # Mật khẩu dạng plain text chỉ có trong request; database chỉ lưu PasswordHash.
 # Chưa có quy định độ dài/độ mạnh mật khẩu trong schema hiện tại.
@@ -36,10 +45,10 @@ class UserRegister(RequestSchema):
 
 
 class AdminUserCreate(UserRegister):
-    """Quản trị viên tạo tài khoản (ví dụ tài khoản nhân viên)."""
+    """Quản trị viên chỉ tạo tài khoản nhân viên."""
 
-    Role: UserRole
-    AccountStatus: varchar(20)
+    Role: Literal["Staff"] = "Staff"
+    AccountStatus: AccountStatusValue
 
 
 class UserProfileUpdate(RequestSchema):
@@ -60,12 +69,11 @@ class PasswordChange(RequestSchema):
 
 
 class AdminUserUpdate(RequestSchema):
-    """Phân quyền và khóa/mở khóa tài khoản (PATCH)."""
+    """Khóa/mở khóa tài khoản (PATCH), không đổi vai trò."""
 
     NULLABLE_FIELDS = frozenset({"LockReason", "LockedUntil"})
 
-    Role: UserRole | None = None
-    AccountStatus: varchar(20) | None = None
+    AccountStatus: AccountStatusValue | None = None
     LockReason: str | None = None
     LockedUntil: datetime | None = None
 
@@ -89,7 +97,7 @@ class UserResponse(ResponseSchema):
     DateOfBirth: date | None
     AvatarUrl: str | None
     Role: UserRole
-    AccountStatus: str
+    AccountStatus: AccountStatusValue
     IsEmailVerified: bool
     CreatedAt: datetime
     UpdatedAt: datetime
@@ -157,3 +165,9 @@ class NotificationResponse(ResponseSchema):
     IsRead: bool
     ReadAt: datetime | None
     CreatedAt: datetime
+
+
+class NotificationCountResponse(ResponseSchema):
+    """Số thông báo: chưa đọc (đếm) hoặc vừa được đánh dấu đã đọc."""
+
+    Count: NonNegativeInt

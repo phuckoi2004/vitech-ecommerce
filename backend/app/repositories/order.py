@@ -9,7 +9,7 @@ from datetime import datetime
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload, selectinload
 
-from app.models import Order, OrderItem, OrderStatusHistory, ShippingMethod
+from app.models import Order, OrderItem, OrderStatusHistory, PaymentMethod, ShippingMethod
 
 from .base import BaseRepository
 
@@ -33,6 +33,10 @@ class ShippingMethodRepository(BaseRepository[ShippingMethod]):
 
 class OrderRepository(BaseRepository[Order]):
     model = Order
+
+    def exists_by_shipping_method(self, shipping_method_id: uuid.UUID) -> bool:
+        """Có đơn hàng (mọi trạng thái) tham chiếu phương thức vận chuyển (FK RESTRICT)."""
+        return self.exists(Order.ShippingMethodId == shipping_method_id)
 
     def get_by_code(self, order_code: str) -> Order | None:
         return self.get_one(Order.OrderCode == order_code)
@@ -60,8 +64,13 @@ class OrderRepository(BaseRepository[Order]):
         payment_status: str | None,
         ordered_from: datetime | None,
         ordered_to: datetime | None,
+        order_code_contains: str | None = None,
     ) -> list:
         conditions = []
+        if order_code_contains:
+            # Tìm theo mã đơn, không phân biệt hoa thường; escape ký tự đặc biệt của LIKE.
+            escaped = order_code_contains.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+            conditions.append(Order.OrderCode.ilike(f"%{escaped}%", escape="\\"))
         if customer_id is not None:
             conditions.append(Order.CustomerId == customer_id)
         if assigned_staff_id is not None:
@@ -85,12 +94,15 @@ class OrderRepository(BaseRepository[Order]):
         payment_status: str | None = None,
         ordered_from: datetime | None = None,
         ordered_to: datetime | None = None,
+        order_code_contains: str | None = None,
         offset: int | None = None,
         limit: int | None = None,
     ) -> list[Order]:
         """ordered_from bao gồm, ordered_to không bao gồm (khoảng [from, to))."""
         return self.get_all(
-            *self._filters(customer_id, assigned_staff_id, order_status, payment_status, ordered_from, ordered_to),
+            *self._filters(
+                customer_id, assigned_staff_id, order_status, payment_status, ordered_from, ordered_to, order_code_contains
+            ),
             order_by=(Order.OrderedAt.desc(), Order.OrderId),
             offset=offset,
             limit=limit,
@@ -105,10 +117,40 @@ class OrderRepository(BaseRepository[Order]):
         payment_status: str | None = None,
         ordered_from: datetime | None = None,
         ordered_to: datetime | None = None,
+        order_code_contains: str | None = None,
     ) -> int:
         return self.count(
-            *self._filters(customer_id, assigned_staff_id, order_status, payment_status, ordered_from, ordered_to)
+            *self._filters(
+                customer_id, assigned_staff_id, order_status, payment_status, ordered_from, ordered_to, order_code_contains
+            )
         )
+
+    def list_expired_unpaid_order_ids(
+        self,
+        *,
+        ordered_before: datetime,
+        order_status: str,
+        payment_statuses: tuple[str, ...],
+        excluded_payment_method_code: str,
+        limit: int,
+    ) -> list[uuid.UUID]:
+        """Id các đơn chưa thanh toán đã quá hạn (OrderedAt <= ordered_before), trừ phương thức ``excluded_payment_method_code``.
+
+        Không khóa dòng; Service khóa từng đơn và kiểm tra lại điều kiện trước khi xử lý.
+        """
+        stmt = (
+            select(Order.OrderId)
+            .join(PaymentMethod, PaymentMethod.PaymentMethodId == Order.PaymentMethodId)
+            .where(
+                Order.OrderStatus == order_status,
+                Order.PaymentStatus.in_(payment_statuses),
+                Order.OrderedAt <= ordered_before,
+                PaymentMethod.Code != excluded_payment_method_code,
+            )
+            .order_by(Order.OrderedAt, Order.OrderId)
+            .limit(limit)
+        )
+        return list(self.session.scalars(stmt))
 
     def list_by_customer(
         self, customer_id: uuid.UUID, *, offset: int | None = None, limit: int | None = None
