@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react'
+import { Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
+import { safeNext } from '../../auth/session.js'
 import useInternalAuth from '../../hooks/useInternalAuth.js'
 import { requestPasswordReset, resendOtp, setNewPassword, verifyPasswordReset } from '../../lib/auth-api.js'
 import logo from '../../assets/auth/vietech-logo.png'
@@ -8,16 +10,10 @@ import { passwordRules } from '../../lib/password-rules.js'
 import { Field, PasswordInput } from '../../customer/components/AuthFields.jsx'
 import OtpInput from '../../customer/components/OtpInput.jsx'
 import '../../customer/layouts/CustomerAuthLayout.css'
-import AdminHomePage from './AdminHomePage.jsx'
+import { ADMIN_FORGOT_PASSWORD_PATH, ADMIN_HOME_PATH, ADMIN_LOGIN_PATH } from '../routes/paths.js'
 
-const LOGIN_PATH = '/admin/login'
-const RESET_PATH = '/admin/forgot-password'
-const PAGE_PATHS = { login: LOGIN_PATH, reset: RESET_PATH }
+const PAGE_PATHS = { login: ADMIN_LOGIN_PATH, reset: ADMIN_FORGOT_PASSWORD_PATH }
 const PAGE_TITLES = { login: 'Đăng nhập nội bộ', reset: 'Quên mật khẩu' }
-
-function pageFromPath(pathname) {
-  return Object.keys(PAGE_PATHS).find((page) => PAGE_PATHS[page] === pathname) ?? 'login'
-}
 
 function Notice({ children, success = false }) {
   if (!children) return null
@@ -261,10 +257,15 @@ function ResetForm({ onBack, onComplete, initialIdentifier }) {
   </div>
 }
 
-function AdminAuthPage() {
+// /admin/login (page="login") and /admin/forgot-password (page="reset"). A signed-in Staff/Admin goes on to `next`
+// (internal pages only) or the internal home. A Customer session in this browser sees the internal login form.
+function AdminAuthPage({ page = 'login' }) {
   const auth = useInternalAuth()
-  const [page, setPage] = useState(() => pageFromPath(window.location.pathname))
-  const [initialIdentifier, setInitialIdentifier] = useState('')
+  const navigateTo = useNavigate()
+  const location = useLocation()
+  const [searchParams] = useSearchParams()
+  // Filled in after a completed password reset.
+  const initialIdentifier = location.state?.identifier ?? ''
 
   useEffect(() => {
     const pop = () => setPage(pageFromPath(window.location.pathname))
@@ -274,26 +275,24 @@ function AdminAuthPage() {
 
   useEffect(() => {
     if (!auth.sessionReady) return
-    const currentPath = window.location.pathname.replace(/\/+$/, '')
-    const isSectionPath = currentPath === '/admin' || (currentPath.startsWith('/admin/') && !Object.values(PAGE_PATHS).includes(currentPath))
-    const path = auth.user ? (isSectionPath ? currentPath : '/admin') : PAGE_PATHS[page]
+    const path = auth.user ? '/admin' : PAGE_PATHS[page]
     if (window.location.pathname !== path) window.history.replaceState(null, '', path)
     // AdminHomePage owns the title once signed in.
     if (!auth.user) document.title = `${PAGE_TITLES[page]} | VieTech`
-  }, [auth.user, auth.sessionReady, page])
+  }, [auth.user, page])
 
-  function navigate(next) {
-    const path = PAGE_PATHS[next]
-    if (window.location.pathname !== path) window.history.pushState(null, '', path)
-    setPage(next)
+  // Keeps `?next=` while moving between the login and reset forms.
+  function navigate(next, state) {
+    navigateTo({ pathname: PAGE_PATHS[next], search: location.search }, state ? { state } : undefined)
   }
 
   function resetComplete(identifier) {
-    setInitialIdentifier(identifier)
-    navigate('login')
+    navigate('login', { identifier })
   }
 
-  if (auth.sessionReady && auth.user) return <AdminHomePage auth={auth} />
+  if (auth.sessionReady && auth.user) {
+    return <Navigate to={safeNext(searchParams.get('next'), 'admin') ?? ADMIN_HOME_PATH} replace />
+  }
 
   return <div className="auth-page">
     <main className="auth-layout">

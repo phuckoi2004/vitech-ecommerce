@@ -4,8 +4,6 @@ import { AVATAR_MAX_BYTES, AVATAR_TYPES, changePassword, getDefaultAddress, save
 import { passwordRules } from '../../lib/password-rules.js'
 import { EyeIcon, PasswordInput } from '../components/AuthFields.jsx'
 import '../layouts/CustomerAuthLayout.css'
-import CustomerLayout from '../layouts/CustomerLayout.jsx'
-import { HOME_PATH, LOGIN_PATH } from '../routes/paths.js'
 import './AccountPage.css'
 
 const SECTIONS = [
@@ -74,7 +72,7 @@ function Field({ id, label, children }) {
   </div>
 }
 
-function ChangePasswordDialog({ session, onClose, onLeave }) {
+function ChangePasswordDialog({ session, onClose }) {
   const dialog = useRef(null)
   const [current, setCurrent] = useState('')
   const [next, setNext] = useState('')
@@ -101,10 +99,9 @@ function ChangePasswordDialog({ session, onClose, onLeave }) {
     setBusy(true)
     try {
       await session.withAccessToken((token) => changePassword(token, current, next, confirm))
-      // The server revoked every session, including this one.
-      onLeave()
+      // The server revoked every session, including this one; the route guard opens the sign-in page
+      // with its "password changed" notice.
       session.endSession()
-      window.location.replace(`${LOGIN_PATH}?doi-mat-khau=1`)
     } catch (failure) {
       setError(failure.message)
       setBusy(false)
@@ -136,7 +133,7 @@ function ChangePasswordDialog({ session, onClose, onLeave }) {
   </dialog>
 }
 
-function ProfileSection({ session, onLeave }) {
+function ProfileSection({ session }) {
   const { user, withAccessToken, updateUser } = session
   // undefined while the saved address is loading; null when the customer has none.
   const [address, setAddress] = useState(undefined)
@@ -284,43 +281,32 @@ function ProfileSection({ session, onLeave }) {
         <button type="button" className="cacc-button is-outline" onClick={() => setPasswordOpen(true)} disabled={busy}>Đổi mật khẩu</button>
       </div>
     </form>
-    {passwordOpen && <ChangePasswordDialog session={session} onClose={() => setPasswordOpen(false)} onLeave={onLeave} />}
+    {passwordOpen && <ChangePasswordDialog session={session} onClose={() => setPasswordOpen(false)} />}
   </>
 }
 
-// Customer account page (/tai-khoan).
+// Customer account page (/tai-khoan), inside CustomerLayout behind RequireCustomer, which also handles the
+// redirects once the session ends (sign-out: home; password change: sign-in page).
 export default function AccountPage() {
   const session = useCustomerSession()
-  const { ready, user, signOut } = session
+  const { user, signOut } = session
   const [section, setSection] = useState('profile')
   const [signingOut, setSigningOut] = useState(false)
-  // Set once this page is leaving on purpose, so the signed-out redirect to the login page does not run.
-  const leaving = useRef(false)
 
   useEffect(() => {
     document.title = 'Tài khoản | VieTech'
   }, [])
 
-  useEffect(() => {
-    if (ready && !user && !leaving.current) window.location.replace(LOGIN_PATH)
-  }, [ready, user])
-
-  if (!user) {
-    return <CustomerLayout>
-      <div className="cacc-loading" role="status"><span className="spinner" />Đang tải thông tin tài khoản…</div>
-    </CustomerLayout>
-  }
+  if (!user) return <div className="cacc-loading" role="status"><span className="spinner" />Đang tải thông tin tài khoản…</div>
 
   async function logout() {
-    leaving.current = true
     setSigningOut(true)
     // Signed out locally even when the server is unreachable; the refresh cookie no longer applies.
     await signOut().catch(() => {})
-    window.location.replace(HOME_PATH)
   }
 
   const current = SECTIONS.find((item) => item.id === section)
-  return <CustomerLayout>
+  return <>
     <div className="shop-container cacc-page">
       <section className="cacc-card cacc-summary" aria-label="Tóm tắt tài khoản">
         <Avatar user={user} className="is-medium" />
@@ -339,7 +325,7 @@ export default function AccountPage() {
         </nav>
         <section className="cacc-card cacc-panel">
           {section === 'profile'
-            ? <ProfileSection session={session} onLeave={() => { leaving.current = true }} />
+            ? <ProfileSection session={session} />
             : <>
               <div className="cacc-panel-heading"><h1>{current.label}</h1></div>
               <p className="cacc-placeholder">Chức năng đang được xây dựng.</p>
@@ -347,5 +333,5 @@ export default function AccountPage() {
         </section>
       </div>
     </div>
-  </CustomerLayout>
+  </>
 }

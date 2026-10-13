@@ -18,4 +18,11 @@ export default defineConfig({
   ],
   server: { host: '127.0.0.1', port: 5173, strictPort: true, proxy },
   preview: { host: '127.0.0.1', port: 4173, strictPort: true, proxy },
+  // Vitest: components run in jsdom; files that need plain Node globals opt out with `@vitest-environment node`.
+  test: {
+    environment: 'jsdom',
+    include: ['src/**/*.test.{js,jsx}'],
+    setupFiles: ['./src/test/setup.js'],
+    restoreMocks: true,
+  },
 })

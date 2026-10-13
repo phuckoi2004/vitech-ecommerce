@@ -1,11 +1,10 @@
 import { useEffect } from 'react'
-import CustomerLayout from '../layouts/CustomerLayout.jsx'
 
-// Customer home page; its sections are added later.
+// Customer home page, rendered inside CustomerLayout; its sections are added later.
 export default function HomePage() {
   useEffect(() => {
     document.title = 'VieTech'
   }, [])
 
-  return <CustomerLayout />
+  return null
 }
