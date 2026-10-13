@@ -1,5 +1,7 @@
+// @vitest-environment node
+// Uses its own minimal `document`/`location` doubles (jsdom keeps only the first cookie of a multi-cookie assignment).
 import assert from 'node:assert/strict'
-import { afterEach, beforeEach, test } from 'node:test'
+import { afterEach, beforeEach, test } from 'vitest'
 import {
   AuthApiError, cancelPendingRefresh, clearLocalCsrf, getCurrentUser, loginCustomer, loginInternal, logoutSession, readCsrfToken,
   refreshSession, registerCustomer, requestPasswordReset, resendOtp, restoreCustomerSession, setNewPassword,
@@ -164,35 +166,32 @@ test('a late response from an aborted refresh cannot resolve or clear the newer 
   assert.equal((await current).user.Role, 'Admin')
 })
 
-test('login and logout cancel old cookie rotations before sending their own requests', async (t) => {
-  const cases = [
-    { name: 'internal login', path: '/api/auth/login', role: 'Admin', call: () => loginInternal('admin@example.com', 'Password1!') },
-    { name: 'customer login', path: '/api/auth/login', role: 'Customer', call: () => loginCustomer('customer@example.com', 'Password1!') },
-    { name: 'logout', path: '/api/auth/logout', role: 'Admin', call: () => logoutSession('access-for-test', 'csrf-for-test') },
-  ]
-  for (const action of cases) {
-    await t.test(action.name, async () => {
-      document.cookie = 'vietech_csrf=csrf-current'
-      const events = []
-      globalThis.fetch = (url, options) => {
-        if (url === '/api/auth/refresh') {
-          return new Promise((_resolve, reject) => {
-            options.signal.addEventListener('abort', () => {
-              events.push('old refresh aborted')
-              reject(options.signal.reason)
-            }, { once: true })
-          })
-        }
-        events.push(url)
-        return Promise.resolve(mockResponse({ ...internalSession, user: { Role: action.role } }))
-      }
-      const old = refreshSession()
-      const oldAborted = assert.rejects(old, (error) => error.name === 'AbortError')
-      await action.call()
-      await oldAborted
-      assert.deepEqual(events, ['old refresh aborted', action.path])
-    })
+const rotationCancellingActions = [
+  { name: 'internal login', path: '/api/auth/login', role: 'Admin', call: () => loginInternal('admin@example.com', 'Password1!') },
+  { name: 'customer login', path: '/api/auth/login', role: 'Customer', call: () => loginCustomer('customer@example.com', 'Password1!') },
+  { name: 'logout', path: '/api/auth/logout', role: 'Admin', call: () => logoutSession('access-for-test', 'csrf-for-test') },
+]
+
+test.each(rotationCancellingActions)('login and logout cancel old cookie rotations before sending their own requests: $name', async (action) => {
+  document.cookie = 'vietech_csrf=csrf-current'
+  const events = []
+  globalThis.fetch = (url, options) => {
+    if (url === '/api/auth/refresh') {
+      return new Promise((_resolve, reject) => {
+        options.signal.addEventListener('abort', () => {
+          events.push('old refresh aborted')
+          reject(options.signal.reason)
+        }, { once: true })
+      })
+    }
+    events.push(url)
+    return Promise.resolve(mockResponse({ ...internalSession, user: { Role: action.role } }))
   }
+  const old = refreshSession()
+  const oldAborted = assert.rejects(old, (error) => error.name === 'AbortError')
+  await action.call()
+  await oldAborted
+  assert.deepEqual(events, ['old refresh aborted', action.path])
 })
 
 test('local logout also aborts an in-flight cookie rotation', async () => {

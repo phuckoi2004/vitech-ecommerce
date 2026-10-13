@@ -1,41 +1,38 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
+import { Outlet, useLocation, useNavigate } from 'react-router-dom'
+import useInternalAuth from '../../hooks/useInternalAuth.js'
 import AdminLayout from '../layouts/AdminLayout.jsx'
-import AccountsPage from './AccountsPage.jsx'
-import ProfilePage from './ProfilePage.jsx'
+import { ADMIN_MENU, ADMIN_PROFILE_ITEM, visibleMenu } from '../routes/menu.js'
 
-// `permission` hides an entry from roles that cannot use it; the backend still enforces it.
-const MENU = [
-  { id: 'overview', label: 'Tổng quan' },
-  { id: 'accounts', label: 'Quản lý tài khoản', permission: 'users:read' },
-]
-
-// Opened from the account button in the top bar, not from the menu.
-const PROFILE = { id: 'profile', label: 'Thông tin cá nhân' }
-
-// Each menu section without a page is intentionally empty until its content is defined.
-export default function AdminHomePage({ auth }) {
-  const menu = MENU.filter((item) => !item.permission || auth.permissions.includes(item.permission))
-  const [active, setActive] = useState(MENU[0].id)
-  // A page inside a section (e.g. "Thêm tài khoản") extends the breadcrumb.
+// Internal area frame (layout route for /admin, /admin/users, /admin/profile). Sections render in the <Outlet />;
+// "Tổng quan" is intentionally empty until its content is defined.
+export default function AdminHomePage() {
+  const auth = useInternalAuth()
+  const navigate = useNavigate()
+  const { pathname } = useLocation()
+  const path = pathname.replace(/\/+$/, '') || '/'
+  const menu = visibleMenu(auth.permissions)
+  const current = path === ADMIN_PROFILE_ITEM.path ? ADMIN_PROFILE_ITEM : ADMIN_MENU.find((item) => item.path === path) ?? ADMIN_MENU[0]
+  // A page inside a section (e.g. "Thêm tài khoản") extends the breadcrumb; it belongs to the URL it was set on.
   const [subPage, setSubPage] = useState(null)
   // Choosing a menu entry again starts that section fresh (e.g. back to the list).
   const [visit, setVisit] = useState(0)
-  const current = active === PROFILE.id ? PROFILE : menu.find((item) => item.id === active) ?? menu[0]
+  const subPageLabel = subPage?.path === path ? subPage.label : null
+  const onSubPage = useCallback((label) => setSubPage(label ? { path, label } : null), [path])
 
   useEffect(() => {
-    document.title = `${subPage ?? current.label} | VieTech`
-  }, [current, subPage])
+    document.title = `${subPageLabel ?? current.label} | VieTech`
+  }, [current, subPageLabel])
 
-  function open(id) {
+  function open(item) {
     setSubPage(null)
-    setActive(id)
     setVisit((value) => value + 1)
+    navigate(item.path)
   }
 
-  return <AdminLayout auth={auth} title={current.label} breadcrumb={`Trang chủ / ${current.label}${subPage ? ` / ${subPage}` : ''}`}
-    menu={menu} active={current.id} onSelect={open} onHome={() => open(MENU[0].id)}
-    onAccount={() => open(PROFILE.id)} accountActive={current.id === PROFILE.id}>
-    {current.id === PROFILE.id && <ProfilePage auth={auth} />}
-    {current.id === 'accounts' && <AccountsPage key={visit} auth={auth} onSubPage={setSubPage} />}
+  return <AdminLayout auth={auth} title={current.label} breadcrumb={`Trang chủ / ${current.label}${subPageLabel ? ` / ${subPageLabel}` : ''}`}
+    menu={menu} active={current.id} onSelect={(id) => open(menu.find((item) => item.id === id))} onHome={() => open(ADMIN_MENU[0])}
+    onAccount={() => open(ADMIN_PROFILE_ITEM)} accountActive={current.id === ADMIN_PROFILE_ITEM.id}>
+    <Outlet context={{ onSubPage, visit }} />
   </AdminLayout>
 }

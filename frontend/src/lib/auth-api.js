@@ -1,17 +1,13 @@
-const API_ROOT = (import.meta.env?.VITE_API_URL || '/api').replace(/\/+$/, '')
+// Auth endpoints and the refresh-cookie rotation. HTTP and error handling come from the shared client;
+// this module keeps its original exports so existing pages, API modules and tests keep working.
+import { ApiError as AuthApiError, request as sendRequest } from '../services/api/client.js'
+
+export { AuthApiError }
+
 const INTERNAL_ROLES = new Set(['Staff', 'Admin'])
 let refreshRequest = null
 let internalRefresh = null
 let refreshController = null
-
-export class AuthApiError extends Error {
-  constructor(message, status = 0, retryAfter = null) {
-    super(message)
-    this.name = 'AuthApiError'
-    this.status = status
-    this.retryAfter = retryAfter
-  }
-}
 
 export function readCsrfToken() {
   if (typeof document === 'undefined') return ''
@@ -33,99 +29,10 @@ export function clearLocalCsrf() {
   document.cookie = `vietech_csrf=; Path=/; Max-Age=0; SameSite=Lax${secure}`
 }
 
-const FIELD_NAMES = {
-  Identifier: 'Số điện thoại / Email',
-  Password: 'Mật khẩu',
-  ChallengeId: 'Yêu cầu xác minh',
-  Code: 'Mã OTP',
-  NewPassword: 'Mật khẩu mới',
-  ConfirmPassword: 'Xác nhận mật khẩu',
-  ResetToken: 'Yêu cầu đặt lại mật khẩu',
-  CurrentPassword: 'Mật khẩu hiện tại',
-  FullName: 'Họ và tên',
-  PhoneNumber: 'Số điện thoại',
-  Gender: 'Giới tính',
-  DateOfBirth: 'Ngày sinh',
-  Province: 'Tỉnh/Thành phố',
-  Ward: 'Phường/Xã',
-  DetailAddress: 'Địa chỉ chi tiết',
-  Email: 'Email',
-  LockReason: 'Lý do khóa',
-  LockedUntil: 'Thời hạn khóa',
-  search: 'Từ khóa tìm kiếm',
-}
-
-// Our own messages are Vietnamese (always non-ASCII); plain-ASCII text is a framework default in English.
-function isVietnamese(message) {
-  return Array.from(message).some((character) => character.codePointAt(0) > 127)
-}
-
-function validationMessage(details) {
-  return details.slice(0, 3).map((item) => {
-    const field = item.loc?.at(-1)
-    const label = FIELD_NAMES[field] || 'Thông tin'
-    const message = typeof item.msg === 'string' ? item.msg.replace(/^Value error,\s*/, '') : ''
-    if (isVietnamese(message)) return message
-    if (item.type === 'missing' || item.type === 'string_too_short') return `${label} không được để trống.`
-    if (field === 'Code') return 'Mã OTP gồm 6 chữ số.'
-    if (field === 'Email') return 'Vui lòng nhập email hợp lệ.'
-    if (field === 'PhoneNumber') return 'Vui lòng nhập số điện thoại Việt Nam hợp lệ.'
-    if (field === 'Identifier') return 'Vui lòng nhập số điện thoại Việt Nam hoặc email hợp lệ.'
-    if (field === 'ChallengeId' || field === 'ResetToken') return 'Yêu cầu xác minh không hợp lệ. Vui lòng gửi lại mã OTP.'
-    return `${label} không hợp lệ. Vui lòng kiểm tra lại.`
-  }).join(' ')
-}
-
-function errorMessage(status, body) {
-  if (status === 422 && Array.isArray(body?.detail)) return validationMessage(body.detail)
-  if (typeof body?.detail === 'string' && isVietnamese(body.detail)) return body.detail
-  if (status === 401) return 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.'
-  if (status === 403) return 'Tài khoản không được phép truy cập trang quản trị.'
-  if (status === 404) return 'Không tìm thấy chức năng yêu cầu. Vui lòng tải lại trang.'
-  if (status === 429) return 'Bạn đã thử quá nhiều lần. Vui lòng chờ rồi thử lại.'
-  if (status >= 500) return 'Hệ thống đang bận. Vui lòng thử lại sau.'
-  return 'Không thể hoàn tất yêu cầu. Vui lòng thử lại.'
-}
-
-// `body` is sent as JSON; `file` is sent as-is with its own type (avatar upload).
-export async function apiRequest(path, { method = 'POST', body, file, accessToken, csrfToken, signal } = {}) {
-  const headers = { Accept: 'application/json' }
-  if (body !== undefined) headers['Content-Type'] = 'application/json'
-  if (file !== undefined) headers['Content-Type'] = file.type || 'application/octet-stream'
-  if (accessToken) headers.Authorization = `Bearer ${accessToken}`
-  if (csrfToken) headers['X-CSRF-Token'] = csrfToken
-
-  let response
-  try {
-    response = await fetch(`${API_ROOT}${path}`, {
-      method,
-      credentials: 'include',
-      cache: 'no-store',
-      headers,
-      ...(signal ? { signal } : {}),
-      ...(file !== undefined ? { body: file } : body === undefined ? {} : { body: JSON.stringify(body) }),
-    })
-  } catch {
-    signal?.throwIfAborted()
-    throw new AuthApiError('Không kết nối được máy chủ. Vui lòng kiểm tra kết nối và thử lại.')
-  }
-
-  signal?.throwIfAborted()
-  if (response.status === 204) return null
-  let data
-  try {
-    data = await response.json()
-  } catch {
-    signal?.throwIfAborted()
-    if (response.ok) throw new AuthApiError('Máy chủ trả về dữ liệu không hợp lệ. Vui lòng thử lại.', response.status)
-  }
-  signal?.throwIfAborted()
-  if (!response.ok) {
-    const retry = response.headers.get('Retry-After')
-    const retryAfter = retry !== null && /^\d+$/.test(retry) ? Number(retry) : null
-    throw new AuthApiError(errorMessage(response.status, data), response.status, retryAfter)
-  }
-  return data
+// Compatibility entry point for the account modules: same options as before and POST unless `method` is given.
+// New code should use `request` from services/api/client.js, which defaults to GET and accepts `query`.
+export function apiRequest(path, options = {}) {
+  return sendRequest(path, { ...options, method: options.method ?? 'POST' })
 }
 
 function request(path, options) {
@@ -228,6 +135,33 @@ export function refreshSession() {
   const session = pending.then(requireSession)
   if (pending === refreshRequest) internalRefresh = session
   return session
+}
+
+// A renewed session of any supported role: Customer, or Staff/Admin with the internal session fields.
+// Other roles are refused (403), like the portal checks above.
+function requireKnownSession(data) {
+  const role = data?.user?.Role
+  if (INTERNAL_ROLES.has(role)) return requireSession(data)
+  if (role !== 'Customer') throw new AuthApiError('Tài khoản không được phép truy cập trang này.', 403)
+  if (!data.access_token) throw new AuthApiError('Thông tin phiên đăng nhập không hợp lệ. Vui lòng đăng nhập lại.')
+  return data
+}
+
+// Rotates the shared refresh cookie for whichever portal owns it. Overlapping callers share one request.
+// Rejects with 401 when there is no CSRF cookie, without a network request.
+export function renewSession() {
+  return rotateRefresh().then(requireKnownSession)
+}
+
+// Startup restore for the whole app: the current session, or null when there is none (no cookie, expired, revoked).
+export async function restoreSession() {
+  if (!readCsrfToken()) return null
+  try {
+    return await renewSession()
+  } catch (failure) {
+    if ([401, 403].includes(failure.status)) return null
+    throw failure
+  }
 }
 
 // Customer site: the signed-in customer, or null when there is no customer session

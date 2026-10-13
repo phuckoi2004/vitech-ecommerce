@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import useCustomerSession from '../../hooks/useCustomerSession.js'
 import { ACCOUNT_PATH, LOGIN_PATH, REGISTER_PATH } from '../routes/paths.js'
 
@@ -22,8 +23,8 @@ function AccountPrompt({ onClose }) {
     <div className="shop-prompt-inner">
       <h2 id="shop-prompt-title">Bạn đã có tài khoản chưa?</h2>
       <div className="shop-prompt-actions">
-        <a className="shop-prompt-button" href={REGISTER_PATH}>Đăng ký</a>
-        <a className="shop-prompt-button is-primary" href={LOGIN_PATH}>Đăng nhập</a>
+        <Link className="shop-prompt-button" to={REGISTER_PATH} onClick={onClose}>Đăng ký</Link>
+        <Link className="shop-prompt-button is-primary" to={LOGIN_PATH} onClick={onClose}>Đăng nhập</Link>
       </div>
     </div>
   </dialog>
@@ -36,10 +37,10 @@ export default function AccountButton() {
   if (!ready) return <span className="shop-account-placeholder" aria-hidden="true" />
 
   if (user) {
-    return <a className="shop-account" href={ACCOUNT_PATH} title="Tài khoản của bạn">
+    return <Link className="shop-account" to={ACCOUNT_PATH} title="Tài khoản của bạn">
       <UserIcon />
       <span className="shop-account-text"><strong>Tài khoản</strong><span>{user.FullName}</span></span>
-    </a>
+    </Link>
   }
 
   return <>
