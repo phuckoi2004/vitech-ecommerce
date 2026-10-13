@@ -274,7 +274,9 @@ function AdminAuthPage() {
 
   useEffect(() => {
     if (!auth.sessionReady) return
-    const path = auth.user ? '/admin' : PAGE_PATHS[page]
+    const currentPath = window.location.pathname.replace(/\/+$/, '')
+    const isSectionPath = currentPath === '/admin' || (currentPath.startsWith('/admin/') && !Object.values(PAGE_PATHS).includes(currentPath))
+    const path = auth.user ? (isSectionPath ? currentPath : '/admin') : PAGE_PATHS[page]
     if (window.location.pathname !== path) window.history.replaceState(null, '', path)
     // AdminHomePage owns the title once signed in.
     if (!auth.user) document.title = `${PAGE_TITLES[page]} | VieTech`

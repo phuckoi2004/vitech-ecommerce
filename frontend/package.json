@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "oxlint",
-    "test": "node --test --test-isolation=none src/lib/auth-api.test.js src/hooks/useInternalAuth.test.js src/customer/pages/AccountPage.test.js",
+    "test": "node --test --test-isolation=none src/lib/auth-api.test.js src/lib/admin-dashboard-api.test.js src/hooks/useInternalAuth.test.js src/customer/pages/AccountPage.test.js src/admin/pages/DashboardPage.test.js",
     "preview": "vite preview"
   },
   "dependencies": {

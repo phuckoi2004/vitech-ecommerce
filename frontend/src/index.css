@@ -1,1 +1,13 @@
 @import "tailwindcss";
+
+@theme {
+  --font-admin: Inter, "Segoe UI", Arial, sans-serif;
+  --color-admin-text: #14213d;
+  --color-admin-muted: #60708a;
+  --color-admin-border: #e4eaf2;
+  --color-admin-blue: #1677ff;
+  --color-admin-red: #e11d2e;
+  --color-admin-navy: #0f2d6b;
+  --color-admin-soft-blue: #eef5ff;
+  --color-admin-warning: #d98300;
+}
