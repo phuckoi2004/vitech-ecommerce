@@ -55,8 +55,11 @@ test('new route matches Figma sections, keeps automatic code/date readonly and r
   expect(screen.getByRole('textbox', { name: 'Mã phiếu' })).toHaveAttribute('readonly')
   expect(screen.getByRole('textbox', { name: 'Ngày lập' })).toHaveValue(formatDate(new Date()))
   expect(screen.getByRole('textbox', { name: 'Ngày lập' })).toHaveAttribute('readonly')
-  expect(screen.getAllByRole('columnheader').map((cell) => cell.textContent)).toEqual(['Sản phẩm / biến thể', 'SL đặt', 'Đơn giá nhập', 'Thành tiền', 'Thao tác'])
-  expect(screen.queryByText(/SL thực nhận/)).not.toBeInTheDocument()
+  expect(screen.getAllByRole('columnheader').map((cell) => cell.textContent)).toEqual(['Sản phẩm / biến thể', 'SL đặt', 'SL thực nhận', 'Đơn giá nhập', 'Thành tiền', 'Thao tác'])
+  for (const input of screen.getAllByRole('spinbutton', { name: /Số lượng thực nhận dòng/ })) {
+    expect(input).toHaveValue(0)
+    expect(input).toHaveAttribute('readonly')
+  }
   expect(screen.getByRole('status', { name: 'Tổng tiền phiếu nhập' }).textContent).toBe(formatMoney('0.00'))
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
 })
@@ -107,6 +110,8 @@ test('edit uses the stored date; removing/replacing variants stays in the draft 
   await waitFor(() => expect(screen.getByRole('button', { name: 'Cập nhật phiếu' })).toBeEnabled())
   expect(screen.getByRole('textbox', { name: 'Ngày lập' })).toHaveValue('13/10/2026')
   expect(screen.getByRole('textbox', { name: 'Mã phiếu' })).toHaveValue('PN-API-01')
+  expect(screen.getByRole('spinbutton', { name: 'Số lượng thực nhận dòng 1' })).toHaveValue(po.Items[0].ReceivedQuantity)
+  expect(screen.getByRole('spinbutton', { name: 'Số lượng thực nhận dòng 1' })).toHaveAttribute('readonly')
   fillLine(1, 'v2', 1, 3200)
   expect(api.addPurchaseItem).not.toHaveBeenCalled()
   expect(api.removePurchaseItem).not.toHaveBeenCalled()
