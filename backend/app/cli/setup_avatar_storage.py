@@ -29,7 +29,9 @@ def _bucket_request(storage, method, payload=None):
 
 
 def _missing_bucket(error):
-    if error.code != 404:
+    # Storage uses 400/NoSuchBucket on current hosted projects; older responses use 404.
+    # Never treat other HTTP 400 failures (bad keys/configuration) as permission to create.
+    if error.code not in {400, 404}:
         return False
     try:
         body = json.loads(error.read())

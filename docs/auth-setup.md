@@ -161,6 +161,10 @@ Staff được Admin tạo đăng nhập được ngay bằng email hoặc số 
 
 ## 6. Cấu hình kho avatar
 
+`DATABASE_URL` kết nối trực tiếp PostgreSQL để đọc/ghi các bảng (tài khoản, sản phẩm, đơn hàng...). Ảnh avatar là file được tải lên **Supabase Storage qua HTTP**, nên cần thêm `SUPABASE_URL` và một khóa server. Database chỉ lưu đường dẫn file ở `Users.AvatarUrl`; mật khẩu database không thay thế khóa API Storage.
+
+Chỉnh trực tiếp `backend/.env` hiện có, thêm/điền các dòng dưới đây; giữ nguyên `DATABASE_URL` và các cấu hình đăng nhập đang dùng. Lấy **Project URL** trong cửa sổ **Connect** của đúng dự án Supabase, dạng `https://<project-ref>.supabase.co` (không phải đường dẫn dashboard hoặc chuỗi `postgresql://...`). Lấy **Secret key** bắt đầu `sb_secret_` tại **Settings → API Keys**. Dùng khóa này ở backend, không đặt trong `frontend/.env` hay biến `VITE_*`.
+
 Điền cấu hình Supabase Storage vào `backend/.env`. `SUPABASE_URL` phải là URL project đang dùng, dạng `https://<project-ref>.supabase.co`. Dùng khóa backend `sb_secret_...` từ Supabase Dashboard → Project Settings → API Keys cho `SUPABASE_SECRET_KEY`; nếu project dùng khóa JWT cũ, điền `service_role` vào `SUPABASE_SERVICE_ROLE_KEY` thay thế. Khi có cả hai, backend ưu tiên `SUPABASE_SECRET_KEY`. Xem [hướng dẫn API key của Supabase](https://supabase.com/docs/guides/getting-started/api-keys).
 
 ```dotenv
@@ -177,6 +181,8 @@ Các khóa này chỉ nằm ở backend; không đưa vào biến `VITE_*`, fron
 ```
 
 Lệnh đầu kiểm tra bucket và chỉ tạo nếu chưa tồn tại: public, chỉ nhận `image/jpeg`, `image/png`, `image/webp`, tối đa 2 MiB. `--check` chỉ đọc cấu hình bucket. CLI không tự sửa hoặc xóa bucket đã có; nếu cấu hình hiện tại không phù hợp, lệnh báo lỗi để bạn kiểm tra trong Storage Dashboard hoặc chọn một bucket avatar mới. Xem [hướng dẫn tạo bucket](https://supabase.com/docs/guides/storage/buckets/creating-buckets).
+
+Supabase hiện có thể trả HTTP 400 với mã `NoSuchBucket` khi chưa tạo bucket. CLI nhận diện trường hợp này để tạo bucket khi chạy lệnh thiết lập; chế độ `--check` chỉ báo thiếu bucket. Các lỗi HTTP 400 khác không được coi là thiếu bucket.
 
 Khởi động lại backend sau khi thay `.env`, rồi thử thay avatar trong hồ sơ. Bộ kiểm thử dùng storage giả; CLI xác nhận cấu hình bucket nhưng chưa chứng minh luồng upload ảnh thật từ giao diện. Nếu thiếu URL/khóa, API upload trả HTTP 503; khóa không hợp lệ hoặc lỗi dịch vụ cần được xử lý trước khi nghiệm thu.
 

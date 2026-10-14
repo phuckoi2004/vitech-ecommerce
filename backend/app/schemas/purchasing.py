@@ -202,6 +202,8 @@ class PurchaseOrderResponse(ResponseSchema):
     PurchaseOrderCode: str
     SupplierId: uuid.UUID
     CreatedByUserId: uuid.UUID
+    # Display name only: internal purchase readers need no account-management permission.
+    CreatedByName: str | None = None
     DecidedByUserId: uuid.UUID | None
     TotalAmount: Money
     Status: PurchaseOrderStatus

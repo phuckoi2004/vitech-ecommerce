@@ -1,0 +1,100 @@
+"""Admin forms preserve the Product parent and its independently managed variants."""
+
+import uuid
+from typing import Any
+from urllib.parse import urlsplit
+
+from pydantic import Field, field_validator, model_validator
+
+from .catalog import AdminProductVariantListResponse, ProductImageResponse
+from .common import Money, NonNegativeInt, ProductStatus, RequestSchema, varchar
+
+
+class CatalogItemImage(RequestSchema):
+    ImageUrl: varchar(500)
+    IsDefault: bool = False
+
+    @field_validator("ImageUrl")
+    @classmethod
+    def valid_url(cls, value: str) -> str:
+        value = value.strip()
+        url = urlsplit(value)
+        if url.scheme not in {"http", "https"} or not url.hostname or url.username or url.password:
+            raise ValueError("Đường dẫn ảnh phải là URL HTTP hoặc HTTPS hợp lệ")
+        return value
+
+
+class CatalogProductWrite(RequestSchema):
+    """Shared information: updating this form affects every variant of this Product."""
+
+    NULLABLE_FIELDS = frozenset({"Description", "Specifications"})
+
+    Name: varchar(255)
+    CategoryId: uuid.UUID
+    BrandId: uuid.UUID
+    WarrantyMonths: NonNegativeInt
+    Status: ProductStatus
+    Description: str | None = None
+    Specifications: dict[str, Any] | None = None
+    Images: list[CatalogItemImage] = Field(default_factory=list)
+
+    @field_validator("Name")
+    @classmethod
+    def not_blank(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("Tên sản phẩm không được để trống")
+        return value.strip()
+
+    @model_validator(mode="after")
+    def one_default_image(self):
+        if sum(image.IsDefault for image in self.Images) > 1:
+            raise ValueError("Chỉ chọn một ảnh mặc định")
+        return self
+
+
+class CatalogVariantWrite(RequestSchema):
+    """No parent metadata, ProductId, stock or cost may be changed by a variant edit."""
+
+    NULLABLE_FIELDS = frozenset({"Storage"})
+
+    Sku: varchar(50)
+    Color: varchar(50)
+    Storage: varchar(50) | None = None
+    Price: Money
+    MinStockLevel: NonNegativeInt = 0
+    IsActive: bool = True
+    IsSerialTracked: bool = False
+
+    @field_validator("Sku", "Color")
+    @classmethod
+    def not_blank(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("SKU và màu sắc không được để trống")
+        return value.strip()
+
+    @field_validator("Storage")
+    @classmethod
+    def trim_storage(cls, value: str | None) -> str | None:
+        return value.strip() or None if value is not None else None
+
+
+class CatalogItemCreate(CatalogVariantWrite):
+    NULLABLE_FIELDS = CatalogVariantWrite.NULLABLE_FIELDS | frozenset({"Product", "ProductId"})
+
+    ProductId: uuid.UUID | None = None
+    Product: CatalogProductWrite | None = None
+
+    @model_validator(mode="after")
+    def one_parent(self):
+        if (self.ProductId is None) == (self.Product is None):
+            raise ValueError("Chọn sản phẩm đã có hoặc nhập thông tin sản phẩm mới")
+        return self
+
+
+class CatalogItemResponse(AdminProductVariantListResponse):
+    CategoryId: uuid.UUID
+    BrandId: uuid.UUID
+    WarrantyMonths: int
+    Description: str | None
+    Specifications: dict[str, Any] | None
+    Images: list[ProductImageResponse]

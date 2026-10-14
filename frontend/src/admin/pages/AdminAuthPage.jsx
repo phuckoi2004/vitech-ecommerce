@@ -268,16 +268,7 @@ function AdminAuthPage({ page = 'login' }) {
   const initialIdentifier = location.state?.identifier ?? ''
 
   useEffect(() => {
-    const pop = () => setPage(pageFromPath(window.location.pathname))
-    window.addEventListener('popstate', pop)
-    return () => window.removeEventListener('popstate', pop)
-  }, [])
-
-  useEffect(() => {
-    if (!auth.sessionReady) return
-    const path = auth.user ? '/admin' : PAGE_PATHS[page]
-    if (window.location.pathname !== path) window.history.replaceState(null, '', path)
-    // AdminHomePage owns the title once signed in.
+    // React Router owns navigation; the internal home owns the title once signed in.
     if (!auth.user) document.title = `${PAGE_TITLES[page]} | VieTech`
   }, [auth.user, page])
 

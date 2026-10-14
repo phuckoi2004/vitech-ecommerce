@@ -166,6 +166,19 @@ class AdminProductResponse(ProductResponse):
     IsDeleted: bool
 
 
+class AdminProductListResponse(AdminProductResponse):
+    """Dữ liệu bảng quản trị; tổng hợp từ các biến thể chưa xóa, không thay đổi schema database."""
+
+    Category: CategorySummary = relation_field("category")
+    Brand: BrandSummary = relation_field("brand")
+    Skus: list[str]
+    ThumbnailUrl: str | None
+    MinPrice: Money | None
+    MaxPrice: Money | None
+    StockQuantity: NonNegativeInt
+    IsLowStock: bool
+
+
 # ---------------------------------------------------------------------------
 # ProductVariants
 # ---------------------------------------------------------------------------
@@ -225,6 +238,17 @@ class AdminProductVariantResponse(ProductVariantResponse):
     MinStockLevel: NonNegativeInt
     IsDeleted: bool
     IsSerialTracked: bool
+
+
+class AdminProductVariantListResponse(AdminProductVariantResponse):
+    """Một dòng quản trị cho mỗi biến thể/SKU; tên và danh mục lấy từ sản phẩm gốc."""
+
+    Name: str
+    Status: ProductStatus
+    Category: CategorySummary
+    Brand: BrandSummary
+    ThumbnailUrl: str | None
+    IsLowStock: bool
 
 
 # ---------------------------------------------------------------------------

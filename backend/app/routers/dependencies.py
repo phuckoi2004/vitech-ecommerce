@@ -24,6 +24,7 @@ from app.services.catalog import (
     ProductVariantService,
 )
 from app.services.chat import ChatService
+from app.services.catalog_item import CatalogItemService
 from app.services.content import ContentService
 from app.services.inventory import InventoryService
 from app.services.order import OrderService
@@ -88,6 +89,7 @@ get_category_service = _session_service(CategoryService)
 get_brand_service = _session_service(BrandService)
 get_product_service = _session_service(ProductService)
 get_variant_service = _session_service(ProductVariantService)
+get_catalog_item_service = _session_service(CatalogItemService)
 get_image_service = _session_service(ProductImageService)
 get_serial_service = _session_service(ProductSerialService)
 get_wishlist_service = _session_service(WishlistService)

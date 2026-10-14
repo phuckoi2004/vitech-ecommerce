@@ -1,10 +1,11 @@
 """Repositories cho Categories, Brands, Products, ProductVariants, ProductImages, ProductSerials."""
 
 import uuid
+from decimal import Decimal
 from collections.abc import Collection
 from typing import NamedTuple
 
-from sqlalchemy import exists, func, or_, select
+from sqlalchemy import String, and_, cast, exists, func, or_, select
 from sqlalchemy.orm import joinedload, selectinload
 
 from app.models import (
@@ -93,6 +94,47 @@ class BrandRepository(BaseRepository[Brand]):
 class ProductRepository(BaseRepository[Product]):
     model = Product
 
+    def admin_catalog_filters(self, *, keyword: str | None = None, min_price: Decimal | None = None,
+                              max_price: Decimal | None = None, stock: str | None = None, **filters) -> list:
+        conditions = self._filters(**filters)
+        variants = [ProductVariant.ProductId == Product.ProductId, ProductVariant.IsDeleted.is_(False)]
+        if keyword:
+            escaped = keyword.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+            pattern = f"%{escaped}%"
+            matches = [Product.Name.ilike(pattern, escape="\\"),
+                       cast(Product.ProductId, String).ilike(pattern, escape="\\"),
+                       exists().where(*variants, ProductVariant.Sku.ilike(pattern, escape="\\"))]
+            try:
+                matches.append(Product.ProductId == uuid.UUID(keyword))
+            except ValueError:
+                pass
+            conditions.append(or_(*matches))
+        price = select(func.min(ProductVariant.Price)).where(*variants).correlate(Product).scalar_subquery()
+        quantity = select(func.coalesce(func.sum(ProductVariant.StockQuantity), 0)).where(*variants) \
+            .correlate(Product).scalar_subquery()
+        low = exists().where(*variants, ProductVariant.MinStockLevel > 0,
+                             ProductVariant.StockQuantity <= ProductVariant.MinStockLevel)
+        if min_price is not None:
+            conditions.append(price >= min_price)
+        if max_price is not None:
+            conditions.append(price <= max_price)
+        if stock == "in_stock":
+            conditions.append(quantity > 0)
+        elif stock == "out_of_stock":
+            conditions.append(quantity == 0)
+        elif stock == "low_stock":
+            conditions.extend([quantity > 0, low])
+        return conditions
+
+    def list_admin_catalog(self, *, offset: int, limit: int, **filters) -> list[Product]:
+        # Load relationships in batches for the current page; never one API/database query per product.
+        return self.get_all(*self.admin_catalog_filters(**filters),
+                            order_by=(Product.CreatedAt.desc(), Product.ProductId), offset=offset, limit=limit,
+                            options=self._detail_options())
+
+    def count_admin_catalog(self, **filters) -> int:
+        return self.count(*self.admin_catalog_filters(**filters))
+
     def get_by_slug(self, slug: str) -> Product | None:
         return self.get_one(Product.Slug == slug)
 
@@ -176,6 +218,57 @@ class ProductRepository(BaseRepository[Product]):
 
 class ProductVariantRepository(BaseRepository[ProductVariant]):
     model = ProductVariant
+
+    @staticmethod
+    def _catalog_filters(*, keyword: str | None = None, category_id: uuid.UUID | None = None,
+                         brand_id: uuid.UUID | None = None, status: str | None = None,
+                         min_price: Decimal | None = None, max_price: Decimal | None = None,
+                         stock: str | None = None) -> list:
+        conditions = [ProductVariant.IsDeleted.is_(False), Product.IsDeleted.is_(False)]
+        if keyword:
+            escaped = keyword.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+            pattern = f"%{escaped}%"
+            conditions.append(or_(Product.Name.ilike(pattern, escape="\\"),
+                                  ProductVariant.VariantName.ilike(pattern, escape="\\"),
+                                  ProductVariant.Sku.ilike(pattern, escape="\\")))
+        if category_id is not None:
+            conditions.append(Product.CategoryId == category_id)
+        if brand_id is not None:
+            conditions.append(Product.BrandId == brand_id)
+        if status == "Active":
+            conditions.extend([Product.Status == "Active", ProductVariant.IsActive.is_(True)])
+        elif status == "Inactive":
+            conditions.append(or_(Product.Status == "Inactive",
+                                  and_(Product.Status == "Active", ProductVariant.IsActive.is_(False))))
+        elif status is not None:
+            conditions.append(Product.Status == status)
+        if min_price is not None:
+            conditions.append(ProductVariant.Price >= min_price)
+        if max_price is not None:
+            conditions.append(ProductVariant.Price <= max_price)
+        if stock == "in_stock":
+            conditions.append(ProductVariant.StockQuantity > 0)
+        elif stock == "out_of_stock":
+            conditions.append(ProductVariant.StockQuantity == 0)
+        elif stock == "low_stock":
+            conditions.extend([ProductVariant.StockQuantity > 0, ProductVariant.MinStockLevel > 0,
+                               ProductVariant.StockQuantity <= ProductVariant.MinStockLevel])
+        return conditions
+
+    def list_catalog(self, *, offset: int, limit: int, **filters) -> list[ProductVariant]:
+        stmt = (select(ProductVariant).join(ProductVariant.product)
+                .where(*self._catalog_filters(**filters))
+                .options(joinedload(ProductVariant.product).joinedload(Product.category),
+                         joinedload(ProductVariant.product).joinedload(Product.brand),
+                         joinedload(ProductVariant.product).selectinload(Product.images))
+                .order_by(Product.CreatedAt.desc(), Product.ProductId, ProductVariant.Sku,
+                          ProductVariant.ProductVariantId).offset(offset).limit(limit))
+        return list(self.session.scalars(stmt))
+
+    def count_catalog(self, **filters) -> int:
+        stmt = (select(func.count()).select_from(ProductVariant).join(ProductVariant.product)
+                .where(*self._catalog_filters(**filters)))
+        return self.session.scalar(stmt) or 0
 
     def get_by_id_for_update(self, id_: uuid.UUID, *, with_product: bool = False) -> ProductVariant | None:
         """Khóa biến thể; luồng giỏ hàng còn nạp lại Product để kiểm tra trạng thái bán hiện tại."""

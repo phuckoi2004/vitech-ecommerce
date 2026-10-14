@@ -183,8 +183,14 @@ class PurchaseOrderService(BaseService):
             "code_contains": code.strip() if code and code.strip() else None,
         }
         items = self.purchase_orders.list_purchase_orders(**filters, offset=offset, limit=limit)
+        creator_names = {user_id: self._creator_name(user_id) for user_id in {po.CreatedByUserId for po in items}}
         return PageResponse[PurchaseOrderResponse](
-            Items=[PurchaseOrderResponse.model_validate(x) for x in items],
+            Items=[
+                PurchaseOrderResponse.model_validate(x).model_copy(
+                    update={"CreatedByName": creator_names[x.CreatedByUserId]}
+                )
+                for x in items
+            ],
             Total=self.purchase_orders.count_purchase_orders(**filters),
             Page=page,
             PageSize=page_size,
@@ -195,7 +201,9 @@ class PurchaseOrderService(BaseService):
         po = self.purchase_orders.get_detail(purchase_order_id)
         if po is None:
             raise NotFoundError("Không tìm thấy phiếu nhập", code="purchase_order_not_found")
-        return PurchaseOrderDetailResponse.model_validate(po)
+        return PurchaseOrderDetailResponse.model_validate(po).model_copy(
+            update={"CreatedByName": self._creator_name(po.CreatedByUserId)}
+        )
 
     # ------------------------------------------------------------------ lập / sửa / gửi lại
 
@@ -547,7 +555,14 @@ class PurchaseOrderService(BaseService):
     def _detail(self, po: PurchaseOrder) -> PurchaseOrderDetailResponse:
         self.purchase_orders.flush()
         self.session.expire(po, ["items"])
-        return PurchaseOrderDetailResponse.model_validate(self.purchase_orders.get_detail(po.PurchaseOrderId))
+        return PurchaseOrderDetailResponse.model_validate(self.purchase_orders.get_detail(po.PurchaseOrderId)).model_copy(
+            update={"CreatedByName": self._creator_name(po.CreatedByUserId)}
+        )
+
+    def _creator_name(self, user_id: uuid.UUID) -> str | None:
+        """Read only the display name, including historical creators whose account was soft deleted."""
+        creator = self.users.get_by_id(user_id)
+        return creator.FullName if creator is not None else None
 
     def _notify_admins(self, po: PurchaseOrder, title: str, content: str, *, exclude: uuid.UUID | None = None) -> None:
         """Thông báo Admin đang hoạt động (trừ ``exclude``, ví dụ người lập phiếu không tự duyệt được)."""

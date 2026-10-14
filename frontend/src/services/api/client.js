@@ -41,6 +41,20 @@ const FIELD_NAMES = {
   LockReason: 'Lý do khóa',
   LockedUntil: 'Thời hạn khóa',
   search: 'Từ khóa tìm kiếm',
+  Name: 'Tên',
+  Slug: 'Đường dẫn',
+  CategoryId: 'Danh mục',
+  BrandId: 'Thương hiệu',
+  WarrantyMonths: 'Số tháng bảo hành',
+  Specifications: 'Thông số kỹ thuật',
+  Sku: 'SKU',
+  VariantName: 'Tên biến thể',
+  Color: 'Màu sắc',
+  Storage: 'Dung lượng',
+  Images: 'Ảnh sản phẩm',
+  Price: 'Giá bán',
+  MinStockLevel: 'Ngưỡng cảnh báo tồn',
+  ImageUrl: 'Đường dẫn ảnh',
 }
 
 // FastAPI prefixes the location with where the value came from.

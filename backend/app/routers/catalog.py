@@ -5,14 +5,24 @@ Business rules and permissions live in the catalog Services.
 """
 
 import uuid
+from decimal import Decimal
+from typing import Literal
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query, Response, status
+from fastapi import APIRouter, Depends, Query, Request, Response, status
+from fastapi.concurrency import run_in_threadpool
+
+from app.core.errors import AuthError
+from app.core.storage import AvatarStorage, get_avatar_storage
+from app.services.actor import ADMIN_ONLY, require_role
+from app.services.product_media import PRODUCT_IMAGE_MAX_BYTES, upload_product_image
 
 from app.schemas import (
     AdminProductDetailResponse,
+    AdminProductListResponse,
     AdminProductResponse,
     AdminProductVariantResponse,
+    AdminProductVariantListResponse,
     BrandCreate,
     BrandResponse,
     BrandUpdate,
@@ -41,6 +51,8 @@ from app.services.catalog import (
     ProductService,
     ProductVariantService,
 )
+from app.schemas.catalog_item import CatalogItemCreate, CatalogItemResponse, CatalogProductWrite, CatalogVariantWrite
+from app.services.catalog_item import CatalogItemService
 
 from .dependencies import (
     CurrentActor,
@@ -54,6 +66,7 @@ from .dependencies import (
     get_product_service,
     get_serial_service,
     get_variant_service,
+    get_catalog_item_service,
 )
 
 router = APIRouter(tags=["Sản phẩm"])
@@ -63,6 +76,46 @@ Categories = Annotated[CategoryService, Depends(get_category_service)]
 Brands = Annotated[BrandService, Depends(get_brand_service)]
 Products = Annotated[ProductService, Depends(get_product_service)]
 Variants = Annotated[ProductVariantService, Depends(get_variant_service)]
+CatalogItems = Annotated[CatalogItemService, Depends(get_catalog_item_service)]
+
+
+@admin_router.post("/product-image-uploads", status_code=status.HTTP_201_CREATED)
+async def stage_product_image(request: Request, actor: CurrentActor,
+                              storage: Annotated[AvatarStorage | None, Depends(get_avatar_storage)]):
+    """Raw file body. Returns an image URL; catalog changes remain a separate confirmed save."""
+    require_role(actor, *ADMIN_ONLY)
+    declared = request.headers.get("Content-Length", "")
+    if declared.isdigit() and int(declared) > PRODUCT_IMAGE_MAX_BYTES:
+        raise AuthError(413, "Ảnh sản phẩm tối đa 2 MB.")
+    data = bytearray()
+    async for chunk in request.stream():
+        if len(data) + len(chunk) > PRODUCT_IMAGE_MAX_BYTES:
+            raise AuthError(413, "Ảnh sản phẩm tối đa 2 MB.")
+        data.extend(chunk)
+    url = await run_in_threadpool(upload_product_image, actor, bytes(data), storage)
+    return {"ImageUrl": url}
+
+
+@admin_router.post("/catalog-items", response_model=CatalogItemResponse, status_code=status.HTTP_201_CREATED)
+def create_catalog_item(data: CatalogItemCreate, service: CatalogItems, actor: CurrentActor):
+    return service.create_item(actor, data)
+
+
+@admin_router.get("/catalog-items/{variant_id}", response_model=CatalogItemResponse)
+def get_catalog_item(variant_id: uuid.UUID, service: CatalogItems, actor: CurrentActor):
+    return service.get_item(actor, variant_id)
+
+
+@admin_router.put("/catalog-items/{variant_id}", response_model=CatalogItemResponse)
+def update_catalog_item(variant_id: uuid.UUID, data: CatalogVariantWrite, service: CatalogItems, actor: CurrentActor):
+    return service.update_item(actor, variant_id, data)
+
+
+@admin_router.put("/catalog-products/{product_id}", response_model=AdminProductDetailResponse)
+def update_catalog_product(product_id: uuid.UUID, data: CatalogProductWrite, service: CatalogItems, actor: CurrentActor):
+    return service.update_product(actor, product_id, data)
+
+
 Images = Annotated[ProductImageService, Depends(get_image_service)]
 Serials = Annotated[ProductSerialService, Depends(get_serial_service)]
 
@@ -165,13 +218,17 @@ def list_product_images(product_id: uuid.UUID, service: Images):
 # ------------------------------------------------------------------ products (admin)
 
 
-@admin_router.get("/products", response_model=PageResponse[AdminProductResponse])
+@admin_router.get("/products", response_model=PageResponse[AdminProductListResponse])
 def admin_list_products(service: Products, actor: CurrentActor, keyword: str | None = None,
                         category_id: uuid.UUID | None = None, brand_id: uuid.UUID | None = None,
                         status_filter: Annotated[str | None, Query(alias="status")] = None,
+                        min_price: Annotated[Decimal | None, Query(ge=0)] = None,
+                        max_price: Annotated[Decimal | None, Query(ge=0)] = None,
+                        stock: Literal["in_stock", "low_stock", "out_of_stock"] | None = None,
                         include_deleted: bool = False, page: Page = 1, page_size: PageSize = 20):
     return service.admin_list_products(actor, keyword=keyword, category_id=category_id, brand_id=brand_id,
                                        status=status_filter, include_deleted=include_deleted,
+                                       min_price=min_price, max_price=max_price, stock=stock,
                                        page=page, page_size=page_size)
 
 
@@ -197,6 +254,20 @@ def delete_product(product_id: uuid.UUID, service: Products, actor: CurrentActor
 
 
 # ------------------------------------------------------------------ variants (admin)
+
+
+@admin_router.get("/variants", response_model=PageResponse[AdminProductVariantListResponse])
+def search_variants(service: Variants, actor: CurrentActor, keyword: str | None = None,
+                    category_id: uuid.UUID | None = None, brand_id: uuid.UUID | None = None,
+                    status_filter: Annotated[Literal["Draft", "Active", "Inactive", "Discontinued"] | None,
+                                             Query(alias="status")] = None,
+                    min_price: Annotated[Decimal | None, Query(ge=0)] = None,
+                    max_price: Annotated[Decimal | None, Query(ge=0)] = None,
+                    stock: Literal["in_stock", "low_stock", "out_of_stock"] | None = None,
+                    page: Page = 1, page_size: PageSize = 20):
+    return service.search_variants(actor, keyword=keyword, category_id=category_id, brand_id=brand_id,
+                                   status=status_filter, min_price=min_price, max_price=max_price,
+                                   stock=stock, page=page, page_size=page_size)
 
 
 @admin_router.get("/products/{product_id}/variants", response_model=list[AdminProductVariantResponse])

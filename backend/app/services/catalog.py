@@ -14,6 +14,7 @@ Quy ước tham số: ``actor`` là tham số đầu tiên khi bắt buộc đă
 import uuid
 from collections.abc import Callable, Mapping
 from datetime import datetime
+from decimal import Decimal
 
 from sqlalchemy.orm import Session
 
@@ -30,8 +31,10 @@ from app.repositories import (
 )
 from app.schemas import (
     AdminProductDetailResponse,
+    AdminProductListResponse,
     AdminProductResponse,
     AdminProductVariantResponse,
+    AdminProductVariantListResponse,
     BrandCreate,
     BrandResponse,
     BrandUpdate,
@@ -325,24 +328,48 @@ class ProductService(BaseService):
         brand_id: uuid.UUID | None = None,
         status: str | None = None,
         include_deleted: bool = False,
+        min_price: Decimal | None = None,
+        max_price: Decimal | None = None,
+        stock: str | None = None,
         page: int = 1,
         page_size: int = 20,
-    ) -> PageResponse[AdminProductResponse]:
+    ) -> PageResponse[AdminProductListResponse]:
         require_role(actor, *STAFF_OR_ADMIN)
+        if min_price is not None and max_price is not None and min_price > max_price:
+            raise BusinessRuleError("Giá tối thiểu phải nhỏ hơn hoặc bằng giá tối đa", code="invalid_price_range")
         offset, limit = self._page_args(page, page_size)
         filters = {
             "category_ids": [category_id] if category_id else None,
             "brand_id": brand_id,
             "status": status,
             "include_deleted": include_deleted,
-            "name_contains": keyword.strip() if keyword and keyword.strip() else None,
+            "keyword": keyword.strip() if keyword and keyword.strip() else None,
+            "min_price": min_price, "max_price": max_price, "stock": stock,
         }
-        items = self.products.list_products(**filters, offset=offset, limit=limit)
-        return PageResponse[AdminProductResponse](
-            Items=[AdminProductResponse.model_validate(p) for p in items],
-            Total=self.products.count_products(**filters),
+        items = self.products.list_admin_catalog(**filters, offset=offset, limit=limit)
+        return PageResponse[AdminProductListResponse](
+            Items=[self._admin_list_item(p) for p in items],
+            Total=self.products.count_admin_catalog(**filters),
             Page=page,
             PageSize=page_size,
+        )
+
+    @staticmethod
+    def _admin_list_item(product: Product) -> AdminProductListResponse:
+        variants = [v for v in product.variants if not v.IsDeleted]
+        images = sorted(product.images, key=lambda image: (not image.IsDefault, image.DisplayOrder,
+                                                            str(image.ProductImageId)))
+        quantity = sum(v.StockQuantity for v in variants)
+        return AdminProductListResponse(
+            **AdminProductResponse.model_validate(product).model_dump(),
+            Category=product.category, Brand=product.brand,
+            Skus=sorted(v.Sku for v in variants),
+            ThumbnailUrl=images[0].ImageUrl if images else None,
+            MinPrice=min((v.Price for v in variants), default=None),
+            MaxPrice=max((v.Price for v in variants), default=None),
+            StockQuantity=quantity,
+            IsLowStock=quantity > 0 and any(v.MinStockLevel > 0 and v.StockQuantity <= v.MinStockLevel
+                                           for v in variants),
         )
 
     def admin_get_product(self, actor: Actor, product_id: uuid.UUID) -> AdminProductDetailResponse:
@@ -405,6 +432,34 @@ class ProductVariantService(BaseService):
         self.products = ProductRepository(session)
         self.users = UserRepository(session)
         self.notifications = NotificationService(session, clock=clock)
+
+    def search_variants(self, actor: Actor, *, keyword: str | None = None,
+                        category_id: uuid.UUID | None = None, brand_id: uuid.UUID | None = None,
+                        status: str | None = None, min_price: Decimal | None = None,
+                        max_price: Decimal | None = None, stock: str | None = None,
+                        page: int = 1, page_size: int = 20) -> PageResponse[AdminProductVariantListResponse]:
+        require_role(actor, *STAFF_OR_ADMIN)
+        if min_price is not None and max_price is not None and min_price > max_price:
+            raise BusinessRuleError("Giá tối thiểu phải nhỏ hơn hoặc bằng giá tối đa", code="invalid_price_range")
+        offset, limit = self._page_args(page, page_size)
+        filters = {"keyword": keyword.strip() if keyword and keyword.strip() else None,
+                   "category_id": category_id, "brand_id": brand_id, "status": status,
+                   "min_price": min_price, "max_price": max_price, "stock": stock}
+        variants = self.variants.list_catalog(**filters, offset=offset, limit=limit)
+        items = []
+        for variant in variants:
+            product = variant.product
+            images = sorted(product.images, key=lambda image: (not image.IsDefault, image.DisplayOrder,
+                                                                str(image.ProductImageId)))
+            items.append(AdminProductVariantListResponse(
+                **AdminProductVariantResponse.model_validate(variant).model_dump(),
+                Name=product.Name, Status=product.Status, Category=product.category, Brand=product.brand,
+                ThumbnailUrl=images[0].ImageUrl if images else None,
+                IsLowStock=variant.StockQuantity > 0 and variant.MinStockLevel > 0
+                and variant.StockQuantity <= variant.MinStockLevel,
+            ))
+        return PageResponse[AdminProductVariantListResponse](Items=items,
+                    Total=self.variants.count_catalog(**filters), Page=page, PageSize=page_size)
 
     def list_variants(
         self, actor: Actor, product_id: uuid.UUID, *, include_deleted: bool = False

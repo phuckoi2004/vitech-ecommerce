@@ -1,1 +1,60 @@
 @import "tailwindcss";
+
+/*
+ * VieTech design tokens. Values are the colors, font and radii already used by the existing stylesheets, so the
+ * brand does not change. Tailwind generates utilities from them (bg-brand-500, text-ink-900, border-line,
+ * rounded-control...). `static` also emits every variable on :root, so the older stylesheets can move to
+ * var(--color-...) one file at a time.
+ */
+@theme static {
+  --font-sans: "Segoe UI", Arial, sans-serif;
+
+  /* Brand red: buttons, links and accents on both portals. */
+  --color-brand-50: #fff5f5;
+  --color-brand-100: #f5dcdf;
+  --color-brand-200: #f1c4c6;
+  --color-brand-300: #df7b80;
+  --color-brand-400: #d95b60;
+  --color-brand-500: #d53239;
+  --color-brand-600: #c12831;
+  --color-brand-700: #b9313b;
+
+  /* Text. */
+  --color-ink-900: #17243d;
+  --color-ink-800: #24334c;
+  --color-ink-700: #27364e;
+  --color-muted-600: #6b768a;
+  --color-muted-500: #8491a4;
+  --color-muted-400: #a0a9b8;
+
+  /* Internal area navigation (sidebar) and its active/focus accent; also the customer footer. */
+  --color-navy-900: #1a2a63;
+  --color-accent-500: #3b7cf4;
+  --color-accent-600: #2c6ae0;
+
+  /* Surfaces and borders. */
+  --color-surface: #ffffff;
+  --color-surface-muted: #f4f6fa;
+  --color-surface-subtle: #f6f8fb;
+  --color-line: #dfe4ec;
+  --color-line-soft: #e6e9f0;
+
+  /* Status. */
+  --color-success-50: #f0faf4;
+  --color-success-600: #2a805b;
+  --color-warning-500: #e48a1c;
+
+  --radius-control: 8px;
+  --radius-card: 12px;
+
+  /* Figma admin dashboard palette; existing customer/account tokens stay available. */
+  --font-admin: Inter, "Segoe UI", Arial, sans-serif;
+  --color-admin-navy: #0f2d6b;
+  --color-admin-blue: #1677ff;
+  --color-admin-red: #e11d2e;
+  --color-admin-text: #14213d;
+  --color-admin-muted: #60708a;
+  --color-admin-border: #e4eaf2;
+  --color-admin-page: #f7f9fc;
+  --color-admin-soft: #eef5ff;
+}
