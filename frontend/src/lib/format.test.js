@@ -1,5 +1,20 @@
 import { describe, expect, test } from 'vitest'
-import { formatDate, formatDateTime, formatMoney } from './format.js'
+import { formatCompactCount, formatDate, formatDateTime, formatMoney, formatRating } from './format.js'
+
+describe('formatCompactCount and formatRating', () => {
+  test.each([
+    [0, '0'], [950, '950'], [1000, '1k'], [1250, '1,2k'], [1299, '1,2k'], [999_999, '999,9k'], [2_500_000, '2,5tr'],
+    [null, '0'], ['abc', '0'],
+  ])('%s → %s', (value, expected) => {
+    expect(formatCompactCount(value)).toBe(expected)
+  })
+
+  test('ratings keep one decimal with a comma', () => {
+    expect(formatRating('4.80')).toBe('4,8')
+    expect(formatRating(5)).toBe('5,0')
+    expect(formatRating('x')).toBe('')
+  })
+})
 
 describe('formatMoney', () => {
   test.each([

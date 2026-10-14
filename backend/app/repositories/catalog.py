@@ -66,6 +66,16 @@ class CategoryRepository(BaseRepository[Category]):
     def has_children(self, category_id: uuid.UUID) -> bool:
         return self.exists(Category.ParentCategoryId == category_id)
 
+    def visible_tree_ids(self, category_id: uuid.UUID) -> list[uuid.UUID]:
+        """Root and active descendants; UNION also terminates on malformed cyclic data."""
+        tree = select(Category.CategoryId).where(
+            Category.CategoryId == category_id, Category.IsActive.is_(True)
+        ).cte("visible_category_tree", recursive=True)
+        tree = tree.union(select(Category.CategoryId).join(
+            tree, Category.ParentCategoryId == tree.c.CategoryId
+        ).where(Category.IsActive.is_(True)))
+        return list(self.session.scalars(select(tree.c.CategoryId)))
+
     def has_products(self, category_id: uuid.UUID) -> bool:
         return bool(self.session.scalar(select(exists().where(Product.CategoryId == category_id))))
 

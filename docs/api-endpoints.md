@@ -37,7 +37,7 @@ Tài liệu sinh từ code router (`backend/app/routers`). Chạy backend rồi 
 | GET | `/brands` | Công khai* |  | active_only | `list[BrandResponse]` | `list_brands` |
 | GET | `/brands/slug/{slug}` | Công khai* |  | active_only | `BrandResponse` | `get_brand_by_slug` |
 | GET | `/brands/{brand_id}` | Công khai* |  | active_only | `BrandResponse` | `get_brand` |
-| GET | `/products` | Công khai |  | keyword, category_id, brand_id, page, page_size | `PageResponse[ProductSummary]` | `search_products` |
+| GET | `/products` | Công khai |  | keyword, category_id, brand_id, include_descendants, page, page_size | `PageResponse[ProductSummary]` | `search_products` |
 | GET | `/products/slug/{slug}` | Công khai |  |  | `ProductDetailResponse` | `get_product_detail_by_slug` |
 | GET | `/products/{product_id}` | Công khai |  |  | `ProductDetailResponse` | `get_product_detail` |
 | GET | `/products/{product_id}/images` | Công khai |  |  | `list[ProductImageResponse]` | `list_images` |

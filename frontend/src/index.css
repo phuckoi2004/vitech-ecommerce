@@ -29,6 +29,7 @@
 
   /* Internal area navigation (sidebar) and its active/focus accent; also the customer footer. */
   --color-navy-900: #1a2a63;
+  --color-accent-50: #eef5ff;
   --color-accent-500: #3b7cf4;
   --color-accent-600: #2c6ae0;
 

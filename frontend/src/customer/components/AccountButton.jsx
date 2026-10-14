@@ -1,13 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
+import userIcon from '../../assets/icons/user-circle.svg'
 import useCustomerSession from '../../hooks/useCustomerSession.js'
 import { ACCOUNT_PATH, LOGIN_PATH, REGISTER_PATH } from '../routes/paths.js'
-
-function UserIcon() {
-  return <svg className="shop-account-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <circle cx="12" cy="12" r="9.25" /><circle cx="12" cy="10" r="3" /><path d="M6.6 18.4a6.5 6.5 0 0 1 10.8 0" />
-  </svg>
-}
 
 // Asked only of guests; a signed-in customer goes straight to their account.
 function AccountPrompt({ onClose }) {
@@ -30,6 +25,9 @@ function AccountPrompt({ onClose }) {
   </dialog>
 }
 
+const icon = <img className="shop-action-icon" src={userIcon} alt="" width="24" height="24" />
+
+// Header "Tài khoản" entry: the caption above, then "Đăng nhập" for guests or the customer's name.
 export default function AccountButton() {
   const { ready, user } = useCustomerSession()
   const [asking, setAsking] = useState(false)
@@ -37,15 +35,17 @@ export default function AccountButton() {
   if (!ready) return <span className="shop-account-placeholder" aria-hidden="true" />
 
   if (user) {
-    return <Link className="shop-account" to={ACCOUNT_PATH} title="Tài khoản của bạn">
-      <UserIcon />
-      <span className="shop-account-text"><strong>Tài khoản</strong><span>{user.FullName}</span></span>
+    return <Link className="shop-action shop-account" to={ACCOUNT_PATH} title="Tài khoản của bạn">
+      <span className="shop-action-text"><strong>Tài khoản</strong><span className="shop-account-name">{user.FullName}</span></span>
+      {icon}
     </Link>
   }
 
+  // The caption is hidden from assistive technology so the button is announced by its action, "Đăng nhập".
   return <>
-    <button type="button" className="shop-login" onClick={() => setAsking(true)} aria-haspopup="dialog">
-      Đăng nhập<UserIcon />
+    <button type="button" className="shop-action shop-account" onClick={() => setAsking(true)} aria-haspopup="dialog">
+      <span className="shop-action-text"><strong aria-hidden="true">Tài khoản</strong><span>Đăng nhập</span></span>
+      {icon}
     </button>
     {asking && <AccountPrompt onClose={() => setAsking(false)} />}
   </>
