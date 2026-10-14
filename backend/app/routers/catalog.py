@@ -195,8 +195,10 @@ def delete_brand(brand_id: uuid.UUID, service: Brands, actor: CurrentActor):
 
 @router.get("/products", response_model=PageResponse[ProductSummary])
 def search_products(service: Products, keyword: str | None = None, category_id: uuid.UUID | None = None,
-                    brand_id: uuid.UUID | None = None, page: Page = 1, page_size: PageSize = 20):
+                    brand_id: uuid.UUID | None = None, include_descendants: bool = False,
+                    page: Page = 1, page_size: PageSize = 20):
     return service.search_products(keyword=keyword, category_id=category_id, brand_id=brand_id,
+                                   include_descendants=include_descendants,
                                    page=page, page_size=page_size)
 
 

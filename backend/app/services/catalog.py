@@ -283,13 +283,19 @@ class ProductService(BaseService):
         keyword: str | None = None,
         category_id: uuid.UUID | None = None,
         brand_id: uuid.UUID | None = None,
+        include_descendants: bool = False,
         page: int = 1,
         page_size: int = 20,
     ) -> PageResponse[ProductSummary]:
         """Tìm kiếm/xem danh sách sản phẩm đang bán (Status Active, chưa xóa)."""
         offset, limit = self._page_args(page, page_size)
+        category_ids = [category_id] if category_id else None
+        if category_id and include_descendants:
+            category_ids = self.categories.visible_tree_ids(category_id)
+            if not category_ids:
+                return PageResponse[ProductSummary](Items=[], Total=0, Page=page, PageSize=page_size)
         filters = {
-            "category_ids": [category_id] if category_id else None,
+            "category_ids": category_ids,
             "brand_id": brand_id,
             "status": SELLABLE_PRODUCT_STATUS,
             "name_contains": keyword.strip() if keyword and keyword.strip() else None,

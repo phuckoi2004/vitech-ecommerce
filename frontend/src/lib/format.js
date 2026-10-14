@@ -16,6 +16,22 @@ export function formatMoney(value, { fallback = FALLBACK } = {}) {
   return Number.isFinite(amount) ? moneyFormat.format(amount) : fallback
 }
 
+const oneDecimal = new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 1 })
+
+// Short counts for product cards: 950 → "950", 1200 → "1,2k", 2_500_000 → "2,5tr".
+export function formatCompactCount(value) {
+  const count = Math.max(0, Math.floor(Number(value) || 0))
+  if (count < 1000) return String(count)
+  if (count < 1_000_000) return `${oneDecimal.format(Math.floor(count / 100) / 10)}k`
+  return `${oneDecimal.format(Math.floor(count / 100_000) / 10)}tr`
+}
+
+// Average rating with one decimal, Vietnamese style: "4.80" → "4,8".
+export function formatRating(value) {
+  const rating = Number(value)
+  return Number.isFinite(rating) ? rating.toLocaleString('vi-VN', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) : ''
+}
+
 function vietnamParts(value) {
   const date = value instanceof Date ? value : new Date(value)
   if (Number.isNaN(date.getTime())) return null

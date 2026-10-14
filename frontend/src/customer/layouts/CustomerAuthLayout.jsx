@@ -27,7 +27,7 @@ export default function CustomerAuthLayout({ children }) {
           {SIDE_ROBOTS.map((robot) => <img key={robot.place} className={`cauth-mascot-small is-${robot.place}`}
             src={robot.src} alt="" width={robot.width} height={robot.height} />)}
         </div>
-        <p className="cauth-slogan">Công nghệ thông minh, mua sắm dễ dàng.</p>
+        <p className="cauth-slogan">Công nghệ thông minh mua sắm dễ dàng</p>
       </div>
     </aside>
     <main className="cauth-main">

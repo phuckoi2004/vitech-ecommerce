@@ -24,6 +24,11 @@ export function saveDefaultAddress(accessToken, address) {
   return apiRequest('/users/me/default-address', { method: 'PUT', body: address, accessToken })
 }
 
+// {Count}: unread notifications of the signed-in user (header bell).
+export function getUnreadNotificationCount(accessToken) {
+  return apiRequest('/users/me/notifications/unread-count', { method: 'GET', accessToken })
+}
+
 export function changePassword(accessToken, currentPassword, newPassword, confirmPassword) {
   return apiRequest('/auth/change-password', {
     body: { CurrentPassword: currentPassword, NewPassword: newPassword, ConfirmPassword: confirmPassword },
