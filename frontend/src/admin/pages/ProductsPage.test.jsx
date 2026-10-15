@@ -33,6 +33,7 @@ function seedVariants() {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  api.uploadProductImage.mockReset()
   items = []; total = 0
   parentDetails = new Map([[productId, { ...product }]])
   parentTotal = 1
@@ -75,6 +76,17 @@ beforeEach(() => {
 })
 
 describe('product variant list', () => {
+  test('stock warnings remain visible for an inactive variant and distinguish zero, threshold and normal quantities', async () => {
+    items = [variantRow({ ...variant, IsActive: false, StockQuantity: 5 }), variantRow({ ...sibling, StockQuantity: 0 }), variantRow({ ...sibling, ProductVariantId: 'v3', Sku: 'SKU-NORMAL', StockQuantity: 6 })]
+    total = items.length
+    renderPage()
+    await screen.findByText('3 biến thể')
+    const rows = within(screen.getByRole('table')).getAllByRole('row').slice(1)
+    expect(within(rows[0]).getAllByRole('cell')[5]).toHaveTextContent('5Sắp hết')
+    expect(within(rows[0]).getByText('Tạm ẩn')).toBeInTheDocument()
+    expect(within(rows[1]).getAllByRole('cell')[5]).toHaveTextContent('0Hết hàng')
+    expect(within(rows[2]).getAllByRole('cell')[5]).toHaveTextContent('6Còn hàng')
+  })
   test('empty data retains all columns and never inserts the Figma example products', async () => {
     renderPage()
     expect(await screen.findByText('Chưa có biến thể phù hợp.')).toBeInTheDocument()
@@ -219,11 +231,13 @@ describe('product variant list', () => {
     expect(await within(dialog).findByRole('alert')).toHaveTextContent('đối tượng JSON')
     expect(api.createCatalogItem).not.toHaveBeenCalled()
     fireEvent.change(within(dialog).getByLabelText('Thông số kỹ thuật (JSON)'), { target: { value: '{"RAM":"16GB"}' } })
-    fireEvent.click(within(dialog).getByRole('button', { name: '+ Thêm ảnh' }))
-    fireEvent.change(within(dialog).getByRole('textbox', { name: 'Đường dẫn ảnh 1' }), { target: { value: 'https://example.com/white.png' } })
+    api.uploadProductImage.mockResolvedValueOnce({ ImageUrl: 'https://example.com/white.png' })
+    await user.upload(within(dialog).getByLabelText('Tải ảnh sản phẩm'), new File(['image'], 'white.png', { type: 'image/png' }))
+    expect(within(dialog).queryByRole('textbox', { name: /Đường dẫn ảnh/ })).not.toBeInTheDocument()
     fireEvent.click(within(dialog).getByRole('button', { name: 'Thêm sản phẩm' }))
     await waitFor(() => expect(api.createCatalogItem).toHaveBeenCalledWith('access-for-test', {
       Sku: 'MY-WHITE', Color: 'Trắng', Storage: null, Price: '12000000', MinStockLevel: 0, IsSerialTracked: false, IsActive: true,
+      VariantImageUrls: ['https://example.com/white.png'], DefaultImageUrl: 'https://example.com/white.png', IsDefaultVariant: true,
       Product: { Name: 'Điện thoại mới', CategoryId: 'c1', BrandId: 'b1', WarrantyMonths: 12, Status: 'Draft',
         Description: null, Specifications: { RAM: '16GB' }, Images: [{ ImageUrl: 'https://example.com/white.png', IsDefault: true }] },
     }))
@@ -372,6 +386,7 @@ describe('product variant list', () => {
     await waitFor(() => expect(api.createCatalogItem).toHaveBeenCalledWith('access-for-test', {
       ProductId: productId, Sku: 'PHONE-PINK', Color: 'Hồng', Storage: null, Price: '11000000',
       MinStockLevel: 0, IsActive: true, IsSerialTracked: false,
+      VariantImageUrls: [], DefaultImageUrl: null, IsDefaultVariant: false, AdditionalImages: [],
     }))
     expect(api.createCatalogItem.mock.calls[0][1]).not.toHaveProperty('Product')
     expect(api.createProduct).not.toHaveBeenCalled()
@@ -414,11 +429,11 @@ describe('product variant list', () => {
     await within(view).findByText('Mã sản phẩm: ' + variant.Sku)
     fireEvent.click(within(view).getByRole('button', { name: 'Sửa thông tin chung' }))
     const dialog = await screen.findByRole('region', { name: 'Cập nhật sản phẩm' })
-    expect(within(dialog).getByText(/áp dụng cho tất cả biến thể/)).toBeInTheDocument()
+    expect(within(dialog).getByText(/áp dụng cho sản phẩm chung/)).toBeInTheDocument()
     fireEvent.change(await within(dialog).findByRole('textbox', { name: 'Tên sản phẩm' }), { target: { value: 'Tên chung mới' } })
     expect(within(dialog).getByRole('textbox', { name: 'Mã sản phẩm (SKU)' })).toBeDisabled()
-    fireEvent.click(within(dialog).getByRole('button', { name: '+ Thêm ảnh' }))
-    fireEvent.change(within(dialog).getByRole('textbox', { name: 'Đường dẫn ảnh 1' }), { target: { value: 'https://example.com/shared.png' } })
+    api.uploadProductImage.mockResolvedValueOnce({ ImageUrl: 'https://example.com/shared.png' })
+    await userEvent.setup().upload(within(dialog).getByLabelText('Tải ảnh sản phẩm'), new File(['image'], 'shared.png', { type: 'image/png' }))
     fireEvent.click(within(dialog).getByRole('button', { name: 'Lưu thay đổi' }))
     expect(api.updateCatalogProduct).not.toHaveBeenCalled()
     fireEvent.click(within(await screen.findByRole('dialog', { name: 'Xác nhận những thay đổi?' })).getByRole('button', { name: 'Xác nhận' }))
@@ -491,13 +506,33 @@ describe('product variant list', () => {
     expect(within(page).getByRole('button', { name: 'Hủy' })).toBeDisabled()
     await act(async () => finish({ ImageUrl: 'https://example.com/uploaded.png' }))
     expect(await within(page).findByRole('alert')).toHaveTextContent('Không tải được ảnh thứ hai.')
-    expect(within(page).getByLabelText('Đường dẫn ảnh 1')).toHaveValue('https://example.com/uploaded.png')
+    expect(within(page).getByRole('img', { name: 'Ảnh sản phẩm 1' })).toHaveAttribute('src', 'https://example.com/uploaded.png')
     expect(within(page).getByLabelText('Ảnh mặc định 1')).toBeChecked()
     expect(api.createCatalogItem).not.toHaveBeenCalled()
     api.uploadProductImage.mockResolvedValueOnce({ ImageUrl: 'https://example.com/second.png' })
     await user.upload(input, new File(['c'], 'retry.png', { type: 'image/png' }))
-    expect(await within(page).findByLabelText('Đường dẫn ảnh 2')).toHaveValue('https://example.com/second.png')
+    expect(await within(page).findByRole('img', { name: 'Ảnh sản phẩm 2' })).toHaveAttribute('src', 'https://example.com/second.png')
     expect(within(page).getByLabelText('Ảnh mặc định 1')).toBeChecked()
+  })
+
+  test('variant chooses multiple parent images and a representative without changing sibling selections', async () => {
+    seedVariants()
+    const images = [1, 2, 3].map((id) => ({ ImageUrl: 'https://demo.supabase.co/' + id + '.png', IsDefault: id === 1 }))
+    variantDetails.set('v2', { ...variantDetails.get('v2'), Images: images, VariantImages: [], IsDefaultVariant: false })
+    renderPage('/admin/products?dialog=edit&variant=v2')
+    const page = await screen.findByRole('region', { name: 'Cập nhật sản phẩm' })
+    fireEvent.click(within(page).getByLabelText('Chọn ảnh 1 cho biến thể'))
+    fireEvent.click(within(page).getByLabelText('Chọn ảnh 3 cho biến thể'))
+    fireEvent.click(within(page).getByLabelText('Ảnh đại diện biến thể 3'))
+    fireEvent.click(within(page).getByLabelText('Biến thể mặc định'))
+    expect(api.updateCatalogItem).not.toHaveBeenCalled()
+    fireEvent.click(within(page).getByRole('button', { name: 'Lưu thay đổi' }))
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Xác nhận' }))
+    await waitFor(() => expect(api.updateCatalogItem).toHaveBeenCalledWith('access-for-test', 'v2', expect.objectContaining({
+      VariantImageUrls: [images[0].ImageUrl, images[2].ImageUrl], DefaultImageUrl: images[2].ImageUrl, IsDefaultVariant: true, AdditionalImages: [],
+    })))
+    expect(api.updateCatalogProduct).not.toHaveBeenCalled()
+    expect(variantDetails.get('v1').Sku).toBe(variant.Sku)
   })
 
 })

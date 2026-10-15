@@ -9,6 +9,7 @@ import useAdminQuery from '../hooks/useAdminQuery.js'
 import AdminTable from '../components/AdminTable.jsx'
 import { ProductDialog, ProductDeleteDialog } from '../components/ProductDialogs.jsx'
 import { ProductButton, ProductThumbnail } from '../components/ProductUi.jsx'
+import StockQuantity from '../components/StockQuantity.jsx'
 const ProductWorkspace = lazy(() => import('../components/ProductWorkspace.jsx'))
 
 function SearchProducts({ keyword, onSearch }) {
@@ -30,10 +31,10 @@ function SearchProducts({ keyword, onSearch }) {
 }
 
 function Filter({ label, value, onChange, options, disabled = false, className = '' }) {
-  return <label className={`relative min-w-0 flex-[1_1_106px] ${className}`}><span className="sr-only">{label}</span>
+  return <label className={`relative flex min-w-0 flex-[1_1_106px] flex-col gap-1 ${className}`}><span className="text-[10px] text-admin-muted">{label}</span>
     <select className="h-[42px] w-full cursor-pointer appearance-none rounded-[10px] border border-admin-border bg-admin-page pr-7 pl-3.5 text-xs text-admin-muted disabled:cursor-wait disabled:opacity-60" aria-label={label} value={value} onChange={(event) => onChange(event.target.value)} disabled={disabled}>
-      <option value="">{label}</option>{options.map(([key, text]) => <option key={key} value={key}>{text}</option>)}
-    </select><span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-[11px] text-admin-muted" aria-hidden="true">▼</span>
+      <option value="">Tất cả</option>{options.map(([key, text]) => <option key={key} value={key}>{text}</option>)}
+    </select><span className="pointer-events-none absolute right-3 bottom-[13px] text-[11px] text-admin-muted" aria-hidden="true">▼</span>
   </label>
 }
 
@@ -90,7 +91,7 @@ export default function ProductsPage() {
     { key: 'Category', label: 'Danh mục', className: 'w-[11.9%]', render: (value) => value?.Name ?? '—' },
     { key: 'Brand', label: 'Thương hiệu', className: 'w-[11%]', render: (value) => value?.Name ?? '—' },
     { key: 'Price', label: 'Giá bán', className: 'w-[11.9%]', render: formatMoney },
-    { key: 'StockQuantity', label: 'Tồn kho', className: 'w-[8.2%]', render: (value, row) => <strong className={value === 0 ? 'text-admin-red' : row.IsLowStock ? 'text-amber-600' : 'font-semibold'}>{value}</strong> },
+    { key: 'StockQuantity', label: 'Tồn kho', className: 'w-[8.2%]', render: (_, row) => <StockQuantity variant={row} /> },
     { key: 'Status', label: 'Trạng thái', className: 'w-[11%]', render: (_, row) => { const [text, classes] = productStatus(row); return <span className={`inline-block rounded-full px-2.5 py-1.5 text-[11px] font-semibold whitespace-nowrap ${classes}`}>{text}</span> } },
     { key: 'actions', label: 'Thao tác', className: 'w-[12.2%]', render: (_, row) => <div className="flex items-center gap-[7px] whitespace-nowrap">
       {[['view', 'Xem', true], ['edit', 'Sửa', can('update')], ['delete', 'Xóa', can('delete')]].filter(([, , allowed]) => allowed).map(([action, text]) => <button key={action} type="button" className={`cursor-pointer rounded-sm border-0 bg-transparent p-0 text-[11px] font-semibold hover:underline ${action === 'delete' ? 'text-admin-red' : 'text-admin-blue'}`} aria-label={`${text} ${row.Sku}`} onClick={() => open(action, row.ProductVariantId)}>{text}</button>)}

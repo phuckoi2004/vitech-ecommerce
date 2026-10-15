@@ -24,7 +24,7 @@ export const ORDER_COLUMNS = [
   { key: 'OrderedAt', label: 'Ngày đặt', render: formatDate },
 ]
 
-export default function AdminTable({ columns, rows = [], rowKey, loading, error, onRetry, emptyText = 'Chưa có dữ liệu.', label = 'Bảng dữ liệu', className = '', variant }) {
+export default function AdminTable({ columns, rows = [], rowKey, loading, error, onRetry, emptyText = 'Chưa có dữ liệu.', emptyContent, label = 'Bảng dữ liệu', className = '', variant }) {
   const products = variant === 'products'
   return <div className="w-full rounded-sm" role="region" aria-label={label} aria-busy={loading}>
     <div className="w-full overflow-x-auto" tabIndex={0}><table className={`w-full border-collapse text-left text-xs leading-normal ${className}`}>
@@ -34,7 +34,7 @@ export default function AdminTable({ columns, rows = [], rowKey, loading, error,
       </tbody>
     </table></div>
     {(loading || error || !rows.length) && <div className="flex min-h-[170px] items-center justify-center">
-      {loading ? <LoadingState label="Đang tải dữ liệu…" className="py-8" /> : error ? <ErrorState title="Không tải được dữ liệu" message={error} onRetry={onRetry} className="py-6" /> : <EmptyState title={emptyText} headingLevel={4} className="py-10 [&_h4]:text-xs [&_h4]:font-normal [&_h4]:text-admin-muted" />}
+      {loading ? <LoadingState label="Đang tải dữ liệu…" className="py-8" /> : error ? <ErrorState title="Không tải được dữ liệu" message={error} onRetry={onRetry} className="py-6" /> : emptyContent ?? <EmptyState title={emptyText} headingLevel={4} className="py-10 [&_h4]:text-xs [&_h4]:font-normal [&_h4]:text-admin-muted" />}
     </div>}
   </div>
 }

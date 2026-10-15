@@ -7,9 +7,10 @@ import { makeAuth } from '../../test/auth.js'
 import BrandsPage from './BrandsPage.jsx'
 import { adminRoutes } from '../routes/index.jsx'
 
-const api = vi.hoisted(() => ({ getAdminData: vi.fn(), createBrand: vi.fn(), updateBrand: vi.fn(), deleteBrand: vi.fn() }))
+const api = vi.hoisted(() => ({ getAdminData: vi.fn(), uploadProductImage: vi.fn(), createBrand: vi.fn(), updateBrand: vi.fn(), deleteBrand: vi.fn() }))
 vi.mock('../../services/api/admin.js', () => ({ getAdminData: api.getAdminData }))
 vi.mock('../services/brands.js', () => api)
+vi.mock('../services/product-media.js', () => ({ uploadProductImage: api.uploadProductImage }))
 
 const brand = { BrandId: 'c1', Name: 'Hãng thiết bị', Slug: 'hang-thiet-bi', Description: 'Mô tả từ API', LogoUrl: null, IsActive: true }
 const hidden = { ...brand, BrandId: 'c2', Name: 'Hãng đã ẩn', Slug: 'hang-da-an', IsActive: false }
@@ -119,7 +120,11 @@ test('create suggests a slug, preserves a manually edited slug and sends only su
   fireEvent.change(slug, { target: { value: 'duong-dan-rieng' } })
   fireEvent.change(within(dialog).getByRole('textbox', { name: 'Tên thương hiệu' }), { target: { value: 'Thiết bị mới hơn' } })
   expect(slug).toHaveValue('duong-dan-rieng')
-  fireEvent.change(within(dialog).getByRole('textbox', { name: 'Đường dẫn logo' }), { target: { value: 'https://example.com/brand.png' } })
+  api.uploadProductImage.mockResolvedValueOnce({ ImageUrl: 'https://example.com/brand.png' })
+  const file = new File(['logo'], 'brand.png', { type: 'image/png' })
+  await user.upload(within(dialog).getByLabelText('Tải ảnh logo thương hiệu'), file)
+  expect(api.uploadProductImage).toHaveBeenCalledWith('access-for-test', file)
+  expect(within(dialog).queryByRole('textbox', { name: 'Đường dẫn logo' })).not.toBeInTheDocument()
   fireEvent.change(within(dialog).getByRole('textbox', { name: 'Mô tả' }), { target: { value: 'Mô tả mới' } })
   fireEvent.change(within(dialog).getByRole('combobox', { name: 'Trạng thái' }), { target: { value: 'hidden' } })
   fireEvent.click(within(dialog).getByRole('button', { name: 'Thêm thương hiệu' }))
@@ -146,7 +151,7 @@ test('view reads logo and API details; editing can clear optional values without
   const name = await within(dialog).findByRole('textbox', { name: 'Tên thương hiệu' })
   fireEvent.change(name, { target: { value: 'Tên mới' } })
   fireEvent.change(within(dialog).getByRole('textbox', { name: 'Mô tả' }), { target: { value: '' } })
-  fireEvent.change(within(dialog).getByRole('textbox', { name: 'Đường dẫn logo' }), { target: { value: '' } })
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Bỏ ảnh 1' }))
   fireEvent.click(within(dialog).getByRole('button', { name: 'Lưu thay đổi' }))
   await waitFor(() => expect(api.updateBrand).toHaveBeenCalledWith('access-for-test', brand.BrandId, {
     Name: 'Tên mới', Slug: brand.Slug, Description: null, LogoUrl: null, IsActive: true,
@@ -222,21 +227,21 @@ test('view-only Staff cannot write or open write forms from direct URLs', async 
   expect(api.deleteBrand).not.toHaveBeenCalled()
 })
 
-test('unsafe logo URLs and blank names are rejected before any API write', async () => {
+test('invalid local logo files and blank names are rejected before any API write', async () => {
   renderPage()
   fireEvent.click(await screen.findByRole('button', { name: '+ Thêm thương hiệu' }))
   const dialog = screen.getByRole('dialog', { name: 'Thêm thương hiệu' })
   const name = within(dialog).getByRole('textbox', { name: 'Tên thương hiệu' })
-  const logo = within(dialog).getByRole('textbox', { name: 'Đường dẫn logo' })
+  const logo = within(dialog).getByLabelText('Tải ảnh logo thương hiệu')
   fireEvent.change(name, { target: { value: ' ' } })
   fireEvent.submit(dialog.querySelector('form'))
   expect(await within(dialog).findByRole('alert')).toHaveTextContent('Tên thương hiệu không được để trống')
   fireEvent.change(name, { target: { value: 'Hãng mới' } })
-  fireEvent.change(logo, { target: { value: 'javascript:alert(1)' } })
-  fireEvent.submit(dialog.querySelector('form'))
-  expect(await within(dialog).findByRole('alert')).toHaveTextContent('HTTP hoặc HTTPS')
+  fireEvent.change(logo, { target: { files: [new File(['<svg>'], 'logo.svg', { type: 'image/svg+xml' })] } })
+  expect(await within(dialog).findByRole('alert')).toHaveTextContent('JPG, PNG hoặc WEBP')
   expect(within(dialog).queryByRole('img')).not.toBeInTheDocument()
   expect(api.createBrand).not.toHaveBeenCalled()
+  expect(api.uploadProductImage).not.toHaveBeenCalled()
 })
 
 test('the actual admin route uses the brand page, header and product breadcrumb', async () => {

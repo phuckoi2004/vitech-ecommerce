@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { safeNext } from '../../auth/session.js'
 import { Button, EmptyState, ErrorState, LoadingState, Pagination } from '../../components/shared/index.js'
 import useInternalAuth from '../../hooks/useInternalAuth.js'
 import { formatDateTime } from '../../lib/format.js'
 import { markAllNotificationsRead, markNotificationRead } from '../../services/api/admin.js'
 import bell from '../../assets/admin/notification-bell.svg'
 import useAdminQuery from '../hooks/useAdminQuery.js'
+import { notificationTarget } from '../lib/notifications.js'
 
 export default function AdminNotifications() {
   const [open, setOpen] = useState(false)
@@ -15,15 +15,17 @@ export default function AdminNotifications() {
   const [error, setError] = useState('')
   const root = useRef(null)
   const trigger = useRef(null)
-  const { withAccessToken } = useInternalAuth()
+  const marking = useRef(false)
+  const { withAccessToken, permissions } = useInternalAuth()
   const count = useAdminQuery('/users/me/notifications/unread-count')
   const list = useAdminQuery('/users/me/notifications', { page, page_size: 5 }, open)
+  const refreshCount = count.refresh, refreshList = list.refresh
   useEffect(() => {
-    const refresh = () => count.refresh()
+    const refresh = () => { refreshCount(); if (open) refreshList() }
     const timer = window.setInterval(refresh, 60000)
     window.addEventListener('focus', refresh)
     return () => { window.clearInterval(timer); window.removeEventListener('focus', refresh) }
-  }, [count.refresh])
+  }, [refreshCount, refreshList, open])
   useEffect(() => {
     if (!open) return
     const outside = (event) => { if (!root.current?.contains(event.target)) setOpen(false) }
@@ -34,6 +36,8 @@ export default function AdminNotifications() {
   }, [open])
 
   async function mark(id) {
+    if (marking.current) return
+    marking.current = true
     setBusy(true)
     setError('')
     try {
@@ -41,13 +45,18 @@ export default function AdminNotifications() {
       count.refresh()
       list.refresh()
     } catch (failure) { setError(failure.message) }
-    finally { setBusy(false) }
+    finally { marking.current = false; setBusy(false) }
+  }
+
+  function openNotification(item) {
+    setOpen(false)
+    if (!item.IsRead) void mark(item.NotificationId)
   }
 
   return <div ref={root} className="relative shrink-0">
     <button ref={trigger} type="button" aria-label="Thông báo" aria-expanded={open} aria-controls={open ? 'admin-notifications' : undefined}
       className="relative grid size-[42px] cursor-pointer place-items-center rounded-[10px] border border-admin-border bg-admin-page hover:bg-admin-soft"
-      onClick={() => { setOpen((value) => !value); setError('') }}>
+      onClick={() => { setOpen((value) => !value); setError(''); if (!open) count.refresh() }}>
       <img src={bell} width="24" height="24" alt="" />
       {count.data?.Count > 0 && <span className="absolute top-1.5 right-2 size-2 rounded-full bg-admin-red"><span className="sr-only">{count.data.Count} thông báo chưa đọc</span></span>}
     </button>
@@ -57,14 +66,16 @@ export default function AdminNotifications() {
       </header>
       {error || count.error ? <ErrorState title="Không cập nhật được thông báo" message={error || count.error} onRetry={() => { setError(''); count.refresh(); list.refresh() }} className="py-4" /> : null}
       {list.loading ? <LoadingState label="Đang tải thông báo…" className="py-8" /> : list.error ? <ErrorState message={list.error} onRetry={list.refresh} className="py-6" /> : !list.data?.Items.length ? <EmptyState title="Chưa có thông báo." headingLevel={3} className="py-10 [&_h3]:text-sm" /> : <ul className="my-3 max-h-[350px] overflow-y-auto">
-        {list.data.Items.map((item) => <li key={item.NotificationId} className={`border-b border-admin-border p-3 last:border-0 ${item.IsRead ? '' : 'bg-admin-soft'}`}>
-          <h3 className="text-sm font-semibold">{item.Title}</h3><p className="mt-1 text-xs leading-relaxed text-admin-muted">{item.Content}</p>
-          <time dateTime={item.CreatedAt} className="mt-1 block text-[10px] text-admin-muted">{formatDateTime(item.CreatedAt)}</time>
+        {list.data.Items.map((item) => {
+          const target = notificationTarget(item, permissions)
+          const content = <><h3 className="text-sm font-semibold">{item.Title}</h3><p className="mt-1 text-xs leading-relaxed text-admin-muted">{item.Content}</p><time dateTime={item.CreatedAt} className="mt-1 block text-[10px] text-admin-muted">{formatDateTime(item.CreatedAt)}</time></>
+          return <li key={item.NotificationId} className={`border-b border-admin-border p-3 last:border-0 ${item.IsRead ? '' : 'bg-admin-soft'}`}>
+          {target ? <Link to={target} aria-label={'Mở thông báo: ' + item.Title} className="block rounded-sm hover:text-admin-blue" onClick={() => openNotification(item)}>{content}</Link> : content}
           <div className="mt-2 flex items-center justify-between gap-2">
-            {safeNext(item.ActionUrl, 'admin') && <Link className="text-xs text-admin-blue hover:underline" to={safeNext(item.ActionUrl, 'admin')} onClick={() => setOpen(false)}>Xem chi tiết</Link>}
+            {target && <Link className="text-xs text-admin-blue hover:underline" to={target} onClick={() => openNotification(item)}>Xem chi tiết</Link>}
             {!item.IsRead && <Button variant="ghost" size="sm" disabled={busy} onClick={() => mark(item.NotificationId)}>Đánh dấu đã đọc</Button>}
           </div>
-        </li>)}
+        </li>})}
       </ul>}
       <Pagination page={page} pageSize={5} total={list.data?.Total ?? 0} onPageChange={setPage} disabled={busy || list.loading} />
     </section>}

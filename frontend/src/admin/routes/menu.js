@@ -17,10 +17,15 @@ export const ADMIN_MENU = [
   { id: 'returns', label: 'Đổi trả', path: '/admin/returns', permission: 'returns:view' },
   { id: 'warranties', label: 'Bảo hành', path: '/admin/warranties', permission: 'warranties:view' },
   { id: 'reviews', label: 'Đánh giá', path: '/admin/reviews', permission: 'reviews:view' },
-  { id: 'content', label: 'Tin tức & Banner', path: '/admin/content', permission: 'news:view' },
+  { id: 'content', label: 'Tin tức & Banner', children: [
+    { id: 'news', label: 'Tin tức', path: '/admin/news', permission: 'news:view' },
+    { id: 'banners', label: 'Banner', path: '/admin/banners', permission: 'banners:view' },
+  ] },
   { id: 'reports', label: 'Báo cáo thống kê', path: '/admin/reports', permission: 'revenue_reports:view' },
   { id: 'support', label: 'Hỗ trợ khách hàng', path: '/admin/support', permission: 'chat:view' },
   { id: 'payments', label: 'Thanh toán', path: '/admin/payments', permission: 'payment_methods:view' },
+  { id: 'coupons', label: 'Mã giảm giá', path: '/admin/coupons', permission: 'promotions:view' },
+  { id: 'shipping', label: 'Vận chuyển', path: '/admin/shipping-methods', permission: 'shipping_methods:view' },
 ]
 
 // Opened from the account button in the top bar, not from the menu.

@@ -9,6 +9,7 @@ import useAdminQuery from '../hooks/useAdminQuery.js'
 import Modal from './Modal.jsx'
 import { sharedBody, sharedForm } from '../lib/product-form.js'
 import { PRODUCT_CONTROL, ProductButton } from './ProductUi.jsx'
+import AdminImagePicker from './AdminImagePicker.jsx'
 
 function FormError({ message }) {
   return message ? <p role="alert" className="mb-3 rounded-[10px] bg-admin-red/5 p-3 text-xs text-admin-red">{message}</p> : null
@@ -16,18 +17,13 @@ function FormError({ message }) {
 
 function ChoiceField({ id, label, value, options, onChange, disabled }) {
   return <Field id={id} label={label} required><select id={id} className={PRODUCT_CONTROL} value={value} onChange={(event) => onChange(event.target.value)} required disabled={disabled}>
-    <option value="">Chọn {label.toLowerCase()}</option>{options.map(([key, name]) => <option key={key} value={key}>{name}</option>)}
+    <option value="" disabled hidden />{options.map(([key, name]) => <option key={key} value={key}>{name}</option>)}
   </select></Field>
 }
 
-function SharedFields({ form, change, categories, brands }) {
+function SharedFields({ form, change, categories, brands, onUploadBusy }) {
   const categoryOptions = (Array.isArray(categories.data) ? categories.data : []).map((entry) => [entry.CategoryId, entry.Name + (entry.IsActive ? '' : ' (đã ẩn)')])
   const brandOptions = (Array.isArray(brands.data) ? brands.data : []).map((entry) => [entry.BrandId, entry.Name + (entry.IsActive ? '' : ' (đã ẩn)')])
-  function removeImage(index) {
-    const images = form.Images.filter((_, i) => i !== index)
-    if (images.length && !images.some((image) => image.IsDefault)) images[0] = { ...images[0], IsDefault: true }
-    change('Images', images)
-  }
   return <div className="grid min-w-0 grid-cols-2 gap-4">
     <Field id="product-name" label="Tên sản phẩm" required value={form.Name} maxLength={255} onChange={(event) => change('Name', event.target.value)} className="col-span-full" />
     <ChoiceField id="product-category" label="Danh mục" value={form.CategoryId} options={categoryOptions} onChange={(value) => change('CategoryId', value)} disabled={categories.loading || Boolean(categories.error)} />
@@ -36,15 +32,7 @@ function SharedFields({ form, change, categories, brands }) {
     <ChoiceField id="product-status" label="Trạng thái sản phẩm" value={form.Status} options={PRODUCT_STATUSES} onChange={(value) => change('Status', value)} />
     <Field id="product-description" label="Mô tả" className="col-span-full"><textarea id="product-description" className={PRODUCT_CONTROL} rows={3} value={form.Description} onChange={(event) => change('Description', event.target.value)} /></Field>
     <Field id="product-specifications" label="Thông số kỹ thuật (JSON)" hint={'Ví dụ: {"RAM":"16GB","Màn hình":"6.7 inch"}'} className="col-span-full"><textarea id="product-specifications" className={PRODUCT_CONTROL + ' font-mono'} rows={3} value={form.Specifications} onChange={(event) => change('Specifications', event.target.value)} /></Field>
-    <div className="col-span-full">
-      <h3 className="mb-3 text-sm font-semibold">Ảnh dùng chung của sản phẩm</h3>
-      <div className="flex flex-col gap-3">{form.Images.map((image, index) => <div key={index} className="flex items-end gap-3 rounded-lg border border-admin-border p-3">
-        <Field id={'product-image-' + index} label={'Đường dẫn ảnh ' + (index + 1)} type="url" pattern="https?://.+" className="min-w-0 flex-1" required maxLength={500} placeholder="https://..." value={image.ImageUrl} onChange={(event) => change('Images', form.Images.map((entry, i) => i === index ? { ...entry, ImageUrl: event.target.value } : entry))} />
-        <label className="flex items-center gap-1 pb-3 text-xs"><input type="radio" name="default-image" aria-label={'Ảnh mặc định ' + (index + 1)} checked={image.IsDefault} onChange={() => change('Images', form.Images.map((entry, i) => ({ ...entry, IsDefault: i === index })))} />Mặc định</label>
-        <ProductButton secondary onClick={() => removeImage(index)} aria-label={'Bỏ ảnh ' + (index + 1)}>Bỏ ảnh</ProductButton>
-      </div>)}</div>
-      <ProductButton secondary className="mt-3" onClick={() => change('Images', [...form.Images, { ImageUrl: '', IsDefault: form.Images.length === 0 }])}>+ Thêm ảnh</ProductButton>
-    </div>
+    <div className="col-span-full"><AdminImagePicker images={form.Images} onChange={(images) => change('Images', images)} onUploadBusy={onUploadBusy} hint="Ảnh nằm trong bộ ảnh của sản phẩm." /></div>
   </div>
 }
 
@@ -72,10 +60,11 @@ function SharedEditor({ product, categories, brands, onClose, onDone, onBusy }) 
   const [form, setForm] = useState(() => sharedForm(product))
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const [uploading, setUploading] = useState(false)
   const lookupError = categories.error || brands.error
   async function save(event) {
     event.preventDefault()
-    if (busy) return
+    if (busy || uploading) return
     let body
     try { body = sharedBody(form) } catch (failure) { setError(failure.message); return }
     setError(''); setBusy(true); onBusy(true)
@@ -89,8 +78,8 @@ function SharedEditor({ product, categories, brands, onClose, onDone, onBusy }) 
     <p className="mb-4 rounded-lg bg-amber-50 p-3 text-sm text-amber-800">Thay đổi tên, danh mục, thương hiệu, mô tả, bảo hành, trạng thái và ảnh tại đây áp dụng cho tất cả biến thể của sản phẩm này.</p>
     <FormError message={error || lookupError} />
     {lookupError && <ProductButton secondary onClick={() => { categories.refresh(); brands.refresh() }}>Thử lại danh mục / thương hiệu</ProductButton>}
-    <fieldset disabled={busy} className="min-w-0 border-0 p-0"><SharedFields form={form} change={(key, value) => setForm((previous) => ({ ...previous, [key]: value }))} categories={categories} brands={brands} /></fieldset>
-    <div className="mt-5 flex justify-end gap-2"><ProductButton secondary disabled={busy} onClick={onClose}>Hủy</ProductButton><ProductButton type="submit" loading={busy} disabled={categories.loading || brands.loading || Boolean(lookupError)}>Lưu thông tin chung</ProductButton></div>
+    <fieldset disabled={busy || uploading} className="min-w-0 border-0 p-0"><SharedFields form={form} change={(key, value) => setForm((previous) => ({ ...previous, [key]: value }))} categories={categories} brands={brands} onUploadBusy={(value) => { setUploading(value); onBusy(value) }} /></fieldset>
+    <div className="mt-5 flex justify-end gap-2"><ProductButton secondary disabled={busy || uploading} onClick={onClose}>Hủy</ProductButton><ProductButton type="submit" loading={busy} disabled={uploading || categories.loading || brands.loading || Boolean(lookupError)}>Lưu thông tin chung</ProductButton></div>
   </form>
 }
 

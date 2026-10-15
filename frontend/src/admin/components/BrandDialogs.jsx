@@ -8,6 +8,7 @@ import { createBrand, deleteBrand, updateBrand } from '../services/brands.js'
 import useAdminQuery from '../hooks/useAdminQuery.js'
 import Modal from './Modal.jsx'
 import { PRODUCT_CONTROL, ProductButton } from './ProductUi.jsx'
+import AdminImagePicker from './AdminImagePicker.jsx'
 
 function BrandError({ message }) {
   return message ? <p role="alert" className="mb-4 rounded-[10px] bg-admin-red/5 p-3 text-sm text-admin-red">{message}</p> : null
@@ -25,6 +26,7 @@ function BrandEditor({ brand, onBusy, onClose, onDone }) {
   const [form, setForm] = useState(() => ({ Name: brand?.Name ?? '', Slug: brand?.Slug ?? '', Description: brand?.Description ?? '', LogoUrl: brand?.LogoUrl ?? '', IsActive: brand?.IsActive ?? true }))
   const [slugEdited, setSlugEdited] = useState(Boolean(brand))
   const [busy, setBusy] = useState(false)
+  const [uploading, setUploading] = useState(false)
   const [error, setError] = useState('')
   function change(key, value) {
     setForm((previous) => ({ ...previous, [key]: value, ...(key === 'Name' && !slugEdited ? { Slug: slugFromName(value) } : {}) }))
@@ -33,10 +35,10 @@ function BrandEditor({ brand, onBusy, onClose, onDone }) {
   }
   async function save(event) {
     event.preventDefault()
-    if (busy) return
+    if (busy || uploading) return
     if (!form.Name.trim()) { setError('Tên thương hiệu không được để trống.'); return }
     if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(form.Slug.trim())) { setError('Đường dẫn chỉ gồm chữ thường không dấu, số và dấu gạch ngang.'); return }
-    if (form.LogoUrl.trim() && !validLogoUrl(form.LogoUrl.trim())) { setError('Đường dẫn logo phải là URL HTTP hoặc HTTPS hợp lệ.'); return }
+    if (form.LogoUrl.trim() && !validLogoUrl(form.LogoUrl.trim())) { setError('Ảnh logo chưa hợp lệ. Vui lòng chọn lại ảnh từ máy.'); return }
     const body = { ...form, Name: form.Name.trim(), Slug: form.Slug.trim(), Description: form.Description.trim() || null, LogoUrl: form.LogoUrl.trim() || null }
     setError(''); setBusy(true); onBusy(true)
     try {
@@ -47,17 +49,16 @@ function BrandEditor({ brand, onBusy, onClose, onDone }) {
   }
   return <form onSubmit={save}>
     <BrandError message={error} />
-    <fieldset disabled={busy} className="grid min-w-0 grid-cols-2 gap-4 border-0 p-0">
+    <fieldset disabled={busy || uploading} className="grid min-w-0 grid-cols-2 gap-4 border-0 p-0">
       <Field id="brand-name" label="Tên thương hiệu" className="col-span-full" required maxLength={255} value={form.Name} onChange={(event) => change('Name', event.target.value)} />
       <Field id="brand-slug" label="Đường dẫn (slug)" className="col-span-full" required maxLength={300} pattern="[a-z0-9]+(-[a-z0-9]+)*" hint="Được gợi ý từ tên thương hiệu; bạn có thể chỉnh lại." value={form.Slug} onChange={(event) => change('Slug', event.target.value)} />
       <Field id="brand-description" label="Mô tả" className="col-span-full"><textarea id="brand-description" className={PRODUCT_CONTROL} rows={4} value={form.Description} onChange={(event) => change('Description', event.target.value)} /></Field>
-      <Field id="brand-logo" label="Đường dẫn logo" className="col-span-full" type="url" pattern="https?://.+" maxLength={500} placeholder="https://..." hint="Nhập đường dẫn ảnh logo; để trống nếu chưa có." value={form.LogoUrl} onChange={(event) => change('LogoUrl', event.target.value)} />
-      {form.LogoUrl.trim() && validLogoUrl(form.LogoUrl.trim()) && <div className="col-span-full"><BrandLogo key={form.LogoUrl.trim()} name={form.Name} url={form.LogoUrl.trim()} /></div>}
+      <div className="col-span-full"><AdminImagePicker title="Logo thương hiệu" name="logo thương hiệu" multiple={false} images={form.LogoUrl ? [{ ImageUrl: form.LogoUrl, IsDefault: true }] : []} onChange={(images) => change('LogoUrl', images[0]?.ImageUrl ?? '')} onUploadBusy={(value) => { setUploading(value); onBusy(value) }} /></div>
       <Field id="brand-status" label="Trạng thái" className="col-span-full"><select id="brand-status" className={PRODUCT_CONTROL} value={form.IsActive ? 'active' : 'hidden'} onChange={(event) => change('IsActive', event.target.value === 'active')}>
         <option value="active">Đang hiển thị</option><option value="hidden">Đã ẩn</option>
       </select></Field>
     </fieldset>
-    <div className="mt-5 flex justify-end gap-2"><ProductButton secondary disabled={busy} onClick={onClose}>Hủy</ProductButton><ProductButton type="submit" loading={busy}>{brand ? 'Lưu thay đổi' : 'Thêm thương hiệu'}</ProductButton></div>
+    <div className="mt-5 flex justify-end gap-2"><ProductButton secondary disabled={busy || uploading} onClick={onClose}>Hủy</ProductButton><ProductButton type="submit" loading={busy} disabled={uploading}>{brand ? 'Lưu thay đổi' : 'Thêm thương hiệu'}</ProductButton></div>
   </form>
 }
 
