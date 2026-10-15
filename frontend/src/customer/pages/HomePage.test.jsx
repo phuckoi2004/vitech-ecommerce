@@ -113,8 +113,9 @@ describe('catalog sections', () => {
     const brands = screen.getByRole('region', { name: 'Thương hiệu nổi bật' })
     expect(within(brands).getByRole('link', { name: 'Samsung' })).toHaveAttribute('href', '/thuong-hieu/samsung')
 
-    // No banner configured: use the local iPhone image from Figma.
-    expect(screen.getByRole('img', { name: 'iPhone 18 Pro' })).toBeInTheDocument()
+    // Empty banner data keeps the area without displaying sample product images.
+    const hero = screen.getByRole('region', { name: 'Danh mục và chương trình nổi bật' })
+    expect(within(hero).getByRole('status')).toHaveTextContent('Chưa có chương trình nổi bật.')
     expect(document.body).not.toHaveTextContent(/Giảm \d+%|Trả góp/)
     expect(screen.queryByRole('heading', { name: 'Tư vấn mua hàng', exact: true })).not.toBeInTheDocument()
   })
@@ -165,28 +166,41 @@ describe('catalog sections', () => {
     await user.click(within(carousel).getByRole('button', { name: 'Banner tiếp theo' }))
     expect(within(carousel).getByRole('button', { name: 'Xem banner 2' })).toHaveAttribute('aria-current', 'true')
     expect(within(carousel).getByRole('link', { name: 'Laptop cho sinh viên' })).toHaveAttribute('href', 'https://vietech.example/laptop')
+    await user.click(within(carousel).getByRole('button', { name: 'Banner tiếp theo' }))
+    expect(within(carousel).getByRole('button', { name: 'Xem banner 1' })).toHaveAttribute('aria-current', 'true')
+    await user.click(within(carousel).getByRole('button', { name: 'Banner trước' }))
+    expect(within(carousel).getByRole('button', { name: 'Xem banner 2' })).toHaveAttribute('aria-current', 'true')
   })
 
-  test('the local phone banners can be selected and wrap in both directions', async () => {
+  test('an empty banner list does not invent phone images or product links', async () => {
     mockApi()
+    renderHome()
+
+    const hero = screen.getByRole('region', { name: 'Danh mục và chương trình nổi bật' })
+    expect(await within(hero).findByText('Chưa có chương trình nổi bật.')).toBeInTheDocument()
+    expect(within(hero).queryAllByRole('img')).toHaveLength(0)
+    expect(within(hero).queryByRole('region', { name: 'Chương trình nổi bật' })).not.toBeInTheDocument()
+    expect(within(hero).queryByRole('button', { name: 'Banner tiếp theo' })).not.toBeInTheDocument()
+    expect(hero.querySelector('a[href^="/san-pham/"]')).toBeNull()
+  })
+
+  test('a failed banner request shows an error and retry loads only the API banner', async () => {
+    let failing = true
+    mockApi({ '/banners': () => failing ? json({ detail: 'Không thể tải banner lúc này.' }, 503)
+      : json([{ BannerId: 'admin-banner', Title: 'Banner do Admin quản lý', ImageUrl: 'https://cdn.example/admin-banner.png', LinkUrl: '/san-pham/mau-do-admin-tao' }]) })
     const user = userEvent.setup()
     renderHome()
 
-    const carousel = await screen.findByRole('region', { name: 'Chương trình nổi bật' })
-    expect(within(carousel).getByRole('img', { name: 'iPhone 18 Pro' })).toBeInTheDocument()
-    expect(within(carousel).getAllByRole('button', { name: /Xem banner/ })).toHaveLength(3)
-    expect(within(carousel).getByRole('link', { name: 'iPhone 18 Pro' })).toHaveAttribute('href', '/san-pham/iphone-18-pro')
-    expect(within(carousel).queryByText('Khám phá ngay')).not.toBeInTheDocument()
-    await user.hover(carousel)
-
-    await user.click(within(carousel).getByRole('button', { name: 'Banner trước' }))
-    expect(within(carousel).getByRole('button', { name: 'Xem banner 3' })).toHaveAttribute('aria-current', 'true')
-    expect(within(carousel).getByRole('link', { name: /POCO F9 Ultra/ })).toHaveAttribute('href', '/san-pham/poco-f9-ultra')
-    await user.click(within(carousel).getByRole('button', { name: 'Banner tiếp theo' }))
-    expect(within(carousel).getByRole('button', { name: 'Xem banner 1' })).toHaveAttribute('aria-current', 'true')
-    await user.click(within(carousel).getByRole('button', { name: 'Xem banner 2' }))
-    expect(within(carousel).getByRole('button', { name: 'Xem banner 2' })).toHaveAttribute('aria-current', 'true')
-    expect(within(carousel).getByRole('link', { name: /Galaxy Z Fold8 Ultra/ })).toHaveAttribute('href', '/san-pham/galaxy-z-fold8-ultra')
+    const hero = screen.getByRole('region', { name: 'Danh mục và chương trình nổi bật' })
+    expect(await within(hero).findByRole('heading', { name: 'Không tải được banner' })).toBeInTheDocument()
+    expect(within(hero).queryAllByRole('img')).toHaveLength(0)
+    expect(within(hero).queryByText('Chưa có chương trình nổi bật.')).not.toBeInTheDocument()
+    failing = false
+    await user.click(within(hero).getByRole('button', { name: 'Thử lại' }))
+    const image = await within(hero).findByRole('img', { name: 'Banner do Admin quản lý' })
+    expect(image).toHaveAttribute('src', 'https://cdn.example/admin-banner.png')
+    expect(image.closest('a')).toHaveAttribute('href', '/san-pham/mau-do-admin-tao')
+    expect(within(hero).queryByRole('button', { name: 'Banner tiếp theo' })).not.toBeInTheDocument()
   })
 
   test('a failed product list can be retried', async () => {
@@ -285,7 +299,8 @@ describe('homepage repairs', () => {
     expect(card.querySelector('.pcard-noimage')).toHaveTextContent('VieTech')
     fireEvent.error(await screen.findByRole('img', { name: 'Banner có lỗi' }))
     const carousel = screen.getByRole('region', { name: 'Chương trình nổi bật' })
-    expect(within(carousel).getByRole('img', { name: 'iPhone 18 Pro' })).toBeInTheDocument()
+    expect(within(carousel).getByText('Hình ảnh đang được cập nhật.')).toBeInTheDocument()
+    expect(within(carousel).queryAllByRole('img')).toHaveLength(0)
     expect(carousel.querySelector('a a')).toBeNull()
   })
 

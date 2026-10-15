@@ -60,7 +60,7 @@
 .home-banner-link { display: block; width: 100%; height: 100%; }
 .home-banner-link:focus-visible { outline: 3px solid var(--color-brand-300); outline-offset: -3px; }
 .home-banner-link > img { display: block; width: 100%; height: 100%; object-fit: contain; }
-.home-banner-link > .home-default-banner { max-width: none; height: 100%; aspect-ratio: auto; border-radius: inherit; }
+.home-banner-link > .home-banner-placeholder { max-width: none; height: 100%; aspect-ratio: auto; border-radius: inherit; }
 
 .home-banner-nav {
   position: absolute;
@@ -94,28 +94,26 @@
 .home-banner-dot[aria-current]::after { width: 22px; background: var(--color-brand-500); }
 .home-banner-dot:focus-visible { outline: 2px solid var(--color-brand-300); outline-offset: 2px; }
 
-.home-phone-banner { display: flex; align-items: center; justify-content: space-between; gap: 20px; height: 100%; padding: 32px 48px; }
-.home-phone-banner.is-galaxy { background: linear-gradient(120deg, #f5e6f1, #fff7fb 60%, #eee6fa); }
-.home-phone-banner.is-poco { background: linear-gradient(120deg, #fff3de, #fffaf2 60%, #f5e7e2); }
-.home-phone-copy { flex: 1; min-width: 0; }
-.home-phone-brand { margin: 0 0 10px; color: var(--color-muted-600); font-size: 13px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; }
-.home-phone-copy h2 { margin: 0; color: var(--color-ink-900); font-size: clamp(24px, 3vw, 36px); font-weight: 700; line-height: 1.15; }
-.home-phone-description { margin: 14px 0 0; color: var(--color-muted-600); font-size: 15px; line-height: 1.5; }
-.home-phone-banner > img { display: block; flex: 0 0 42%; width: 42%; min-width: 0; max-width: 300px; height: 100%; object-fit: contain; mix-blend-mode: multiply; }
-
-/* Figma's iPhone banner remains visible, including on narrow screens. */
-.home-default-banner {
-  display: block;
+/* Reserve the banner area without showing sample products. */
+.home-banner-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   width: 100%;
   max-width: 881px;
+  height: auto;
   aspect-ratio: 881 / 383;
   margin: 0 auto;
-  overflow: hidden;
+  padding: 16px;
   border-radius: 31px;
-  background: #fff;
+  color: var(--color-muted-600);
+  font-size: 14px;
+  text-align: center;
 }
-.home-default-banner img { display: block; width: 100%; height: 100%; object-fit: contain; }
-.home-default-banner:focus-visible { outline: 3px solid var(--color-brand-300); outline-offset: 3px; }
+.home-banner-placeholder p { margin: 0; }
+.home-banner-placeholder.is-error { min-height: 220px; }
 
 /* ---------- Benefits strip ---------- */
 .home-trust ul { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); margin: 0; padding: 0; list-style: none; }
@@ -367,13 +365,9 @@ span.home-tab { display: block; cursor: default; }
   .home-catmenu { max-height: none; overflow-y: visible; min-width: 0; }
   .home-catmenu-item { min-height: 40px; padding: 6px 12px 6px 8px; border: 1px solid var(--color-line-soft); white-space: nowrap; }
   .home-catmenu-item.is-skeleton { width: 120px; }
-  .home-banner, .home-default-banner { height: auto; aspect-ratio: 881 / 383; border-radius: 16px; }
+  .home-banner { height: auto; aspect-ratio: 881 / 383; border-radius: 16px; }
   .home-banner-carousel .home-banner { border-radius: 16px; }
   .home-banner-nav { width: 30px; height: 44px; }
-  .home-phone-banner { gap: 12px; padding: 20px 38px; }
-  .home-phone-brand { margin-bottom: 6px; font-size: 10px; letter-spacing: 0.5px; }
-  .home-phone-copy h2 { font-size: clamp(17px, 3.5vw, 28px); }
-  .home-phone-description { margin: 8px 0 0; font-size: 12px; }
   .home-trust ul { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .home-trust li, .home-trust li:nth-child(n + 4) { grid-column: auto; min-height: 72px; }
   .home-trust li:nth-child(5) { grid-column: 1 / -1; }
@@ -400,12 +394,8 @@ span.home-tab { display: block; cursor: default; }
 
 @media (max-width: 480px) {
   .home { width: calc(100% - 24px); }
-  .home-phone-banner { gap: 8px; padding: 12px 28px; }
   .home-banner-nav { width: 24px; height: 40px; }
   .home-banner-nav svg { width: 16px; height: 16px; }
-  .home-phone-brand { margin-bottom: 4px; font-size: 8px; }
-  .home-phone-copy h2 { font-size: 17px; }
-  .home-phone-description { display: none; }
   .home-shortcut { gap: 6px; min-height: 0; padding: 12px; }
   .home-shortcut h3 { font-size: 13px; }
   .home-shortcut-headline { min-height: 24px; font-size: 16px; }

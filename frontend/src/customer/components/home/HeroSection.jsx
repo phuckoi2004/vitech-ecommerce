@@ -1,24 +1,13 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import iphoneHomeBanner from '../../../assets/storefront/iphone-home-banner.png'
-import galaxyFoldHome from '../../../assets/storefront/galaxy-fold-home.png'
-import pocoHome from '../../../assets/storefront/poco-home.png'
+import ErrorState from '../../../components/shared/ErrorState.jsx'
 import useApiData from '../../../hooks/useApiData.js'
 import { listBanners } from '../../../lib/catalog-api.js'
-import { categoryPath, productPath } from '../../routes/paths.js'
+import { categoryPath } from '../../routes/paths.js'
 import { CategoryIcon, ChevronLeftIcon, ChevronRightIcon } from '../icons.jsx'
 import StoreImage from '../StoreImage.jsx'
 
 const SLIDE_MS = 5000
-const DEFAULT_BANNERS = [
-  { BannerId: 'home-iphone', Title: 'iPhone 18 Pro', ImageUrl: iphoneHomeBanner, LinkUrl: productPath('iphone-18-pro') },
-  { BannerId: 'home-galaxy', Title: 'Galaxy Z Fold8 Ultra', ImageUrl: galaxyFoldHome,
-    LinkUrl: productPath('galaxy-z-fold8-ultra'), Theme: 'galaxy', Brand: 'Samsung Galaxy',
-    Description: 'Khám phá thế giới điện thoại gập' },
-  { BannerId: 'home-poco', Title: 'POCO F9 Ultra', ImageUrl: pocoHome,
-    LinkUrl: productPath('poco-f9-ultra'), Theme: 'poco', Brand: 'Xiaomi POCO',
-    Description: 'Tìm chiếc điện thoại phù hợp với bạn' },
-]
 
 // Left column of the hero: root categories (Figma "Category Sidebar").
 function CategoryMenu({ categories }) {
@@ -87,9 +76,11 @@ function BannerCarousel({ banners }) {
         {banners.map((banner, position) => <div key={banner.BannerId} className="home-banner-slide" role="group"
           aria-roledescription="slide" aria-label={`${position + 1} / ${count}`} inert={position !== current}>
           <BannerLink banner={banner} className="home-banner-link">
-            {banner.Theme ? <PhoneBanner banner={banner} eager={position === 0} />
-              : <StoreImage src={banner.ImageUrl} alt={banner.Title} loading={position ? 'lazy' : 'eager'}
-                fallback={<DefaultBanner />} />}
+            <StoreImage src={banner.ImageUrl} alt={banner.Title} loading={position ? 'lazy' : 'eager'}
+              fallback={<BannerPlaceholder>
+                <p>{banner.Title}</p>
+                <p role="status">Hình ảnh đang được cập nhật.</p>
+              </BannerPlaceholder>} />
           </BannerLink>
         </div>)}
       </div>
@@ -106,23 +97,8 @@ function BannerCarousel({ banners }) {
   </div>
 }
 
-function PhoneBanner({ banner, eager }) {
-  return <div className={`home-phone-banner is-${banner.Theme}`}>
-    <div className="home-phone-copy">
-      <p className="home-phone-brand">{banner.Brand}</p>
-      <h2>{banner.Title}</h2>
-      <p className="home-phone-description">{banner.Description}</p>
-    </div>
-    <StoreImage src={banner.ImageUrl} alt={banner.Title} width="300" height="300"
-      loading={eager ? 'eager' : 'lazy'} decoding="async" fallback={<DefaultBanner />} />
-  </div>
-}
-
-// The original iPhone image from Figma (9:83), also used if an API image cannot be loaded.
-function DefaultBanner() {
-  return <div className="home-default-banner">
-    <img src={iphoneHomeBanner} alt="iPhone 18 Pro" width="1036" height="450" decoding="async" />
-  </div>
+function BannerPlaceholder({ children, error = false }) {
+  return <div className={`home-banner home-banner-placeholder${error ? ' is-error' : ''}`}>{children}</div>
 }
 
 // Figma "Danh mục": category menu and the banner area.
@@ -131,16 +107,14 @@ export default function HeroSection({ categories }) {
 
   let banner
   if (banners.loading) banner = <div className="home-banner is-skeleton" aria-hidden="true" />
+  else if (banners.error) banner = <BannerPlaceholder error>
+    <ErrorState title="Không tải được banner" message={banners.error} onRetry={banners.reload} className="py-4" />
+  </BannerPlaceholder>
   else if (banners.data?.length) banner = <BannerCarousel banners={banners.data} />
-  else banner = <BannerCarousel banners={DEFAULT_BANNERS} />
+  else banner = <BannerPlaceholder><p role="status">Chưa có chương trình nổi bật.</p></BannerPlaceholder>
 
   return <section className="home-hero home-card is-raised" aria-label="Danh mục và chương trình nổi bật">
     <CategoryMenu categories={categories} />
-    <div className="home-hero-content">
-      {banners.error && <div className="home-inline-error" role="alert">
-        <span>Không tải được banner.</span><button type="button" onClick={banners.reload}>Thử lại</button>
-      </div>}
-      {banner}
-    </div>
+    <div className="home-hero-content">{banner}</div>
   </section>
 }
