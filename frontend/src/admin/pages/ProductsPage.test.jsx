@@ -447,6 +447,79 @@ describe('product variant list', () => {
     expect(api.updateCatalogItem).not.toHaveBeenCalled()
   })
 
+  async function openSharedEditor() {
+    fireEvent.click(await screen.findByRole('button', { name: 'Xem ' + variant.Sku }))
+    const view = await screen.findByRole('region', { name: 'Chi tiết sản phẩm' })
+    await within(view).findByText('Mã sản phẩm: ' + variant.Sku)
+    return view
+  }
+
+  async function saveShared(dialog) {
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Lưu thay đổi' }))
+    fireEvent.click(within(await screen.findByRole('dialog', { name: 'Xác nhận những thay đổi?' })).getByRole('button', { name: 'Xác nhận' }))
+    await waitFor(() => expect(api.updateCatalogProduct).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(screen.queryByRole('region', { name: 'Cập nhật sản phẩm' })).not.toBeInTheDocument())
+  }
+
+  test('the description editor saves formatted HTML that is shown and edited again with its formatting', async () => {
+    seedVariants()
+    renderPage()
+    fireEvent.click(within(await openSharedEditor()).getByRole('button', { name: 'Sửa thông tin chung' }))
+    const dialog = await screen.findByRole('region', { name: 'Cập nhật sản phẩm' })
+    const editor = (await within(dialog).findByRole('textbox', { name: 'Mô tả' })).editor
+    const selectText = (from, to) => act(() => { editor.commands.setTextSelection({ from, to }) })
+    act(() => { editor.chain().focus().insertContent('<p>Thiết kế</p><p>Màn hình lớn</p>').run() })
+    selectText(1, 9)
+    fireEvent.change(within(dialog).getByRole('combobox', { name: 'Cỡ chữ' }), { target: { value: '24px' } })
+    fireEvent.change(within(dialog).getByRole('combobox', { name: 'Phông chữ' }), { target: { value: 'Georgia, serif' } })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'In đậm (Ctrl + B)' }))
+    selectText(20, 23)
+    fireEvent.click(within(dialog).getByRole('button', { name: 'In đậm (Ctrl + B)' }))
+    act(() => { editor.commands.setTextSelection(23) })
+    // The image goes through the existing product image upload endpoint; saving waits for it.
+    let finish
+    api.uploadProductImage.mockImplementationOnce(() => new Promise((resolve) => { finish = resolve }))
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Chèn hoặc sửa ảnh' }))
+    fireEvent.change(within(dialog).getByRole('textbox', { name: 'Mô tả ảnh' }), { target: { value: 'Mặt sau' } })
+    const file = new File([new Uint8Array(64)], 'mat-sau.png', { type: 'image/png' })
+    fireEvent.change(within(dialog).getByLabelText('Chọn ảnh để chèn vào mô tả'), { target: { files: [file] } })
+    await waitFor(() => expect(api.uploadProductImage).toHaveBeenCalledWith('access-for-test', file))
+    expect(within(dialog).getByRole('button', { name: 'Lưu thay đổi' })).toBeDisabled()
+    await act(async () => { finish({ ImageUrl: 'https://cdn.example/products/mat-sau.png' }) })
+    await waitFor(() => expect(within(dialog).getByRole('button', { name: 'Lưu thay đổi' })).toBeEnabled())
+    await saveShared(dialog)
+    const html = '<p><span style="font-family: Georgia, serif; font-size: 24px"><strong>Thiết kế</strong></span></p><p>Màn hình <strong>lớn</strong></p>'
+      + '<img src="https://cdn.example/products/mat-sau.png" alt="Mặt sau" loading="lazy" decoding="async">'
+    expect(api.updateCatalogProduct).toHaveBeenCalledWith('access-for-test', productId, expect.objectContaining({ Description: html }))
+
+    const view = await openSharedEditor()
+    expect(within(view).getByText('Thiết kế').parentElement).toHaveStyle({ fontSize: '24px', fontFamily: 'Georgia, serif' })
+    expect(within(view).getByText('lớn').tagName).toBe('STRONG')
+    expect(within(view).getByRole('img', { name: 'Mặt sau' })).toHaveAttribute('src', 'https://cdn.example/products/mat-sau.png')
+    fireEvent.click(within(view).getByRole('button', { name: 'Sửa thông tin chung' }))
+    const reopened = await within(await screen.findByRole('region', { name: 'Cập nhật sản phẩm' })).findByRole('textbox', { name: 'Mô tả' })
+    expect(reopened.querySelector('span[style]')).toHaveStyle({ fontSize: '24px', fontFamily: 'Georgia, serif' })
+    expect(reopened.querySelector('span[style] strong')).toHaveTextContent('Thiết kế')
+    expect(reopened.querySelector('img')).toHaveAttribute('alt', 'Mặt sau')
+  })
+
+  test('a legacy plain-text description is displayed as paragraphs and saved unchanged when not edited', async () => {
+    const legacy = 'Đoạn mô tả cũ.\nDòng thứ hai.\n\nĐoạn <không phải thẻ> thứ hai.'
+    for (const map of [parentDetails, variantDetails]) map.forEach((entry, key) => map.set(key, { ...entry, Description: legacy }))
+    seedVariants()
+    renderPage()
+    const view = await openSharedEditor()
+    expect(within(view).getByText(/Đoạn mô tả cũ\./).tagName).toBe('P')
+    expect(within(view).getByText('Đoạn <không phải thẻ> thứ hai.')).toBeInTheDocument()
+    fireEvent.click(within(view).getByRole('button', { name: 'Sửa thông tin chung' }))
+    const dialog = await screen.findByRole('region', { name: 'Cập nhật sản phẩm' })
+    const description = await within(dialog).findByRole('textbox', { name: 'Mô tả' })
+    expect(description.querySelectorAll('p')).toHaveLength(2)
+    fireEvent.change(within(dialog).getByRole('textbox', { name: 'Tên sản phẩm' }), { target: { value: 'Tên mới' } })
+    await saveShared(dialog)
+    expect(api.updateCatalogProduct).toHaveBeenCalledWith('access-for-test', productId, expect.objectContaining({ Name: 'Tên mới', Description: legacy }))
+  })
+
   test('canceling update confirmation retains input; pending save blocks duplicate submission and dismissal', async () => {
     seedVariants()
     let finish

@@ -15,6 +15,9 @@ export default function LoginPage() {
   const { signInCustomer } = useAuth()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
+  // Keeps the return page when the visitor switches to sign-up instead.
+  const next = safeNext(searchParams.get('next'), 'customer')
+  const nextQuery = next ? `?next=${encodeURIComponent(next)}` : ''
   const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
   const [busy, setBusy] = useState(false)
@@ -58,6 +61,6 @@ export default function LoginPage() {
       </div>
       <button type="submit" className="cauth-submit" disabled={busy}>{busy && <span className="spinner" />}Đăng nhập</button>
     </form>
-    <p className="cauth-footer">Chưa có tài khoản? <Link className="cauth-link" to={REGISTER_PATH}>Đăng ký ngay</Link></p>
+    <p className="cauth-footer">Chưa có tài khoản? <Link className="cauth-link" to={REGISTER_PATH + nextQuery}>Đăng ký ngay</Link></p>
   </CustomerAuthLayout>
 }

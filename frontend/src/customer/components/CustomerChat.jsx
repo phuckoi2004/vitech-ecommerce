@@ -45,6 +45,17 @@ export default function CustomerChat() {
     setKind((current) => current === 'Staff' ? null : 'Staff')
   }
 
+  // Product consultation opens the existing employee chat without creating another chat UI.
+  useEffect(() => {
+    function openConsultation() {
+      if (!ready) return
+      if (!user) { navigate(CHAT_PATH); return }
+      setKind('Staff')
+    }
+    window.addEventListener('vietech-open-staff-chat', openConsultation)
+    return () => window.removeEventListener('vietech-open-staff-chat', openConsultation)
+  }, [ready, user, navigate])
+
   return <>
     {activeKind && <section ref={panel} id={panelId} className={`shop-chat-panel shop-chat-panel-${activeKind.toLowerCase()}`} role="dialog"
       aria-modal="false" aria-labelledby={titleId} tabIndex={-1}

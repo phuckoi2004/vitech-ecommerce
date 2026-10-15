@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import Field from '../../components/shared/Field.jsx'
 import Button from '../../components/shared/Button.jsx'
 import { ErrorState, LoadingState } from '../../components/shared/index.js'
@@ -6,10 +6,13 @@ import useInternalAuth from '../../hooks/useInternalAuth.js'
 import { PRODUCT_STATUSES } from '../../lib/admin-products.js'
 import { updateCatalogProduct, deleteVariant } from '../../services/api/products.js'
 import useAdminQuery from '../hooks/useAdminQuery.js'
+import { uploadProductImage } from '../services/product-media.js'
 import Modal from './Modal.jsx'
 import { sharedBody, sharedForm } from '../lib/product-form.js'
 import { PRODUCT_CONTROL, ProductButton } from './ProductUi.jsx'
-import AdminImagePicker from './AdminImagePicker.jsx'
+
+// Tiptap stays out of the main bundle: this dialog is reachable from the eagerly loaded products page.
+const RichTextEditor = lazy(() => import('./RichTextEditor.jsx'))
 
 function FormError({ message }) {
   return message ? <p role="alert" className="mb-3 rounded-[10px] bg-admin-red/5 p-3 text-xs text-admin-red">{message}</p> : null
@@ -21,7 +24,7 @@ function ChoiceField({ id, label, value, options, onChange, disabled }) {
   </select></Field>
 }
 
-function SharedFields({ form, change, categories, brands, onUploadBusy }) {
+function SharedFields({ form, change, categories, brands, disabled, onUploadImage, onUploadBusy }) {
   const categoryOptions = (Array.isArray(categories.data) ? categories.data : []).map((entry) => [entry.CategoryId, entry.Name + (entry.IsActive ? '' : ' (đã ẩn)')])
   const brandOptions = (Array.isArray(brands.data) ? brands.data : []).map((entry) => [entry.BrandId, entry.Name + (entry.IsActive ? '' : ' (đã ẩn)')])
   return <div className="grid min-w-0 grid-cols-2 gap-4">
@@ -30,7 +33,7 @@ function SharedFields({ form, change, categories, brands, onUploadBusy }) {
     <ChoiceField id="product-brand" label="Thương hiệu" value={form.BrandId} options={brandOptions} onChange={(value) => change('BrandId', value)} disabled={brands.loading || Boolean(brands.error)} />
     <Field id="product-warranty" label="Bảo hành (tháng)" type="number" min={0} step={1} required value={form.WarrantyMonths} onChange={(event) => change('WarrantyMonths', event.target.value)} />
     <ChoiceField id="product-status" label="Trạng thái sản phẩm" value={form.Status} options={PRODUCT_STATUSES} onChange={(value) => change('Status', value)} />
-    <Field id="product-description" label="Mô tả" className="col-span-full"><textarea id="product-description" className={PRODUCT_CONTROL} rows={3} value={form.Description} onChange={(event) => change('Description', event.target.value)} /></Field>
+    <div className="col-span-full font-sans"><Suspense fallback={<LoadingState label="Đang tải trình soạn thảo…" className="py-4" />}><RichTextEditor id="product-description" label="Mô tả" labelClassName="text-sm font-semibold text-ink-900" disabled={disabled} value={form.Description} onChange={(value) => change('Description', value)} onUploadImage={onUploadImage} onUploadBusy={onUploadBusy} /></Suspense></div>
     <Field id="product-specifications" label="Thông số kỹ thuật (JSON)" hint={'Ví dụ: {"RAM":"16GB","Màn hình":"6.7 inch"}'} className="col-span-full"><textarea id="product-specifications" className={PRODUCT_CONTROL + ' font-mono'} rows={3} value={form.Specifications} onChange={(event) => change('Specifications', event.target.value)} /></Field>
     <div className="col-span-full"><AdminImagePicker images={form.Images} onChange={(images) => change('Images', images)} onUploadBusy={onUploadBusy} hint="Ảnh nằm trong bộ ảnh của sản phẩm." /></div>
   </div>
@@ -58,10 +61,11 @@ export function ParentPicker({ value, onChange, selected, lookup }) {
 function SharedEditor({ product, categories, brands, onClose, onDone, onBusy }) {
   const auth = useInternalAuth()
   const [form, setForm] = useState(() => sharedForm(product))
-  const [busy, setBusy] = useState(false)
+  const [busy, setBusy] = useState(false), [uploading, setUploading] = useState(false)
   const [error, setError] = useState('')
   const [uploading, setUploading] = useState(false)
   const lookupError = categories.error || brands.error
+  const uploadDescriptionImage = async (file) => (await auth.withAccessToken((token) => uploadProductImage(token, file))).ImageUrl
   async function save(event) {
     event.preventDefault()
     if (busy || uploading) return
@@ -78,8 +82,8 @@ function SharedEditor({ product, categories, brands, onClose, onDone, onBusy }) 
     <p className="mb-4 rounded-lg bg-amber-50 p-3 text-sm text-amber-800">Thay đổi tên, danh mục, thương hiệu, mô tả, bảo hành, trạng thái và ảnh tại đây áp dụng cho tất cả biến thể của sản phẩm này.</p>
     <FormError message={error || lookupError} />
     {lookupError && <ProductButton secondary onClick={() => { categories.refresh(); brands.refresh() }}>Thử lại danh mục / thương hiệu</ProductButton>}
-    <fieldset disabled={busy || uploading} className="min-w-0 border-0 p-0"><SharedFields form={form} change={(key, value) => setForm((previous) => ({ ...previous, [key]: value }))} categories={categories} brands={brands} onUploadBusy={(value) => { setUploading(value); onBusy(value) }} /></fieldset>
-    <div className="mt-5 flex justify-end gap-2"><ProductButton secondary disabled={busy || uploading} onClick={onClose}>Hủy</ProductButton><ProductButton type="submit" loading={busy} disabled={uploading || categories.loading || brands.loading || Boolean(lookupError)}>Lưu thông tin chung</ProductButton></div>
+    <fieldset disabled={busy} className="min-w-0 border-0 p-0"><SharedFields form={form} change={(key, value) => setForm((previous) => ({ ...previous, [key]: value }))} categories={categories} brands={brands} disabled={busy || uploading} onUploadImage={uploadDescriptionImage} onUploadBusy={setUploading} /></fieldset>
+    <div className="mt-5 flex justify-end gap-2"><ProductButton secondary disabled={busy} onClick={onClose}>Hủy</ProductButton><ProductButton type="submit" loading={busy} disabled={uploading || categories.loading || brands.loading || Boolean(lookupError)}>Lưu thông tin chung</ProductButton></div>
   </form>
 }
 

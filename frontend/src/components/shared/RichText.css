@@ -1,0 +1,53 @@
+/* Formatted product descriptions: the admin editor and previews show exactly what customers see on the product page.
+   Contexts tune the --rt-* variables instead of overriding the element rules. Line height stays unitless so text an
+   administrator enlarges gets taller lines instead of overlapping. */
+.vt-rich-text {
+  --rt-font-size: 14px;
+  --rt-line-height: 1.65;
+  --rt-color: var(--color-ink-900);
+  --rt-h2-size: 19px;
+  --rt-h3-size: 16px;
+  --rt-block-gap: 14px;
+  --rt-link-color: var(--color-brand-500);
+  color: var(--rt-color);
+  font-family: var(--font-sans);
+  font-size: var(--rt-font-size);
+  line-height: var(--rt-line-height);
+  overflow-wrap: anywhere;
+}
+.vt-rich-text > * { margin: 0 0 var(--rt-block-gap); }
+.vt-rich-text :is(h2, h3, h4) { margin-bottom: calc(var(--rt-block-gap) * 0.6); color: var(--rt-color); font-weight: 700; }
+.vt-rich-text h2 { margin-top: calc(var(--rt-block-gap) * 1.8); font-size: var(--rt-h2-size); line-height: 1.35; }
+.vt-rich-text h3 { margin-top: calc(var(--rt-block-gap) * 1.5); font-size: var(--rt-h3-size); line-height: 1.4; }
+.vt-rich-text h4 { margin-top: var(--rt-block-gap); font-size: var(--rt-font-size); }
+.vt-rich-text > :first-child { margin-top: 0; }
+.vt-rich-text > :last-child { margin-bottom: 0; }
+.vt-rich-text :is(strong, b) { font-weight: 700; }
+.vt-rich-text :is(em, i) { font-style: italic; }
+.vt-rich-text u { text-decoration: underline; }
+.vt-rich-text s { text-decoration: line-through; }
+.vt-rich-text a { color: var(--rt-link-color); text-decoration: underline; text-underline-offset: 2px; }
+.vt-rich-text a:hover { text-decoration-thickness: 2px; }
+.vt-rich-text :is(ul, ol) { padding-left: 1.5em; }
+.vt-rich-text ul { list-style: disc; }
+.vt-rich-text ol { list-style: decimal; }
+.vt-rich-text ul ul { list-style: circle; }
+.vt-rich-text li + li, .vt-rich-text li > :is(ul, ol) { margin-top: 4px; }
+.vt-rich-text li > p { margin: 0; }
+.vt-rich-text li::marker { color: var(--rt-color); }
+.vt-rich-text blockquote { padding-left: 12px; border-left: 3px solid var(--color-line); color: var(--color-muted-600); }
+.vt-rich-text img { display: block; max-width: 100%; height: auto; margin-inline: auto; border-radius: 10px; }
+/* Keep the blank lines an administrator typed between paragraphs. */
+.vt-rich-text p:empty::before { content: '\00a0'; }
+
+/* Admin editor chrome. */
+.vt-rich-editor { overflow: hidden; border: 1px solid var(--color-admin-border); border-radius: 9px; background: #fff; }
+.vt-rich-editor:focus-within { border-color: var(--color-admin-blue); box-shadow: 0 0 0 3px rgb(22 119 255 / 12%); }
+.vt-rich-editor[data-readonly='true'] { background: var(--color-admin-page); }
+.vt-rich-editor .tiptap { min-height: 200px; max-height: 560px; overflow-y: auto; padding: 14px 16px; outline: none; }
+.vt-rich-editor[data-readonly='true'] .tiptap { min-height: 0; max-height: 320px; }
+.vt-rich-editor[data-dragging='true'] .tiptap { background: var(--color-admin-soft); }
+.vt-rich-editor .tiptap p.is-editor-empty:first-child::before { content: attr(data-placeholder); float: left; height: 0; color: var(--color-admin-muted); pointer-events: none; }
+.vt-rich-editor .tiptap a { cursor: text; }
+.vt-rich-editor .tiptap img { cursor: pointer; }
+.vt-rich-editor .tiptap img.ProseMirror-selectednode { outline: 3px solid var(--color-admin-blue); outline-offset: 2px; }

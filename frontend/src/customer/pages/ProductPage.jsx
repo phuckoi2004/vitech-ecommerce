@@ -1,77 +1,101 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import Button from '../../components/shared/Button.jsx'
+import useAuth from '../../auth/useAuth.js'
 import ErrorState from '../../components/shared/ErrorState.jsx'
 import LoadingState from '../../components/shared/LoadingState.jsx'
-import Money from '../../components/shared/Money.jsx'
 import useApiData from '../../hooks/useApiData.js'
 import useCustomerRequest from '../../hooks/useCustomerRequest.js'
 import useCustomerSession from '../../hooks/useCustomerSession.js'
 import { getProductBySlug } from '../../lib/catalog-api.js'
-import { CART_PATH, CHAT_PATH, LOGIN_PATH, productPath } from '../routes/paths.js'
-import './ShoppingPages.css'
+import { formatRating } from '../../lib/format.js'
+import { canPurchase, initialVariant, productVariants } from '../../lib/product-detail.js'
+import LoginPromptDialog from '../components/LoginPromptDialog.jsx'
+import ProductGallery from '../components/product/ProductGallery.jsx'
+import ProductInformation from '../components/product/ProductInformation.jsx'
+import ProductPurchasePanel from '../components/product/ProductPurchasePanel.jsx'
+import ProductReviews from '../components/product/ProductReviews.jsx'
+import RelatedProducts from '../components/product/RelatedProducts.jsx'
+import { CART_PATH, HOME_PATH, LOGIN_PATH, brandPath, categoryPath, productPath } from '../routes/paths.js'
+import './ProductPage.css'
 
 function ProductDetails({ product }) {
-  const [variantId, setVariantId] = useState(product.Variants?.[0]?.ProductVariantId ?? '')
+  const variants = productVariants(product)
+  const [variantId, setVariantId] = useState(initialVariant(variants)?.ProductVariantId ?? '')
   const [busy, setBusy] = useState('')
   const [notice, setNotice] = useState(null)
-  const { user } = useCustomerSession()
+  const [loginPrompt, setLoginPrompt] = useState(false)
+  const [reviewSummary, setReviewSummary] = useState(null)
+  const pending = useRef(false)
+  const { ready, user } = useCustomerSession()
+  const { session } = useAuth()
   const send = useCustomerRequest()
   const navigate = useNavigate()
-  const variant = product.Variants?.find((item) => item.ProductVariantId === variantId)
-  const images = [...(product.Images ?? [])].sort((a, b) => Number(b.IsDefault) - Number(a.IsDefault) || a.DisplayOrder - b.DisplayOrder)
+  const variant = variants.find((item) => item.ProductVariantId === variantId)
+  const reviewCount = Math.max(0, reviewSummary?.count ?? (Number(product.ReviewCount) || 0))
+  const rating = Math.min(5, Math.max(0, reviewSummary?.rating ?? (Number(product.AverageRating) || 0)))
 
   async function act(kind) {
-    if (!user) return navigate(`${LOGIN_PATH}?next=${encodeURIComponent(productPath(product.Slug))}`)
+    if (pending.current || !ready || !canPurchase(variant)) return
+    if (!user) return session ? navigate(`${LOGIN_PATH}?next=${encodeURIComponent(productPath(product.Slug))}`) : setLoginPrompt(true)
+    pending.current = true
     setBusy(kind); setNotice(null)
     try {
-      await send(kind === 'cart' ? '/cart/items' : '/wishlist/items', { method: 'POST', body: kind === 'cart'
-        ? { ProductVariantId: variantId, Quantity: 1 } : { ProductId: product.ProductId } })
-      setNotice({ ok: true, text: kind === 'cart' ? 'Đã thêm vào giỏ hàng.' : 'Đã lưu vào danh sách yêu thích.' })
-    } catch (error) { setNotice({ ok: false, text: error.message }) }
-    finally { setBusy('') }
+      await send('/cart/items', { method: 'POST', body: { ProductVariantId: variant.ProductVariantId, Quantity: 1 } })
+      window.dispatchEvent(new Event('vietech-cart-changed'))
+      if (kind === 'buy') navigate(CART_PATH)
+      else setNotice({ ok: true, text: 'Đã thêm vào giỏ hàng.' })
+    } catch (error) { setNotice({ ok: false, text: error.message || 'Không thể thực hiện. Vui lòng thử lại.' }) }
+    finally { pending.current = false; setBusy('') }
   }
 
-  return <div className="shopping-page">
-    <h1>{product.Name}</h1>
-    <div className="product-detail-grid">
-      <div className="product-detail-images">
-        {images.length ? images.map((image) => <img key={image.ProductImageId ?? image.ImageUrl} src={image.ImageUrl} alt={product.Name} />)
-          : <div className="product-detail-placeholder">Chưa có ảnh sản phẩm</div>}
+  function consult() {
+    if (!ready) return
+    if (!user) return session ? navigate(`${LOGIN_PATH}?next=${encodeURIComponent(productPath(product.Slug))}`) : setLoginPrompt(true)
+    window.dispatchEvent(new Event('vietech-open-staff-chat'))
+  }
+
+  function select(item) {
+    if (!item || pending.current) return
+    setVariantId(item.ProductVariantId); setNotice(null)
+  }
+
+  return <div className="pd-page">
+    <nav className="pd-breadcrumb" aria-label="Đường dẫn sản phẩm"><ol>
+      <li><Link to={HOME_PATH}>Trang chủ</Link></li>
+      {product.Category?.Name && <li>{product.Category.Slug ? <Link to={categoryPath(product.Category.Slug)}>{product.Category.Name}</Link> : product.Category.Name}</li>}
+      {product.Brand?.Name && <li>{product.Brand.Slug ? <Link to={brandPath(product.Brand.Slug)}>{product.Brand.Name}</Link> : product.Brand.Name}</li>}
+      <li aria-current="page">{product.Name}</li>
+    </ol></nav>
+    <header className="pd-heading"><h1>{product.Name}</h1>
+      <div className="pd-meta"><span className="pd-stars" aria-label={`Đánh giá ${formatRating(rating)} trên 5 sao`}>
+        {Array.from({ length: 5 }, (_, index) => <span key={index} aria-hidden="true">{index < Math.round(rating) ? '★' : '☆'}</span>)}
+      </span><a className="pd-review-link" href="#product-reviews">{reviewCount ? `${formatRating(rating)} (${reviewCount} đánh giá)` : 'Chưa có đánh giá'}</a>
+        <span>Đã bán {Math.max(0, Number(product.SoldQuantity) || 0)}</span>
       </div>
-      <section className="shopping-panel" aria-label="Thông tin mua hàng">
-        <p>{product.Brand?.Name} · {product.Category?.Name}</p>
-        <p>Bảo hành: {product.WarrantyMonths} tháng</p>
-        {!!product.Variants?.length && <label className="shopping-filter">Phiên bản
-          <select value={variantId} onChange={(event) => setVariantId(event.target.value)}>
-            {product.Variants.map((item) => <option key={item.ProductVariantId} value={item.ProductVariantId}>
-              {item.VariantName} {item.Color ? `· ${item.Color}` : ''} {item.Storage ? `· ${item.Storage}` : ''}
-            </option>)}
-          </select>
-        </label>}
-        <p className="product-detail-price">{variant ? <Money value={variant.Price} /> : 'Đang cập nhật giá'}</p>
-        <p>{variant?.StockQuantity > 0 ? `Còn ${variant.StockQuantity} sản phẩm` : 'Hết hàng'}</p>
-        <div className="shopping-actions">
-          <Button onClick={() => act('cart')} loading={busy === 'cart'} disabled={!!busy || !variant || variant.StockQuantity <= 0}>Thêm vào giỏ hàng</Button>
-          <Button variant="outline" onClick={() => act('wishlist')} loading={busy === 'wishlist'} disabled={!!busy}>Yêu thích</Button>
-        </div>
-        {notice && <p role={notice.ok ? 'status' : 'alert'}>{notice.text}</p>}
-        <div className="shopping-actions"><Link to={CART_PATH}>Xem giỏ hàng</Link><Link to={CHAT_PATH}>Chat với nhân viên</Link></div>
-      </section>
+    </header>
+    <div className="pd-main-grid grid grid-cols-1 items-start gap-5 min-[1000px]:grid-cols-[520fr_750fr]">
+      <ProductGallery product={product} />
+      <ProductPurchasePanel variants={variants} variant={variant} onSelect={select} busy={busy} notice={notice} ready={ready}
+        onCart={() => act('cart')} onBuy={() => act('buy')}
+        onConsult={consult} />
     </div>
-    <section className="shopping-panel"><h2>Mô tả sản phẩm</h2><p className="shopping-text">{product.Description || 'Đang cập nhật mô tả.'}</p></section>
-    {product.Specifications && <section className="shopping-panel"><h2>Thông số kỹ thuật</h2>
-      <dl className="shopping-specs">{Object.entries(product.Specifications).map(([name, value]) => <div key={name}>
-        <dt>{name}</dt><dd>{typeof value === 'object' ? JSON.stringify(value) : String(value)}</dd>
-      </div>)}</dl>
-    </section>}
+    <ProductInformation product={product} variant={variant} />
+    <ProductReviews product={product} onSummaryChange={setReviewSummary}
+      onRequireLogin={() => session ? navigate(`${LOGIN_PATH}?next=${encodeURIComponent(productPath(product.Slug))}`) : setLoginPrompt(true)} />
+    <RelatedProducts product={product} />
+    <LoginPromptDialog open={loginPrompt} next={productPath(product.Slug)} onClose={() => setLoginPrompt(false)} />
   </div>
 }
 
 export default function ProductPage() {
   const { slug } = useParams()
-  const product = useApiData(`product:${slug}`, (signal) => getProductBySlug(slug, { signal }))
-  if (product.loading) return <LoadingState />
-  if (product.error) return <ErrorState message={product.error} onRetry={product.reload} />
+  const product = useApiData(`product:${slug}`, async (signal) => {
+    try { return await getProductBySlug(slug, { signal }) }
+    catch (error) { if (error.status === 404) return null; throw error }
+  })
+  if (product.loading) return <div className="pd-page"><LoadingState label="Đang tải sản phẩm…" /></div>
+  if (product.error) return <div className="pd-page"><ErrorState message={product.error} onRetry={product.reload} /></div>
+  if (!product.data?.ProductId) return <div className="pd-page"><h1>Không tìm thấy sản phẩm</h1>
+    <p>Sản phẩm không tồn tại hoặc đã ngừng bán.</p><Link to={HOME_PATH}>Về trang chủ</Link></div>
   return <ProductDetails key={product.data.ProductId} product={product.data} />
 }

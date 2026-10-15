@@ -1,13 +1,13 @@
 import { useState } from 'react'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
-import cartIcon from '../../assets/icons/cart.svg'
-import heartIcon from '../../assets/icons/heart.svg'
 import logoMark from '../../assets/storefront/vietech-mark.png'
 import logoName from '../../assets/storefront/vietech-wordmark.png'
 import AccountButton from '../components/AccountButton.jsx'
+import CartLink from '../components/CartLink.jsx'
 import CustomerChat from '../components/CustomerChat.jsx'
 import NotificationLink from '../components/NotificationLink.jsx'
-import { CART_PATH, CHAT_PATH, HOME_PATH, INFO_PATHS, NEWS_PATH, SEARCH_PATH, WISHLIST_PATH } from '../routes/paths.js'
+import WishlistLink from '../components/WishlistLink.jsx'
+import { CHAT_PATH, HOME_PATH, INFO_PATHS, NEWS_PATH, SEARCH_PATH } from '../routes/paths.js'
 import './CustomerLayout.css'
 
 // Searches the catalog by product name (GET /products?keyword=…) on the search page.
@@ -47,16 +47,10 @@ export default function CustomerLayout({ children }) {
         </Link>
         <SearchForm />
         <nav className="shop-actions" aria-label="Tài khoản">
-          <Link className="shop-action" to={CART_PATH}>
-            <span className="shop-action-text"><strong>Giỏ hàng</strong></span>
-            <img className="shop-action-icon" src={cartIcon} alt="" width="24" height="24" />
-          </Link>
+          <CartLink />
           <AccountButton />
           <NotificationLink />
-          <Link className="shop-action" to={WISHLIST_PATH}>
-            <span className="shop-action-text"><strong>Yêu thích</strong></span>
-            <img className="shop-action-icon" src={heartIcon} alt="" width="24" height="24" />
-          </Link>
+          <WishlistLink />
         </nav>
       </div>
     </header>
