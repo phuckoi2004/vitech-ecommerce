@@ -8,6 +8,7 @@ import { updateCatalogProduct, deleteVariant } from '../../services/api/products
 import useAdminQuery from '../hooks/useAdminQuery.js'
 import { uploadProductImage } from '../services/product-media.js'
 import Modal from './Modal.jsx'
+import AdminImagePicker from './AdminImagePicker.jsx'
 import { sharedBody, sharedForm } from '../lib/product-form.js'
 import { PRODUCT_CONTROL, ProductButton } from './ProductUi.jsx'
 
@@ -63,7 +64,6 @@ function SharedEditor({ product, categories, brands, onClose, onDone, onBusy }) 
   const [form, setForm] = useState(() => sharedForm(product))
   const [busy, setBusy] = useState(false), [uploading, setUploading] = useState(false)
   const [error, setError] = useState('')
-  const [uploading, setUploading] = useState(false)
   const lookupError = categories.error || brands.error
   const uploadDescriptionImage = async (file) => (await auth.withAccessToken((token) => uploadProductImage(token, file))).ImageUrl
   async function save(event) {
