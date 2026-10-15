@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
+import { safeNext } from '../../auth/session.js'
 import { registerCustomer, resendOtp, verifyRegistration } from '../../lib/auth-api.js'
 import { passwordRules } from '../../lib/password-rules.js'
 import { Field, PasswordInput } from '../components/AuthFields.jsx'
@@ -23,6 +25,10 @@ function CheckIcon() {
 
 // Customer sign-up (B3.2): details -> emailed OTP -> account created as Customer.
 export default function RegisterPage() {
+  // Sign-up started from a page that needs an account: signing in afterwards returns there.
+  const [searchParams] = useSearchParams()
+  const next = safeNext(searchParams.get('next'), 'customer')
+  const loginPath = next ? `${LOGIN_PATH}?next=${encodeURIComponent(next)}` : LOGIN_PATH
   const [stage, setStage] = useState('details')
   const [form, setForm] = useState(EMPTY)
   const [code, setCode] = useState('')
@@ -106,7 +112,7 @@ export default function RegisterPage() {
         <span className="cauth-done-icon"><CheckIcon /></span>
         <h2>Đăng ký thành công</h2>
         <p className="cauth-lead">Tài khoản của bạn đã được tạo. Bạn có thể đăng nhập để bắt đầu mua sắm.</p>
-        <a className="cauth-submit" href={LOGIN_PATH}>Đăng nhập</a>
+        <a className="cauth-submit" href={loginPath}>Đăng nhập</a>
         <p className="cauth-footer"><a className="cauth-link" href={HOME_PATH}>Về trang chủ</a></p>
       </div>
     </CustomerAuthLayout>
@@ -156,6 +162,6 @@ export default function RegisterPage() {
       <PasswordInput id="register-confirm" label="Xác nhận mật khẩu" name="xác nhận mật khẩu" placeholder="Nhập lại mật khẩu" autoComplete="new-password" value={form.ConfirmPassword} onChange={edit('ConfirmPassword')} disabled={!!busy} />
       <button type="submit" className="cauth-submit" disabled={!!busy}>{busy === 'submit' && <span className="spinner" />}Đăng ký</button>
     </form>
-    <p className="cauth-footer">Đã có tài khoản? <a className="cauth-link" href={LOGIN_PATH}>Đăng nhập</a></p>
+    <p className="cauth-footer">Đã có tài khoản? <a className="cauth-link" href={loginPath}>Đăng nhập</a></p>
   </CustomerAuthLayout>
 }

@@ -86,6 +86,35 @@ afterEach(() => {
 })
 
 describe('catalog sections', () => {
+  test('signed-in customers can add a home product to their wishlist from its heart button', async () => {
+    const calls = mockApi({
+      '/wishlist/items': () => json({ WishlistItemId: 'w1' }, 201),
+      '/wishlist/products/p1': () => new Response(null, { status: 204 }),
+    })
+    renderHome(makeAuth({ role: 'Customer' }))
+    const user = userEvent.setup()
+    const heart = await screen.findByRole('button', { name: `Thêm ${DETAILS.p1.Name} vào yêu thích` })
+    await user.click(heart)
+    expect(heart).toHaveAttribute('aria-pressed', 'true')
+    expect(calls).toContain('/wishlist/items')
+    expect(heart).toHaveAccessibleName(`Bỏ ${DETAILS.p1.Name} khỏi yêu thích`)
+    await user.click(heart)
+    expect(heart).toHaveAttribute('aria-pressed', 'false')
+    expect(calls).toContain('/wishlist/products/p1')
+  })
+
+  test('guest heart buttons ask for sign-in or registration and do not call wishlist API', async () => {
+    const calls = mockApi()
+    const router = renderHome()
+    const user = userEvent.setup()
+    await user.click(await screen.findByRole('button', { name: `Thêm ${DETAILS.p1.Name} vào yêu thích` }))
+    expect(await screen.findByRole('dialog', { name: 'Bạn đã có tài khoản chưa?' })).toBeInTheDocument()
+    expect(calls).not.toContain('/wishlist/items')
+    await user.click(screen.getByRole('link', { name: 'Đăng nhập' }))
+    expect(router.state.location.pathname).toBe('/dang-nhap')
+    expect(router.state.location.search).toBe('?next=%2Fsan-pham%2Fiphone-18-pro-max')
+  })
+
   test('categories, newest products, shortcuts, news and brands come from the API', async () => {
     mockApi()
     renderHome()

@@ -1,3 +1,5 @@
+import { normalizeRichText } from '../../lib/rich-text.js'
+
 export function sharedForm(product) {
   return {
     Name: product?.Name ?? '', CategoryId: product?.CategoryId ?? '', BrandId: product?.BrandId ?? '',
@@ -16,7 +18,8 @@ export function sharedBody(form) {
   } catch { throw new Error('Thông số kỹ thuật phải là một đối tượng JSON hợp lệ, ví dụ {"RAM":"16GB"}.') }
   return {
     ...form, Name: form.Name.trim(), WarrantyMonths: Number(form.WarrantyMonths),
-    Description: form.Description.trim() || null, Specifications: specifications,
+    // Editor HTML is sanitized again before saving; an untouched legacy plain-text description is kept as it was.
+    Description: normalizeRichText(form.Description), Specifications: specifications,
     Images: form.Images.map((image) => ({ ...image, ImageUrl: image.ImageUrl.trim() })),
   }
 }

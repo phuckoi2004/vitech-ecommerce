@@ -34,6 +34,7 @@ function mockApi({ existingConversation = null, messages = [], history = [] } = 
     else if (endpoint === '/brands/slug/apple') result = { BrandId: 'b1', Name: 'Apple', Slug: 'apple' }
     else if (endpoint === '/products') result = { Items: [product], Total: 1, Page: 1, PageSize: 20 }
     else if (endpoint === '/products/p1' || endpoint === '/products/slug/dien-thoai-mau') result = product
+    else if (endpoint === '/products/p1/reviews') result = { Items: [], Total: 0, Page: Number(url.searchParams.get('page')), PageSize: Number(url.searchParams.get('page_size')) }
     else if (endpoint === '/cart/items') result = { Items: [], SelectedQuantity: 0, SelectedSubtotal: '0.00' }
     else if (endpoint === '/cart') result = { Items: [], SelectedQuantity: 0, SelectedSubtotal: '0.00' }
     else if (endpoint === '/wishlist') result = { Items: [] }
@@ -100,7 +101,7 @@ test('product page adds the selected variant through the authenticated cart API'
 })
 
 test.each([
-  ['/gio-hang', 'Giỏ hàng đang trống'], ['/yeu-thich', 'Chưa có sản phẩm yêu thích'],
+  ['/gio-hang', 'Giỏ hàng đang trống'], ['/yeu-thich', 'Bạn chưa có sản phẩm yêu thích nào.'],
   ['/thong-bao', 'Chưa có thông báo'], ['/tin-tuc', 'Tin tức công nghệ'],
   ['/tin-tuc/tin-cong-nghe', 'Tin công nghệ'],
 ])('home destination %s renders its page', async (url, heading) => {

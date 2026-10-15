@@ -10,7 +10,10 @@ import { uploadProductImage } from '../services/product-media.js'
 import Modal from './Modal.jsx'
 import { ParentPicker, ProductDeleteDialog } from './ProductDialogs.jsx'
 import { sharedBody, sharedForm } from '../lib/product-form.js'
+import { isAllowedProductImage, PRODUCT_IMAGE_RULE } from '../lib/product-images.js'
 import { ProductButton } from './ProductUi.jsx'
+import RichTextContent from '../../components/shared/RichTextContent.jsx'
+import RichTextEditor from './RichTextEditor.jsx'
 
 const CARD = 'min-w-0 rounded-[14px] border border-admin-border bg-white p-5'
 const CONTROL = 'h-[42px] w-full rounded-[9px] border border-admin-border bg-white px-3 font-admin text-xs text-admin-text placeholder:text-admin-muted disabled:bg-admin-page disabled:text-admin-muted'
@@ -53,7 +56,7 @@ function ProductDetailsPage({ item, onClose, onDone, onEdit, onEditShared, onAdd
           ['Danh mục', item.Category?.Name], ['Thương hiệu', item.Brand?.Name], ['Giá bán', formatMoney(item.Price)], ['Số lượng tồn kho', item.StockQuantity + ' sản phẩm'],
           ['Trạng thái', status], ['Màu sắc', item.Color], ['Dung lượng', item.Storage],
         ].map(([label, value]) => <div key={label} className="grid grid-cols-[180px_minmax(0,1fr)] gap-2"><dt className="font-medium text-admin-muted">{label}</dt><dd className={'m-0 font-semibold break-words ' + (label === 'Trạng thái' && item.IsActive && item.Status === 'Active' ? 'text-green-600' : '')}>{value ?? '—'}</dd></div>)}</dl>
-        <div><h4 className="m-0 text-[13px] font-semibold">Mô tả sản phẩm</h4><p className="mt-[7px] mb-0 text-xs leading-normal whitespace-pre-wrap text-admin-muted">{item.Description || 'Chưa có mô tả sản phẩm.'}</p></div>
+        <div><h4 className="m-0 text-[13px] font-semibold">Mô tả sản phẩm</h4><RichTextContent value={item.Description} className="mt-[7px] max-h-[420px] overflow-y-auto" fallback={<p className="mt-[7px] mb-0 text-xs leading-normal text-admin-muted">Chưa có mô tả sản phẩm.</p>} /></div>
         <details className="text-xs"><summary className="cursor-pointer font-semibold">Thông tin bổ sung</summary><dl className="mt-3 grid grid-cols-[180px_1fr] gap-y-3"><dt>Bảo hành</dt><dd>{item.WarrantyMonths} tháng</dd><dt>Ngưỡng cảnh báo tồn</dt><dd>{item.MinStockLevel}</dd><dt>Quản lý Serial / IMEI</dt><dd>{item.IsSerialTracked ? 'Có' : 'Không'}</dd></dl>{item.Specifications && <pre className="overflow-auto rounded-lg bg-admin-page p-3">{JSON.stringify(item.Specifications, null, 2)}</pre>}</details>
       </article>
     </div>
@@ -70,7 +73,7 @@ function ProductImages({ form, change, disabled, onUploadBusy }) {
   async function upload(files) {
     if (disabled || uploading.current || !files?.length) return
     const batch = [...files]
-    if (batch.some((file) => !['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 2 * 1024 * 1024 || !file.size)) { setError('Chọn ảnh JPG, PNG hoặc WEBP, tối đa 2 MB mỗi ảnh.'); return }
+    if (!batch.every(isAllowedProductImage)) { setError(PRODUCT_IMAGE_RULE); return }
     uploading.current = true; onUploadBusy(true); setError('')
     const images = [...form.Images]
     try {
@@ -115,6 +118,7 @@ function ProductFormPage({ item, presetProductId, editShared, categories, brands
   const common = !item && !newProduct ? sharedForm(parent.data) : shared
   const change = (key, value) => setForm((previous) => ({ ...previous, [key]: value }))
   const changeShared = (key, value) => setShared((previous) => ({ ...previous, [key]: value }))
+  const uploadDescriptionImage = async (file) => (await auth.withAccessToken((token) => uploadProductImage(token, file))).ImageUrl
   const lookupsError = commonEditable && (categories.error || brands.error)
   const blocked = commonEditable ? categories.loading || brands.loading || Boolean(lookupsError) : !item && (!parent.data || parent.loading || Boolean(parent.error))
   async function write(body) {
@@ -159,9 +163,9 @@ function ProductFormPage({ item, presetProductId, editShared, categories, brands
                 <ProductField id="product-name" label="Tên sản phẩm" required maxLength={255} disabled={!commonEditable} placeholder="Nhập tên sản phẩm" value={common.Name} onChange={(event) => changeShared('Name', event.target.value)} />
                 <div className="grid grid-cols-2 gap-3.5"><ProductField id="product-sku" label="Mã sản phẩm (SKU)" required maxLength={50} disabled={editingShared} placeholder="Nhập SKU" value={form.Sku} onChange={(event) => change('Sku', event.target.value)} />{commonEditable ? <ProductSelect id="product-status" label="Trạng thái sản phẩm" options={PRODUCT_STATUSES} required value={common.Status} onChange={(event) => changeShared('Status', event.target.value)} /> : <ProductSelect id="variant-status" label="Trạng thái biến thể" options={[["true", 'Hoạt động'], ["false", 'Tạm ẩn']]} value={String(form.IsActive)} onChange={(event) => change('IsActive', event.target.value === 'true')} />}</div>
                 <div className="grid grid-cols-2 gap-3.5"><ProductSelect id="product-category" label="Danh mục" options={(categories.data ?? []).map((entry) => [entry.CategoryId, entry.Name + (entry.IsActive ? '' : ' (đã ẩn)')])} required disabled={!commonEditable || categories.loading} value={common.CategoryId} onChange={(event) => changeShared('CategoryId', event.target.value)} /><ProductSelect id="product-brand" label="Thương hiệu" options={(brands.data ?? []).map((entry) => [entry.BrandId, entry.Name + (entry.IsActive ? '' : ' (đã ẩn)')])} required disabled={!commonEditable || brands.loading} value={common.BrandId} onChange={(event) => changeShared('BrandId', event.target.value)} /></div>
-                <ProductField id="product-description" label="Mô tả"><textarea id="product-description" className={CONTROL + ' h-[90px] py-3'} disabled={!commonEditable} placeholder="Nhập mô tả sản phẩm" value={common.Description} onChange={(event) => changeShared('Description', event.target.value)} /></ProductField>
-                <div className="grid grid-cols-2 gap-3.5"><ProductField id="product-color" label="Màu sắc" required maxLength={50} disabled={editingShared} placeholder="Một màu cho mỗi biến thể" value={form.Color} onChange={(event) => change('Color', event.target.value)} /><ProductField id="product-storage" label="Dung lượng" maxLength={50} disabled={editingShared} value={form.Storage} onChange={(event) => change('Storage', event.target.value)} /></div>
               </div>
+              <RichTextEditor id="product-description" label="Mô tả" labelClassName="text-xs font-medium" readOnly={!commonEditable} disabled={busy || uploading || Boolean(pending)} value={common.Description} onChange={(value) => changeShared('Description', value)} onUploadImage={uploadDescriptionImage} onUploadBusy={setUploading} />
+              <div className="grid w-full max-w-[520px] grid-cols-2 gap-3.5"><ProductField id="product-color" label="Màu sắc" required maxLength={50} disabled={editingShared} placeholder="Một màu cho mỗi biến thể" value={form.Color} onChange={(event) => change('Color', event.target.value)} /><ProductField id="product-storage" label="Dung lượng" maxLength={50} disabled={editingShared} value={form.Storage} onChange={(event) => change('Storage', event.target.value)} /></div>
               <details className="text-xs"><summary className="cursor-pointer text-admin-blue">Thông tin bổ sung</summary><div className="mt-3 flex max-w-[520px] flex-col gap-3.5"><ProductField id="product-warranty" label="Bảo hành (tháng)" type="number" required min={0} step={1} disabled={!commonEditable} value={common.WarrantyMonths} onChange={(event) => changeShared('WarrantyMonths', event.target.value)} /><ProductField id="product-specifications" label="Thông số kỹ thuật (JSON)"><textarea id="product-specifications" rows={3} className={CONTROL + ' h-auto py-3 font-mono'} disabled={!commonEditable} placeholder={'{"RAM":"16GB"}'} value={common.Specifications} onChange={(event) => changeShared('Specifications', event.target.value)} /></ProductField></div></details>
             </section>
             <section className={CARD + ' flex flex-col gap-3.5'}><h3 className="m-0 text-[15px] font-semibold">Giá và tồn kho</h3><div className="grid max-w-[520px] grid-cols-2 gap-3.5"><ProductField id="product-price" label="Giá bán (đồng)" type="number" required min={0} max="9999999999999.99" step="0.01" placeholder="Nhập giá bán" disabled={editingShared} value={form.Price} onChange={(event) => change('Price', event.target.value)} /><ProductField id="product-stock" label="Số lượng tồn kho" type="number" readOnly value={item?.StockQuantity ?? 0} /></div><p className="m-0 text-[11px] text-admin-muted">Tồn kho được cập nhật qua nhập hàng; biến thể mới có tồn kho bằng 0.</p><details className="text-xs"><summary className="cursor-pointer text-admin-blue">Thiết lập biến thể</summary><div className="mt-3 flex max-w-[520px] flex-col gap-3"><ProductField id="product-min" label="Ngưỡng cảnh báo tồn" type="number" min={0} step={1} required disabled={editingShared} value={form.MinStockLevel} onChange={(event) => change('MinStockLevel', event.target.value)} /><label className="flex gap-2"><input type="checkbox" disabled={editingShared} checked={form.IsActive} onChange={(event) => change('IsActive', event.target.checked)} />Đang hoạt động</label><label className="flex gap-2"><input type="checkbox" disabled={editingShared} checked={form.IsSerialTracked} onChange={(event) => change('IsSerialTracked', event.target.checked)} />Quản lý Serial / IMEI</label></div></details></section>
