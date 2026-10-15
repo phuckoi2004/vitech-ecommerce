@@ -2,6 +2,7 @@
 
 from datetime import date
 from typing import Annotated, Literal
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query
 
@@ -13,12 +14,42 @@ from app.schemas import (
     TopProductResponse,
 )
 from app.services.statistics import StatisticsService
+from app.services.statistics_report import StatisticsReportService
+from app.schemas.statistics import OrderReportResponse, ReportOptionsResponse, SalesReportResponse
 
-from .dependencies import CurrentActor, InternalOnly, Page, get_statistics_service
+from .dependencies import CurrentActor, Database, InternalOnly, Page, PageSize, get_statistics_service
 
 admin_router = APIRouter(prefix="/admin/statistics", tags=["Thống kê"], dependencies=[InternalOnly])
 
 Statistics = Annotated[StatisticsService, Depends(get_statistics_service)]
+
+
+def get_report_service(session: Database):
+    return StatisticsReportService(session)
+
+
+Reports = Annotated[StatisticsReportService, Depends(get_report_service)]
+
+
+@admin_router.get('/report-options', response_model=ReportOptionsResponse)
+def report_options(service: Reports, actor: CurrentActor):
+    return service.options(actor)
+
+
+@admin_router.get('/reports/revenue', response_model=SalesReportResponse)
+def sales_report(date_from: date, date_to: date, service: Reports, actor: CurrentActor,
+                 category_id: UUID | None = None, brand_id: UUID | None = None,
+                 product_id: UUID | None = None, page: Page = 1, page_size: PageSize = 10):
+    return service.report(actor, 'revenue', date_from, date_to, category_id=category_id,
+                          brand_id=brand_id, product_id=product_id, page=page, page_size=page_size)
+
+
+@admin_router.get('/reports/orders', response_model=OrderReportResponse)
+def orders_report(date_from: date, date_to: date, service: Reports, actor: CurrentActor,
+                  category_id: UUID | None = None, brand_id: UUID | None = None,
+                  product_id: UUID | None = None, page: Page = 1, page_size: PageSize = 10):
+    return service.report(actor, 'orders', date_from, date_to, category_id=category_id,
+                          brand_id=brand_id, product_id=product_id, page=page, page_size=page_size)
 
 
 @admin_router.get("/orders", response_model=OrderStatisticsResponse)

@@ -1,4 +1,10 @@
-"""Return service (đợt 5.4): yêu cầu đổi hàng (Exchange) / trả hàng (Return) cho sản phẩm thuộc đơn đã giao.
+"""ACTIVE 15/10/2026: advance_status/reject_status update progress and notify customers only.
+No financial, inventory or serial operations run in the active HTTP workflow. The former
+inspection/approval/refund implementations below are retained as deferred reference (TODO),
+with their HTTP endpoints paused; Completed no longer certifies a refund.
+
+Historical implementation notes (not the current workflow):
+Return service (đợt 5.4): yêu cầu đổi hàng (Exchange) / trả hàng (Return) cho sản phẩm thuộc đơn đã giao.
 
 Nguồn nghiệp vụ: docs/business-requirements.md mục 13, quyết định đợt 5.1 (mục 5.2–5.3) và 5.4 (mục 6).
 Chính sách được truyền vào qua ``ReturnPolicy`` (không hard-code trong Service):
@@ -308,6 +314,53 @@ class ReturnService(BaseService):
 
     # ================================================================== Staff / Admin: xem
 
+    def advance_status(self, actor: Actor, request_id: uuid.UUID, expected_status: str) -> AdminReturnRequestDetailResponse:
+        """Active workflow (15/10/2026): status only, no refund, stock or serial mutations.
+
+        Financial/inspection implementations below are retained for later consultation;
+        their HTTP endpoints are paused. Completed here does NOT mean money was refunded.
+        """
+        require_role(actor, *STAFF_OR_ADMIN)
+        transitions = {PENDING: APPROVED, APPROVED: RECEIVING, RECEIVING: PROCESSING, PROCESSING: COMPLETED}
+        labels = {APPROVED: "Đã tiếp nhận yêu cầu", RECEIVING: "Đang điều phối", PROCESSING: "Đang đánh giá hư hại",
+                  COMPLETED: "Đã hoàn tất yêu cầu đổi/trả"}
+        with self.transaction():
+            request, _, _ = self._lock(request_id)
+            if request.Status != expected_status:
+                raise ConflictError("Phiếu đã thay đổi; hãy tải lại trước khi chuyển giai đoạn", code="service_request_stale")
+            next_status = transitions.get(request.Status)
+            if next_status is None:
+                raise BusinessRuleError("Phiếu đã đóng, không thể chuyển giai đoạn", code="service_request_closed")
+            old = request.Status
+            if request.AssignedStaffId is None:
+                request.AssignedStaffId = actor.user_id
+            request.Status = next_status
+            if next_status == PROCESSING:
+                request.ReceivedAt = self.now()
+            if next_status == COMPLETED:
+                request.CompletedAt = self.now()
+            self._history(request, actor.user_id, old, next_status, labels[next_status] + ".")
+            self._notify_customer(request, labels[next_status], f"Yêu cầu {request.RequestCode}: {labels[next_status]}.")
+            self.requests.flush()
+            return self.get_return_request(actor, request_id)
+
+    def reject_status(self, actor: Actor, request_id: uuid.UUID, data: ServiceRequestRejection) -> AdminReturnRequestDetailResponse:
+        """Staff/Admin can reject any open status; no money, stock or serial side effects."""
+        require_role(actor, *STAFF_OR_ADMIN)
+        reason = required_text(data.Reason, code="rejection_reason_required", message="Cần ghi lý do từ chối")
+        with self.transaction():
+            request, _, _ = self._lock(request_id)
+            if request.Status not in (PENDING, APPROVED, RECEIVING, PROCESSING):
+                raise BusinessRuleError("Phiếu đã đóng, không thể từ chối", code="service_request_closed")
+            old = request.Status
+            request.Status, request.DecisionReason = REJECTED, reason
+            if request.AssignedStaffId is None:
+                request.AssignedStaffId = actor.user_id
+            self._history(request, actor.user_id, old, REJECTED, f"Yêu cầu bị từ chối. Lý do: {reason}")
+            self._notify_customer(request, "Yêu cầu đổi/trả bị từ chối", f"Yêu cầu {request.RequestCode}. Lý do: {reason}")
+            self.requests.flush()
+            return self.get_return_request(actor, request_id)
+
     def list_return_requests(
         self,
         actor: Actor,
@@ -316,6 +369,7 @@ class ReturnService(BaseService):
         request_type: str | None = None,
         customer_id: uuid.UUID | None = None,
         assigned_staff_id: uuid.UUID | None = None,
+        pending_first: bool = False,
         page: int = 1,
         page_size: int = 20,
     ) -> PageResponse[AdminReturnRequestResponse]:
@@ -323,9 +377,11 @@ class ReturnService(BaseService):
         offset, limit = self._page_args(page, page_size)
         filters = {"customer_id": customer_id, "assigned_staff_id": assigned_staff_id, "status": status,
                    "request_type": request_type}
-        items = self.requests.list_requests(**filters, offset=offset, limit=limit)
+        items = self.requests.list_requests(**filters, pending_first=pending_first, offset=offset, limit=limit)
+        context = self.requests.get_admin_context([r.ReturnRequestId for r in items])
         return PageResponse[AdminReturnRequestResponse](
-            Items=[AdminReturnRequestResponse.model_validate(r) for r in items],
+            Items=[AdminReturnRequestResponse.model_validate(r).model_copy(update=context.get(r.ReturnRequestId, {}))
+                   for r in items],
             Total=self.requests.count_requests(**filters),
             Page=page,
             PageSize=page_size,
@@ -336,7 +392,8 @@ class ReturnService(BaseService):
         request = self.requests.get_detail(request_id)
         if request is None:
             raise NotFoundError("Không tìm thấy yêu cầu đổi/trả", code="return_request_not_found")
-        return AdminReturnRequestDetailResponse.model_validate(request)
+        context = self.requests.get_admin_context([request_id])
+        return AdminReturnRequestDetailResponse.model_validate(request).model_copy(update=context.get(request_id, {}))
 
     # ================================================================== Staff: xem xét / nhận hàng / kiểm tra
 

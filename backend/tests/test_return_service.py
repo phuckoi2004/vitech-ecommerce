@@ -930,7 +930,7 @@ class ReturnSchemaAndModelTest(unittest.TestCase):
         for name in ("CK_ReturnRequests_RequestType_Valid", "CK_ReturnRequests_Quantity_Positive",
                      "CK_ReturnRequests_Serial_SingleUnit", "CK_ReturnRequests_Inspection_Consistent",
                      "CK_ReturnRequests_Inspection_RequiresReceipt", "CK_ReturnRequests_Approval_RequiresAssessment",
-                     "CK_ReturnRequests_Refund_RequiresApprovedReturn", "CK_ReturnRequests_Completed_RequiresApproval"):
+                     "CK_ReturnRequests_Refund_RequiresApprovedReturn", "CK_ReturnRequests_Completed_RequiresTimestamp"):
             self.assertIn(name, checks)
         index = {i.name: i for i in table.indexes}["UX_ReturnRequests_Serial_Open"]
         self.assertTrue(index.unique)

@@ -98,6 +98,10 @@ class ConversationDetailResponse(ConversationResponse):
 
 class AdminConversationResponse(ConversationResponse):
     AssignedStaffId: uuid.UUID | None
+    # Read-only context for the internal inbox; never included in Customer schemas.
+    CustomerName: str | None = None
+    CustomerEmail: str | None = None
+    LastMessage: AdminMessageResponse | None = None
 
 
 class AdminConversationDetailResponse(AdminConversationResponse):

@@ -155,6 +155,14 @@ class ContentService(BaseService):
             self.articles.flush()
             return AdminNewsArticleResponse.model_validate(article)
 
+    def delete_article(self, actor: Actor, article_id: uuid.UUID) -> None:
+        """Admin explicitly deletes an article; storage files and the author's account remain intact."""
+        require_role(actor, *ADMIN_ONLY)
+        with self.transaction():
+            article = self._lock_article(article_id)
+            self.articles.delete(article)
+            self.articles.flush()
+
     # ================================================================== Banner: công khai
 
     def list_display_banners(self) -> list[BannerResponse]:
@@ -199,6 +207,14 @@ class ContentService(BaseService):
 
     def deactivate_banner(self, actor: Actor, banner_id: uuid.UUID) -> AdminBannerResponse:
         return self._set_banner_active(actor, banner_id, False)
+
+    def delete_banner(self, actor: Actor, banner_id: uuid.UUID) -> None:
+        """Admin deletes only the selected banner; storage images and creator remain intact."""
+        require_role(actor, *ADMIN_ONLY)
+        with self.transaction():
+            banner = self._lock_banner(banner_id)
+            self.banners.delete(banner)
+            self.banners.flush()
 
     # ================================================================== helpers
 

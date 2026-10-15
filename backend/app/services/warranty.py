@@ -1,4 +1,10 @@
-"""Warranty service (đợt 5.4): yêu cầu bảo hành từ khi khách gửi đến khi trả máy hoặc đổi máy thay thế.
+"""ACTIVE 15/10/2026: advance_status/reject_status drive the forward-only admin workflow.
+An operator selects a non-replacement result and publishes ResultNote directly to the customer;
+ResultApprovedAt/By record publication, not a second review. Repair-centre/replacement/old
+approval endpoints below are paused and retained for later consultation.
+
+Historical implementation notes (not the current workflow):
+Warranty service (đợt 5.4): yêu cầu bảo hành từ khi khách gửi đến khi trả máy hoặc đổi máy thay thế.
 
 Nguồn nghiệp vụ: docs/business-requirements.md mục 12, docs/database-schema.md 3.31, quyết định đợt 5.1.1 và 5.4.
 Luồng (Status / EligibilityStatus):
@@ -74,6 +80,7 @@ from app.schemas import (
 )
 
 from .actor import ADMIN_ONLY, CUSTOMER_ONLY, STAFF_OR_ADMIN, Actor, require_role
+from app.schemas.service_request import WarrantyProgressRequest
 from .base import BaseService, utc_now
 from .catalog import ProductVariantService
 from .exceptions import BusinessRuleError, ConflictError, NotFoundError
@@ -236,6 +243,76 @@ class WarrantyService(BaseService):
 
     # ================================================================== Staff / Admin: xem
 
+    @staticmethod
+    def progress_stage(request: WarrantyRequest) -> str:
+        if request.Status == NEW:
+            return "Inspecting" if request.ReceivedAt is not None else "New"
+        if request.Status in (HANDED_OVER, PROCESSING):
+            return "Finished" if request.ResultApprovedAt is not None else "Repairing"
+        return request.Status
+
+    def advance_status(self, actor: Actor, request_id: uuid.UUID, data: WarrantyProgressRequest) -> AdminWarrantyRequestDetailResponse:
+        """Active forward-only workflow. One Staff/Admin publishes the actual result; no repair-centre form.
+
+        ResultApprovedAt/By retain their columns and record confirmation/publication by the operator.
+        No separate reviewer, automatic stock movement, replacement or financial operation is performed.
+        """
+        require_role(actor, *STAFF_OR_ADMIN)
+        with self.transaction():
+            request, _ = self._lock(request_id)
+            stage = self.progress_stage(request)
+            if stage != data.ExpectedStage:
+                raise ConflictError("Phiếu đã thay đổi; hãy tải lại trước khi chuyển giai đoạn", code="service_request_stale")
+            if stage not in ("New", "Inspecting", "Repairing", "Finished"):
+                raise BusinessRuleError("Phiếu đã đóng", code="service_request_closed")
+            if stage != "Repairing" and (data.ResultType is not None or data.ResultNote is not None):
+                raise BusinessRuleError("Chỉ ghi kết quả khi hoàn tất xử lý", code="warranty_result_not_applicable")
+            old = request.Status
+            now = self.now()
+            if request.AssignedStaffId is None:
+                request.AssignedStaffId = actor.user_id
+            if stage == "New":
+                request.ReceivedAt = now
+                event = "Đã tiếp nhận yêu cầu, đang kiểm tra."
+            elif stage == "Inspecting":
+                request.Status = PROCESSING
+                request.EligibilityStatus = ELIGIBLE
+                event = "Đang xử lý bảo hành."
+            elif stage == "Repairing":
+                if data.ResultType not in ("Repaired", "PartReplaced", "NotRepairable"):
+                    raise BusinessRuleError("Cần chọn kết quả bảo hành; tạm thời không hỗ trợ đổi máy", code="warranty_result_required")
+                note = required_text(data.ResultNote, code="result_note_required", message="Cần ghi nhận kết quả gửi cho khách")
+                request.Status = PROCESSING
+                request.ResultType, request.ResultNote = data.ResultType, note
+                request.ResultProposedByUserId = request.ResultApprovedByUserId = actor.user_id
+                request.ResultProposedAt = request.ResultApprovedAt = now
+                event = f"Kết quả bảo hành: {_RESULT_LABELS[data.ResultType]}. {note}"
+            else:
+                if request.ResultType == RESULT_PRODUCT_REPLACED:
+                    raise BusinessRuleError("Phiếu đổi máy cũ cần được xử lý riêng; tạm thời không hỗ trợ đổi máy", code="warranty_replacement_paused")
+                request.Status, request.CompletedAt = COMPLETED, now
+                event = "Đã trả sản phẩm cho khách, đóng phiếu bảo hành."
+            self._history(request, actor.user_id, old, request.Status, event)
+            self._notify_customer(request, "Cập nhật yêu cầu bảo hành", f"Yêu cầu {request.RequestCode}: {event}")
+            self.requests.flush()
+            return self.get_warranty_request(actor, request_id)
+
+    def reject_status(self, actor: Actor, request_id: uuid.UUID, data: ServiceRequestRejection) -> AdminWarrantyRequestDetailResponse:
+        require_role(actor, *STAFF_OR_ADMIN)
+        reason = required_text(data.Reason, code="rejection_reason_required", message="Cần ghi lý do từ chối")
+        with self.transaction():
+            request, _ = self._lock(request_id)
+            if request.Status not in (NEW, HANDED_OVER, PROCESSING):
+                raise BusinessRuleError("Phiếu đã đóng, không thể từ chối", code="service_request_closed")
+            old = request.Status
+            request.Status, request.EligibilityStatus, request.EligibilityReason = REJECTED, INELIGIBLE, reason
+            if request.AssignedStaffId is None:
+                request.AssignedStaffId = actor.user_id
+            self._history(request, actor.user_id, old, REJECTED, f"Yêu cầu bị từ chối. Lý do: {reason}")
+            self._notify_customer(request, "Yêu cầu bảo hành bị từ chối", f"Yêu cầu {request.RequestCode}. Lý do: {reason}")
+            self.requests.flush()
+            return self.get_warranty_request(actor, request_id)
+
     def list_warranty_requests(
         self,
         actor: Actor,
@@ -253,8 +330,10 @@ class WarrantyService(BaseService):
         filters = {"customer_id": customer_id, "assigned_staff_id": assigned_staff_id, "supplier_id": supplier_id,
                    "status": status, "eligibility_status": eligibility_status}
         items = self.requests.list_requests(**filters, offset=offset, limit=limit)
+        context = self.requests.get_admin_context([r.WarrantyRequestId for r in items])
         return PageResponse[AdminWarrantyRequestResponse](
-            Items=[AdminWarrantyRequestResponse.model_validate(r) for r in items],
+            Items=[AdminWarrantyRequestResponse.model_validate(r).model_copy(update=context.get(r.WarrantyRequestId, {}))
+                   for r in items],
             Total=self.requests.count_requests(**filters),
             Page=page,
             PageSize=page_size,
@@ -265,7 +344,8 @@ class WarrantyService(BaseService):
         request = self.requests.get_detail(request_id)
         if request is None:
             raise NotFoundError("Không tìm thấy yêu cầu bảo hành", code="warranty_request_not_found")
-        return AdminWarrantyRequestDetailResponse.model_validate(request)
+        context = self.requests.get_admin_context([request_id])
+        return AdminWarrantyRequestDetailResponse.model_validate(request).model_copy(update=context.get(request_id, {}))
 
     # ================================================================== Staff: tiếp nhận / kiểm tra / bàn giao
 

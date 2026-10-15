@@ -17,6 +17,7 @@ from datetime import datetime
 from decimal import Decimal
 
 from sqlalchemy.orm import Session
+from app.core.catalog_media import default_variant_id, merge_specifications, variant_images
 
 from app.models import Category, Product, ProductImage, ProductSerial, ProductVariant
 from app.repositories import (
@@ -321,7 +322,18 @@ class ProductService(BaseService):
         # Chỉ hiển thị biến thể đang bán.
         visible = {v.ProductVariantId for v in product.variants if is_variant_sellable(v)}
         response.Variants = [v for v in response.Variants if v.ProductVariantId in visible]
+        self._detail_media(response, product)
         return response
+
+    @staticmethod
+    def _detail_media(response, product):
+        visible = {variant.ProductVariantId for variant in response.Variants if not getattr(variant, "IsDeleted", False)}
+        default = default_variant_id(product)
+        response.DefaultVariantId = default if default in visible else min(visible, key=str, default=None)
+        for variant_id in visible:
+            images, thumbnail = variant_images(product, variant_id)
+            response.VariantImages[variant_id] = [ProductImageResponse.model_validate(image).model_copy(
+                update={"IsDefault": image.ImageUrl == thumbnail}) for image in images]
 
     # ---------------------------------------------------------- Admin / Staff
 
@@ -383,7 +395,9 @@ class ProductService(BaseService):
         product = self.products.get_detail(product_id)
         if product is None:
             raise NotFoundError("Không tìm thấy sản phẩm", code="product_not_found")
-        return AdminProductDetailResponse.model_validate(product)
+        response = AdminProductDetailResponse.model_validate(product)
+        self._detail_media(response, product)
+        return response
 
     def create_product(self, actor: Actor, data: ProductCreate) -> AdminProductResponse:
         require_role(actor, *ADMIN_ONLY)
@@ -401,8 +415,12 @@ class ProductService(BaseService):
         """Cập nhật thông tin; ẩn sản phẩm bằng cách đổi Status."""
         require_role(actor, *ADMIN_ONLY)
         with self.transaction():
-            product = self._get_active(product_id)
+            product = self.products.get_by_id_for_update(product_id)
+            if product is None or product.IsDeleted:
+                raise NotFoundError("Không tìm thấy sản phẩm", code="product_not_found")
             values = data.model_dump(exclude_unset=True)
+            if "Specifications" in values:
+                values["Specifications"] = merge_specifications(product.Specifications, values["Specifications"])
             self._ensure_references(values)
             if "WarrantyMonths" in values:
                 validate_warranty_months(values["WarrantyMonths"])
@@ -455,12 +473,11 @@ class ProductVariantService(BaseService):
         items = []
         for variant in variants:
             product = variant.product
-            images = sorted(product.images, key=lambda image: (not image.IsDefault, image.DisplayOrder,
-                                                                str(image.ProductImageId)))
+            _, thumbnail = variant_images(product, variant.ProductVariantId)
             items.append(AdminProductVariantListResponse(
                 **AdminProductVariantResponse.model_validate(variant).model_dump(),
                 Name=product.Name, Status=product.Status, Category=product.category, Brand=product.brand,
-                ThumbnailUrl=images[0].ImageUrl if images else None,
+                ThumbnailUrl=thumbnail,
                 IsLowStock=variant.StockQuantity > 0 and variant.MinStockLevel > 0
                 and variant.StockQuantity <= variant.MinStockLevel,
             ))

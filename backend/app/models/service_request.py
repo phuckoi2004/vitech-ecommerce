@@ -60,14 +60,11 @@ class WarrantyRequest(Base):
             name="Replacement_OnlyProductReplaced",
         ),
         CheckConstraint('"ResultApprovedAt" IS NULL OR "ResultType" IS NOT NULL', name="Approval_RequiresResult"),
-        # Đợt 5.4.1 (migration e6a2d9c4b8f1): kết quả phải có người/thời điểm đề xuất; người duyệt khác người đề xuất.
+        # Keep the time at which the operator recorded the result.
         CheckConstraint('"ResultType" IS NULL OR "ResultProposedAt" IS NOT NULL', name="Proposal_Recorded"),
-        CheckConstraint(
-            '"ResultApprovedByUserId" IS NULL OR "ResultProposedByUserId" IS NULL '
-            'OR "ResultApprovedByUserId" <> "ResultProposedByUserId"',
-            name="Approval_NotByProposer",
-        ),
-        # Hoàn tất cần kết quả đã được Admin duyệt; đổi máy cần đã bàn giao máy thay thế.
+        # 15/10/2026: one Staff/Admin confirms and publishes the actual result.
+        # Keep proposal/confirmation columns as an audit trail; no independent reviewer.
+        # Closing requires a confirmed/published result; replacement records are retained for history only.
         CheckConstraint(
             "\"Status\" <> 'Completed' OR (\"CompletedAt\" IS NOT NULL AND \"ResultType\" IS NOT NULL "
             "AND \"ResultApprovedAt\" IS NOT NULL "
@@ -187,10 +184,8 @@ class ReturnRequest(Base):
             'AND "CompensationApprovedAt" IS NOT NULL)',
             name="Refund_RequiresApprovedReturn",
         ),
-        CheckConstraint(
-            "\"Status\" <> 'Completed' OR (\"CompletedAt\" IS NOT NULL AND \"CompensationApprovedAt\" IS NOT NULL)",
-            name="Completed_RequiresApproval",
-        ),
+        # Status completion is independent from money/refunds in the active workflow.
+        CheckConstraint("\"Status\" <> 'Completed' OR \"CompletedAt\" IS NOT NULL", name="Completed_RequiresTimestamp"),
     )
 
     ReturnRequestId: Mapped[uuid.UUID] = mapped_column(

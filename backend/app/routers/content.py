@@ -3,7 +3,7 @@
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query, Response, status
 
 from app.schemas import (
     AdminBannerResponse,
@@ -81,6 +81,12 @@ def hide_news(article_id: uuid.UUID, service: Content, actor: CurrentActor):
     return service.hide_article(actor, article_id)
 
 
+@admin_router.delete("/news/{article_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_news(article_id: uuid.UUID, service: Content, actor: CurrentActor):
+    service.delete_article(actor, article_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
 # ------------------------------------------------------------------ banners (Admin)
 
 
@@ -112,3 +118,9 @@ def activate_banner(banner_id: uuid.UUID, service: Content, actor: CurrentActor)
 @admin_router.post("/banners/{banner_id}/deactivate", response_model=AdminBannerResponse)
 def deactivate_banner(banner_id: uuid.UUID, service: Content, actor: CurrentActor):
     return service.deactivate_banner(actor, banner_id)
+
+
+@admin_router.delete("/banners/{banner_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_banner(banner_id: uuid.UUID, service: Content, actor: CurrentActor):
+    service.delete_banner(actor, banner_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

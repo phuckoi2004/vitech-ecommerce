@@ -506,6 +506,16 @@ class FakeConversationRepo(FakeRepo):
 
     model = Conversation
 
+    def get_support_context(self, conversation_ids):
+        context = {}
+        for id_ in conversation_ids:
+            conversation = self.db.get(Conversation, id_)
+            customer = self.db.get(User, conversation.CustomerId)
+            messages = sorted(self.db.rows(Message), key=lambda m: (m.SentAt, str(m.MessageId)))
+            latest = next((m for m in reversed(messages) if m.ConversationId == id_), None)
+            context[id_] = (customer.FullName, customer.Email, latest)
+        return context
+
     def create(self, values):
         if values.get("Status") == "Open" and self.get_open_by_customer(values["CustomerId"]) is not None:
             orig = SimpleNamespace(sqlstate="23505", diag=SimpleNamespace(constraint_name="UX_Conversations_CustomerId_Open"))
@@ -922,6 +932,26 @@ class FakeWarrantyRequestRepo(FakeRepo):
 
     model = WarrantyRequest
 
+    def get_admin_context(self, request_ids):
+        result = {}
+        for request in self._rows(lambda r: r.WarrantyRequestId in request_ids):
+            customer = self.db.get(User, request.CustomerId)
+            item = self.db.get(OrderItem, request.OrderItemId)
+            order = self.db.get(Order, item.OrderId) if item else None
+            serial = self.db.get(ProductSerial, request.ProductSerialId) if request.ProductSerialId else None
+            result[request.WarrantyRequestId] = {
+                "CustomerName": customer.FullName if customer else None,
+                "ProductName": item.ProductName if item else None,
+                "Sku": item.Sku if item else None,
+                "VariantInfo": item.VariantInfo if item else None,
+                "OrderId": order.OrderId if order else None,
+                "OrderCode": order.OrderCode if order else None,
+                "SerialNumber": serial.SerialNumber if serial else None,
+                "WarrantyEndDate": serial.WarrantyEndDate if serial else None,
+                "AssignedStaffName": self.db.get(User, request.AssignedStaffId).FullName if request.AssignedStaffId else None,
+            }
+        return result
+
     def list_by_product_serial(self, product_serial_id):
         return sorted(self._rows(lambda r: r.ProductSerialId == product_serial_id),
                       key=lambda r: (r.RequestedAt, str(r.WarrantyRequestId)), reverse=True)
@@ -994,6 +1024,23 @@ class FakeReturnRequestRepo(FakeRepo):
 
     model = ReturnRequest
 
+    def get_admin_context(self, request_ids):
+        result = {}
+        for request in self._rows(lambda r: r.ReturnRequestId in request_ids):
+            customer = self.db.get(User, request.CustomerId)
+            item = self.db.get(OrderItem, request.OrderItemId)
+            order = self.db.get(Order, item.OrderId) if item else None
+            result[request.ReturnRequestId] = {
+                "CustomerName": customer.FullName if customer else None,
+                "ProductName": item.ProductName if item else None,
+                "Sku": item.Sku if item else None,
+                "VariantInfo": item.VariantInfo if item else None,
+                "OrderId": order.OrderId if order else None,
+                "OrderCode": order.OrderCode if order else None,
+                "AssignedStaffName": self.db.get(User, request.AssignedStaffId).FullName if request.AssignedStaffId else None,
+            }
+        return result
+
     def create(self, values):
         constraint = None
         if self.exists_by_code(values["RequestCode"]):
@@ -1045,8 +1092,12 @@ class FakeReturnRequestRepo(FakeRepo):
             reverse=True,
         )
 
-    def list_requests(self, *, offset=None, limit=None, **filters):
-        return self._filtered(**filters)
+    def list_requests(self, *, pending_first=False, offset=None, limit=None, **filters):
+        rows = self._filtered(**filters)
+        rows.sort(key=lambda r: (-(r.RequestedAt.timestamp()), str(r.ReturnRequestId)))
+        if pending_first:
+            rows.sort(key=lambda r: r.Status != "Pending")
+        return rows[offset or 0:None if limit is None else (offset or 0) + limit]
 
     def count_requests(self, **filters):
         return len(self._filtered(**filters))

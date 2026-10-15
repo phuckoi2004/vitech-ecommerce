@@ -8,7 +8,8 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import Any
 
-from pydantic import Field
+from pydantic import Field, field_validator
+from app.core.catalog_media import technical_specifications, validate_specifications
 
 from .common import (
     Money,
@@ -126,6 +127,8 @@ class ProductCreate(RequestSchema):
     WarrantyMonths: NonNegativeInt
     Status: ProductStatus
 
+    _specifications = field_validator("Specifications")(validate_specifications)
+
 
 class ProductUpdate(RequestSchema):
     NULLABLE_FIELDS = frozenset({"Description", "Specifications"})
@@ -138,6 +141,8 @@ class ProductUpdate(RequestSchema):
     Specifications: dict[str, Any] | None = None
     WarrantyMonths: NonNegativeInt | None = None
     Status: ProductStatus | None = None
+
+    _specifications = field_validator("Specifications")(validate_specifications)
 
 
 class ProductSummary(ResponseSchema):
@@ -160,6 +165,8 @@ class ProductResponse(ProductSummary):
     WarrantyMonths: int
     CreatedAt: datetime
     UpdatedAt: datetime
+
+    _specifications = field_validator("Specifications")(technical_specifications)
 
 
 class AdminProductResponse(ProductResponse):
@@ -288,6 +295,8 @@ class ProductDetailResponse(ProductResponse):
     Brand: BrandSummary = relation_field("brand")
     Variants: list[ProductVariantResponse] = relation_field("variants")
     Images: list[ProductImageResponse] = relation_field("images")
+    DefaultVariantId: uuid.UUID | None = None
+    VariantImages: dict[uuid.UUID, list[ProductImageResponse]] = Field(default_factory=dict)
 
 
 class AdminProductDetailResponse(AdminProductResponse):
@@ -295,6 +304,8 @@ class AdminProductDetailResponse(AdminProductResponse):
     Brand: BrandSummary = relation_field("brand")
     Variants: list[AdminProductVariantResponse] = relation_field("variants")
     Images: list[ProductImageResponse] = relation_field("images")
+    DefaultVariantId: uuid.UUID | None = None
+    VariantImages: dict[uuid.UUID, list[ProductImageResponse]] = Field(default_factory=dict)
 
 
 # ---------------------------------------------------------------------------

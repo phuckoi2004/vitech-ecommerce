@@ -150,7 +150,7 @@ class ChatService(BaseService):
         with self.transaction():
             conversation = self._lock(conversation_id)
             if conversation.AssignedStaffId == actor.user_id:
-                return AdminConversationResponse.model_validate(conversation)  # gọi lặp: không đổi gì
+                return self._admin_responses([conversation], AdminConversationResponse)[0]  # gọi lặp: không đổi gì
             if conversation.Status != STATUS_OPEN:
                 raise BusinessRuleError("Hội thoại đã đóng", code="conversation_closed")
             if conversation.AssignedStaffId is not None:
@@ -159,7 +159,7 @@ class ChatService(BaseService):
                 raise BusinessRuleError("Chỉ nhận hội thoại ở chế độ nhân viên", code="conversation_not_claimable")
             conversation.AssignedStaffId = actor.user_id
             self.conversations.flush()
-            return AdminConversationResponse.model_validate(conversation)
+            return self._admin_responses([conversation], AdminConversationResponse)[0]
 
     def close_conversation(
         self, actor: Actor, conversation_id: uuid.UUID
@@ -183,7 +183,9 @@ class ChatService(BaseService):
             conversation.Status = STATUS_CLOSED
             conversation.ClosedAt = self.now()
             self.conversations.flush()
-            return _conversation_schema(actor).model_validate(conversation)
+            if has_role(actor, "Customer"):
+                return ConversationResponse.model_validate(conversation)
+            return self._admin_responses([conversation], AdminConversationResponse)[0]
 
     # ------------------------------------------------------------------ Xem
 
@@ -195,7 +197,9 @@ class ChatService(BaseService):
         if conversation is None or not self._can_view(actor, conversation):
             raise NotFoundError("Không tìm thấy hội thoại", code="conversation_not_found")
         schema = ConversationDetailResponse if has_role(actor, "Customer") else AdminConversationDetailResponse
-        return schema.model_validate(conversation)
+        if has_role(actor, "Customer"):
+            return schema.model_validate(conversation)
+        return self._admin_responses([conversation], schema)[0]
 
     def list_messages(
         self, actor: Actor, conversation_id: uuid.UUID, *, page: int = 1, page_size: int = 50
@@ -322,6 +326,18 @@ class ChatService(BaseService):
             raise NotFoundError("Không tìm thấy sản phẩm", code="product_not_found")
         return {"ProductId": str(product.ProductId), "ProductName": product.Name, "Slug": product.Slug}
 
+    def _admin_responses(self, conversations: list[Conversation], schema: type[AdminConversationResponse]) -> list:
+        context = self.conversations.get_support_context([c.ConversationId for c in conversations])
+        responses = []
+        for conversation in conversations:
+            name, email, last_message = context.get(conversation.ConversationId, (None, None, None))
+            responses.append(schema.model_validate(conversation).model_copy(update={
+                "CustomerName": name,
+                "CustomerEmail": email,
+                "LastMessage": AdminMessageResponse.model_validate(last_message) if last_message is not None else None,
+            }))
+        return responses
+
     def _page(
         self, *, page: int, page_size: int, schema: type[ConversationResponse] = ConversationResponse, **filters: Any
     ) -> PageResponse[ConversationResponse]:
@@ -331,16 +347,11 @@ class ChatService(BaseService):
         offset, limit = self._page_args(page, page_size)
         items = self.conversations.list_conversations(**filters, offset=offset, limit=limit)
         return PageResponse[schema](
-            Items=[schema.model_validate(c) for c in items],
+            Items=self._admin_responses(items, schema) if issubclass(schema, AdminConversationResponse) else [schema.model_validate(c) for c in items],
             Total=self.conversations.count_conversations(**filters),
             Page=page,
             PageSize=page_size,
         )
-
-
-def _conversation_schema(actor: Actor) -> type[ConversationResponse]:
-    """Customer: không có AssignedStaffId; Staff/Admin: đủ thông tin phân công."""
-    return ConversationResponse if has_role(actor, "Customer") else AdminConversationResponse
 
 
 def _message_schema(actor: Actor) -> type[MessageResponse] | type[AdminMessageResponse]:

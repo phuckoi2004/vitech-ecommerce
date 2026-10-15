@@ -119,6 +119,7 @@ def get_payment_service(
 def get_return_service(
     db: Database,
     policy: Annotated[ReturnPolicy, Depends(get_return_policy)],
-    gateway: Annotated[PaymentGateway | None, Depends(get_payment_gateway)],
 ) -> ReturnService:
-    return ReturnService(db, policy=policy, gateway=gateway)
+    # Status-only returns do not initialize or depend on the payment gateway.
+    # TODO: restore the gateway dependency with the deferred refund workflow.
+    return ReturnService(db, policy=policy)

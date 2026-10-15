@@ -18,6 +18,77 @@ class StatisticsPeriod(ResponseSchema):
     EndsBefore: datetime
 
 
+class ReportOption(ResponseSchema):
+    Id: uuid.UUID
+    Name: str
+
+
+class ReportProductOption(ReportOption):
+    CategoryId: uuid.UUID
+    BrandId: uuid.UUID
+
+
+class ReportOptionsResponse(ResponseSchema):
+    Categories: list[ReportOption]
+    Brands: list[ReportOption]
+    Products: list[ReportProductOption]
+
+
+class ReportSummary(ResponseSchema):
+    TotalOrders: int = 0
+    DeliveredOrders: int = 0
+    CancelledOrders: int = 0
+    Revenue: Decimal = Decimal('0')
+    AverageOrderValue: Decimal = Decimal('0')
+    PeakRevenue: Decimal = Decimal('0')
+
+
+class ReportPoint(ReportSummary):
+    DateFrom: date
+    DateTo: date
+    Label: str
+
+
+class SalesReportItem(ResponseSchema):
+    Key: str
+    DateFrom: date
+    DateTo: date
+    ProductId: uuid.UUID
+    ProductName: str
+    CategoryName: str
+    BrandName: str
+    Revenue: Decimal
+
+
+class OrderReportItem(ResponseSchema):
+    Key: str
+    DateFrom: date
+    DateTo: date
+    TotalOrders: int
+    DeliveredOrders: int
+    CancelledOrders: int
+
+
+class SalesReportResponse(ResponseSchema):
+    Period: StatisticsPeriod
+    Summary: ReportSummary
+    Chart: list[ReportPoint]
+    Items: list[SalesReportItem]
+    Total: int
+    Page: int
+    PageSize: int
+
+
+class OrderReportResponse(ResponseSchema):
+    Period: StatisticsPeriod
+    Summary: ReportSummary
+    Chart: list[ReportPoint]
+    Items: list[OrderReportItem]
+    Total: int
+    Page: int
+    PageSize: int
+
+
 class OrderStatisticsResponse(ResponseSchema):
     """Đơn đặt trong khoảng (theo OrderedAt). Completed = hoàn tất; Delivered = đã giao, chưa hoàn tất;
     InProgress = Pending + Confirmed + Processing + Shipping."""

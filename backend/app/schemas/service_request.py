@@ -1,5 +1,12 @@
 """Schemas cho WarrantyRequests, ReturnRequests, ServiceRequestAttachments, ServiceRequestHistories.
 
+ACTIVE 15/10/2026: ReturnProgressRequest/WarrantyProgressRequest advance the status-only
+workflow. Warranty ResultApprovedAt/By now also record direct publication by Staff/Admin.
+Deferred finance and repair-centre schemas below are retained for future consultation,
+but their former HTTP write endpoints are paused. No refund is implied by Completed.
+
+Historical schema notes:
+
 WarrantyRequests:
 - EligibilityStatus = kết quả kiểm tra điều kiện bảo hành (Pending, Eligible, Ineligible).
 - Status = trạng thái xử lý yêu cầu (không có Approved).
@@ -16,7 +23,7 @@ khách hàng chỉ trả lịch sử công khai (bỏ dòng IsInternal, không c
 """
 
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any, Literal
 
 from pydantic import Field, model_validator
@@ -204,6 +211,15 @@ class WarrantyRequestDetailResponse(WarrantyRequestResponse):
 
 class AdminWarrantyRequestResponse(_WarrantyRequestFields):
     CustomerId: uuid.UUID
+    CustomerName: str | None = None
+    ProductName: str | None = None
+    Sku: str | None = None
+    VariantInfo: str | None = None
+    OrderId: uuid.UUID | None = None
+    OrderCode: str | None = None
+    SerialNumber: str | None = None
+    AssignedStaffName: str | None = None
+    WarrantyEndDate: date | None = None
     AssignedStaffId: uuid.UUID | None
     SupplierId: uuid.UUID | None
     ResultProposedByUserId: uuid.UUID | None
@@ -321,6 +337,13 @@ class ReturnRequestDetailResponse(ReturnRequestResponse):
 
 class AdminReturnRequestResponse(_ReturnRequestFields):
     CustomerId: uuid.UUID
+    CustomerName: str | None = None
+    ProductName: str | None = None
+    Sku: str | None = None
+    VariantInfo: str | None = None
+    OrderId: uuid.UUID | None = None
+    OrderCode: str | None = None
+    AssignedStaffName: str | None = None
     AssignedStaffId: uuid.UUID | None
     CompensationBasis: dict[str, Any] | None
     CompensationApprovedByUserId: uuid.UUID | None
@@ -329,3 +352,15 @@ class AdminReturnRequestResponse(_ReturnRequestFields):
 class AdminReturnRequestDetailResponse(AdminReturnRequestResponse):
     Attachments: list[ServiceRequestAttachmentResponse] = relation_field("attachments")
     Histories: list[AdminServiceRequestHistoryResponse] = relation_field("histories")
+
+
+class ReturnProgressRequest(RequestSchema):
+    """One forward step; the observed state prevents stale/repeated clicks from skipping stages."""
+    ExpectedStatus: ReturnRequestStatus
+
+
+class WarrantyProgressRequest(RequestSchema):
+    NULLABLE_FIELDS = frozenset({"ResultType", "ResultNote"})
+    ExpectedStage: Literal["New", "Inspecting", "Repairing", "Finished"]
+    ResultType: Literal["Repaired", "PartReplaced", "NotRepairable"] | None = None
+    ResultNote: str | None = None

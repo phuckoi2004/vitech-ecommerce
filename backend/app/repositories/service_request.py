@@ -5,10 +5,10 @@ Không quyết định điều kiện bảo hành, duyệt đổi trả, bàn gi
 
 import uuid
 
-from sqlalchemy import select
-from sqlalchemy.orm import selectinload
+from sqlalchemy import case, select
+from sqlalchemy.orm import aliased, selectinload
 
-from app.models import OrderItem, ReturnRequest, ServiceRequestAttachment, ServiceRequestHistory, WarrantyRequest
+from app.models import Order, OrderItem, ProductSerial, ReturnRequest, ServiceRequestAttachment, ServiceRequestHistory, User, WarrantyRequest
 from app.models.service_request import RETURN_OPEN_STATUSES, WARRANTY_OPEN_STATUSES
 
 from .base import BaseRepository
@@ -16,6 +16,27 @@ from .base import BaseRepository
 
 class WarrantyRequestRepository(BaseRepository[WarrantyRequest]):
     model = WarrantyRequest
+
+    def get_admin_context(self, request_ids: list[uuid.UUID]) -> dict[uuid.UUID, dict]:
+        """Read display context together, using the original order-item name and the exact requested serial."""
+        if not request_ids:
+            return {}
+        staff = aliased(User)
+        stmt = (
+            select(WarrantyRequest.WarrantyRequestId, User.FullName.label("CustomerName"),
+                   OrderItem.ProductName, OrderItem.Sku, OrderItem.VariantInfo, Order.OrderId, Order.OrderCode,
+                   ProductSerial.SerialNumber, ProductSerial.WarrantyEndDate,
+                   staff.FullName.label("AssignedStaffName"))
+            .select_from(WarrantyRequest)
+            .outerjoin(User, User.UserId == WarrantyRequest.CustomerId)
+            .outerjoin(OrderItem, OrderItem.OrderItemId == WarrantyRequest.OrderItemId)
+            .outerjoin(Order, Order.OrderId == OrderItem.OrderId)
+            .outerjoin(ProductSerial, ProductSerial.ProductSerialId == WarrantyRequest.ProductSerialId)
+            .outerjoin(staff, staff.UserId == WarrantyRequest.AssignedStaffId)
+            .where(WarrantyRequest.WarrantyRequestId.in_(request_ids))
+        )
+        return {row.WarrantyRequestId: {key: value for key, value in row.items() if key != "WarrantyRequestId"}
+                for row in self.session.execute(stmt).mappings()}
 
     def get_by_code(self, request_code: str) -> WarrantyRequest | None:
         return self.get_one(WarrantyRequest.RequestCode == request_code)
@@ -131,6 +152,25 @@ class WarrantyRequestRepository(BaseRepository[WarrantyRequest]):
 class ReturnRequestRepository(BaseRepository[ReturnRequest]):
     model = ReturnRequest
 
+    def get_admin_context(self, request_ids: list[uuid.UUID]) -> dict[uuid.UUID, dict]:
+        """Read display fields in one query, retaining the order item's historical SKU/name."""
+        if not request_ids:
+            return {}
+        staff = aliased(User)
+        stmt = (
+            select(ReturnRequest.ReturnRequestId, User.FullName.label("CustomerName"),
+                   OrderItem.ProductName, OrderItem.Sku, OrderItem.VariantInfo, Order.OrderId, Order.OrderCode,
+                   staff.FullName.label("AssignedStaffName"))
+            .select_from(ReturnRequest)
+            .outerjoin(User, User.UserId == ReturnRequest.CustomerId)
+            .outerjoin(OrderItem, OrderItem.OrderItemId == ReturnRequest.OrderItemId)
+            .outerjoin(Order, Order.OrderId == OrderItem.OrderId)
+            .outerjoin(staff, staff.UserId == ReturnRequest.AssignedStaffId)
+            .where(ReturnRequest.ReturnRequestId.in_(request_ids))
+        )
+        return {row.ReturnRequestId: {key: value for key, value in row.items() if key != "ReturnRequestId"}
+                for row in self.session.execute(stmt).mappings()}
+
     def get_by_code(self, request_code: str) -> ReturnRequest | None:
         return self.get_one(ReturnRequest.RequestCode == request_code)
 
@@ -206,12 +246,16 @@ class ReturnRequestRepository(BaseRepository[ReturnRequest]):
         assigned_staff_id: uuid.UUID | None = None,
         status: str | None = None,
         request_type: str | None = None,
+        pending_first: bool = False,
         offset: int | None = None,
         limit: int | None = None,
     ) -> list[ReturnRequest]:
+        order = (ReturnRequest.RequestedAt.desc(), ReturnRequest.ReturnRequestId)
+        if pending_first:
+            order = (case((ReturnRequest.Status == "Pending", 0), else_=1), *order)
         return self.get_all(
             *self._filters(customer_id, assigned_staff_id, status, request_type),
-            order_by=(ReturnRequest.RequestedAt.desc(), ReturnRequest.ReturnRequestId),
+            order_by=order,
             offset=offset,
             limit=limit,
         )

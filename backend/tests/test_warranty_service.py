@@ -725,11 +725,10 @@ class ReviewRightsTest(WarrantyTestBase):
         self.propose(rid)
         self.assertEqual(self.approve(rid).ResultApprovedByUserId, self.admin.UserId)
 
-    def test_database_declares_four_eyes_constraint(self):
+    def test_database_allows_direct_result_publication_and_preserves_recorded_time(self):
         checks = {c.name: str(c.sqltext) for c in WarrantyRequest.__table__.constraints
                   if c.__class__.__name__ == "CheckConstraint"}
-        self.assertIn('"ResultApprovedByUserId" <> "ResultProposedByUserId"',
-                      checks["CK_WarrantyRequests_Approval_NotByProposer"])
+        self.assertNotIn("CK_WarrantyRequests_Approval_NotByProposer", checks)
         self.assertIn('"ResultProposedAt" IS NOT NULL', checks["CK_WarrantyRequests_Proposal_Recorded"])
 
 

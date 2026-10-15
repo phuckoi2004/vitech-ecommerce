@@ -2,16 +2,37 @@
 
 import uuid
 
-from sqlalchemy import select
-from sqlalchemy.orm import selectinload
+from sqlalchemy import func, select
+from sqlalchemy.orm import aliased, selectinload
 
-from app.models import Conversation, Message
+from app.models import Conversation, Message, User
 
 from .base import BaseRepository
 
 
 class ConversationRepository(BaseRepository[Conversation]):
     model = Conversation
+
+    def get_support_context(self, conversation_ids: list[uuid.UUID]) -> dict:
+        """Only enrich IDs already authorized by the service; two queries per page, no N+1/history load."""
+        if not conversation_ids:
+            return {}
+        customers = self.session.execute(
+            select(Conversation.ConversationId, User.FullName, User.Email)
+            .join(User, User.UserId == Conversation.CustomerId)
+            .where(Conversation.ConversationId.in_(conversation_ids))
+        ).all()
+        ranked = select(
+            Message,
+            func.row_number().over(
+                partition_by=Message.ConversationId,
+                order_by=(Message.SentAt.desc(), Message.MessageId.desc()),
+            ).label("message_rank"),
+        ).where(Message.ConversationId.in_(conversation_ids)).subquery()
+        latest = aliased(Message, ranked)
+        messages = self.session.scalars(select(latest).where(ranked.c.message_rank == 1)).all()
+        by_id = {message.ConversationId: message for message in messages}
+        return {id_: (name, email, by_id.get(id_)) for id_, name, email in customers}
 
     def get_detail(self, conversation_id: uuid.UUID) -> Conversation | None:
         """Conversation kèm toàn bộ Messages; với hội thoại dài nên dùng MessageRepository có phân trang."""

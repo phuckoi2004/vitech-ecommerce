@@ -8,6 +8,7 @@ from pydantic import Field, field_validator, model_validator
 
 from .catalog import AdminProductVariantListResponse, ProductImageResponse
 from .common import Money, NonNegativeInt, ProductStatus, RequestSchema, varchar
+from app.core.catalog_media import technical_specifications, validate_specifications
 
 
 class CatalogItemImage(RequestSchema):
@@ -37,6 +38,7 @@ class CatalogProductWrite(RequestSchema):
     Description: str | None = None
     Specifications: dict[str, Any] | None = None
     Images: list[CatalogItemImage] = Field(default_factory=list)
+    _specifications = field_validator("Specifications")(validate_specifications)
 
     @field_validator("Name")
     @classmethod
@@ -55,7 +57,7 @@ class CatalogProductWrite(RequestSchema):
 class CatalogVariantWrite(RequestSchema):
     """No parent metadata, ProductId, stock or cost may be changed by a variant edit."""
 
-    NULLABLE_FIELDS = frozenset({"Storage"})
+    NULLABLE_FIELDS = frozenset({"Storage", "VariantImageUrls", "DefaultImageUrl"})
 
     Sku: varchar(50)
     Color: varchar(50)
@@ -64,6 +66,18 @@ class CatalogVariantWrite(RequestSchema):
     MinStockLevel: NonNegativeInt = 0
     IsActive: bool = True
     IsSerialTracked: bool = False
+    VariantImageUrls: list[varchar(500)] | None = None
+    DefaultImageUrl: varchar(500) | None = None
+    IsDefaultVariant: bool = False
+    AdditionalImages: list[CatalogItemImage] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def valid_image_selection(self):
+        if self.VariantImageUrls is not None and len(set(self.VariantImageUrls)) != len(self.VariantImageUrls):
+            raise ValueError("Không chọn trùng ảnh cho biến thể")
+        if self.DefaultImageUrl is not None and (self.VariantImageUrls is None or self.DefaultImageUrl not in self.VariantImageUrls):
+            raise ValueError("Ảnh đại diện phải nằm trong những ảnh đã chọn")
+        return self
 
     @field_validator("Sku", "Color")
     @classmethod
@@ -98,3 +112,7 @@ class CatalogItemResponse(AdminProductVariantListResponse):
     Description: str | None
     Specifications: dict[str, Any] | None
     Images: list[ProductImageResponse]
+    VariantImages: list[ProductImageResponse] = Field(default_factory=list)
+    DefaultVariantId: uuid.UUID | None = None
+    IsDefaultVariant: bool = False
+    _specifications = field_validator("Specifications")(technical_specifications)

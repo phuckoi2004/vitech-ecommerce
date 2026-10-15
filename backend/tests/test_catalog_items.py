@@ -13,6 +13,7 @@ from app.schemas import CartItemCreate
 from app.services import Actor, ProductService
 from app.services.wishlist_cart import CartService
 from tests.test_admin_product_list import catalog  # noqa: F401
+from app.core.catalog_media import MEDIA_KEY
 
 
 def shared_payload(product, **changes):
@@ -221,3 +222,92 @@ def test_internal_read_admin_write_and_deleted_parent_guards(catalog):
     assert client.put(url, json=variant_payload()).status_code == 404
     assert client.put(shared_url, json=shared_payload(products[0])).status_code == 404
     assert client.post("/admin/catalog-items", json={**variant_payload(), "ProductId": str(products[0].ProductId)}).status_code == 404
+
+
+def test_first_variant_is_default_and_siblings_choose_multiple_parent_images(catalog):
+    client, session, products, _ = catalog
+    urls = ["https://demo.supabase.co/white.png", "https://demo.supabase.co/back.png", "https://demo.supabase.co/black.png"]
+    response = client.post("/admin/catalog-items", json={**variant_payload(), "Product": shared_payload(products[0],
+        Name="Bộ ảnh", Specifications={"RAM": "16GB"}, Images=[{"ImageUrl": url} for url in urls]),
+        "VariantImageUrls": urls[:2], "DefaultImageUrl": urls[1]})
+    assert response.status_code == 201, response.text
+    first = response.json()
+    assert first["IsDefaultVariant"] and first["DefaultVariantId"] == first["ProductVariantId"]
+    assert first["ThumbnailUrl"] == urls[1] and len(first["Images"]) == 3
+    assert [image["ImageUrl"] for image in first["VariantImages"]] == urls[:2]
+    assert first["Specifications"] == {"RAM": "16GB"}
+    second_response = client.post("/admin/catalog-items", json={**variant_payload(Sku="MY-BLACK", Color="Đen"),
+        "ProductId": first["ProductId"], "VariantImageUrls": [urls[1], urls[2]], "DefaultImageUrl": urls[2]})
+    assert second_response.status_code == 201, second_response.text
+    second = second_response.json()
+    assert not second["IsDefaultVariant"] and second["DefaultVariantId"] == first["ProductVariantId"]
+    customer = ProductService(session).get_product_detail(uuid.UUID(first["ProductId"])).model_dump(mode="json")
+    assert customer["DefaultVariantId"] == first["ProductVariantId"]
+    assert [image["ImageUrl"] for image in customer["VariantImages"][second["ProductVariantId"]]] == [urls[1], urls[2]]
+    assert MEDIA_KEY not in customer["Specifications"]
+
+    response = client.put("/admin/catalog-items/" + second["ProductVariantId"], json={**variant_payload(Sku="MY-BLACK", Color="Đen"),
+        "VariantImageUrls": [urls[2]], "DefaultImageUrl": urls[2], "IsDefaultVariant": True})
+    assert response.status_code == 200, response.text
+    assert response.json()["IsDefaultVariant"]
+    untouched = client.get("/admin/catalog-items/" + first["ProductVariantId"]).json()
+    assert not untouched["IsDefaultVariant"] and untouched["ThumbnailUrl"] == urls[1]
+    assert [image["ImageUrl"] for image in untouched["VariantImages"]] == urls[:2]
+    assert client.get("/admin/variants", params={"keyword": "MY-BLACK"}).json()["Items"][0]["ThumbnailUrl"] == urls[2]
+
+
+def test_variant_can_append_uploaded_images_to_parent_gallery_atomically(catalog):
+    client, session, products, _ = catalog
+    product = products[2]
+    variant = selected(session, product)
+    url = "https://demo.supabase.co/new.png"
+    body = {**variant_payload(Sku=variant.Sku), "AdditionalImages": [{"ImageUrl": url}],
+            "VariantImageUrls": [url], "DefaultImageUrl": url}
+    response = client.put(f"/admin/catalog-items/{variant.ProductVariantId}", json=body)
+    assert response.status_code == 200, response.text
+    assert response.json()["ThumbnailUrl"] == url
+    assert len(client.get(f"/admin/products/{product.ProductId}").json()["Images"]) == 1
+    again = client.put(f"/admin/catalog-items/{variant.ProductVariantId}", json=body)
+    assert again.status_code == 200 and len(again.json()["Images"]) == 1
+    cleared = client.put(f"/admin/catalog-items/{variant.ProductVariantId}", json={**variant_payload(Sku=variant.Sku), "VariantImageUrls": [], "DefaultImageUrl": None})
+    assert cleared.status_code == 200
+    assert cleared.json()["VariantImages"] == [] and cleared.json()["ThumbnailUrl"] is None
+    assert len(cleared.json()["Images"]) == 1  # Clearing a SKU's selection never deletes its parent's gallery.
+
+
+def test_cross_product_selection_and_invalid_defaults_rollback_variant_and_gallery(catalog):
+    client, session, products, _ = catalog
+    variant = selected(session, products[2])
+    original_sku = variant.Sku
+    foreign = ProductImage(ProductId=products[1].ProductId, ImageUrl="https://demo.supabase.co/foreign.png")
+    session.add(foreign); session.commit()
+    response = client.put(f"/admin/catalog-items/{variant.ProductVariantId}", json={**variant_payload(Sku="FAILED"),
+        "AdditionalImages": [{"ImageUrl": "https://demo.supabase.co/new.png"}], "VariantImageUrls": [foreign.ImageUrl]})
+    assert response.status_code == 400 and response.json()["code"] == "variant_image_not_in_product"
+    assert variant.Sku == original_sku
+    assert client.get(f"/admin/products/{variant.ProductId}").json()["Images"] == []
+    for fields in [{"VariantImageUrls": [], "DefaultImageUrl": foreign.ImageUrl},
+                   {"VariantImageUrls": [foreign.ImageUrl, foreign.ImageUrl]}]:
+        assert client.put(f"/admin/catalog-items/{variant.ProductVariantId}", json={**variant_payload(), **fields}).status_code == 422
+
+
+def test_shared_specifications_and_gallery_edits_preserve_variant_assignments(catalog):
+    client, session, products, _ = catalog
+    product = products[2]
+    variant = selected(session, product)
+    url = "https://demo.supabase.co/chosen.png"
+    assert client.put(f"/admin/catalog-items/{variant.ProductVariantId}", json={**variant_payload(Sku=variant.Sku),
+        "AdditionalImages": [{"ImageUrl": url}], "VariantImageUrls": [url], "IsDefaultVariant": True}).status_code == 200
+    response = client.put(f"/admin/catalog-products/{product.ProductId}", json=shared_payload(product,
+        Specifications={"RAM": "32GB"}, Images=[{"ImageUrl": url}, {"ImageUrl": "https://demo.supabase.co/extra.png"}]))
+    assert response.status_code == 200, response.text
+    assert response.json()["Specifications"] == {"RAM": "32GB"}
+    detail = client.get(f"/admin/catalog-items/{variant.ProductVariantId}").json()
+    assert detail["IsDefaultVariant"] and detail["ThumbnailUrl"] == url
+    assert len(detail["VariantImages"]) == 1 and len(detail["Images"]) == 2
+    assert client.patch(f"/admin/products/{product.ProductId}", json={"Specifications": None}).status_code == 200
+    detail = client.get(f"/admin/catalog-items/{variant.ProductVariantId}").json()
+    assert detail["Specifications"] is None and detail["ThumbnailUrl"] == url
+    assert MEDIA_KEY in product.Specifications
+    assert client.put(f"/admin/catalog-products/{product.ProductId}", json=shared_payload(product,
+        Specifications={MEDIA_KEY: {}})).status_code == 422

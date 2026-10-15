@@ -1,8 +1,8 @@
 """Service request APIs: warranty and return/exchange requests.
 
 Customers create, follow and cancel their own requests; Staff/Admin process them under ``/admin``.
-Approval steps (warranty result, return approval, rejection after inspection) are Admin-only in the Services.
-Steps with an optional note accept an empty body.
+Active Staff/Admin workflow: forward-only status updates and direct warranty result publication.
+Legacy repair-centre, independent review and return finance endpoints are paused for consultation.
 """
 
 import uuid
@@ -36,6 +36,8 @@ from app.schemas import (
 )
 from app.services.returns import ReturnService
 from app.services.warranty import WarrantyService
+from app.schemas.service_request import ReturnProgressRequest, WarrantyProgressRequest
+from app.services import BusinessRuleError
 
 from .dependencies import (
     CurrentActor,
@@ -82,6 +84,23 @@ def cancel_warranty_request(request_id: uuid.UUID, service: Warranty, actor: Cur
 # ------------------------------------------------------------------ warranty (Staff/Admin)
 
 
+def paused_service_workflow():
+    # TODO: restore the former repair-centre/independent-approval/return-finance
+    # workflows only after business consultation. Retain the service implementations
+    # and stored financial evidence; no active HTTP endpoint may trigger them.
+    raise BusinessRuleError("Luồng xử lý cũ đang tạm dừng; dùng chuyển giai đoạn của phiếu", code="service_workflow_paused")
+
+
+@admin_router.post("/warranty-requests/{request_id}/advance", response_model=AdminWarrantyRequestDetailResponse)
+def advance_warranty(request_id: uuid.UUID, data: WarrantyProgressRequest, service: Warranty, actor: CurrentActor):
+    return service.advance_status(actor, request_id, data)
+
+
+@admin_router.post("/return-requests/{request_id}/advance", response_model=AdminReturnRequestDetailResponse)
+def advance_return(request_id: uuid.UUID, data: ReturnProgressRequest, service: Returns, actor: CurrentActor):
+    return service.advance_status(actor, request_id, data.ExpectedStatus)
+
+
 @admin_router.get("/warranty-requests", response_model=PageResponse[AdminWarrantyRequestResponse])
 def list_warranty_requests(service: Warranty, actor: CurrentActor, status_filter: StatusFilter = None,
                            eligibility_status: str | None = None, customer_id: uuid.UUID | None = None,
@@ -100,59 +119,59 @@ def get_warranty_request(request_id: uuid.UUID, service: Warranty, actor: Curren
 @admin_router.post("/warranty-requests/{request_id}/receive", response_model=AdminWarrantyRequestDetailResponse)
 def receive_warranty_request(request_id: uuid.UUID, service: Warranty, actor: CurrentActor,
                              data: ServiceRequestNote | None = None):
-    return service.receive_warranty_request(actor, request_id, data)
+    return service.advance_status(actor, request_id, WarrantyProgressRequest(ExpectedStage="New"))
 
 
 @admin_router.post("/warranty-requests/{request_id}/inspect", response_model=AdminWarrantyRequestDetailResponse)
 def inspect_warranty_request(request_id: uuid.UUID, data: WarrantyEligibilityUpdate, service: Warranty,
                              actor: CurrentActor):
-    return service.inspect_warranty_request(actor, request_id, data)
+    return paused_service_workflow()
 
 
 @admin_router.post("/warranty-requests/{request_id}/hand-over", response_model=AdminWarrantyRequestDetailResponse)
 def hand_over_warranty_request(request_id: uuid.UUID, data: WarrantyHandoverCreate, service: Warranty,
                                actor: CurrentActor):
-    return service.hand_over_warranty_request(actor, request_id, data)
+    return paused_service_workflow()
 
 
 @admin_router.post("/warranty-requests/{request_id}/start-processing",
                    response_model=AdminWarrantyRequestDetailResponse)
 def start_warranty_processing(request_id: uuid.UUID, service: Warranty, actor: CurrentActor,
                               data: ServiceRequestNote | None = None):
-    return service.start_warranty_processing(actor, request_id, data)
+    return paused_service_workflow()
 
 
 @admin_router.post("/warranty-requests/{request_id}/propose-result",
                    response_model=AdminWarrantyRequestDetailResponse)
 def propose_warranty_result(request_id: uuid.UUID, data: WarrantyResultProposal, service: Warranty,
                             actor: CurrentActor):
-    return service.propose_warranty_result(actor, request_id, data)
+    return paused_service_workflow()
 
 
 @admin_router.post("/warranty-requests/{request_id}/approve-result",
                    response_model=AdminWarrantyRequestDetailResponse)
 def approve_warranty_result(request_id: uuid.UUID, service: Warranty, actor: CurrentActor,
                             data: ServiceRequestNote | None = None):
-    return service.approve_warranty_result(actor, request_id, data)
+    return paused_service_workflow()
 
 
 @admin_router.post("/warranty-requests/{request_id}/reject-result",
                    response_model=AdminWarrantyRequestDetailResponse)
 def reject_warranty_result(request_id: uuid.UUID, data: WarrantyResultRejection, service: Warranty,
                            actor: CurrentActor):
-    return service.reject_warranty_result(actor, request_id, data)
+    return paused_service_workflow()
 
 
 @admin_router.post("/warranty-requests/{request_id}/reject", response_model=AdminWarrantyRequestDetailResponse)
 def reject_warranty_request(request_id: uuid.UUID, data: ServiceRequestRejection, service: Warranty,
                             actor: CurrentActor):
-    return service.reject_warranty_request(actor, request_id, data)
+    return service.reject_status(actor, request_id, data)
 
 
 @admin_router.post("/warranty-requests/{request_id}/complete", response_model=AdminWarrantyRequestDetailResponse)
 def complete_warranty_request(request_id: uuid.UUID, service: Warranty, actor: CurrentActor,
                               data: WarrantyCompletion | None = None):
-    return service.complete_warranty_request(actor, request_id, data)
+    return paused_service_workflow()
 
 
 # ------------------------------------------------------------------ returns (customer)
@@ -186,10 +205,11 @@ def cancel_return_request(request_id: uuid.UUID, service: Returns, actor: Curren
 @admin_router.get("/return-requests", response_model=PageResponse[AdminReturnRequestResponse])
 def list_return_requests(service: Returns, actor: CurrentActor, status_filter: StatusFilter = None,
                          request_type: str | None = None, customer_id: uuid.UUID | None = None,
-                         assigned_staff_id: uuid.UUID | None = None, page: Page = 1, page_size: PageSize = 20):
+                         assigned_staff_id: uuid.UUID | None = None, pending_first: bool = False,
+                         page: Page = 1, page_size: PageSize = 20):
     return service.list_return_requests(actor, status=status_filter, request_type=request_type,
                                         customer_id=customer_id, assigned_staff_id=assigned_staff_id,
-                                        page=page, page_size=page_size)
+                                        pending_first=pending_first, page=page, page_size=page_size)
 
 
 @admin_router.get("/return-requests/{request_id}", response_model=AdminReturnRequestDetailResponse)
@@ -200,42 +220,42 @@ def get_return_request(request_id: uuid.UUID, service: Returns, actor: CurrentAc
 @admin_router.post("/return-requests/{request_id}/accept", response_model=AdminReturnRequestDetailResponse)
 def accept_return_request(request_id: uuid.UUID, service: Returns, actor: CurrentActor,
                           data: ServiceRequestNote | None = None):
-    return service.accept_return_request(actor, request_id, data)
+    return service.advance_status(actor, request_id, "Pending")
 
 
 @admin_router.post("/return-requests/{request_id}/reject", response_model=AdminReturnRequestDetailResponse)
 def reject_return_request(request_id: uuid.UUID, data: ServiceRequestRejection, service: Returns,
                           actor: CurrentActor):
-    return service.reject_return_request(actor, request_id, data)
+    return service.reject_status(actor, request_id, data)
 
 
 @admin_router.post("/return-requests/{request_id}/start-receiving", response_model=AdminReturnRequestDetailResponse)
 def start_return_receiving(request_id: uuid.UUID, service: Returns, actor: CurrentActor,
                            data: ServiceRequestNote | None = None):
-    return service.start_return_receiving(actor, request_id, data)
+    return service.advance_status(actor, request_id, "Approved")
 
 
 @admin_router.post("/return-requests/{request_id}/receive", response_model=AdminReturnRequestDetailResponse)
 def receive_return_goods(request_id: uuid.UUID, data: ReturnGoodsReceive, service: Returns, actor: CurrentActor):
-    return service.receive_return_goods(actor, request_id, data)
+    return service.advance_status(actor, request_id, "Receiving")
 
 
 @admin_router.post("/return-requests/{request_id}/inspect", response_model=AdminReturnRequestDetailResponse)
 def inspect_return_goods(request_id: uuid.UUID, data: ReturnInspection, service: Returns, actor: CurrentActor):
-    return service.inspect_return_goods(actor, request_id, data)
+    return paused_service_workflow()
 
 
 @admin_router.post("/return-requests/{request_id}/approve", response_model=AdminReturnRequestDetailResponse)
 def approve_return_request(request_id: uuid.UUID, data: ReturnApproval, service: Returns, actor: CurrentActor):
-    return service.approve_return_request(actor, request_id, data)
+    return paused_service_workflow()
 
 
 @admin_router.post("/return-requests/{request_id}/refund", response_model=AdminReturnRequestDetailResponse)
 def refund_return_request(request_id: uuid.UUID, service: Returns, actor: CurrentActor,
                           data: ReturnRefundCreate | None = None):
-    return service.refund_return_request(actor, request_id, data)
+    return paused_service_workflow()
 
 
 @admin_router.post("/return-requests/{request_id}/confirm-refund", response_model=AdminReturnRequestDetailResponse)
 def confirm_return_refund(request_id: uuid.UUID, service: Returns, actor: CurrentActor):
-    return service.confirm_return_refund(actor, request_id)
+    return paused_service_workflow()
