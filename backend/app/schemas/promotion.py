@@ -6,8 +6,9 @@ MaxDiscountAmount, StartDate, EndDate). Coupon chỉ lưu mã và tham chiếu P
 
 import uuid
 from datetime import datetime
+from typing import Literal
 
-from pydantic import Field, model_validator
+from pydantic import AliasPath, Field, model_validator
 
 from .common import (
     DiscountTypeValue,
@@ -75,6 +76,8 @@ class PromotionUpdate(RequestSchema):
     StartDate: datetime | None = None
     EndDate: datetime | None = None
     Status: PromotionStatus | None = None
+    ProductIds: list[uuid.UUID] | None = None
+    CategoryIds: list[uuid.UUID] | None = None
 
     @model_validator(mode="after")
     def _check_constraints(self):
@@ -114,6 +117,8 @@ class PromotionResponse(ResponseSchema):
 class AdminPromotionResponse(PromotionResponse):
     CreatedByUserId: uuid.UUID
     CreatedAt: datetime
+    CreatedByName: str | None = Field(default=None, validation_alias=AliasPath("created_by", "FullName"))
+    EvaluatedAt: datetime | None = None
 
 
 class AdminPromotionDetailResponse(AdminPromotionResponse):
@@ -127,7 +132,10 @@ class AdminPromotionDetailResponse(AdminPromotionResponse):
 
 
 class CouponCreate(RequestSchema):
-    """CreatedByUserId lấy từ người dùng đăng nhập; UsedCount do hệ thống tăng."""
+    """CreatedByUserId lấy từ người đăng nhập; UsedCount và IsActive do hệ thống quản lý.
+
+    IsActive chỉ còn được nhận để tương thích client cũ; service bỏ qua và tự tính.
+    """
 
     NULLABLE_FIELDS = frozenset({"UsageLimit"})
 
@@ -139,6 +147,7 @@ class CouponCreate(RequestSchema):
 
 
 class CouponUpdate(RequestSchema):
+    """IsActive từ client cũ được bỏ qua; không còn thao tác tạm ngừng riêng mã."""
     NULLABLE_FIELDS = frozenset({"UsageLimit"})
 
     PromotionId: uuid.UUID | None = None
@@ -168,6 +177,9 @@ class AdminCouponResponse(ResponseSchema):
     UsedCount: NonNegativeInt
     IsActive: bool
     CreatedAt: datetime
+    CreatedByName: str | None = Field(default=None, validation_alias=AliasPath("created_by", "FullName"))
+    Status: Literal["Active", "Upcoming", "Exhausted", "Ended"]
+    EvaluatedAt: datetime
 
 
 class CouponPreviewResponse(ResponseSchema):

@@ -11,6 +11,40 @@ from tests.test_purchasing import PurchaseOrderTestBase
 
 
 class PurchaseCreatorNameTest(PurchaseOrderTestBase):
+    def test_decision_name_is_returned_to_staff_from_detail_and_decision_response(self):
+        po = self.create_po()
+        approved = self.approve(po.PurchaseOrderId, by=self.admin2)
+        self.assertEqual(approved.DecidedByName, self.admin2.FullName)
+        self.admin2.IsDeleted = True  # historical account still has a display name
+        detail = self.svc.get_purchase_order(self.f.actor(self.staff), po.PurchaseOrderId)
+        self.assertEqual(detail.DecidedByName, self.admin2.FullName)
+        self.assertEqual(detail.DecidedByUserId, self.admin2.UserId)
+        for private_field in ("PasswordHash", "Email", "PhoneNumber"):
+            self.assertNotIn(private_field, detail.model_dump())
+        with self.assertRaises(PermissionDeniedError):
+            self.svc.get_purchase_order(self.f.actor(self.customer), po.PurchaseOrderId)
+
+    def test_rejected_decision_name_clears_when_resubmitted(self):
+        po = self.create_po()
+        rejected = self.reject(po.PurchaseOrderId, by=self.admin)
+        self.assertEqual(rejected.DecidedByName, self.admin.FullName)
+        resubmitted = self.svc.resubmit_purchase_order(self.f.actor(self.staff), po.PurchaseOrderId)
+        self.assertIsNone(resubmitted.DecidedByName)
+        self.assertIsNone(resubmitted.DecidedByUserId)
+
+    def test_pending_and_automatic_approval_do_not_invent_a_separate_decision(self):
+        pending = self.create_po()
+        automatic = self.create_po(self.admin)
+        self.assertIsNone(pending.DecidedByName)
+        self.assertIsNone(automatic.DecidedByName)
+        self.assertIsNone(automatic.DecidedByUserId)
+        self.assertEqual(automatic.Status, "Approved")
+        self.assertEqual(automatic.CreatedByName, self.admin.FullName)
+
+    def test_client_cannot_write_decision_display_name(self):
+        with self.assertRaises(ValidationError):
+            PurchaseOrderUpdate.model_validate({"DecidedByName": "Forged approver"})
+
     def test_staff_reads_other_staff_and_admin_creator_names(self):
         staff_order = self.create_po()
         admin_order = self.create_po(self.admin)

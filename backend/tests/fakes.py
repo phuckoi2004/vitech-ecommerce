@@ -753,6 +753,11 @@ class FakePaymentTransactionRepo(FakeRepo):
 class FakePromotionRepo(FakeRepo):
     model = Promotion
 
+    def synchronize(self, now, promotion_id=None):
+        from app.services.promotion_state import promotion_status
+        for row in self._rows(lambda p: promotion_id is None or p.PromotionId == promotion_id):
+            row.Status = promotion_status(row, now)
+
 
 class FakePromotionProductRepo(FakeRepo):
     model = PromotionProduct
@@ -770,6 +775,11 @@ class FakePromotionCategoryRepo(FakeRepo):
 
 class FakeCouponRepo(FakeRepo):
     model = Coupon
+
+    def synchronize(self, now, promotion_id=None):
+        from app.services.promotion_state import coupon_status
+        for row in self._rows(lambda c: promotion_id is None or c.PromotionId == promotion_id):
+            row.IsActive = coupon_status(row, now) == "Active"
 
     def get_by_code(self, code, *, with_promotion=False):
         rows = self._rows(lambda c: c.Code.lower() == code.lower())

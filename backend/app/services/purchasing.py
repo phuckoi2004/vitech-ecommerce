@@ -202,7 +202,7 @@ class PurchaseOrderService(BaseService):
         if po is None:
             raise NotFoundError("Không tìm thấy phiếu nhập", code="purchase_order_not_found")
         return PurchaseOrderDetailResponse.model_validate(po).model_copy(
-            update={"CreatedByName": self._creator_name(po.CreatedByUserId)}
+            update=self._detail_names(po)
         )
 
     # ------------------------------------------------------------------ lập / sửa / gửi lại
@@ -247,10 +247,13 @@ class PurchaseOrderService(BaseService):
         require_role(actor, *STAFF_OR_ADMIN)
         with self.transaction():
             po = self._lock_editable(purchase_order_id)
-            values = data.model_dump(exclude_unset=True)
-            if "SupplierId" in values:
+            values = data.model_dump(exclude_unset=True, exclude={"Items"})
+            if "SupplierId" in values and values["SupplierId"] != po.SupplierId:
                 self._ensure_supplier(values["SupplierId"])
             self.purchase_orders.update(po, values)
+            if "Items" in data.model_fields_set:
+                self._replace_draft_items(po, data.Items)
+                self._recalculate_total(po)
             return self._detail(po)
 
     def add_item(
@@ -522,6 +525,31 @@ class PurchaseOrderService(BaseService):
         if unit_price is None or unit_price < 0:
             raise BusinessRuleError("Đơn giá nhập không được âm", code="invalid_unit_price")
 
+    def _replace_draft_items(self, po: PurchaseOrder, lines: list[PurchaseOrderItemCreate]) -> None:
+        """Match by SKU identity, retain existing line IDs, and never modify actual receipts.
+
+        Called only inside update_purchase_order's locked transaction. A later error, including
+        flush/response validation/commit failure, rolls back the header and every line together.
+        """
+        if not lines:
+            raise BusinessRuleError("Phiếu nhập phải có ít nhất một sản phẩm", code="purchase_order_empty")
+        self._ensure_distinct_variants(line.ProductVariantId for line in lines)
+        current = {item.ProductVariantId: item for item in self.items.list_by_purchase_order(po.PurchaseOrderId)}
+        if any(item.ReceivedQuantity > 0 for item in current.values()):
+            raise BusinessRuleError("Phiếu đã nhận hàng, không thể thay danh sách sản phẩm", code="purchase_order_has_receipts")
+        for line in lines:
+            self._check_line_values(line.OrderedQuantity, line.UnitPrice)
+            if line.ProductVariantId in current:
+                item = current[line.ProductVariantId]
+                self.items.update(item, {"OrderedQuantity": line.OrderedQuantity, "UnitPrice": line.UnitPrice,
+                                         "Note": line.Note, "LineTotal": money(line.UnitPrice * line.OrderedQuantity)})
+            else:
+                self._add_item(po, line)
+        desired = {line.ProductVariantId for line in lines}
+        for variant_id, item in current.items():
+            if variant_id not in desired:
+                self.items.delete(item)
+
     def _add_item(self, po: PurchaseOrder, data: PurchaseOrderItemCreate) -> None:
         self._check_line_values(data.OrderedQuantity, data.UnitPrice)
         variant = self.variants.get_by_id(data.ProductVariantId)
@@ -556,8 +584,12 @@ class PurchaseOrderService(BaseService):
         self.purchase_orders.flush()
         self.session.expire(po, ["items"])
         return PurchaseOrderDetailResponse.model_validate(self.purchase_orders.get_detail(po.PurchaseOrderId)).model_copy(
-            update={"CreatedByName": self._creator_name(po.CreatedByUserId)}
+            update=self._detail_names(po)
         )
+
+    def _detail_names(self, po: PurchaseOrder) -> dict[str, str | None]:
+        return {"CreatedByName": self._creator_name(po.CreatedByUserId),
+                "DecidedByName": self._creator_name(po.DecidedByUserId) if po.DecidedByUserId else None}
 
     def _creator_name(self, user_id: uuid.UUID) -> str | None:
         """Read only the display name, including historical creators whose account was soft deleted."""

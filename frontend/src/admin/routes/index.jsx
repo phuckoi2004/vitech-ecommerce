@@ -29,6 +29,8 @@ import ReturnDetailPageRoute from '../pages/ReturnDetailPageRoute.jsx'
 import WarrantiesPageRoute from '../pages/WarrantiesPageRoute.jsx'
 import WarrantyDetailPageRoute from '../pages/WarrantyDetailPageRoute.jsx'
 import ReportsPageRoute from '../pages/ReportsPageRoute.jsx'
+import PromotionsPageRoute from '../pages/PromotionsPageRoute.jsx'
+import CouponsPageRoute from '../pages/CouponsPageRoute.jsx'
 import ShippingMethodsPageRoute from '../pages/ShippingMethodsPageRoute.jsx'
 import ShippingMethodWorkspacePageRoute from '../pages/ShippingMethodWorkspacePageRoute.jsx'
 import { ADMIN_SECTIONS } from './menu.js'
@@ -61,12 +63,12 @@ export const adminRoutes = [
       { path: 'purchases/new', element: <RequirePermission permission="purchases:view"><RequirePermission permission="purchases:create"><PurchaseFormPageRoute /></RequirePermission></RequirePermission> },
       { path: 'purchases/:purchaseId/edit', element: <RequirePermission permission="purchases:view"><RequirePermission permission="purchases:update"><PurchaseFormPageRoute /></RequirePermission></RequirePermission> },
       { path: 'reports', element: <RequirePermission permission="revenue_reports:view"><ReportsPageRoute /></RequirePermission> },
-      // Only reserve the coupon menu/URL; its page is intentionally left for the next design.
-      { path: 'coupons', element: <RequirePermission permission="promotions:view"><></></RequirePermission> },
+      { path: 'promotions', element: <RequirePermission permission="promotions:view"><PromotionsPageRoute /></RequirePermission> },
+      { path: 'coupons', element: <RequirePermission permission="promotions:view"><CouponsPageRoute /></RequirePermission> },
       { path: 'shipping-methods', element: <RequirePermission permission="shipping_methods:view"><ShippingMethodsPageRoute /></RequirePermission> },
       { path: 'shipping-methods/new', element: <RequirePermission permission="shipping_methods:view"><RequirePermission permission="shipping_methods:create"><ShippingMethodWorkspacePageRoute mode="new" /></RequirePermission></RequirePermission> },
       { path: 'shipping-methods/:methodId/edit', element: <RequirePermission permission="shipping_methods:view"><RequirePermission permission="shipping_methods:update"><ShippingMethodWorkspacePageRoute mode="edit" /></RequirePermission></RequirePermission> },
-      ...ADMIN_SECTIONS.filter((item) => !['overview', 'accounts', 'reports', 'coupons', 'shipping'].includes(item.id)).map((item) => ({
+      ...ADMIN_SECTIONS.filter((item) => !['overview', 'accounts', 'reports', 'promotions', 'coupons', 'shipping'].includes(item.id)).map((item) => ({
         path: item.path.slice('/admin/'.length),
         element: <RequirePermission permission={item.permission}>{item.id === 'products' ? <ProductsPage /> : item.id === 'categories' ? <CategoriesPage /> : item.id === 'brands' ? <BrandsPageRoute /> : item.id === 'orders' ? <OrdersPageRoute /> : item.id === 'suppliers' ? <SuppliersPageRoute /> : item.id === 'purchases' ? <PurchasesPageRoute /> : item.id === 'reviews' ? <ReviewsPageRoute /> : item.id === 'news' ? <NewsPageRoute /> : item.id === 'banners' ? <BannersPageRoute /> : item.id === 'payments' ? <PaymentMethodsPageRoute /> : item.id === 'support' ? <SupportPageRoute /> : item.id === 'returns' ? <ReturnsPageRoute /> : item.id === 'warranties' ? <WarrantiesPageRoute /> : <AdminResourcePage key={item.id} section={item} />}</RequirePermission>,
       })),

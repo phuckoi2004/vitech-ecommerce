@@ -26,7 +26,7 @@ function Breadcrumb({ trail, onHome }) {
   </p>
 }
 
-export default function AdminLayout({ auth, title, breadcrumb, menu = [], active, onSelect, onHome, onBreadcrumbHome, onAccount, accountActive = false, sidebarLogo, children }) {
+export default function AdminLayout({ auth, title, breadcrumb, menu = [], active, onSelect, onHome, onBreadcrumbHome, onAccount, accountActive = false, sidebarLogo, notificationIcon, children }) {
   const { user } = auth
   const role = ROLES[user.Role] ?? user.Role
   const [expanded, setExpanded] = useState(null)
@@ -66,7 +66,7 @@ export default function AdminLayout({ auth, title, breadcrumb, menu = [], active
       <header className="sticky top-0 z-10 flex min-h-[82px] items-center justify-between gap-4 border-b border-admin-border bg-white px-8 py-3.5 max-[860px]:min-h-16 max-[860px]:px-4 max-[860px]:py-3">
         <div className="min-w-0"><h1 className="m-0 text-2xl leading-[1.3] font-bold max-[860px]:text-[19px]">{title}</h1><Breadcrumb trail={breadcrumb} onHome={onBreadcrumbHome ?? onHome} /></div>
         <div className="flex items-center gap-4">
-          <AdminNotifications />
+          <AdminNotifications icon={notificationIcon} />
           <button type="button" className={`flex min-w-0 cursor-pointer items-center gap-[11px] rounded-xl border py-[5px] pr-2.5 pl-[5px] text-left text-inherit transition-colors duration-150 ${accountActive ? 'border-[#dfe6f5] bg-[#f4f7fd]' : 'border-transparent bg-transparent hover:bg-[#f4f6fa]'}`} onClick={onAccount} aria-current={accountActive ? 'page' : undefined} title="Thông tin cá nhân">
             <Avatar user={user} />
             <span className="flex min-w-0 flex-col max-[860px]:hidden"><strong className="max-w-[220px] truncate text-xs leading-normal font-bold">{user.FullName}</strong><span className="text-[10px] text-admin-muted">{role}</span></span>

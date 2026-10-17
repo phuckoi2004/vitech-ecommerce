@@ -46,7 +46,7 @@ test.each(['Admin', 'Staff'])('%s opens a reference-only stock notification at t
   expect(await detail.findByText('Mã sản phẩm: SKU-1')).toBeInTheDocument()
   expect(detail.queryByText('Mã sản phẩm: SKU-2')).not.toBeInTheDocument()
   expect(detail.getByText('2 sản phẩm')).toBeInTheDocument()
-  expect(detail.getByText('Ngưỡng cảnh báo: 3')).toBeInTheDocument()
+  expect(detail.getByText('Ngưỡng cảnh báo tồn').nextElementSibling).toHaveTextContent('3')
   expect(router.state.location.search).toBe('?dialog=view&variant=' + ids[0])
   await waitFor(() => expect(api.markNotificationRead).toHaveBeenCalledExactlyOnceWith('access-for-test', 'n0'))
   await screen.findByText('1 thông báo chưa đọc')

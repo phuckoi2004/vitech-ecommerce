@@ -1,9 +1,8 @@
 """Schemas cho NewsArticles, Banners.
 
-Đợt 5.5 (ContentService): client không gửi trường trạng thái/quản trị.
-- NewsArticles.Status đổi qua nghiệp vụ đăng/ẩn (publish_article/hide_article); bài mới luôn là Draft;
-  PublishedAt do server gán khi đăng lần đầu.
-- Banners.IsActive đổi qua activate_banner/deactivate_banner; banner mới theo mặc định của database (IsActive = true).
+Form tạo/sửa nhận nội dung và trạng thái trong cùng request để lưu nguyên khối.
+- NewsArticles.Status tuân thủ chuyển trạng thái của service; PublishedAt do server gán khi đăng lần đầu.
+- Banners.IsActive có thể gửi cùng nội dung, mặc định tạo là true.
 - CreatedByUserId lấy từ Admin đăng nhập.
 """
 
@@ -20,7 +19,7 @@ from .common import NewsArticleStatus, RequestSchema, ResponseSchema, check_end_
 
 
 class NewsArticleCreate(RequestSchema):
-    """Admin tạo bài viết (luôn ở trạng thái Draft). CreatedByUserId lấy từ người dùng đăng nhập."""
+    """Admin tạo bài viết. Mặc định Draft; ngày đăng/người tạo do server quyết định."""
 
     NULLABLE_FIELDS = frozenset({"Summary", "ThumbnailUrl"})
 
@@ -29,10 +28,11 @@ class NewsArticleCreate(RequestSchema):
     Summary: str | None = None
     Content: str
     ThumbnailUrl: varchar(500) | None = None
+    Status: NewsArticleStatus = "Draft"
 
 
 class NewsArticleUpdate(RequestSchema):
-    """Admin sửa nội dung bài viết (PATCH). Không đổi Status/PublishedAt (dùng nghiệp vụ đăng/ẩn)."""
+    """Admin lưu nội dung và trạng thái cùng transaction; bỏ Status thì giữ trạng thái cũ."""
 
     NULLABLE_FIELDS = frozenset({"Summary", "ThumbnailUrl"})
 
@@ -41,6 +41,7 @@ class NewsArticleUpdate(RequestSchema):
     Summary: str | None = None
     Content: str | None = None
     ThumbnailUrl: varchar(500) | None = None
+    Status: NewsArticleStatus | None = None
 
 
 class NewsArticleSummary(ResponseSchema):
@@ -75,7 +76,7 @@ class AdminNewsArticleResponse(NewsArticleResponse):
 
 
 class BannerCreate(RequestSchema):
-    """Admin tạo banner. IsActive không nhận từ client (mặc định database: true; đổi qua kích hoạt/ngừng)."""
+    """Admin tạo banner cùng trạng thái hiển thị, mặc định hoạt động."""
 
     NULLABLE_FIELDS = frozenset({"LinkUrl", "StartDate", "EndDate"})
 
@@ -85,6 +86,7 @@ class BannerCreate(RequestSchema):
     DisplayOrder: int | None = None
     StartDate: datetime | None = None
     EndDate: datetime | None = None
+    IsActive: bool = True
 
     @model_validator(mode="after")
     def _check_dates(self):
@@ -97,6 +99,7 @@ class BannerUpdate(BannerCreate):
 
     Title: varchar(255) | None = None
     ImageUrl: varchar(500) | None = None
+    IsActive: bool | None = None
 
 
 class BannerResponse(ResponseSchema):

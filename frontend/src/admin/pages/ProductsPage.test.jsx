@@ -75,6 +75,18 @@ beforeEach(() => {
   })
 })
 
+test.each([
+  [20, false, true, 'Còn hàng', 'text-green-600'],
+  [3, true, true, 'Sắp hết', 'text-amber-600'],
+  [0, true, true, 'Hết hàng', 'text-admin-red'],
+  [20, false, false, 'Tạm ẩn', 'text-admin-muted'],
+])('detail stock=%s low=%s active=%s uses the correct status color', async (StockQuantity, IsLowStock, IsActive, label, color) => {
+  variantDetails.set('v1', { ...variantDetails.get('v1'), StockQuantity, IsLowStock, IsActive })
+  renderPage('/admin/products?dialog=view&variant=v1')
+  const detail = within(await screen.findByRole('region', { name: 'Chi tiết sản phẩm' }))
+  expect(detail.getByText(label)).toHaveClass(color)
+})
+
 describe('product variant list', () => {
   test('stock warnings remain visible for an inactive variant and distinguish zero, threshold and normal quantities', async () => {
     items = [variantRow({ ...variant, IsActive: false, StockQuantity: 5 }), variantRow({ ...sibling, StockQuantity: 0 }), variantRow({ ...sibling, ProductVariantId: 'v3', Sku: 'SKU-NORMAL', StockQuantity: 6 })]
