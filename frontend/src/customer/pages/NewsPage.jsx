@@ -3,11 +3,22 @@ import EmptyState from '../../components/shared/EmptyState.jsx'
 import ErrorState from '../../components/shared/ErrorState.jsx'
 import LoadingState from '../../components/shared/LoadingState.jsx'
 import Pagination from '../../components/shared/Pagination.jsx'
+import RichTextContent from '../../components/shared/RichTextContent.jsx'
 import useApiData from '../../hooks/useApiData.js'
 import { getNews, listNews } from '../../lib/catalog-api.js'
 import { formatDate } from '../../lib/format.js'
-import { NEWS_PATH, newsPath } from '../routes/paths.js'
+import { HOME_PATH, NEWS_PATH, newsPath } from '../routes/paths.js'
 import './ShoppingPages.css'
+
+function NewsBreadcrumb({ title }) {
+  return <nav className="news-breadcrumb" aria-label="Đường dẫn tin tức"><ol>
+    <li><Link to={HOME_PATH}>Trang chủ</Link></li>
+    {title ? <>
+      <li><Link to={NEWS_PATH}>Tin tức công nghệ</Link></li>
+      <li aria-current="page">{title}</li>
+    </> : <li aria-current="page">Tin tức công nghệ</li>}
+  </ol></nav>
+}
 
 export default function NewsPage() {
   const { slug } = useParams()
@@ -18,13 +29,13 @@ export default function NewsPage() {
   if (news.loading) return <LoadingState />
   if (news.error) return <ErrorState message={news.error} onRetry={news.reload} />
   if (slug) return <article className="shopping-page shopping-article">
-    <Link to={NEWS_PATH}>← Tin tức công nghệ</Link><h1>{news.data.Title}</h1>
+    <NewsBreadcrumb title={news.data.Title} /><h1>{news.data.Title}</h1>
     {news.data.PublishedAt && <p className="shopping-muted">{formatDate(news.data.PublishedAt)}</p>}
     {news.data.ThumbnailUrl && <img src={news.data.ThumbnailUrl} alt="" />}
     {news.data.Summary && <p>{news.data.Summary}</p>}
-    <div className="shopping-text">{news.data.Content}</div>
+    <RichTextContent value={news.data.Content} />
   </article>
-  return <div className="shopping-page"><h1>Tin tức công nghệ</h1>
+  return <div className="shopping-page"><NewsBreadcrumb /><h1>Tin tức công nghệ</h1>
     {news.data.Items.length ? <ul className="shopping-news-list">{news.data.Items.map((article) => <li key={article.NewsArticleId}>
       <Link className="home-news-card" to={newsPath(article.Slug)}>
         {article.ThumbnailUrl && <img src={article.ThumbnailUrl} alt="" loading="lazy" />}

@@ -20,6 +20,12 @@ function AiIcon() {
 // One employee-chat entry. Opening the window starts/reuses the real customer conversation.
 // AI is intentionally a coming-soon view and never creates a conversation or sends a message.
 export default function CustomerChat() {
+  const { user } = useCustomerSession()
+  // Reset only the chat window when the customer changes, preserving the page and route guard.
+  return <CustomerChatWindow key={user?.UserId ?? 'anonymous'} />
+}
+
+function CustomerChatWindow() {
   const { ready, user } = useCustomerSession()
   const navigate = useNavigate()
   const [kind, setKind] = useState(null)

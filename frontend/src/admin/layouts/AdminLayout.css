@@ -1,0 +1,135 @@
+/* Shared reading sizes for the internal workspace, isolated from the customer site. */
+.admin-shell {
+  --text-xs: 0.8125rem;
+  --text-xs--line-height: 1.5;
+  --text-xl: 1.5rem;
+  --text-xl--line-height: 1.35;
+  --text-2xl: 1.75rem;
+  --text-2xl--line-height: 1.3;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.admin-main { min-width: 0; width: 100%; max-width: 1800px; margin-inline: auto; }
+.admin-topbar { box-shadow: 0 1px 6px rgb(20 33 61 / 3%); }
+.admin-sidebar { box-shadow: 4px 0 20px rgb(15 45 107 / 6%); }
+.admin-filterbar { flex-wrap: wrap; gap: 14px; }
+.admin-filterbar > label { flex: 1 1 170px; min-width: 0; }
+.admin-main :is(div, header):has(> form[role="search"]) { flex-wrap: wrap; }
+.admin-main form[role="search"] { min-width: 0; max-width: 100%; }
+.admin-main form[role="search"]:not(.admin-filterbar) { flex-wrap: wrap; }
+.admin-main form[role="search"] > label { max-width: 100%; }
+.admin-table-scroll { border-radius: 0; }
+.admin-table thead { background: #f3f6fb; }
+.admin-table { min-width: 640px; }
+.admin-table--products { min-width: 1080px; }
+.admin-table--dashboard-stock { min-width: 0; table-layout: fixed; }
+.admin-panel { --admin-table-inset: 22px; box-shadow: 0 2px 8px rgb(20 33 61 / 3%); }
+.admin-table-inset { --admin-table-inset: 18px; }
+.admin-shell .admin-table-region {
+  width: calc(100% + var(--admin-table-inset, 0px) * 2);
+  margin-inline: calc(0px - var(--admin-table-inset, 0px));
+}
+.admin-shell .acc-card > .acc-table-wrap { width: calc(100% + 32px); margin-inline: -16px; }
+.admin-shell .vt-rich-editor select[aria-label="Phông chữ"] { width: 160px; }
+.admin-shell .vt-rich-editor select[aria-label="Cỡ chữ"] { width: 132px; }
+
+/* Several existing screens use literal Figma sizes (8–11px), including ! utilities.
+   Normalize those captions here. Base-layer important rules precede utility-layer
+   important rules in the cascade, so old page-specific sizes cannot shrink them. */
+@layer base {
+  .admin-shell :is(
+    [class~="text-[8px]"], [class~="text-[8px]!"],
+    [class~="text-[9px]"], [class~="text-[9px]!"],
+    [class~="text-[10px]"], [class~="text-[10px]!"],
+    [class~="text-[11px]"], [class~="text-[11px]!"],
+    [class~="text-[12px]"], [class~="text-[12px]!"]
+  ) { font-size: 13px !important; line-height: 1.5 !important; }
+
+  .admin-shell :is([class~="text-[13px]"], [class~="text-[13px]!"]) {
+    font-size: 14px !important; line-height: 1.5 !important;
+  }
+
+  .admin-shell :is([class~="text-[15px]"], [class~="text-[15px]!"]) {
+    font-size: 16px !important; line-height: 1.5 !important;
+  }
+
+  .admin-shell .admin-main > section > h2,
+  .admin-shell .admin-main > section > :is(header, div) > h2,
+  .admin-shell .admin-main > section > :is(header, div) > div > h2 {
+    font-size: var(--admin-page-title, 24px) !important; line-height: 1.35 !important;
+  }
+
+  .admin-shell .admin-button {
+    min-height: 42px !important;
+    height: auto !important;
+    padding: 10px 16px !important;
+    font-size: 14px !important;
+    line-height: 1.5 !important;
+  }
+
+  .admin-shell :is(.admin-main, dialog) :is(
+    input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]):not([type="color"]),
+    select, textarea
+  ) {
+    min-height: 42px !important;
+    max-width: 100%;
+    padding-block: 9px !important;
+    font-size: 14px !important;
+    line-height: 1.5 !important;
+  }
+
+  .admin-shell :is(.admin-table, .acc-table) th {
+    border-radius: 0 !important;
+    height: auto !important;
+    padding: 15px 14px !important;
+    background: #f3f6fb !important;
+    border-bottom: 1px solid var(--color-admin-border) !important;
+    color: #465774 !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    line-height: 1.5 !important;
+  }
+
+  .admin-shell :is(.admin-table, .acc-table) td {
+    height: auto !important;
+    padding: 16px 14px !important;
+    border-bottom: 1px solid #edf0f6 !important;
+    font-size: 14px !important;
+    line-height: 1.6 !important;
+    overflow-wrap: anywhere;
+  }
+
+  .admin-shell :is(.admin-table, .acc-table) tbody tr:hover { background: #f8faff; }
+  .admin-shell :is(.admin-table, .acc-table) tbody tr:last-child td { border-bottom: 0 !important; }
+  .admin-shell .admin-pagination :is(span, button) { font-size: 13px !important; line-height: 1.5 !important; }
+  .admin-shell .admin-pagination button { min-width: 36px !important; min-height: 36px !important; }
+}
+
+@media (max-width: 860px) {
+  .admin-shell { --text-2xl: 1.375rem; }
+  .admin-main { padding: 20px 16px; }
+  .admin-topbar { align-items: flex-start; }
+  .admin-filterbar > label { flex-basis: 200px; }
+}
+
+@media (max-width: 480px) {
+  .admin-shell { --admin-page-title: 21px; }
+  .admin-main > section > :is(header, div):has(> h2),
+  .admin-main > section > :is(header, div):has(> div > h2) {
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 12px;
+    height: auto;
+  }
+  .admin-main > section > :is(header, div) > h2,
+  .admin-main > section > :is(header, div) > div:has(> h2) { flex-basis: 100%; }
+  .admin-topbar { gap: 8px; padding-inline: 12px; }
+  .admin-topbar > div:last-child { gap: 6px; }
+  .admin-main { padding-inline: 12px; }
+  .admin-filterbar > label { flex-basis: 100%; }
+}
+
+@media (max-width: 600px) {
+  .admin-shell .acc-card > .acc-table-wrap { width: calc(100% + 24px); margin-inline: -12px; }
+}

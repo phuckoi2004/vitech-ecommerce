@@ -13,25 +13,25 @@ import { useAdminLoad } from '../hooks/useAdminQuery.js'
 import { filterPurchases, PURCHASE_PAGE_SIZE, PURCHASE_TABS, purchaseCancellable, purchaseCsv, purchaseEditable, purchaseFilters, purchaseListSearch, purchaseQuantity } from '../lib/purchases.js'
 import { getPurchaseDirectory, getPurchaseVariants, purchaseReadBatch } from '../services/purchases.js'
 import { getSupplierDirectory } from '../services/suppliers.js'
+import useAutoFilters from '../hooks/useAutoFilters.js'
 
 function PurchaseFilters({ filter, suppliers, variants, supplierDisabled, productDisabled, onApply, onClear }) {
   const initial = { keyword: filter.keyword, supplier: filter.supplier, product: filter.product, from: filter.from, to: filter.to }
-  const source = JSON.stringify(initial)
-  const [previous, setPrevious] = useState(source)
-  const [draft, setDraft] = useState(initial)
-  const [error, setError] = useState('')
-  if (previous !== source) { setPrevious(source); setDraft(initial); setError('') }
+  const { draft, setDraft, formProps } = useAutoFilters(initial, onApply, {
+    validate: (values) => !(values.from && values.to && values.from > values.to),
+  })
+  const error = draft.from && draft.to && draft.from > draft.to ? 'Từ ngày không được sau Đến ngày.' : ''
   const control = PRODUCT_CONTROL + ' h-10 rounded-lg! px-[11px] text-[10px]! font-normal text-admin-muted placeholder:text-admin-muted'
   const products = [...new Map(variants.map((variant) => [variant.ProductId, variant.Name])).entries()]
-  function change(key, value) { setDraft((valueBefore) => ({ ...valueBefore, [key]: value })); setError('') }
-  return <form role="search" className="flex flex-col gap-2" onSubmit={(event) => { event.preventDefault(); if (draft.from && draft.to && draft.from > draft.to) { setError('Từ ngày không được sau Đến ngày.'); return } onApply(draft) }}>
-    <div className="flex items-end gap-[9px]">
+  function change(key, value) { setDraft((valueBefore) => ({ ...valueBefore, [key]: value })) }
+  return <form role="search" className="flex flex-col gap-2" {...formProps}>
+    <div className="admin-filterbar flex items-end gap-[9px]">
       <label className="flex w-[210px] shrink-0 flex-col gap-[5px] text-[10px] leading-[normal] font-medium">Tìm kiếm<input type="search" aria-label="Tìm phiếu nhập theo mã hoặc sản phẩm" className={control} placeholder="Mã phiếu / sản phẩm" maxLength={255} value={draft.keyword} onChange={(event) => change('keyword', event.target.value)} /></label>
       <label className="flex w-[170px] shrink-0 flex-col gap-[5px] text-[10px] leading-[normal] font-medium">Nhà cung cấp<select aria-label="Nhà cung cấp" className={control} disabled={supplierDisabled} value={draft.supplier} onChange={(event) => change('supplier', event.target.value)}><option value="">Tất cả NCC</option>{suppliers.map((item) => <option key={item.SupplierId} value={item.SupplierId}>{item.Name}{!item.IsActive ? ' (Ẩn)' : ''}</option>)}</select></label>
       <label className="flex w-[175px] shrink-0 flex-col gap-[5px] text-[10px] leading-[normal] font-medium">Sản phẩm<select aria-label="Sản phẩm" className={control} disabled={productDisabled} value={draft.product} onChange={(event) => change('product', event.target.value)}><option value="">Tất cả sản phẩm</option>{products.map(([id, name]) => <option key={id} value={id}>{name}</option>)}</select></label>
       <label className="flex w-[130px] shrink-0 flex-col gap-[5px] text-[10px] leading-[normal] font-medium">Từ ngày<input type="date" aria-label="Từ ngày" className={control + ' px-2!'} value={draft.from} max={draft.to || undefined} onChange={(event) => change('from', event.target.value)} /></label>
       <label className="flex w-[130px] shrink-0 flex-col gap-[5px] text-[10px] leading-[normal] font-medium">Đến ngày<input type="date" aria-label="Đến ngày" className={control + ' px-2!'} value={draft.to} min={draft.from || undefined} onChange={(event) => change('to', event.target.value)} /></label>
-      <PurchaseButton secondary className="ml-auto mb-1! shrink-0" onClick={() => { setDraft({ keyword: '', supplier: '', product: '', from: '', to: '' }); setError(''); onClear() }}>Xóa lọc</PurchaseButton><PurchaseButton type="submit" className="mb-1! shrink-0">Tìm kiếm</PurchaseButton>
+      <PurchaseButton secondary className="ml-auto mb-1! shrink-0" onClick={() => { setDraft({ keyword: '', supplier: '', product: '', from: '', to: '' }); onClear() }}>Xóa lọc</PurchaseButton>
     </div>{error && <p role="alert" className="m-0 text-xs text-admin-red">{error}</p>}
   </form>
 }

@@ -51,6 +51,7 @@ class Category(Base):
     Name: Mapped[str] = mapped_column(String(255), nullable=False)
     Slug: Mapped[str] = mapped_column(String(300), nullable=False, unique=True)
     Description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    ImageUrl: Mapped[str | None] = mapped_column(String(500), nullable=True)
     DisplayOrder: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
     IsActive: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("true"))
 

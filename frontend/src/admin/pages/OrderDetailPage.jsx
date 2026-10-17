@@ -53,7 +53,7 @@ export default function OrderDetailPage() {
           <section aria-label="Thông tin đơn hàng" className={CARD + ' min-h-[178px]'}><h3 className={TITLE}>Thông tin đơn hàng</h3>
             <dl className="mt-2.5 mb-0 flex justify-between gap-6"><div className="flex min-w-0 flex-col gap-2"><Info label="Mã đơn" strong>{order.OrderCode}</Info><Info label="Khách hàng">{order.ReceiverName}</Info></div><div className="flex min-w-0 flex-col gap-2"><Info label="Ngày đặt">{formatDate(order.OrderedAt)}</Info><Info label="Số điện thoại">{order.ReceiverPhone}</Info></div></dl>
           </section>
-          <section aria-label="Sản phẩm trong đơn" className={CARD + ' min-h-[250px]'}><h3 className={TITLE + ' mb-2.5'}>Sản phẩm trong đơn</h3>
+          <section aria-label="Sản phẩm trong đơn" className={CARD + ' admin-table-inset min-h-[250px]'}><h3 className={TITLE + ' mb-2.5'}>Sản phẩm trong đơn</h3>
             <AdminTable variant="products" columns={columns} rows={order.Items ?? []} rowKey="OrderItemId" label="Sản phẩm trong đơn" emptyText="Đơn hàng chưa có sản phẩm." className="min-w-[570px] table-fixed [&_th]:h-[38px]! [&_th]:font-semibold! [&_td]:h-[58px]! [&_td]:py-2" />
           </section>
           <section aria-label="Lịch sử trạng thái" className={CARD + ' min-h-[230px]'}><h3 className={TITLE + ' mb-2.5'}>Lịch sử trạng thái</h3>

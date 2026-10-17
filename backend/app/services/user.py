@@ -328,6 +328,16 @@ class NotificationService(BaseService):
             )
             if notification is None:
                 raise NotFoundError("Không tìm thấy thông báo", code="notification_not_found")
+            # Recheck a cached queue link before returning its navigation target.
+            if (notification.NotificationType == 'Chat' and notification.ReferenceType == 'Conversation'
+                    and notification.ReferenceId is not None
+                    and notification.ActionUrl == f'/admin/support?conversation={notification.ReferenceId}'):
+                conversation = self.notifications.get_conversation(notification.ReferenceId)
+                if (conversation is None or conversation.Status != 'Open' or conversation.Mode != 'Staff'
+                        or conversation.AssignedStaffId is not None):
+                    notification.ActionUrl = '/admin/support'
+                    notification.Title = 'Yêu cầu hỗ trợ đã được xử lý'
+                    notification.Content = 'Cuộc trò chuyện này không còn trong hàng đợi tiếp nhận.'
             if not notification.IsRead:
                 notification.IsRead = True
                 notification.ReadAt = self.now()
@@ -343,6 +353,11 @@ class NotificationService(BaseService):
                 notification.IsRead = True
                 notification.ReadAt = now
             return len(unread)
+
+    def resolve_chat_queue(self, conversation_id: uuid.UUID) -> None:
+        """Resolve queue alerts in the claim/close transaction; retain notification history."""
+        self.require_enclosing_use_case()
+        self.notifications.resolve_chat_queue(conversation_id, self.now())
 
     def notify(
         self,

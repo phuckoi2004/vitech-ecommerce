@@ -6,7 +6,7 @@ export default function Pagination({ page, pageSize, total, onPageChange, disabl
   if (variant === 'admin') {
     const candidates = [...new Set([1, page - 1, page, page + 1, pages].filter((value) => value >= 1 && value <= pages))].sort((a, b) => a - b)
     const buttonClass = 'inline-grid h-8 min-w-[34px] cursor-pointer place-items-center rounded-lg border border-admin-border bg-white px-2 text-[11px] text-admin-muted enabled:hover:bg-admin-soft disabled:cursor-not-allowed disabled:opacity-40'
-    return <div className="flex flex-wrap items-center justify-between gap-3 text-[11px] text-admin-muted">
+    return <div className="admin-pagination flex flex-wrap items-center justify-between gap-3 text-[11px] text-admin-muted">
       <span>Hiển thị {total ? (page - 1) * pageSize + 1 : 0}–{Math.min(page * pageSize, total)} trong {total} {itemLabel}</span>
       <nav aria-label={label} className="flex flex-wrap items-center gap-2">
         <button type="button" className={buttonClass} disabled={disabled || page <= 1} aria-label="Trang trước" onClick={() => onPageChange(page - 1)}>‹</button>

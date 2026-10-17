@@ -1,10 +1,11 @@
 import { useState } from 'react'
-import { productImages } from '../../../lib/product-detail.js'
+import { variantImages } from '../../../lib/product-detail.js'
 import StoreImage from '../StoreImage.jsx'
 import ProductModal from './ProductModal.jsx'
 
-export default function ProductGallery({ product }) {
-  const images = productImages(product)
+// Shows the photos of the selected variant; ProductPage remounts it per variant so the main photo resets.
+export default function ProductGallery({ product, variant }) {
+  const images = variantImages(product, variant?.ProductVariantId)
   const [selectedUrl, setSelectedUrl] = useState(images[0]?.ImageUrl)
   const [zoom, setZoom] = useState(false)
   const selected = images.find((image) => image.ImageUrl === selectedUrl) ?? images[0]

@@ -6,12 +6,12 @@ from datetime import datetime, timedelta, timezone
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from sqlalchemy import JSON, MetaData, create_engine, event, select
+from sqlalchemy import JSON, MetaData, create_engine, event, select, text
 from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
 
 from app.core.dependencies import get_current_actor
-from app.models import Conversation, Message, User
+from app.models import Conversation, Message, Notification, User
 from app.repositories.chat import ConversationRepository
 from app.routers.chat import admin_router, router
 from app.routers.dependencies import get_chat_service
@@ -30,10 +30,13 @@ def inbox():
         connection.create_function('now', 0, lambda: datetime.now(timezone.utc).isoformat(' '))
 
     metadata = MetaData()
-    for model in (User, Conversation, Message):
+    for model in (User, Conversation, Message, Notification):
         model.__table__.to_metadata(metadata)
     # SQLite test DDL only; production mapping and schema remain PostgreSQL JSONB.
     metadata.tables['Messages'].c.Metadata.type = JSON()
+    for index in metadata.tables['Conversations'].indexes:
+        if index.name == 'UX_Conversations_CustomerId_Open':
+            index.dialect_options['sqlite']['where'] = text('"Status" = \'Open\'')
     metadata.create_all(engine)
     with Session(engine) as session:
         users = [User(Email=f'{role}{index}@example.test', PhoneNumber=f'090123456{index}', PasswordHash='test-only-secret', FullName=f'{role} {index}', Role=role, AccountStatus='Active') for index, role in enumerate(['Customer', 'Customer', 'Staff', 'Staff', 'Admin'])]

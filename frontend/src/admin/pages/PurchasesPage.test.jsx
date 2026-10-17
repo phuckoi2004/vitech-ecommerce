@@ -87,7 +87,7 @@ test('search, supplier, parent product and inclusive dates combine across every 
   fireEvent.change(screen.getByRole('combobox', { name: 'Sản phẩm' }), { target: { value: 'p1' } })
   fireEvent.change(screen.getByLabelText('Từ ngày'), { target: { value: '2026-10-14' } })
   fireEvent.change(screen.getByLabelText('Đến ngày'), { target: { value: '2026-10-14' } })
-  fireEvent.submit(screen.getByRole('search'))
+  expect(screen.queryByRole('button', { name: 'Tìm kiếm', exact: true })).not.toBeInTheDocument()
   await screen.findByText('1 phiếu')
   expect(screen.getByText('PN-100')).toBeInTheDocument()
   expect(router.state.location.search).not.toContain('page=')

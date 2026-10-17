@@ -38,7 +38,7 @@ export function bannerPayload(form, banner) {
 }
 export function bannerValidation(body) {
   if (!body.Title) return 'Vui lòng nhập tiêu đề banner.'
-  if (!body.ImageUrl) return 'Vui lòng chọn ảnh banner từ máy và chờ tải lên hoàn tất.'
+  if (!body.ImageUrl) return 'Vui lòng chọn ảnh banner (tải từ máy hoặc dán đường dẫn) và chờ tải lên hoàn tất.'
   if (body.LinkUrl && !safeBannerLink(body.LinkUrl)) return 'Link khi bấm phải là đường dẫn nội bộ bắt đầu bằng / hoặc địa chỉ HTTPS hợp lệ.'
   if (!Number.isSafeInteger(body.DisplayOrder)) return 'Thứ tự hiển thị phải là số nguyên.'
   if ([body.StartDate, body.EndDate].some((value) => value && Number.isNaN(new Date(value).getTime()))) return 'Vui lòng chọn thời gian hiển thị hợp lệ.'

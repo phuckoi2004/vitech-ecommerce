@@ -19,9 +19,9 @@ export default function ReportChart({ tab, points = [], loading, error }) {
   const y = (value) => 156 - value / cap * 148
   const groupWidth = 1000 / Math.max(points.length, 1), barWidth = Math.min(66, groupWidth / (series.length + 1.5))
   const title = revenue ? 'Doanh thu theo thời gian' : 'Số lượng đơn hàng theo thời gian'
-  return <section aria-label={title} aria-busy={loading} className="h-[248px] rounded-xl border border-admin-border bg-white px-4 py-3.5">
-    <header className="mb-2 flex items-center justify-between gap-3"><h3 className="m-0 text-[13px] leading-normal font-semibold">{title}</h3><div className="flex gap-2 text-[9px] text-admin-muted">{series.map((item) => <span key={item.key} className="flex items-center gap-[5px]"><span className="size-2 rounded-full" style={{ backgroundColor: revenue ? '#e11d2e' : item.color }} />{item.label}</span>)}</div></header>
-    <svg viewBox="0 0 1096 194" className="block h-[194px] w-full" role="img" aria-label={title}>
+  return <section aria-label={title} aria-busy={loading} className="min-h-[270px] min-w-0 rounded-[14px] border border-admin-border bg-white p-5">
+    <header className="mb-3 flex flex-wrap items-center justify-between gap-3"><h3 className="m-0 text-base font-semibold">{title}</h3><div className="flex gap-2 text-xs text-admin-muted">{series.map((item) => <span key={item.key} className="flex items-center gap-[5px]"><span className="size-2 rounded-full" style={{ backgroundColor: revenue ? '#e11d2e' : item.color }} />{item.label}</span>)}</div></header>
+    <div className="overflow-x-auto"><svg viewBox="0 0 1096 194" className="block h-[194px] min-w-[640px] w-full" role="img" aria-label={title}>
       {ticks.map((tick) => <g key={tick}><text x="0" y={y(tick) + 3} className="fill-admin-muted text-[8px]">{axisLabel(tick, revenue)}</text><line x1="52" x2="1052" y1={y(tick)} y2={y(tick)} className="stroke-admin-border" /></g>)}
       {!loading && !error && points.map((point, index) => <g key={point.DateFrom ?? index}>
         {series.map(({ key, label, color }, seriesIndex) => {
@@ -31,6 +31,6 @@ export default function ReportChart({ tab, points = [], loading, error }) {
         <text x={52 + groupWidth * (index + 0.5)} y="180" textAnchor="middle" className="fill-admin-muted text-[8px]">{point.Label}</text>
       </g>)}
       {(!hasData || loading || error) && <text x="552" y="86" textAnchor="middle" className="fill-admin-muted text-[11px]">{loading ? 'Đang tải biểu đồ…' : error ? 'Không tải được biểu đồ.' : 'Chưa có dữ liệu trong kỳ đã chọn.'}</text>}
-    </svg>
+    </svg></div>
   </section>
 }

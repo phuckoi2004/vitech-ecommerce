@@ -38,7 +38,7 @@ function BrandEditor({ brand, onBusy, onClose, onDone }) {
     if (busy || uploading) return
     if (!form.Name.trim()) { setError('Tên thương hiệu không được để trống.'); return }
     if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(form.Slug.trim())) { setError('Đường dẫn chỉ gồm chữ thường không dấu, số và dấu gạch ngang.'); return }
-    if (form.LogoUrl.trim() && !validLogoUrl(form.LogoUrl.trim())) { setError('Ảnh logo chưa hợp lệ. Vui lòng chọn lại ảnh từ máy.'); return }
+    if (form.LogoUrl.trim() && !validLogoUrl(form.LogoUrl.trim())) { setError('Ảnh logo chưa hợp lệ. Vui lòng tải lại ảnh từ máy hoặc dán đường dẫn https khác.'); return }
     const body = { ...form, Name: form.Name.trim(), Slug: form.Slug.trim(), Description: form.Description.trim() || null, LogoUrl: form.LogoUrl.trim() || null }
     setError(''); setBusy(true); onBusy(true)
     try {

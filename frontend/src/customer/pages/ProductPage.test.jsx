@@ -93,6 +93,29 @@ test('version/color combinations update price, specifications and the exact cart
   expect(await screen.findByText(', 1 sản phẩm')).toBeInTheDocument()
 })
 
+test('each colour shows only its own photos, starting from the default variant chosen in admin', async () => {
+  const photo = (url, IsDefault = false) => ({ ProductImageId: url, ImageUrl: url, IsDefault, DisplayOrder: 0 })
+  mockApi({ detail: { ...product, DefaultVariantId: 'black256',
+    Images: [photo('/black-front.png', true), photo('/black-back.png'), photo('/red.png')],
+    VariantImages: { black256: [photo('/black-front.png'), photo('/black-back.png', true)], red256: [photo('/red.png', true)] } } })
+  renderProduct(); const user = userEvent.setup()
+  // The gallery is remounted for each variant, so it is looked up again every time.
+  await screen.findByRole('region', { name: 'Hình ảnh sản phẩm' })
+  const gallery = () => screen.getByRole('region', { name: 'Hình ảnh sản phẩm' })
+  const main = () => within(gallery()).getByRole('img', { name: product.Name })
+  const thumbnails = () => within(gallery()).getAllByRole('button', { name: /^Xem ảnh/ })
+  expect(screen.getByRole('button', { name: 'Đen' })).toHaveAttribute('aria-pressed', 'true')
+  expect(main()).toHaveAttribute('src', '/black-back.png')
+  expect(thumbnails()).toHaveLength(2)
+  await user.click(screen.getByRole('button', { name: 'Đỏ Burgundy' }))
+  expect(main()).toHaveAttribute('src', '/red.png')
+  expect(thumbnails()).toHaveLength(1)
+  expect(gallery().querySelector('img[src="/black-front.png"]')).toBeNull()
+  // A colour without its own photos yet keeps the whole product gallery rather than showing none.
+  await user.click(screen.getByRole('button', { name: '512GB' }))
+  expect(thumbnails()).toHaveLength(3)
+})
+
 test('out of stock and absent price disable both purchase actions', async () => {
   mockApi(); renderProduct(); const user = userEvent.setup()
   await user.click(await screen.findByRole('button', { name: '1TB' }))

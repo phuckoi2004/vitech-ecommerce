@@ -1,5 +1,5 @@
 import { StrictMode } from 'react'
-import { act, render, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import { afterEach, expect, test, vi } from 'vitest'
@@ -15,7 +15,7 @@ const product = {
 }
 const conversation = { ConversationId: 'c1', Mode: 'Staff', Status: 'Open', CreatedAt: '2026-10-13T00:00:00Z', ClosedAt: null }
 
-function mockApi({ existingConversation = null, messages = [], history = [] } = {}) {
+function mockApi({ existingConversation = null, messages = [], history = [], newsContent = 'Nội dung bài viết.' } = {}) {
   const calls = []
   const records = [...history]
   if (existingConversation) records.unshift({ ...existingConversation })
@@ -41,7 +41,7 @@ function mockApi({ existingConversation = null, messages = [], history = [] } = 
     else if (endpoint === '/users/me/notifications') result = { Items: [], Total: 0 }
     else if (endpoint === '/users/me/notifications/unread-count') result = { Count: 0 }
     else if (endpoint === '/news') result = { Items: [{ NewsArticleId: 'n1', Title: 'Tin công nghệ', Slug: 'tin-cong-nghe' }], Total: 1 }
-    else if (endpoint === '/news/tin-cong-nghe') result = { Title: 'Tin công nghệ', Content: 'Nội dung bài viết.' }
+    else if (endpoint === '/news/tin-cong-nghe') result = { Title: 'Tin công nghệ', Content: newsContent }
     else if (endpoint === '/conversations' && method === 'POST') {
       while (records.some(item => item.ConversationId === `c${nextId}`)) nextId++
       result = { ...conversation, ConversationId: `c${nextId}`, CreatedAt: new Date(Date.parse(conversation.CreatedAt) + nextId * 60000).toISOString() }
@@ -78,6 +78,25 @@ function renderAt(url, auth = makeAuth(), { strict = false } = {}) {
 
 afterEach(() => vi.unstubAllGlobals())
 
+test('price filter combines with brand and keyword, resets pagination and can be cleared', async () => {
+  const calls = mockApi()
+  const router = renderAt('/danh-muc/dien-thoai?brand=b1&q=mau&page=3&price=5-10')
+  const prices = await screen.findByRole('combobox', { name: 'Khoảng giá' })
+  expect(prices).toHaveValue('5-10')
+  await waitFor(() => expect(calls.filter((call) => call.endpoint === '/products').at(-1).query).toMatchObject({
+    category_id: 'root', brand_id: 'b1', keyword: 'mau', page: '3', min_price: '5000000', max_price: '9999999.99',
+  }))
+  fireEvent.change(prices, { target: { value: 'from-20' } })
+  await waitFor(() => expect(calls.filter((call) => call.endpoint === '/products').at(-1).query).toMatchObject({
+    brand_id: 'b1', keyword: 'mau', page: '1', min_price: '20000000',
+  }))
+  expect(new URLSearchParams(router.state.location.search).has('page')).toBe(false)
+  expect(calls.filter((call) => call.endpoint === '/products').at(-1).query).not.toHaveProperty('max_price')
+  fireEvent.change(prices, { target: { value: '' } })
+  await waitFor(() => expect(calls.filter((call) => call.endpoint === '/products').at(-1).query).not.toHaveProperty('min_price'))
+  expect(calls.filter((call) => call.endpoint === '/products').at(-1).query).toMatchObject({ brand_id: 'b1', keyword: 'mau' })
+})
+
 test.each([
   ['/tim-kiem?q=iphone', 'Kết quả tìm kiếm: iphone'],
   ['/danh-muc/dien-thoai', 'Điện thoại'],
@@ -109,6 +128,18 @@ test.each([
   renderAt(url, makeAuth({ role: 'Customer' }))
   expect(await screen.findByRole('heading', { name: heading })).toBeInTheDocument()
   expect(screen.queryByRole('heading', { name: 'Không tìm thấy trang' })).not.toBeInTheDocument()
+})
+
+test('news displays saved formatting and inline images while removing unsafe HTML', async () => {
+  mockApi({ newsContent: '<p><strong>Nội dung định dạng</strong></p><ul><li>Tiêu chí chọn máy</li></ul><img src="https://cdn.example.test/news.png" alt="Ảnh bài viết" onerror="alert(1)"><script>alert(1)</script>' })
+  renderAt('/tin-tuc/tin-cong-nghe')
+  const content = await screen.findByText('Nội dung định dạng')
+  expect(content.tagName).toBe('STRONG')
+  expect(screen.getByText('Tiêu chí chọn máy').closest('ul')).toBeInTheDocument()
+  expect(screen.getByRole('img', { name: 'Ảnh bài viết' })).toHaveAttribute('src', 'https://cdn.example.test/news.png')
+  const article = screen.getByRole('article')
+  expect(article.querySelector('script')).toBeNull()
+  expect(article.querySelector('[onerror]')).toBeNull()
 })
 
 test('chat requires customer sign-in and preserves the return URL', async () => {
@@ -180,6 +211,91 @@ test('Enter sends a message, Shift+Enter adds a line, and an empty Enter never e
   expect(calls.some(c => c.endpoint.endsWith('/close'))).toBe(false)
 })
 
+test('chat renders image and product metadata without turning unsafe image URLs into links', async () => {
+  mockApi({ existingConversation: conversation, messages: [
+    { MessageId: 'photo', SenderType: 'Staff', MessageType: 'Image', Content: 'Ảnh tư vấn', Metadata: { ImageUrl: 'https://example.com/photo.png' }, SentAt: '2026-10-13T01:00:00Z' },
+    { MessageId: 'product', SenderType: 'Staff', MessageType: 'Product', Content: '', Metadata: { ProductName: 'Laptop được tư vấn', Slug: 'laptop-tu-van' }, SentAt: '2026-10-13T01:01:00Z' },
+    { MessageId: 'unsafe', SenderType: 'Staff', MessageType: 'Image', Content: '', Metadata: { ImageUrl: 'javascript:alert(1)' }, SentAt: '2026-10-13T01:02:00Z' },
+  ] })
+  renderAt('/tu-van', makeAuth({ role: 'Customer' }))
+  expect(await screen.findByRole('link', { name: 'Xem ảnh đính kèm' })).toHaveAttribute('href', 'https://example.com/photo.png')
+  expect(screen.getByRole('img', { name: 'Ảnh tư vấn' })).toHaveAttribute('src', 'https://example.com/photo.png')
+  expect(screen.getByRole('link', { name: 'Laptop được tư vấn' })).toHaveAttribute('href', '/san-pham/laptop-tu-van')
+  expect(screen.getByText('Ảnh đính kèm không khả dụng.')).toBeInTheDocument()
+  expect(document.querySelector('[href^="javascript:"], [src^="javascript:"]')).toBeNull()
+})
+
+test('failed message survives polling and retry resends the failed content while preserving a newer draft', async () => {
+  const calls = mockApi({ existingConversation: conversation })
+  const fetchApi = globalThis.fetch
+  let fail = true, attempts = 0
+  vi.stubGlobal('fetch', vi.fn((input, options) => {
+    if (String(input).endsWith('/messages') && options?.method === 'POST') {
+      attempts++
+      if (fail) return Promise.resolve(new Response(JSON.stringify({ detail: 'Không gửi được tin nhắn.' }), { status: 503 }))
+    }
+    return fetchApi(input, options)
+  }))
+  const user = userEvent.setup()
+  renderAt('/tu-van', makeAuth({ role: 'Customer' }))
+  const box = await screen.findByRole('textbox', { name: 'Nội dung tin nhắn' })
+  await user.type(box, 'Tin nhắn gửi lỗi')
+  await user.click(screen.getByRole('button', { name: 'Gửi tin nhắn' }))
+  expect(await screen.findByRole('alert')).toHaveTextContent('Không gửi được tin nhắn.')
+  const previousReads = calls.filter(call => call.endpoint === '/conversations/c1').length
+  await act(async () => document.dispatchEvent(new Event('visibilitychange')))
+  await waitFor(() => expect(calls.filter(call => call.endpoint === '/conversations/c1').length).toBeGreaterThan(previousReads))
+  expect(screen.getByRole('alert')).toHaveTextContent('Không gửi được tin nhắn.')
+  expect(box).toHaveValue('Tin nhắn gửi lỗi')
+  await user.clear(box)
+  await user.type(box, 'Bản nháp mới')
+  fail = false
+  await user.click(within(screen.getByRole('alert')).getByRole('button', { name: 'Thử lại' }))
+  expect(await screen.findByText('Tin nhắn gửi lỗi', { exact: true })).toBeInTheDocument()
+  expect(attempts).toBe(2)
+  expect(calls.find(call => call.endpoint.endsWith('/messages')).body.Content).toBe('Tin nhắn gửi lỗi')
+  expect(box).toHaveValue('Bản nháp mới')
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+})
+
+test('retrying a close failure actually closes the conversation', async () => {
+  mockApi({ existingConversation: conversation, messages: [{ MessageId: 'sent', SenderType: 'Customer', MessageType: 'Text', Content: 'Cần hỗ trợ', SentAt: '2026-10-13T01:00:00Z' }] })
+  const fetchApi = globalThis.fetch
+  let attempts = 0
+  vi.stubGlobal('fetch', vi.fn((input, options) => {
+    if (String(input).endsWith('/close') && ++attempts === 1) return Promise.resolve(new Response(JSON.stringify({ detail: 'Chưa kết thúc được hội thoại.' }), { status: 503 }))
+    return fetchApi(input, options)
+  }))
+  const user = userEvent.setup()
+  renderAt('/tu-van', makeAuth({ role: 'Customer' }))
+  await user.click(await screen.findByRole('button', { name: 'Dừng hội thoại' }))
+  expect(await screen.findByRole('alert')).toHaveTextContent('Chưa kết thúc được hội thoại.')
+  await user.click(screen.getByRole('button', { name: 'Thử lại' }))
+  expect(await screen.findByText('Hội thoại đã kết thúc')).toBeInTheDocument()
+  expect(attempts).toBe(2)
+})
+
+test('incoming messages preserve the reading position and follow the end only when already near it', async () => {
+  const messages = [{ MessageId: 'first', SenderType: 'Staff', MessageType: 'Text', Content: 'Tin cũ', SentAt: '2026-10-13T01:00:00Z' }]
+  mockApi({ existingConversation: conversation, messages })
+  renderAt('/tu-van', makeAuth({ role: 'Customer' }))
+  await screen.findByText('Tin cũ')
+  const log = screen.getByRole('log', { name: 'Tin nhắn' })
+  Object.defineProperties(log, { scrollHeight: { configurable: true, value: 2000 }, clientHeight: { configurable: true, value: 300 } })
+  log.scrollTop = 100
+  fireEvent.scroll(log)
+  messages.push({ MessageId: 'second', SenderType: 'Staff', MessageType: 'Text', Content: 'Tin mới thứ nhất', SentAt: '2026-10-13T01:01:00Z' })
+  await act(async () => document.dispatchEvent(new Event('visibilitychange')))
+  expect(await screen.findByText('Tin mới thứ nhất')).toBeInTheDocument()
+  expect(log.scrollTop).toBe(100)
+  log.scrollTop = 1700
+  fireEvent.scroll(log)
+  messages.push({ MessageId: 'third', SenderType: 'Staff', MessageType: 'Text', Content: 'Tin mới thứ hai', SentAt: '2026-10-13T01:02:00Z' })
+  await act(async () => document.dispatchEvent(new Event('visibilitychange')))
+  expect(await screen.findByText('Tin mới thứ hai')).toBeInTheDocument()
+  expect(log.scrollTop).toBe(2000)
+})
+
 test('the home page has one employee entry and opens the conversation without leaving the page', async () => {
   const calls = mockApi()
   const user = userEvent.setup()
@@ -200,6 +316,56 @@ test('the home page has one employee entry and opens the conversation without le
   await user.click(employee)
   expect(await screen.findByRole('textbox', { name: 'Nội dung tin nhắn' })).toBeInTheDocument()
   expect(calls.filter(c => c.endpoint === '/conversations' && c.method === 'POST')).toHaveLength(1)
+})
+
+test('closing, reopening and switching chat windows preserves the draft until a successful send', async () => {
+  mockApi({ existingConversation: conversation })
+  const user = userEvent.setup()
+  renderAt('/', makeAuth({ role: 'Customer' }))
+  const employee = screen.getByRole('button', { name: 'Chat với nhân viên', exact: true })
+  await user.click(employee)
+  await user.type(await screen.findByRole('textbox', { name: 'Nội dung tin nhắn' }), 'Bản nháp cần giữ')
+  await user.click(screen.getByRole('button', { name: 'Đóng cửa sổ chat' }))
+  await user.click(employee)
+  expect(await screen.findByRole('textbox', { name: 'Nội dung tin nhắn' })).toHaveValue('Bản nháp cần giữ')
+  await user.click(screen.getByRole('button', { name: 'Chat với AI', exact: true }))
+  await user.click(employee)
+  expect(await screen.findByRole('textbox', { name: 'Nội dung tin nhắn' })).toHaveValue('Bản nháp cần giữ')
+  await user.click(screen.getByRole('button', { name: 'Gửi tin nhắn' }))
+  expect(await screen.findByText('Bản nháp cần giữ', { exact: true })).toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: 'Đóng cửa sổ chat' }))
+  await user.click(employee)
+  expect(await screen.findByRole('textbox', { name: 'Nội dung tin nhắn' })).toHaveValue('')
+})
+
+test('drafts stay with their conversation when browsing history', async () => {
+  const old = { ...conversation, ConversationId: 'old1', Status: 'Closed', CreatedAt: '2026-10-12T08:00:00Z' }
+  mockApi({ existingConversation: conversation, history: [old] })
+  const user = userEvent.setup()
+  renderAt('/tu-van', makeAuth({ role: 'Customer' }))
+  await user.type(await screen.findByRole('textbox', { name: 'Nội dung tin nhắn' }), 'Bản nháp hội thoại đang mở')
+  await user.click(screen.getByRole('button', { name: 'Danh sách hội thoại', exact: true }))
+  await user.click(await screen.findByRole('button', { name: /Đã kết thúc/ }))
+  await screen.findByText('Hội thoại đã kết thúc')
+  await user.click(screen.getByRole('button', { name: 'Danh sách hội thoại', exact: true }))
+  await user.click(await screen.findByRole('button', { name: /Đang mở/ }))
+  expect(await screen.findByRole('textbox', { name: 'Nội dung tin nhắn' })).toHaveValue('Bản nháp hội thoại đang mở')
+})
+
+test('signing out clears chat drafts even when the same customer signs in again', async () => {
+  mockApi({ existingConversation: conversation })
+  const router = createMemoryRouter(appRoutes, { initialEntries: ['/'] })
+  const auth = makeAuth({ role: 'Customer' })
+  const app = (value) => <AuthContext.Provider value={value}><RouterProvider router={router} /></AuthContext.Provider>
+  const view = render(app(auth))
+  const user = userEvent.setup()
+  await user.click(screen.getByRole('button', { name: 'Chat với nhân viên', exact: true }))
+  await user.type(await screen.findByRole('textbox', { name: 'Nội dung tin nhắn' }), 'Bản nháp riêng tư')
+  view.rerender(app(makeAuth()))
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  view.rerender(app(auth))
+  await user.click(screen.getByRole('button', { name: 'Chat với nhân viên', exact: true }))
+  expect(await screen.findByRole('textbox', { name: 'Nội dung tin nhắn' })).toHaveValue('')
 })
 
 test('AI opens a coming-soon window without creating or closing any conversation', async () => {
@@ -305,6 +471,17 @@ test('choosing a closed conversation from the menu reads its messages without re
   await user.click(await within(history).findByRole('button', { name: /Đã kết thúc/ }))
   expect(await screen.findByText('Tin nhắn của hội thoại cũ')).toBeInTheDocument()
   expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
+  expect(calls.some(call => call.method === 'POST')).toBe(false)
+})
+
+test('a notification link opens the exact closed conversation without starting a new one', async () => {
+  const old = { ...conversation, ConversationId: 'old-notification', Status: 'Closed', CreatedAt: '2026-10-12T08:00:00Z',
+    Messages: [{ MessageId: 'notification-reply', SenderType: 'Staff', MessageType: 'Text', Content: 'Trả lời trong hội thoại từ thông báo', SentAt: '2026-10-12T08:01:00Z' }] }
+  const calls = mockApi({ existingConversation: conversation, history: [old] })
+  renderAt('/tu-van?conversation=old-notification', makeAuth({ role: 'Customer' }))
+  expect(await screen.findByText('Trả lời trong hội thoại từ thông báo')).toBeInTheDocument()
+  expect(screen.getByText('Hội thoại đã kết thúc')).toBeInTheDocument()
+  expect(screen.queryByRole('textbox', { name: 'Nội dung tin nhắn' })).not.toBeInTheDocument()
   expect(calls.some(call => call.method === 'POST')).toBe(false)
 })
 

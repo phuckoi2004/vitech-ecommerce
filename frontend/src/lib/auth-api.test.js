@@ -1,7 +1,7 @@
 // @vitest-environment node
 // Uses its own minimal `document`/`location` doubles (jsdom keeps only the first cookie of a multi-cookie assignment).
 import assert from 'node:assert/strict'
-import { afterEach, beforeEach, test } from 'vitest'
+import { afterEach, beforeEach, test, vi } from 'vitest'
 import {
   AuthApiError, cancelPendingRefresh, clearLocalCsrf, getCurrentUser, loginCustomer, loginInternal, logoutSession, readCsrfToken,
   refreshSession, registerCustomer, requestPasswordReset, resendOtp, restoreCustomerSession, setNewPassword,
@@ -35,6 +35,8 @@ function deferred() {
 
 beforeEach(() => {
   requests = []
+  // Default to the browser fallback; individual tests supply a shared tab lock.
+  vi.stubGlobal('navigator', {})
   Object.defineProperty(globalThis, 'document', {
     value: { cookie: '' }, writable: true, configurable: true,
   })
@@ -49,6 +51,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cancelPendingRefresh()
+  vi.unstubAllGlobals()
   globalThis.fetch = originalFetch
   if (originalDocument) Object.defineProperty(globalThis, 'document', originalDocument)
   else delete globalThis.document
@@ -110,6 +113,73 @@ test('refresh reads only the exact CSRF cookie and shares overlapping rotations'
 test('refresh without CSRF cookie makes no network request', async () => {
   await assert.rejects(refreshSession(), (error) => error instanceof AuthApiError && error.status === 401)
   assert.equal(requests.length, 0)
+})
+
+test('independent tabs serialize cookie rotations instead of replaying and revoking the customer session', async () => {
+  let queue = Promise.resolve()
+  vi.stubGlobal('navigator', { locks: {
+    request(name, { signal }, rotate) {
+      assert.equal(name, 'vietech-auth-refresh')
+      const pending = queue.then(() => {
+        signal.throwIfAborted()
+        return rotate()
+      })
+      queue = pending.catch(() => {})
+      return pending
+    },
+  } })
+  // Separate module instances model separate tabs, which cannot share a JS promise.
+  vi.resetModules()
+  const firstTab = await import('./auth-api.js')
+  vi.resetModules()
+  const secondTab = await import('./auth-api.js')
+  document.cookie = 'vietech_csrf=csrf-0'
+  let generation = 0, active = 0, maximumActive = 0
+  globalThis.fetch = async (url, options) => {
+    requests.push({ url, ...options })
+    active += 1
+    maximumActive = Math.max(maximumActive, active)
+    const csrf = options.headers['X-CSRF-Token']
+    await new Promise(resolve => setTimeout(resolve, 5))
+    active -= 1
+    if (csrf !== `csrf-${generation}`) return mockResponse({ detail: 'Phiên đăng nhập không hợp lệ.' }, 401)
+    document.cookie = `vietech_csrf=csrf-${++generation}`
+    return mockResponse({ access_token: `customer-access-${generation}`, user: { Role: 'Customer' } })
+  }
+  const restored = await Promise.all([firstTab.renewSession(), secondTab.renewSession()])
+  assert.deepEqual(restored.map(session => session.user.Role), ['Customer', 'Customer'])
+  assert.equal(maximumActive, 1)
+  assert.deepEqual(requests.map(entry => entry.headers['X-CSRF-Token']), ['csrf-0', 'csrf-1'])
+})
+
+test.each(['rotated', 'removed', 'cancelled'])('a queued refresh uses the cookie state after another tab %s it', async (change) => {
+  const gate = deferred()
+  vi.stubGlobal('navigator', { locks: {
+    request(_name, { signal }, rotate) {
+      return gate.promise.then(() => { signal.throwIfAborted(); return rotate() })
+    },
+  } })
+  document.cookie = 'vietech_csrf=old-csrf'
+  const pending = refreshSession()
+  assert.equal(requests.length, 0)
+  let failed
+  if (change === 'rotated') document.cookie = 'vietech_csrf=new-csrf'
+  if (change === 'removed') {
+    document.cookie = ''
+    failed = assert.rejects(pending, error => error.status === 401)
+  }
+  if (change === 'cancelled') {
+    cancelPendingRefresh()
+    failed = assert.rejects(pending, error => error.name === 'AbortError')
+  }
+  gate.resolve()
+  if (failed) {
+    await failed
+    assert.equal(requests.length, 0)
+  } else {
+    await pending
+    assert.equal(requests[0].headers['X-CSRF-Token'], 'new-csrf')
+  }
 })
 
 test('cancelling shared refresh aborts the fetch without disturbing a newer shared refresh', async () => {

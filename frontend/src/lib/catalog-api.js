@@ -12,9 +12,9 @@ export function listBrands({ signal } = {}) {
 }
 
 // PageResponse[ProductSummary], newest first.
-export function searchProducts({ keyword, categoryId, brandId, includeDescendants = false, page = 1, pageSize = 20, signal } = {}) {
+export function searchProducts({ keyword, categoryId, brandId, includeDescendants = false, minPrice, maxPrice, page = 1, pageSize = 20, signal } = {}) {
   return request('/products', {
-    query: { keyword, category_id: categoryId, brand_id: brandId, include_descendants: includeDescendants || undefined, page, page_size: pageSize },
+    query: { keyword, category_id: categoryId, brand_id: brandId, include_descendants: includeDescendants || undefined, min_price: minPrice, max_price: maxPrice, page, page_size: pageSize },
     signal,
   })
 }

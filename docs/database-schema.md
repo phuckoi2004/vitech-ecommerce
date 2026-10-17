@@ -133,6 +133,7 @@ Ký hiệu trong các bảng dưới: **NN** = NOT NULL, **PK** = Primary Key, *
 | Name | varchar(255) | x | | |
 | Slug | varchar(300) | x | | UQ |
 | Description | text | | | |
+| ImageUrl | varchar(500) | | | Ảnh danh mục tùy chọn; có thể để NULL |
 | DisplayOrder | integer | x | 0 | |
 | IsActive | boolean | x | true | |
 

@@ -34,7 +34,7 @@ export default function HomePage() {
 
   return <div className="home">
     <h1 className="sr-only">VieTech – Mua sắm công nghệ chính hãng</h1>
-    <HeroSection categories={categories} />
+    <HeroSection categories={categories} brandPool={brands} />
     <TrustBar />
     <CategoryShortcuts categories={{ ...categories, data: shortcuts }} />
     <FeaturedProducts />

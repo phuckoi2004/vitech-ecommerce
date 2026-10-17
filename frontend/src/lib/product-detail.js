@@ -18,8 +18,10 @@ export function canPurchase(variant) {
     && Number(variant.StockQuantity) > 0
 }
 
-export function initialVariant(variants) {
-  return variants.find(canPurchase) ?? variants[0] ?? null
+// The product's default variant (chosen in admin) opens first when it can be bought.
+export function initialVariant(variants, defaultVariantId) {
+  const preferred = variants.find((variant) => variant.ProductVariantId === defaultVariantId)
+  return (canPurchase(preferred) ? preferred : null) ?? variants.find(canPurchase) ?? preferred ?? variants[0] ?? null
 }
 
 export function productImages(product) {
@@ -28,6 +30,13 @@ export function productImages(product) {
     .sort((a, b) => Number(!!b.IsDefault) - Number(!!a.IsDefault)
       || Number(a.DisplayOrder || 0) - Number(b.DisplayOrder || 0))
   return [...new Map(images.map((image) => [image.ImageUrl, image])).values()]
+}
+
+// Each colour shows only its own photos (VariantImages, chosen in admin); a variant without any photos yet,
+// or an older response without VariantImages, falls back to the whole product gallery.
+export function variantImages(product, variantId) {
+  const own = productImages({ Images: product?.VariantImages?.[variantId] })
+  return own.length ? own : productImages(product)
 }
 
 export function specificationText(value, depth = 0) {

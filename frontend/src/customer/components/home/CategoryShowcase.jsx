@@ -8,6 +8,7 @@ import { listCategories, listProductSummaries, loadProductCards, searchProducts 
 import { categoryPath } from '../../routes/paths.js'
 import { CategoryIcon, ChevronLeftIcon, ChevronRightIcon } from '../icons.jsx'
 import ProductCard, { ProductCardSkeleton } from '../ProductCard.jsx'
+import StoreImage from '../StoreImage.jsx'
 
 const ROW_SIZE = 10
 
@@ -86,7 +87,7 @@ function CategoryPanel({ category, brandPool, id, labelledBy }) {
     {childList.length > 0 && <ul className="home-subcats" aria-label={`Nhóm ${category.Name}`}>
       {childList.map((child) => <li key={child.CategoryId}>
         <button type="button" className="home-subcat" aria-pressed={child.CategoryId === childId} onClick={() => pickChild(child.CategoryId)}>
-          <CategoryIcon name={child.Name} /><span>{child.Name}</span>
+          <StoreImage src={child.ImageUrl} alt="" loading="lazy" fallback={<CategoryIcon name={child.Name} />} /><span>{child.Name}</span>
         </button>
       </li>)}
     </ul>}
