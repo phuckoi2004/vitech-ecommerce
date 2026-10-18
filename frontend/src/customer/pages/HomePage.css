@@ -325,8 +325,8 @@ span.home-tab { display: block; cursor: default; }
 
 .home-news-card:hover { box-shadow: 0 6px 20px rgb(23 36 61 / 10%); }
 .home-news-card:focus-visible { outline: 3px solid var(--color-brand-300); outline-offset: 2px; }
-.home-news-image { display: block; overflow: hidden; height: 120px; border-radius: 12px; background: var(--color-accent-50); }
-.home-news-image img { width: 100%; height: 100%; object-fit: cover; }
+.home-news-image { display: block; flex-shrink: 0; overflow: hidden; height: 220px; border-radius: 12px; background: var(--color-accent-50); }
+.home-news-image img { width: 100%; height: 100%; object-fit: contain; }
 .home-image-placeholder { display: grid; place-items: center; width: 100%; height: 100%; color: var(--color-muted-600); font-size: 14px; }
 .home-news-card h3 { display: -webkit-box; overflow: hidden; margin: 0; color: var(--color-ink-900); font-size: 16px; font-weight: 600; line-height: 1.35; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
 .home-news-card p { display: -webkit-box; overflow: hidden; margin: 0; color: var(--color-muted-600); font-size: 13px; line-height: 1.5; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }

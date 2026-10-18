@@ -15,7 +15,7 @@ const product = {
 }
 const conversation = { ConversationId: 'c1', Mode: 'Staff', Status: 'Open', CreatedAt: '2026-10-13T00:00:00Z', ClosedAt: null }
 
-function mockApi({ existingConversation = null, messages = [], history = [], newsContent = 'Nội dung bài viết.' } = {}) {
+function mockApi({ existingConversation = null, messages = [], history = [], newsContent = 'Nội dung bài viết.', categoryRecords = [] } = {}) {
   const calls = []
   const records = [...history]
   if (existingConversation) records.unshift({ ...existingConversation })
@@ -28,9 +28,14 @@ function mockApi({ existingConversation = null, messages = [], history = [], new
     const body = options.body ? JSON.parse(options.body) : null
     calls.push({ endpoint, method, body, query: Object.fromEntries(url.searchParams), token: options.headers?.Authorization })
     let result, status = 200
-    if (endpoint === '/categories' || endpoint === '/banners') result = []
+    if (endpoint === '/banners') result = []
+    else if (endpoint === '/categories') result = url.searchParams.get('roots_only') === 'true'
+      ? categoryRecords.filter((item) => !item.ParentCategoryId) : categoryRecords
     else if (endpoint === '/brands') result = [{ BrandId: 'b1', Name: 'Apple', Slug: 'apple' }]
-    else if (endpoint === '/categories/slug/dien-thoai') result = { CategoryId: 'root', Name: 'Điện thoại', Slug: 'dien-thoai' }
+    else if (endpoint === '/categories/slug/dien-thoai') result = categoryRecords.find((item) => item.Slug === 'dien-thoai')
+      ?? { CategoryId: 'root', Name: 'Điện thoại', Slug: 'dien-thoai' }
+    else if (endpoint.startsWith('/categories/slug/') && categoryRecords.some((item) => endpoint.endsWith('/' + item.Slug)))
+      result = categoryRecords.find((item) => endpoint.endsWith('/' + item.Slug))
     else if (endpoint === '/brands/slug/apple') result = { BrandId: 'b1', Name: 'Apple', Slug: 'apple' }
     else if (endpoint === '/products') result = { Items: [product], Total: 1, Page: 1, PageSize: 20 }
     else if (endpoint === '/products/p1' || endpoint === '/products/slug/dien-thoai-mau') result = product
@@ -108,6 +113,41 @@ test.each([
   expect(await screen.findByRole('heading', { name: product.Name })).toBeInTheDocument()
   if (url.includes('danh-muc')) expect(calls.find(c => c.endpoint === '/products').query).toMatchObject({ category_id: 'root', include_descendants: 'true' })
   if (url.includes('thuong-hieu')) expect(calls.find(c => c.endpoint === '/products').query.brand_id).toBe('b1')
+})
+
+const categoryRecords = [
+  { CategoryId: 'root', ParentCategoryId: null, Name: 'Điện thoại', Slug: 'dien-thoai', DisplayOrder: 1 },
+  { CategoryId: 'battery', ParentCategoryId: 'root', Name: 'Điện thoại pin trâu', Slug: 'dien-thoai-pin-trau',
+    ImageUrl: 'https://example.test/battery-phone.png', DisplayOrder: 2, Description: 'Pin từ 6.000 mAh.' },
+  { CategoryId: 'gaming', ParentCategoryId: 'root', Name: 'Điện thoại chơi game', Slug: 'dien-thoai-choi-game', DisplayOrder: 1 },
+  { CategoryId: 'laptop', ParentCategoryId: null, Name: 'Laptop', Slug: 'laptop', DisplayOrder: 2 },
+]
+
+test('child category cards navigate to the selected product group and reset old filters and page', async () => {
+  const calls = mockApi({ categoryRecords })
+  const router = renderAt('/danh-muc/dien-thoai?brand=b1&price=from-20&page=3')
+  const navigation = await screen.findByRole('navigation', { name: 'Nhóm điện thoại' })
+  expect(within(navigation).getAllByRole('link').map((link) => link.textContent)).toEqual([
+    'Điện thoại chơi game', 'Điện thoại pin trâu',
+  ])
+  await userEvent.click(within(navigation).getByRole('link', { name: 'Điện thoại pin trâu' }))
+  expect(await screen.findByRole('heading', { level: 1, name: 'Điện thoại pin trâu' })).toBeInTheDocument()
+  await waitFor(() => expect(calls.filter((call) => call.endpoint === '/products').at(-1).query).toMatchObject({
+    category_id: 'battery', include_descendants: 'true', page: '1',
+  }))
+  expect(router.state.location.search).toBe('')
+  expect(calls.filter((call) => call.endpoint === '/products').at(-1).query).not.toHaveProperty('min_price')
+})
+
+test('a direct child category visit shows sibling groups, its criteria and a link back to the parent', async () => {
+  const calls = mockApi({ categoryRecords })
+  renderAt('/danh-muc/dien-thoai-pin-trau')
+  const navigation = await screen.findByRole('navigation', { name: 'Nhóm điện thoại' })
+  expect(within(navigation).getByRole('link', { name: 'Điện thoại pin trâu' })).toHaveAttribute('aria-current', 'page')
+  expect(screen.getByText('Pin từ 6.000 mAh.')).toBeInTheDocument()
+  await userEvent.click(screen.getByRole('link', { name: 'Tất cả điện thoại' }))
+  expect(await screen.findByRole('heading', { level: 1, name: 'Điện thoại' })).toBeInTheDocument()
+  await waitFor(() => expect(calls.filter((call) => call.endpoint === '/products').at(-1).query.category_id).toBe('root'))
 })
 
 test('product page adds the selected variant through the authenticated cart API', async () => {
@@ -390,6 +430,45 @@ test('a guest clicking employee chat signs in before any conversation is opened'
   const user = userEvent.setup()
   const router = renderAt('/')
   await user.click(screen.getByRole('button', { name: 'Chat với nhân viên', exact: true }))
+  expect(await screen.findByRole('heading', { name: 'Đăng nhập' })).toBeInTheDocument()
+  expect(router.state.location.search).toBe('?next=%2Ftu-van')
+  expect(calls.some(c => c.endpoint.startsWith('/conversations'))).toBe(false)
+})
+
+test('news consultation opens employee chat on the article only after that option is chosen', async () => {
+  const calls = mockApi()
+  const user = userEvent.setup()
+  const router = renderAt('/tin-tuc/tin-cong-nghe', makeAuth({ role: 'Customer' }))
+  await user.click(await screen.findByRole('button', { name: 'Tư vấn ngay' }))
+  const choices = screen.getByRole('dialog', { name: 'Chọn hình thức tư vấn' })
+  expect(calls.some(c => c.endpoint.startsWith('/conversations'))).toBe(false)
+  await user.click(within(choices).getByRole('button', { name: 'Chat với nhân viên' }))
+  const dialog = await screen.findByRole('dialog', { name: 'Chat với nhân viên' })
+  expect(await within(dialog).findByRole('textbox', { name: 'Nội dung tin nhắn' })).toBeInTheDocument()
+  expect(screen.queryByRole('dialog', { name: 'Chọn hình thức tư vấn' })).not.toBeInTheDocument()
+  expect(router.state.location.pathname).toBe('/tin-tuc/tin-cong-nghe')
+  expect(calls.filter(c => c.endpoint === '/conversations' && c.method === 'POST')).toHaveLength(1)
+})
+
+test('news AI consultation opens the existing coming-soon panel without creating a conversation', async () => {
+  const calls = mockApi()
+  const user = userEvent.setup()
+  const router = renderAt('/tin-tuc/tin-cong-nghe')
+  await user.click(await screen.findByRole('button', { name: 'Tư vấn ngay' }))
+  await user.click(within(screen.getByRole('dialog', { name: 'Chọn hình thức tư vấn' })).getByRole('button', { name: 'Chat với AI' }))
+  const dialog = await screen.findByRole('dialog', { name: 'Chat với AI' })
+  expect(within(dialog).getByRole('heading', { name: 'Sắp ra mắt' })).toBeInTheDocument()
+  expect(screen.queryByRole('dialog', { name: 'Chọn hình thức tư vấn' })).not.toBeInTheDocument()
+  expect(router.state.location.pathname).toBe('/tin-tuc/tin-cong-nghe')
+  expect(calls.some(c => c.endpoint.startsWith('/conversations'))).toBe(false)
+})
+
+test('a guest choosing employee consultation from news must sign in first', async () => {
+  const calls = mockApi()
+  const user = userEvent.setup()
+  const router = renderAt('/tin-tuc/tin-cong-nghe')
+  await user.click(await screen.findByRole('button', { name: 'Tư vấn ngay' }))
+  await user.click(within(screen.getByRole('dialog', { name: 'Chọn hình thức tư vấn' })).getByRole('button', { name: 'Chat với nhân viên' }))
   expect(await screen.findByRole('heading', { name: 'Đăng nhập' })).toBeInTheDocument()
   expect(router.state.location.search).toBe('?next=%2Ftu-van')
   expect(calls.some(c => c.endpoint.startsWith('/conversations'))).toBe(false)

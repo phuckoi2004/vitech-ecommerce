@@ -3,10 +3,9 @@ import EmptyState from '../../components/shared/EmptyState.jsx'
 import ErrorState from '../../components/shared/ErrorState.jsx'
 import LoadingState from '../../components/shared/LoadingState.jsx'
 import Pagination from '../../components/shared/Pagination.jsx'
-import RichTextContent from '../../components/shared/RichTextContent.jsx'
+import NewsArticle from '../components/news/NewsArticle.jsx'
 import useApiData from '../../hooks/useApiData.js'
 import { getNews, listNews } from '../../lib/catalog-api.js'
-import { formatDate } from '../../lib/format.js'
 import { HOME_PATH, NEWS_PATH, newsPath } from '../routes/paths.js'
 import './ShoppingPages.css'
 
@@ -28,13 +27,8 @@ export default function NewsPage() {
     ? getNews(slug, { signal }) : listNews({ page, pageSize: 12, signal }))
   if (news.loading) return <LoadingState />
   if (news.error) return <ErrorState message={news.error} onRetry={news.reload} />
-  if (slug) return <article className="shopping-page shopping-article">
-    <NewsBreadcrumb title={news.data.Title} /><h1>{news.data.Title}</h1>
-    {news.data.PublishedAt && <p className="shopping-muted">{formatDate(news.data.PublishedAt)}</p>}
-    {news.data.ThumbnailUrl && <img src={news.data.ThumbnailUrl} alt="" />}
-    {news.data.Summary && <p>{news.data.Summary}</p>}
-    <RichTextContent value={news.data.Content} />
-  </article>
+  if (slug) return <NewsArticle key={slug} article={news.data} slug={slug}
+    breadcrumb={<NewsBreadcrumb title={news.data.Title} />} />
   return <div className="shopping-page"><NewsBreadcrumb /><h1>Tin tức công nghệ</h1>
     {news.data.Items.length ? <ul className="shopping-news-list">{news.data.Items.map((article) => <li key={article.NewsArticleId}>
       <Link className="home-news-card" to={newsPath(article.Slug)}>

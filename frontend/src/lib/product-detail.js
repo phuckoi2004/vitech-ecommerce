@@ -4,7 +4,12 @@ export function productVariants(product) {
     .filter((variant) => variant?.ProductVariantId && variant.IsActive !== false)
 }
 
-export const versionLabel = (variant) => variant.Storage?.trim() || variant.VariantName || 'Tiêu chuẩn'
+// Without a storage option the name is the version, minus the colour it repeats ("Đen", "Bản Pro · Đen"), so the
+// colours of one model are one version rather than one version each.
+export const versionLabel = (variant) => variant.Storage?.trim()
+  || String(variant.VariantName ?? '').split(' · ').filter((part) => part.trim().toLocaleLowerCase('vi-VN')
+    !== String(variant.Color ?? '').trim().toLocaleLowerCase('vi-VN')).join(' · ').trim()
+  || 'Tiêu chuẩn'
 export const colorLabel = (variant) => variant.Color?.trim() || 'Tiêu chuẩn'
 
 export function variantPrice(variant) {
@@ -32,11 +37,13 @@ export function productImages(product) {
   return [...new Map(images.map((image) => [image.ImageUrl, image])).values()]
 }
 
-// Each colour shows only its own photos (VariantImages, chosen in admin); a variant without any photos yet,
-// or an older response without VariantImages, falls back to the whole product gallery.
+// Respect an explicitly empty selection: it must not borrow a different colour's photos.
+// Older responses without a selection retain the shared product gallery.
 export function variantImages(product, variantId) {
-  const own = productImages({ Images: product?.VariantImages?.[variantId] })
-  return own.length ? own : productImages(product)
+  if (Object.hasOwn(product?.VariantImages ?? {}, variantId)) {
+    return productImages({ Images: product.VariantImages[variantId] })
+  }
+  return productImages(product)
 }
 
 export function specificationText(value, depth = 0) {

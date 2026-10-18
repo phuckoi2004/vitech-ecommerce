@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, CheckConstraint, DateTime, ForeignKey, Integer, String, Text, text
+from sqlalchemy import BigInteger, Boolean, CheckConstraint, DateTime, ForeignKey, Integer, String, Text, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -19,7 +19,10 @@ NEWS_ARTICLE_STATUSES = ("Draft", "Published", "Hidden")
 
 class NewsArticle(Base):
     __tablename__ = "NewsArticles"
-    __table_args__ = (check_in("Status", NEWS_ARTICLE_STATUSES, "Status_Valid"),)
+    __table_args__ = (
+        check_in("Status", NEWS_ARTICLE_STATUSES, "Status_Valid"),
+        CheckConstraint('"ViewCount" >= 0', name="ViewCount_NonNegative"),
+    )
 
     NewsArticleId: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
@@ -34,6 +37,7 @@ class NewsArticle(Base):
     ThumbnailUrl: Mapped[str | None] = mapped_column(String(500), nullable=True)
     Status: Mapped[str] = mapped_column(String(30), nullable=False)
     PublishedAt: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    ViewCount: Mapped[int] = mapped_column(BigInteger, nullable=False, server_default=text("0"))
     CreatedAt: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=text("now()")
     )

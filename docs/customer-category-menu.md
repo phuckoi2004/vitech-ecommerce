@@ -1,5 +1,7 @@
 # Menu danh mục cạnh banner trang chủ
 
+Các danh mục con được bổ sung ngày 18/10/2026 có thể chọn trong trang danh mục và khối danh mục hiện có; xem [danh sách và cách hoạt động](catalog-child-categories.md). Menu cạnh banner vẫn giữ phạm vi thương hiệu và khoảng giá dưới đây.
+
 Tham chiếu [Figma Category Sidebar, node 5:29](https://www.figma.com/design/aLG7De0fgbWCfaIpzIrPii/VieTech---Homepage-UI?node-id=5-29). Phần mở rộng tham khảo cách tổ chức danh mục/hãng của [CellphoneS](https://cellphones.com.vn/), dùng màu sắc và component sẵn có của VieTech.
 
 - Desktop: rê chuột hoặc bấm danh mục để mở bảng bên phải. Điện thoại/tablet: bấm mở bảng ngay dưới hàng danh mục.

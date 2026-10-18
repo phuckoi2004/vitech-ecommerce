@@ -7,11 +7,12 @@ import useApiData from '../../hooks/useApiData.js'
 import { getBrandBySlug, getCategoryBySlug, listBrands, loadProductCards, searchProducts } from '../../lib/catalog-api.js'
 import { PRICE_RANGES } from '../../lib/catalog-filters.js'
 import ProductCard from '../components/ProductCard.jsx'
+import CategoryNavigation from '../components/CategoryNavigation.jsx'
 import './ShoppingPages.css'
 
 const PAGE_SIZE = 20
 
-function Results({ title, categoryId, fixedBrandId }) {
+function Results({ title, category, categoryId, fixedBrandId }) {
   const [params, setParams] = useSearchParams()
   const page = Math.max(1, Number.parseInt(params.get('page') ?? '1', 10) || 1)
   const keyword = params.get('q') ?? ''
@@ -33,6 +34,8 @@ function Results({ title, categoryId, fixedBrandId }) {
 
   return <div className="shopping-page">
     <h1>{title || (keyword ? `Kết quả tìm kiếm: ${keyword}` : 'Sản phẩm')}</h1>
+    {category && <CategoryNavigation category={category} />}
+    {category?.ParentCategoryId && category.Description && <p className="catalog-category-description">{category.Description}</p>}
     <div className="shopping-catalog-filters">
       {!fixedBrandId && brands.data?.length > 0 && <label className="shopping-filter">Thương hiệu
         <select value={brandId} onChange={(event) => change('brand', event.target.value)}>
@@ -67,6 +70,7 @@ export default function CatalogPage({ kind = 'search' }) {
     if (scope.loading) return <LoadingState />
     if (scope.error) return <ErrorState message={scope.error} onRetry={scope.reload} />
   }
-  return <Results title={scope.data?.Name} categoryId={kind === 'category' ? scope.data.CategoryId : undefined}
+  return <Results title={scope.data?.Name} category={kind === 'category' ? scope.data : undefined}
+    categoryId={kind === 'category' ? scope.data.CategoryId : undefined}
     fixedBrandId={kind === 'brand' ? scope.data.BrandId : undefined} />
 }

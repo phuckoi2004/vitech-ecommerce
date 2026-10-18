@@ -1155,6 +1155,13 @@ class FakeNewsArticleRepo(FakeRepo):
         rows = self._rows(lambda a: a.Slug == slug)
         return rows[0] if rows else None
 
+    def increment_published_view(self, slug):
+        article = self.get_by_slug(slug)
+        if article is None or article.Status != "Published":
+            return None
+        article.ViewCount += 1
+        return article.ViewCount
+
     def exists_by_slug(self, slug, exclude_id=None):
         return FakeNewsArticleRepo._duplicate(self, slug, exclude_id)
 

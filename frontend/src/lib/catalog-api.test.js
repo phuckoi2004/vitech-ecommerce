@@ -31,6 +31,14 @@ describe('toProductCard', () => {
   test('without a variant on sale there is no price', () => {
     expect(toProductCard({ ...product, Variants: [] })).toMatchObject({ price: null, priceFrom: false, inStock: false })
   })
+
+  test('cards use the default colour photo instead of a shared photo of another colour', () => {
+    const colored = { ...product, DefaultVariantId: 'white', VariantImages: {
+      white: [{ ImageUrl: 'https://cdn.example/white.png', IsDefault: true, DisplayOrder: 0 }],
+    } }
+    expect(toProductCard(colored).imageUrl).toBe('https://cdn.example/white.png')
+    expect(toProductCard({ ...colored, VariantImages: { white: [] } }).imageUrl).toBeNull()
+  })
 })
 
 describe('loadProductCards', () => {

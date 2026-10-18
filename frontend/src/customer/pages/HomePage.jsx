@@ -6,18 +6,9 @@ import CategoryShowcase from '../components/home/CategoryShowcase.jsx'
 import HeroSection from '../components/home/HeroSection.jsx'
 import { BrandSection, NewsSection } from '../components/home/NewsAndBrands.jsx'
 import FeaturedProducts from '../components/home/FeaturedProducts.jsx'
-import { selectHomeCategories } from '../components/home/categories.js'
+import { pairHomeCategories, selectHomeCategories } from '../components/home/categories.js'
 import { PolicySection, TrustBar } from '../components/home/StaticSections.jsx'
 import './HomePage.css'
-
-// Root categories shown as tabbed product rows, two per section.
-const SHOWCASE_CATEGORIES = 4
-
-function pairs(items) {
-  const result = []
-  for (let index = 0; index < items.length; index += 2) result.push(items.slice(index, index + 2))
-  return result
-}
 
 // Customer home page (Figma "Trang chủ"), rendered inside CustomerLayout. Every list comes from the public
 // catalog/content API; sections below the fold load when the visitor scrolls near them.
@@ -26,7 +17,8 @@ export default function HomePage() {
   const brands = useApiData('brands', (signal) => listBrands({ signal }))
   const roots = categories.data ?? []
   const shortcuts = selectHomeCategories(roots, ['phone', 'laptop', 'accessories', 'smartHome'], 4)
-  const showcase = selectHomeCategories(roots, ['phone', 'laptop', 'desktop', 'components'], SHOWCASE_CATEGORIES)
+  // Every root category gets a tabbed product row, paired with a related one when there is one.
+  const showcase = pairHomeCategories(roots)
 
   useEffect(() => {
     document.title = 'VieTech'
@@ -38,7 +30,7 @@ export default function HomePage() {
     <TrustBar />
     <CategoryShortcuts categories={{ ...categories, data: shortcuts }} />
     <FeaturedProducts />
-    {pairs(showcase).map((group) => <CategoryShowcase key={group[0].CategoryId} categories={group} brandPool={brands} />)}
+    {showcase.map((group) => <CategoryShowcase key={group[0].CategoryId} categories={group} brandPool={brands} />)}
     <NewsSection />
     <PolicySection />
     <BrandSection brands={brands} />

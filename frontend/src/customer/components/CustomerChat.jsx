@@ -51,15 +51,20 @@ function CustomerChatWindow() {
     setKind((current) => current === 'Staff' ? null : 'Staff')
   }
 
-  // Product consultation opens the existing employee chat without creating another chat UI.
+  // Product and news consultation reuse these chat windows.
   useEffect(() => {
     function openConsultation() {
       if (!ready) return
       if (!user) { navigate(CHAT_PATH); return }
       setKind('Staff')
     }
+    function openAiConsultation() { setKind('AI') }
     window.addEventListener('vietech-open-staff-chat', openConsultation)
-    return () => window.removeEventListener('vietech-open-staff-chat', openConsultation)
+    window.addEventListener('vietech-open-ai-chat', openAiConsultation)
+    return () => {
+      window.removeEventListener('vietech-open-staff-chat', openConsultation)
+      window.removeEventListener('vietech-open-ai-chat', openAiConsultation)
+    }
   }, [ready, user, navigate])
 
   return <>

@@ -259,6 +259,7 @@ Khi nhân viên/Admin phụ trách gửi tin trả lời, Customer nhận thông
 |---|---|---|---|---|---|---|
 | GET | `/news` | Công khai |  | page, page_size | `PageResponse[NewsArticleSummary]` | `list_published_articles` |
 | GET | `/news/{slug}` | Công khai |  |  | `NewsArticleResponse` | `get_published_article` |
+| POST | `/news/{slug}/views` | Công khai |  |  | `NewsArticleViewResponse` (`ViewCount`) | `record_article_view` |
 | GET | `/banners` | Công khai |  |  | `list[BannerResponse]` | `list_display_banners` |
 | GET | `/admin/news` | Staff/Admin |  | status, page, page_size | `PageResponse[AdminNewsArticleSummary]` | `admin_list_articles` |
 | GET | `/admin/news/{article_id}` | Staff/Admin |  |  | `AdminNewsArticleResponse` | `admin_get_article` |

@@ -1,0 +1,41 @@
+﻿DanhMucCha,DanhMucCon,SoSanPham,LinkTrongProject,MoTa
+Điện thoại,Điện thoại pin trâu,6,http://127.0.0.1:5173/danh-muc/samsung,Các mẫu được chọn có dung lượng pin công bố từ 6.000 mAh; thời lượng thực tế tùy cách sử dụng.
+Điện thoại,Điện thoại chơi game,3,http://127.0.0.1:5173/danh-muc/dien-thoai-choi-game,"Nhóm ưu tiên cấu hình xử lý, RAM và màn hình cho nhu cầu chơi game; kết quả tùy trò chơi và thiết lập."
+Điện thoại,Điện thoại chụp ảnh,5,http://127.0.0.1:5173/danh-muc/dien-thoai-chup-anh,"Các mẫu có hệ thống camera là điểm nhấn, gồm những phiên bản hỗ trợ nhiều tiêu cự hoặc camera tele."
+Điện thoại,Điện thoại màn hình gập,2,http://127.0.0.1:5173/danh-muc/dien-thoai-man-hinh-gap,"Các mẫu có màn hình gập, mở rộng không gian hiển thị khi cần."
+Điện thoại,Điện thoại mỏng nhẹ,1,http://127.0.0.1:5173/danh-muc/dien-thoai-mong-nhe,"Nhóm ưu tiên thiết kế mỏng, thuận tiện mang theo hằng ngày."
+Điện thoại,Điện thoại phổ thông,3,http://127.0.0.1:5173/danh-muc/dien-thoai-pho-thong,"Các mẫu tập trung liên lạc, ứng dụng cơ bản và chi phí dễ tiếp cận."
+Điện thoại,Điện thoại tầm trung,4,http://127.0.0.1:5173/danh-muc/dien-thoai-tam-trung,"Nhóm cân bằng cấu hình, camera và nhu cầu sử dụng thường ngày."
+Điện thoại,Điện thoại cao cấp,5,http://127.0.0.1:5173/danh-muc/dien-thoai-cao-cap,Các dòng máy cao cấp dành cho người dùng quan tâm cấu hình và trải nghiệm tổng thể.
+Điện thoại,Điện thoại nhỏ gọn,4,http://127.0.0.1:5173/danh-muc/dien-thoai-nho-gon,"Các mẫu được chọn có màn hình không quá 6,3 inch, ưu tiên kích thước dễ cầm."
+Điện thoại,Điện thoại màn hình lớn,3,http://127.0.0.1:5173/danh-muc/dien-thoai-man-hinh-lon,"Các mẫu được chọn có màn hình 6,9 inch, dành thêm không gian cho nội dung và giải trí."
+Laptop,Laptop gaming,8,http://127.0.0.1:5173/danh-muc/laptop-gaming,"Các dòng laptop gaming có GPU rời; hiệu năng thực tế phụ thuộc trò chơi, công suất và tản nhiệt."
+Laptop,Laptop học tập,4,http://127.0.0.1:5173/danh-muc/laptop-hoc-tap,"Nhóm dành cho tài liệu, bài giảng và những công cụ học tập thông dụng; cần đối chiếu phần mềm của ngành học."
+Laptop,Laptop văn phòng,5,http://127.0.0.1:5173/danh-muc/laptop-van-phong,"Các mẫu phục vụ tài liệu, bảng tính và công việc văn phòng hằng ngày."
+Laptop,Laptop đồ họa,2,http://127.0.0.1:5173/danh-muc/laptop-do-hoa,Các cấu hình có GPU rời để cân nhắc với phần mềm đồ họa; yêu cầu màu sắc cần kiểm tra thêm thông số màn hình.
+Laptop,Laptop mỏng nhẹ,6,http://127.0.0.1:5173/danh-muc/laptop-mong-nhe,"Nhóm ưu tiên tính di động, phù hợp người thường mang máy đi học hoặc làm việc."
+Laptop,Laptop 2 trong 1,1,http://127.0.0.1:5173/danh-muc/laptop-2-trong-1,"Dòng máy có thiết kế xoay gập, hỗ trợ thay đổi cách sử dụng màn hình."
+Laptop,Laptop AI,2,http://127.0.0.1:5173/danh-muc/laptop-ai,Các mẫu có bộ xử lý tích hợp NPU được công bố; tính năng AI phụ thuộc phần mềm và dịch vụ hỗ trợ.
+Laptop,Laptop màn hình lớn,2,http://127.0.0.1:5173/danh-muc/laptop-man-hinh-lon,"Các mẫu có màn hình từ 15,3 inch, tăng không gian bố trí nội dung."
+Laptop,Laptop lập trình,3,http://127.0.0.1:5173/danh-muc/laptop-lap-trinh,Nhóm để cân nhắc cho môi trường phát triển và công cụ lập trình; cần đối chiếu hệ điều hành và yêu cầu dự án.
+Laptop,Laptop cao cấp,2,http://127.0.0.1:5173/danh-muc/laptop-cao-cap,Các phiên bản cấu hình và dung lượng lưu trữ cao hơn trong dòng máy đã chọn.
+Máy tính bảng,Máy tính bảng học tập,2,http://127.0.0.1:5173/danh-muc/may-tinh-bang-hoc-tap,"Nhóm dành cho tài liệu, bài giảng và ứng dụng học tập trên màn hình cảm ứng."
+Máy tính bảng,Máy tính bảng văn phòng,2,http://127.0.0.1:5173/danh-muc/may-tinh-bang-van-phong,Các phiên bản kèm bàn phím để nhập liệu và xử lý công việc cơ bản; ứng dụng cần tương thích hệ điều hành.
+Máy tính bảng,Máy tính bảng chơi game,3,http://127.0.0.1:5173/danh-muc/may-tinh-bang-choi-game,"Nhóm ưu tiên bộ xử lý và màn hình cho nhu cầu chơi game, tùy khả năng tương thích của từng trò chơi."
+Máy tính bảng,Máy tính bảng sáng tạo,2,http://127.0.0.1:5173/danh-muc/may-tinh-bang-sang-tao,"Nhóm để cân nhắc cho vẽ, chỉnh sửa ảnh và các ứng dụng sáng tạo; phụ kiện cần được chọn đúng loại tương thích."
+Máy tính bảng,Máy tính bảng giải trí,2,http://127.0.0.1:5173/danh-muc/may-tinh-bang-giai-tri,"Các mẫu có màn hình rộng để xem video, đọc nội dung và giải trí hằng ngày."
+Máy tính bảng,Máy tính bảng nhỏ gọn,2,http://127.0.0.1:5173/danh-muc/may-tinh-bang-nho-gon,"Các mẫu được chọn có màn hình dưới 10 inch, thuận tiện cầm và mang theo."
+Máy tính bảng,Máy tính bảng màn hình lớn,1,http://127.0.0.1:5173/danh-muc/may-tinh-bang-man-hinh-lon,"Các mẫu được chọn có màn hình 13 inch, mở rộng không gian xem tài liệu và nội dung."
+Máy tính bảng,Máy tính bảng kèm bút,2,http://127.0.0.1:5173/danh-muc/may-tinh-bang-kem-but,Các phiên bản trong nhóm có ghi kèm bút ở tên cấu hình nguồn; cần đối chiếu đúng gói sản phẩm.
+Máy tính bảng,Máy tính bảng kèm bàn phím,1,http://127.0.0.1:5173/danh-muc/may-tinh-bang-kem-ban-phim,"Các phiên bản trong nhóm được công bố kèm bàn phím, thuận tiện nhập liệu."
+Máy tính bảng,Máy tính bảng phổ thông,3,http://127.0.0.1:5173/danh-muc/may-tinh-bang-pho-thong,"Nhóm tập trung các ứng dụng cơ bản, đọc nội dung và giải trí với cấu hình dễ tiếp cận."
+Tai nghe,Tai nghe chống ồn chủ động,5,http://127.0.0.1:5173/danh-muc/tai-nghe-chong-on-chu-dong,Nhóm có công nghệ chống ồn chủ động được nguồn sản phẩm công bố; hiệu quả thay đổi theo môi trường và độ vừa vặn.
+Tai nghe,Tai nghe chụp tai,3,http://127.0.0.1:5173/danh-muc/tai-nghe-chup-tai,Thiết kế chụp tai dành cho người thích kiểu đeo bao quanh tai.
+Tai nghe,Tai nghe thể thao,1,http://127.0.0.1:5173/danh-muc/tai-nghe-the-thao,Các mẫu được định hướng thể thao ở thông tin sản phẩm; nên chọn kiểu đeo vừa vặn với hoạt động.
+Tai nghe,Tai nghe có dây,2,http://127.0.0.1:5173/danh-muc/tai-nghe-co-day,Các mẫu kết nối âm thanh bằng dây; cần kiểm tra cổng và micro của phiên bản.
+Tai nghe,Tai nghe đeo cổ,1,http://127.0.0.1:5173/danh-muc/tai-nghe-deo-co,"Thiết kế có dây nối hai bên tai, sử dụng kết nối Bluetooth với thiết bị nguồn."
+Tai nghe,Tai nghe Hi-Res,2,http://127.0.0.1:5173/danh-muc/tai-nghe-hi-res,Các mẫu có Hi-Res Audio hoặc Hi-Res Audio Wireless được công bố; chất lượng còn phụ thuộc nguồn nhạc và thiết bị phát.
+Tai nghe,Tai nghe đàm thoại,2,http://127.0.0.1:5173/danh-muc/tai-nghe-dam-thoai,Nhóm có micro và xử lý giảm ồn cuộc gọi để cân nhắc với nhu cầu đàm thoại; không đồng nhất ENC với ANC.
+Tai nghe,Tai nghe pin lâu,6,http://127.0.0.1:5173/danh-muc/tai-nghe-pin-lau,Nhóm có thời lượng riêng tai nghe công bố từ 8 giờ; thời gian kèm hộp sạc được thể hiện riêng trong mô tả.
+Tai nghe,Tai nghe cho hệ sinh thái Apple,4,http://127.0.0.1:5173/danh-muc/tai-nghe-he-sinh-thai-apple,Các dòng AirPods để sử dụng cùng thiết bị Apple; một số tính năng yêu cầu thiết bị và hệ điều hành tương thích.
+Tai nghe,Tai nghe cho hệ sinh thái Galaxy,4,http://127.0.0.1:5173/danh-muc/tai-nghe-he-sinh-thai-galaxy,Các dòng Galaxy Buds để cân nhắc khi dùng thiết bị Samsung Galaxy; tính năng đồng bộ tùy phiên bản.

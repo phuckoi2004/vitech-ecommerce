@@ -71,7 +71,7 @@ export default function ProductCard({ product, headingLevel = 3, wishlistLayout 
       <p className="pcard-price">
         {product.price === null
           ? <span className="pcard-noprice">Đang cập nhật giá</span>
-          : <>{product.priceFrom && <span className="pcard-from">Từ </span>}<Money value={product.price} /></>}
+          : <Money value={product.price} />}
       </p>
       <p className="pcard-meta">
         {rated && <span><span className="sr-only">Đánh giá </span><span aria-hidden="true">★ </span>{formatRating(product.rating)}</span>}

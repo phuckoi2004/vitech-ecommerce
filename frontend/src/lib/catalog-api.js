@@ -1,4 +1,5 @@
 import { request } from '../services/api/client.js'
+import { variantImages } from './product-detail.js'
 
 // Public catalog and content endpoints (docs/api-endpoints.md). Called without a token, so the backend returns
 // only what customers may see: active categories/brands, products on sale, published news, banners in their window.
@@ -59,8 +60,7 @@ export function listShippingMethods({ signal } = {}) {
 // lowest variant price (null without a sellable variant); `priceFrom` is set when variants have different prices.
 export function toProductCard(product) {
   const prices = (product.Variants ?? []).map((variant) => Number(variant.Price)).filter(Number.isFinite)
-  const images = [...(product.Images ?? [])]
-    .sort((a, b) => Number(b.IsDefault) - Number(a.IsDefault) || a.DisplayOrder - b.DisplayOrder)
+  const images = variantImages(product, product.DefaultVariantId)
   return {
     id: product.ProductId,
     name: product.Name,
@@ -91,3 +91,4 @@ export const getCategoryBySlug = (slug, { signal } = {}) => request(`/categories
 export const getBrandBySlug = (slug, { signal } = {}) => request(`/brands/slug/${encodeURIComponent(slug)}`, { signal })
 export const getProductBySlug = (slug, { signal } = {}) => request(`/products/slug/${encodeURIComponent(slug)}`, { signal })
 export const getNews = (slug, { signal } = {}) => request(`/news/${encodeURIComponent(slug)}`, { signal })
+export const recordNewsView = (slug) => request(`/news/${encodeURIComponent(slug)}/views`, { method: 'POST' })

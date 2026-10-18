@@ -3,7 +3,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import or_
+from sqlalchemy import or_, update
 
 from app.models import Banner, NewsArticle
 
@@ -15,6 +15,16 @@ class NewsArticleRepository(BaseRepository[NewsArticle]):
 
     def get_by_slug(self, slug: str) -> NewsArticle | None:
         return self.get_one(NewsArticle.Slug == slug)
+
+    def increment_published_view(self, slug: str) -> int | None:
+        """Increment in SQL so concurrent page opens cannot overwrite another view."""
+        self.session.flush()
+        statement = (update(NewsArticle)
+                     .where(NewsArticle.Slug == slug, NewsArticle.Status == "Published")
+                     .values(ViewCount=NewsArticle.ViewCount + 1)
+                     .returning(NewsArticle.ViewCount)
+                     .execution_options(synchronize_session=False))
+        return self.session.scalar(statement)
 
     def exists_by_slug(self, slug: str, exclude_id: uuid.UUID | None = None) -> bool:
         conditions = [NewsArticle.Slug == slug]

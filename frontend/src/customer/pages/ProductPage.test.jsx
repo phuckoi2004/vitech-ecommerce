@@ -66,6 +66,15 @@ function renderProduct({ guest = false } = {}) {
 
 afterEach(() => vi.unstubAllGlobals())
 
+test('a product with no colour data does not invent a standard colour option', async () => {
+  mockApi({ detail: { ...product, Variants: [variant('no-color', '256GB', null)] } })
+  renderProduct()
+  await screen.findByRole('heading', { level: 1, name: product.Name })
+  expect(screen.getByText('Đang cập nhật màu sắc.')).toBeInTheDocument()
+  expect(screen.queryByRole('group', { name: 'Chọn màu sắc' })).not.toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'Thêm vào giỏ hàng' })).toBeEnabled()
+})
+
 test('real product metadata, breadcrumbs and demo offers are distinguished', async () => {
   mockApi(); renderProduct()
   expect(await screen.findByRole('heading', { level: 1, name: product.Name })).toBeInTheDocument()
@@ -233,21 +242,43 @@ test('a signed-in staff account is still sent to the sign-in page', async () => 
   expect(calls.some((call) => call.endpoint === '/cart/items')).toBe(false)
 })
 
-test('consultation opens the existing employee conversation', async () => {
-  const { calls } = mockApi(); renderProduct(); const user = userEvent.setup()
+test('consultation first offers both options and opens employee chat only when selected', async () => {
+  const { calls } = mockApi(); const router = renderProduct(); const user = userEvent.setup()
   await user.click(await screen.findByRole('button', { name: 'Tư vấn ngay' }))
+  const choices = await screen.findByRole('dialog', { name: 'Chọn hình thức tư vấn' })
+  expect(choices).toHaveAttribute('aria-modal', 'true')
+  expect(calls.some((call) => call.endpoint === '/conversations')).toBe(false)
+  expect(within(choices).getByRole('button', { name: 'Chat với AI' })).toBeInTheDocument()
+  await user.click(within(choices).getByRole('button', { name: 'Chat với nhân viên' }))
   expect(await screen.findByRole('dialog', { name: /Chat với nhân viên/ })).toBeInTheDocument()
+  expect(screen.queryByRole('dialog', { name: 'Chọn hình thức tư vấn' })).not.toBeInTheDocument()
   await waitFor(() => expect(calls.some((call) => call.endpoint === '/conversations')).toBe(true))
+  expect(router.state.location.pathname).toBe('/san-pham/san-pham-kiem-thu')
 })
 
 test('guest consultation requires sign-in or registration like purchase actions', async () => {
   const { calls } = mockApi(); const router = renderProduct({ guest: true }); const user = userEvent.setup()
   await user.click(await screen.findByRole('button', { name: 'Tư vấn ngay' }))
+  expect(screen.queryByRole('dialog', { name: 'Bạn đã có tài khoản chưa?' })).not.toBeInTheDocument()
+  await user.click(within(screen.getByRole('dialog', { name: 'Chọn hình thức tư vấn' })).getByRole('button', { name: 'Chat với nhân viên' }))
   expect(await screen.findByRole('dialog', { name: 'Bạn đã có tài khoản chưa?' })).toBeInTheDocument()
+  expect(screen.queryByRole('dialog', { name: 'Chọn hình thức tư vấn' })).not.toBeInTheDocument()
   expect(calls.some((call) => call.endpoint === '/conversations')).toBe(false)
   await user.click(screen.getByRole('link', { name: 'Đăng ký' }))
   expect(router.state.location.pathname).toBe('/dang-ky')
   expect(router.state.location.search).toBe('?next=%2Fsan-pham%2Fsan-pham-kiem-thu')
+})
+
+test.each([false, true])('product AI consultation stays on the product without creating a conversation (guest=%s)', async (guest) => {
+  const { calls } = mockApi(); const router = renderProduct({ guest }); const user = userEvent.setup()
+  await user.click(await screen.findByRole('button', { name: 'Tư vấn ngay' }))
+  await user.click(within(screen.getByRole('dialog', { name: 'Chọn hình thức tư vấn' })).getByRole('button', { name: 'Chat với AI' }))
+  const panel = await screen.findByRole('dialog', { name: 'Chat với AI' })
+  expect(within(panel).getByRole('heading', { name: 'Sắp ra mắt' })).toBeInTheDocument()
+  expect(screen.queryByRole('dialog', { name: 'Chọn hình thức tư vấn' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('dialog', { name: 'Bạn đã có tài khoản chưa?' })).not.toBeInTheDocument()
+  expect(router.state.location.pathname).toBe('/san-pham/san-pham-kiem-thu')
+  expect(calls.some((call) => call.endpoint === '/conversations' || call.endpoint === '/cart/items')).toBe(false)
 })
 
 test('related products exclude the current product and link to their own slug', async () => {
