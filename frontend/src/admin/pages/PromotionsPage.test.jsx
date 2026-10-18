@@ -61,12 +61,12 @@ test('accent search and type/status filters combine and reset pagination', async
   fireEvent.change(screen.getByRole('combobox', { name: 'Trạng thái khuyến mãi' }), { target: { value: 'Expired' } })
   expect(screen.getByText('Không có khuyến mãi phù hợp.')).toBeInTheDocument()
 })
-test('pagination shows four records per page and search returns to first page', async () => {
+test('pagination shows six records per page and search returns to first page', async () => {
   rows = Array.from({ length: 9 }, (_, index) => ({ ...base, PromotionId: 'p' + index, Name: 'Chương trình ' + index }))
   open(); await screen.findByText('Hiển thị 9 khuyến mãi', {}, { timeout: 5000 })
-  expect(table().getAllByRole('row')).toHaveLength(5)
+  expect(table().getAllByRole('row')).toHaveLength(7)
   fireEvent.click(screen.getByRole('button', { name: 'Trang sau' }))
-  expect(table().getByText('Chương trình 4')).toBeInTheDocument()
+  expect(table().getByText('Chương trình 6')).toBeInTheDocument()
   fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'Chương trình 8' } })
   expect(table().getByText('Chương trình 8')).toBeInTheDocument()
   expect(screen.getByText('Hiển thị 1–1 trong 1 khuyến mãi')).toBeInTheDocument()
@@ -262,7 +262,6 @@ test('all categories saves the global scope without retaining old product or cat
 
 test('additional discount cap remains editable and saved to the existing field', async () => {
   const dialog = await edit()
-  fireEvent.click(dialog.getByText('Thiết lập bổ sung'))
   fireEvent.change(dialog.getByLabelText('Giảm tối đa'), { target: { value: '250000' } })
   fireEvent.click(dialog.getByRole('button', { name: 'Cập nhật' }))
   await screen.findByText('Đã cập nhật chương trình khuyến mãi.')
