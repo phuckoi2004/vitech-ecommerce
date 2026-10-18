@@ -57,7 +57,7 @@ export function listShippingMethods({ signal } = {}) {
 }
 
 // What a product card shows, from a ProductDetailResponse (its variants are the ones on sale). `price` is the
-// lowest variant price (null without a sellable variant); `priceFrom` is set when variants have different prices.
+// lowest variant price (null without a sellable variant).
 export function toProductCard(product) {
   const prices = (product.Variants ?? []).map((variant) => Number(variant.Price)).filter(Number.isFinite)
   const images = variantImages(product, product.DefaultVariantId)
@@ -67,7 +67,6 @@ export function toProductCard(product) {
     slug: product.Slug,
     brandId: product.BrandId,
     price: prices.length ? Math.min(...prices) : null,
-    priceFrom: new Set(prices).size > 1,
     imageUrl: images[0]?.ImageUrl ?? null,
     rating: Number(product.AverageRating) || 0,
     reviewCount: product.ReviewCount ?? 0,

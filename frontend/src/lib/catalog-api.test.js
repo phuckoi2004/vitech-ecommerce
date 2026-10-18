@@ -18,18 +18,18 @@ describe('toProductCard', () => {
   test('lowest variant price, default image first, stock from any variant', () => {
     expect(toProductCard(product)).toEqual({
       id: 'p1', name: 'iPhone 18 Pro Max', slug: 'iphone-18-pro-max', brandId: 'b1',
-      price: 20990000, priceFrom: true, imageUrl: 'https://cdn.example/default.png',
+      price: 20990000, imageUrl: 'https://cdn.example/default.png',
       rating: 4.8, reviewCount: 12, sold: 1250, inStock: true,
     })
   })
 
   test('one price, no image, nothing in stock', () => {
     const card = toProductCard({ ...product, Variants: [{ Price: '990000.00', StockQuantity: 0 }], Images: [] })
-    expect(card).toMatchObject({ price: 990000, priceFrom: false, imageUrl: null, inStock: false })
+    expect(card).toMatchObject({ price: 990000, imageUrl: null, inStock: false })
   })
 
   test('without a variant on sale there is no price', () => {
-    expect(toProductCard({ ...product, Variants: [] })).toMatchObject({ price: null, priceFrom: false, inStock: false })
+    expect(toProductCard({ ...product, Variants: [] })).toMatchObject({ price: null, inStock: false })
   })
 
   test('cards use the default colour photo instead of a shared photo of another colour', () => {
