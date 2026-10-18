@@ -9,7 +9,10 @@ export const ADMIN_MENU = [
     { id: 'products', label: 'Danh sách sản phẩm', path: '/admin/products', permission: 'products:view' },
     { id: 'categories', label: 'Danh mục', path: '/admin/categories', permission: 'categories:view' },
     { id: 'brands', label: 'Thương hiệu', path: '/admin/brands', permission: 'brands:view' },
-    { id: 'promotions', label: 'Khuyến mãi', path: '/admin/promotions', permission: 'promotions:view' },
+  ] },
+  { id: 'discounts', label: 'Khuyến mãi', children: [
+    { id: 'promotions', label: 'Chương trình khuyến mãi', path: '/admin/promotions', permission: 'promotions:view' },
+    { id: 'coupons', label: 'Mã giảm giá', path: '/admin/coupons', permission: 'promotions:view' },
   ] },
   { id: 'orders', label: 'Đơn hàng', path: '/admin/orders', permission: 'orders:view' },
   { id: 'purchases', label: 'Nhập hàng', path: '/admin/purchases', permission: 'purchases:view' },
@@ -24,7 +27,6 @@ export const ADMIN_MENU = [
   { id: 'reports', label: 'Báo cáo thống kê', path: '/admin/reports', permission: 'revenue_reports:view' },
   { id: 'support', label: 'Hỗ trợ khách hàng', path: '/admin/support', permission: 'chat:view' },
   { id: 'payments', label: 'Thanh toán', path: '/admin/payments', permission: 'payment_methods:view' },
-  { id: 'coupons', label: 'Mã giảm giá', path: '/admin/coupons', permission: 'promotions:view' },
   { id: 'shipping', label: 'Vận chuyển', path: '/admin/shipping-methods', permission: 'shipping_methods:view' },
 ]
 

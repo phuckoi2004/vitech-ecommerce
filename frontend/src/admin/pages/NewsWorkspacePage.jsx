@@ -9,12 +9,10 @@ import NewsEditor from '../components/NewsEditor.jsx'
 import NewsDetail from '../components/NewsDetail.jsx'
 import NewsErrorDialog from '../components/NewsErrorDialog.jsx'
 
-const contentFields = (article) => ({ Title: article.Title, Slug: article.Slug, Summary: article.Summary ?? null, Content: article.Content, ThumbnailUrl: article.ThumbnailUrl ?? null })
-
 function NewsWorkspace({ mode, article, onClose, onDone, onEdit }) {
   const auth = useInternalAuth(), canEdit = auth.permissions.includes('news:update')
   const [snapshot, setSnapshot] = useState(article), [busy, setBusy] = useState(false), [uploading, setUploading] = useState(false), [failure, setFailure] = useState(null), [validation, setValidation] = useState(''), [notice, setNotice] = useState('')
-  const saved = useRef(article), lastBody = useRef(article ? JSON.stringify(contentFields(article)) : ''), writing = useRef(false), mounted = useRef(true)
+  const saved = useRef(article), writing = useRef(false), mounted = useRef(true)
   useEffect(() => { mounted.current = true; return () => { mounted.current = false } }, [])
   const permitted = auth.permissions.includes('news:view') && (mode === 'view' || auth.permissions.includes('news:' + (mode === 'new' ? 'create' : 'update')))
   async function save(body, status) {
@@ -23,22 +21,12 @@ function NewsWorkspace({ mode, article, onClose, onDone, onEdit }) {
     const current = saved.current?.Status ?? 'Draft'
     if (!newsStatusChoices(current).includes(status) || (status !== current && !canEdit)) { setValidation('Bạn không thể chuyển sang trạng thái này.'); return }
     writing.current = true; setBusy(true); setValidation('')
-    let committed = false
     try {
-      if (!saved.current) {
-        saved.current = await auth.withAccessToken((token) => createNews(token, body))
-        lastBody.current = JSON.stringify(body); committed = true
-      } else if (lastBody.current !== JSON.stringify(body)) {
-        saved.current = await auth.withAccessToken((token) => updateNews(token, saved.current.NewsArticleId, body))
-        lastBody.current = JSON.stringify(body); committed = true
-      }
-      if (mounted.current) setSnapshot(saved.current)
-      if (saved.current.Status !== status) {
-        saved.current = await auth.withAccessToken((token) => status === 'Published' ? publishNews(token, saved.current.NewsArticleId) : hideNews(token, saved.current.NewsArticleId))
-      }
+      const payload = { ...body, Status: status }
+      saved.current = await auth.withAccessToken((token) => saved.current ? updateNews(token, saved.current.NewsArticleId, payload) : createNews(token, payload))
       if (mounted.current) onDone(mode === 'new' ? 'Đã thêm tin tức.' : 'Đã cập nhật tin tức.')
     } catch (error) {
-      if (mounted.current) setFailure({ title: mode === 'new' ? 'Không thể lưu tin tức' : 'Không thể cập nhật tin tức', message: error.message, partial: committed })
+      if (mounted.current) setFailure({ title: mode === 'new' ? 'Không thể lưu tin tức' : 'Không thể cập nhật tin tức', message: error.message })
     } finally { writing.current = false; if (mounted.current) setBusy(false) }
   }
   async function changeStatus() {

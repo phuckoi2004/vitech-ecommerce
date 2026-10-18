@@ -44,7 +44,7 @@ beforeEach(() => {
     throw new Error('Không tìm thấy phiếu nhập.')
   })
   api.decidePurchase.mockImplementation(async (_, __, body) => save({ ...body, DecidedByUserId: 'Admin-id', DecidedAt: '2026-10-14T06:00:00Z' }))
-  api.updatePurchase.mockImplementation(async (_, __, body) => save(body))
+  api.updatePurchase.mockImplementation(async (_, __, body) => save({ ...body, ...(body.Items ? { Items: body.Items.map((line) => ({ ...po.Items.find((item) => item.ProductVariantId === line.ProductVariantId), ...line, LineTotal: String(line.OrderedQuantity * Number(line.UnitPrice)) })) } : {}) }))
   api.updatePurchaseItem.mockImplementation(async (_, __, itemId, body) => save({ Items: po.Items.map((item) => item.PurchaseOrderItemId === itemId ? { ...item, ...body } : item) }))
   api.resubmitPurchase.mockImplementation(async () => save({ Status: 'Pending', DecidedByUserId: null, DecidedAt: null, RejectReason: null }))
   api.closePurchase.mockImplementation(async (_, __, body) => save({ Status: 'Closed', CloseReason: body.Reason, ClosedByUserId: 'Admin-id', ClosedAt: '2026-10-14T06:00:00Z' }))
@@ -150,6 +150,36 @@ test('Admin with account permission resolves the approving name using the existi
   expect(api.getAdminData).toHaveBeenCalledWith('access-for-test', '/admin/users/admin-decider', { include_deleted: true }, expect.any(AbortSignal))
 })
 
+test.each(['Staff', 'Admin'])('%s sees the API approver name without account management access or extra account reads', async (role) => {
+  po = { ...po, Status: 'Approved', DecidedByUserId: 'other-admin', DecidedByName: 'Admin duyệt từ API', DecidedAt: '2026-10-14T06:00:00Z' }
+  renderPage('/admin/purchases/po1', permissions, role)
+  await screen.findByText('Điện thoại - Đen')
+  expect(screen.getByText('Người duyệt').nextElementSibling).toHaveTextContent('Admin duyệt từ API')
+  expect(api.getAdminData.mock.calls.some(([, path]) => path.startsWith('/admin/users/'))).toBe(false)
+})
+
+test('pending order keeps the approver label with an empty value', async () => {
+  renderPage()
+  await screen.findByText('Điện thoại - Đen')
+  expect(screen.getByText('Người duyệt').nextElementSibling).toBeEmptyDOMElement()
+})
+
+test.each(['Approved', 'Receiving', 'Completed', 'Closed'])('automatically approved Admin order shows its creator as approver in %s', async (Status) => {
+  po = { ...po, Status, CreatedByUserId: 'another-admin', CreatedByName: 'Admin tạo và duyệt', DecidedByUserId: null, DecidedByName: null }
+  renderPage()
+  await screen.findByText('Điện thoại - Đen')
+  expect(screen.getByText('Người duyệt').nextElementSibling).toHaveTextContent('Admin tạo và duyệt')
+  expect(api.getAdminData.mock.calls.some(([, path]) => path.startsWith('/admin/users/'))).toBe(false)
+})
+
+test.each(['Rejected', 'Cancelled'])('a %s rejected order identifies the rejecting Admin and does not call them an approver', async (Status) => {
+  po = { ...po, Status, DecidedByUserId: 'admin-refused', DecidedByName: 'Admin từ chối', RejectReason: 'Sai giá' }
+  renderPage()
+  await screen.findByText('Điện thoại - Đen')
+  expect(screen.getByText('Người duyệt').nextElementSibling).toBeEmptyDOMElement()
+  expect(screen.getByText('Người từ chối').nextElementSibling).toHaveTextContent('Admin từ chối')
+})
+
 test('editing opens its own page, saves header and lines together and returns to fresh detail', async () => {
   const router = renderPage()
   fireEvent.click(await screen.findByRole('button', { name: 'Sửa phiếu' }))
@@ -161,8 +191,11 @@ test('editing opens its own page, saves header and lines together and returns to
   fireEvent.change(within(form).getByRole('spinbutton', { name: 'Số lượng đặt dòng 1' }), { target: { value: '4' } })
   await waitFor(() => expect(within(form).getByRole('button', { name: 'Cập nhật phiếu' })).toBeEnabled())
   fireEvent.click(within(form).getByRole('button', { name: 'Cập nhật phiếu' }))
-  await waitFor(() => expect(api.updatePurchaseItem).toHaveBeenCalledWith('access-for-test', 'po1', 'i1', { OrderedQuantity: 4 }))
-  await waitFor(() => expect(api.updatePurchase).toHaveBeenCalledWith('access-for-test', 'po1', { Note: 'Đã sửa ghi chú' }))
+  await waitFor(() => expect(api.updatePurchase).toHaveBeenCalledExactlyOnceWith('access-for-test', 'po1', { SupplierId: 's1', Note: 'Đã sửa ghi chú', Items: [
+    { ProductVariantId: 'v1', OrderedQuantity: 4, UnitPrice: '1500000.00', Note: 'Kiểm tra bao bì' },
+    { ProductVariantId: 'v2', OrderedQuantity: 1, UnitPrice: '2000000.00', Note: null },
+  ] }))
+  expect(api.updatePurchaseItem).not.toHaveBeenCalled()
   await screen.findByText('Đã sửa ghi chú')
   expect(router.state.location.pathname).toBe('/admin/purchases/po1')
   expect(within(screen.getByRole('table')).getByText('4')).toBeInTheDocument()

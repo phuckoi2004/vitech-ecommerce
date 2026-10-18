@@ -71,21 +71,15 @@ class ArticleTest(ContentTestBase):
                          ("Ra mắt iPhone", "ra-mat-iphone", "Bài viết", None))
         self.assertEqual(self.session.commits, 1)
 
-    def test_client_cannot_set_status_or_admin_fields(self):
-        with self.assertRaises(ValidationError):
-            NewsArticleCreate(Title="T", Slug="s", Content="C", Status="Published")
-        with self.assertRaises(ValidationError):
-            NewsArticleUpdate(Status="Published")
+    def test_client_cannot_set_server_owned_article_fields(self):
         base = {"Title": "T", "Slug": "s", "Content": "C"}
-        for extra in ({"Status": "Published"}, {"PublishedAt": NOW}, {"CreatedByUserId": self.staff.UserId}):
+        for extra in ({"PublishedAt": NOW}, {"CreatedByUserId": self.staff.UserId}, {"CreatedAt": NOW}):
             with self.subTest(extra=extra):
+                with self.assertRaises(ValidationError):
+                    NewsArticleCreate(**base, **extra)
                 self.assert_error(BusinessRuleError, "article_field_not_allowed",
                                   lambda e=extra: self.svc.create_article(self.a(self.admin), bypass({**base, **e})))
-        article = self.article()
-        self.assert_error(BusinessRuleError, "article_field_not_allowed", lambda: self.svc.update_article(
-            self.a(self.admin), article.NewsArticleId, bypass({"Status": "Published"})))
-        self.assertEqual(self.db.get(NewsArticle, article.NewsArticleId).Status, "Draft")
-        self.assertEqual(len(self.db.rows(NewsArticle)), 1)
+        self.assertEqual(self.db.rows(NewsArticle), [])
 
     def test_input_validation(self):
         cases = [
@@ -224,14 +218,12 @@ class BannerTest(ContentTestBase):
                          (True, self.admin.UserId, NOW, 2, "/khuyen-mai/thang-10"))
         self.assertEqual(self.banner(title="Mặc định").DisplayOrder, 0)
 
-    def test_client_cannot_set_active_or_admin_fields(self):
-        with self.assertRaises(ValidationError):
-            BannerCreate(Title="T", ImageUrl="https://cdn.vietech.vn/b.jpg", IsActive=False)
-        with self.assertRaises(ValidationError):
-            BannerUpdate(IsActive=True)
+    def test_client_cannot_set_server_owned_banner_fields(self):
         base = {"Title": "T", "ImageUrl": "https://cdn.vietech.vn/b.jpg"}
-        for extra in ({"IsActive": False}, {"CreatedByUserId": self.staff.UserId}, {"CreatedAt": NOW}):
+        for extra in ({"CreatedByUserId": self.staff.UserId}, {"CreatedAt": NOW}):
             with self.subTest(extra=extra):
+                with self.assertRaises(ValidationError):
+                    BannerCreate(**base, **extra)
                 self.assert_error(BusinessRuleError, "banner_field_not_allowed",
                                   lambda e=extra: self.svc.create_banner(self.a(self.admin), bypass({**base, **e})))
         self.assertEqual(self.db.rows(Banner), [])
@@ -347,12 +339,12 @@ class BannerTest(ContentTestBase):
 
 
 class ContentSchemaTest(unittest.TestCase):
-    def test_content_schemas_exported_without_status_inputs(self):
+    def test_content_schemas_export_atomic_status_inputs(self):
         self.assertIn("AdminNewsArticleSummary", app.schemas.__all__)
-        self.assertNotIn("Status", NewsArticleCreate.model_fields)
-        self.assertNotIn("Status", NewsArticleUpdate.model_fields)
-        self.assertNotIn("IsActive", BannerCreate.model_fields)
-        self.assertNotIn("IsActive", BannerUpdate.model_fields)
+        self.assertIn("Status", NewsArticleCreate.model_fields)
+        self.assertIn("Status", NewsArticleUpdate.model_fields)
+        self.assertIn("IsActive", BannerCreate.model_fields)
+        self.assertIn("IsActive", BannerUpdate.model_fields)
 
 
 if __name__ == "__main__":

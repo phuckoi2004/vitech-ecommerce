@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { expect, test } from 'vitest'
-import { purchaseCentsText, purchaseEditPlan, purchaseFormBody, purchaseFormDate, purchaseFormTotal, purchaseLineCents } from './purchase-form.js'
+import { purchaseCentsText, purchaseFormBody, purchaseFormDate, purchaseFormTotal, purchaseLineCents } from './purchase-form.js'
 
 const po = { SupplierId: 's1', Note: 'Ghi chú', CreatedAt: '2026-10-13T17:30:00Z', Items: [{ PurchaseOrderItemId: 'i1', ProductVariantId: 'v1', OrderedQuantity: 2, UnitPrice: '0.10', Note: null }] }
 
@@ -26,12 +26,6 @@ test('duplicate variants, invalid quantities, precision and overflowing totals a
   expect(() => purchaseFormBody({ ...body, Items: [{ ...body.Items[0], UnitPrice: '9999999999999.99' }] })).toThrow('Tổng tiền vượt')
 })
 
-test('unchanged date and line data produce no writes; only the intended quantity/header changes enter patches', () => {
-  expect(purchaseEditPlan(po, { SupplierId: 's1', Note: 'Ghi chú', Items: [{ ProductVariantId: 'v1', OrderedQuantity: 2, UnitPrice: '0.1', Note: null }] })).toEqual([])
-  expect(purchaseEditPlan(po, { SupplierId: 's1', Note: null, Items: [{ ProductVariantId: 'v1', OrderedQuantity: 3, UnitPrice: '0.10', Note: null }] })).toEqual([{ kind: 'updateItem', id: 'i1', body: { OrderedQuantity: 3 } }, { kind: 'header', body: { Note: null } }])
+test('creation date uses the local calendar date', () => {
   expect(purchaseFormDate(po.CreatedAt)).toBe('2026-10-14')
-})
-
-test('replacing the only variant adds the new SKU before removing the last existing line', () => {
-  expect(purchaseEditPlan(po, { SupplierId: 's1', Note: 'Ghi chú', Items: [{ ProductVariantId: 'v2', OrderedQuantity: 1, UnitPrice: '3.00', Note: null }] }).map((operation) => operation.kind)).toEqual(['addItem', 'removeItem'])
 })

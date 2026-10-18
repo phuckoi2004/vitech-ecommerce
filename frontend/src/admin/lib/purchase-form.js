@@ -22,31 +22,3 @@ export function purchaseFormBody(form) {
   if (purchaseFormTotal(Items) > 999999999999999n) throw new Error('Tổng tiền vượt giới hạn lưu trữ 9.999.999.999.999,99đ.')
   return body
 }
-
-export function purchaseEditPlan(po, body) {
-  const byVariant = new Map(po.Items.map((item) => [item.ProductVariantId, item]))
-  const wanted = new Set(body.Items.map((item) => item.ProductVariantId))
-  const operations = []
-  // Update retained lines, remove redundant lines while retaining one, then add new variants.
-  // Each result is saved as a checkpoint so a retry never repeats a successful add/delete.
-  for (const line of body.Items) {
-    const existing = byVariant.get(line.ProductVariantId)
-    if (!existing) continue
-    const patch = {}
-    if (existing.OrderedQuantity !== line.OrderedQuantity) patch.OrderedQuantity = line.OrderedQuantity
-    if (purchaseLineCents({ ...existing, OrderedQuantity: 1 }) !== purchaseLineCents({ ...line, OrderedQuantity: 1 })) patch.UnitPrice = line.UnitPrice
-    if ((existing.Note ?? '').trim() !== (line.Note ?? '')) patch.Note = line.Note
-    if (Object.keys(patch).length) operations.push({ kind: 'updateItem', id: existing.PurchaseOrderItemId, body: patch })
-  }
-  const removals = po.Items.filter((item) => !wanted.has(item.ProductVariantId))
-  // When replacing every variant, retain one old line until at least one new line exists.
-  const deferred = removals.length === po.Items.length ? removals.pop() : null
-  for (const item of removals) operations.push({ kind: 'removeItem', id: item.PurchaseOrderItemId })
-  for (const line of body.Items) if (!byVariant.has(line.ProductVariantId)) operations.push({ kind: 'addItem', body: line })
-  if (deferred) operations.push({ kind: 'removeItem', id: deferred.PurchaseOrderItemId })
-  const header = {}
-  if (po.SupplierId !== body.SupplierId) header.SupplierId = body.SupplierId
-  if ((po.Note ?? '').trim() !== (body.Note ?? '')) header.Note = body.Note
-  if (Object.keys(header).length) operations.push({ kind: 'header', body: header })
-  return operations
-}

@@ -133,10 +133,13 @@ class PurchaseOrderCreate(RequestSchema):
 
 
 class PurchaseOrderUpdate(RequestSchema):
+    """PATCH header and, when supplied, the complete desired line set in one transaction."""
+
     NULLABLE_FIELDS = frozenset({"Note"})
 
     SupplierId: uuid.UUID | None = None
     Note: str | None = None
+    Items: list[PurchaseOrderItemCreate] | None = Field(default=None, min_length=1)
 
 
 class PurchaseOrderDecision(RequestSchema):
@@ -217,6 +220,8 @@ class PurchaseOrderResponse(ResponseSchema):
 
 
 class PurchaseOrderDetailResponse(PurchaseOrderResponse):
+    # Derived from the existing account link; no account-management permission is required.
+    DecidedByName: str | None = None
     Items: list[PurchaseOrderItemResponse] = relation_field("items")
 
 

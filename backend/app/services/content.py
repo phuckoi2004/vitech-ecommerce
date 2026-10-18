@@ -5,14 +5,14 @@ trường/trạng thái hiện có; chỉ hiển thị nội dung đang hoạt �
 xuất bản), docs/database-schema.md 3.35–3.36.
 
 Tin tức (Status: Draft = nháp, Published = đã đăng, Hidden = đã ẩn):
-- Chỉ Admin tạo/sửa/đổi trạng thái và xem bài chưa đăng. Bài mới luôn Draft; client không gửi Status/PublishedAt.
+- Chỉ Admin tạo/sửa/đổi trạng thái và xem bài chưa đăng. Form lưu nội dung + Status nguyên khối; mặc định tạo Draft.
 - Đăng: Draft/Hidden → Published; PublishedAt = thời điểm đăng lần đầu (đăng lại sau khi ẩn giữ nguyên PublishedAt).
-- Ẩn: Published → Hidden. Chưa có căn cứ cho: đưa bài về Draft, xóa bài, hẹn giờ đăng → chưa triển khai.
+- Ẩn: Published → Hidden. Không đưa bài đã đăng về Draft, không hẹn giờ đăng.
 - Công khai (không cần đăng nhập): chỉ bài Published, xem theo Slug.
 Banner:
-- Chỉ Admin tạo/sửa/kích hoạt/ngừng và xem toàn bộ. Banner mới theo mặc định database (IsActive = true).
+- Chỉ Admin tạo/sửa/kích hoạt/ngừng và xem toàn bộ. Form lưu nội dung + IsActive nguyên khối; mặc định tạo true.
 - Công khai: IsActive và thời điểm hiện tại nằm trong [StartDate, EndDate] (mốc để trống = không giới hạn; cùng quy
-  ước với khuyến mãi), sắp theo DisplayOrder. Chưa có căn cứ cho xóa banner → chưa triển khai (ngừng bằng IsActive).
+  ước với khuyến mãi), sắp theo DisplayOrder. Xóa chỉ thực hiện qua lệnh xóa riêng.
 Kiểm tra dữ liệu (kỹ thuật): Title/Slug/Content không rỗng; Slug không chứa khoảng trắng, không trùng (UNIQUE);
 ảnh (ImageUrl, ThumbnailUrl) phải là URL https; LinkUrl là URL https hoặc đường dẫn nội bộ bắt đầu bằng "/";
 StartDate/EndDate có múi giờ, EndDate >= StartDate (kể cả khi chỉ sửa một mốc).
@@ -54,8 +54,8 @@ ARTICLE_HIDDEN = "Hidden"
 PUBLISHABLE_STATUSES = (ARTICLE_DRAFT, ARTICLE_HIDDEN)
 URL_MAX_LENGTH = 500
 
-ARTICLE_FIELDS = frozenset({"Title", "Slug", "Summary", "Content", "ThumbnailUrl"})
-BANNER_FIELDS = frozenset({"Title", "ImageUrl", "LinkUrl", "DisplayOrder", "StartDate", "EndDate"})
+ARTICLE_FIELDS = frozenset({"Title", "Slug", "Summary", "Content", "ThumbnailUrl", "Status"})
+BANNER_FIELDS = frozenset({"Title", "ImageUrl", "LinkUrl", "DisplayOrder", "StartDate", "EndDate", "IsActive"})
 
 
 class ContentService(BaseService):
@@ -114,26 +114,33 @@ class ContentService(BaseService):
         return AdminNewsArticleResponse.model_validate(self._get_article(article_id))
 
     def create_article(self, actor: Actor, data: NewsArticleCreate) -> AdminNewsArticleResponse:
-        """Admin tạo bài viết ở trạng thái Draft."""
+        """Admin tạo nội dung cùng trạng thái; ngày đăng lấy từ thời gian server."""
         require_role(actor, *ADMIN_ONLY)
-        values = self._article_values(_allowed(data, ARTICLE_FIELDS, code="article_field_not_allowed"), creating=True)
+        raw = _allowed(data, ARTICLE_FIELDS, code="article_field_not_allowed")
+        target = raw.pop("Status", ARTICLE_DRAFT)
+        values = self._article_values(raw, creating=True)
         with self.transaction():
             self._ensure_slug_unique(values["Slug"])
             article = self.articles.create(
-                {**values, "CreatedByUserId": actor.user_id, "Status": ARTICLE_DRAFT, "PublishedAt": None, "ViewCount": 0,
-                 "CreatedAt": self.now()}
+                {**values, **self._article_state(ARTICLE_DRAFT, None, target), "ViewCount": 0,
+                 "CreatedByUserId": actor.user_id, "CreatedAt": self.now()}
             )
             self.articles.flush()
             return AdminNewsArticleResponse.model_validate(article)
 
     def update_article(self, actor: Actor, article_id: uuid.UUID, data: NewsArticleUpdate) -> AdminNewsArticleResponse:
-        """Admin sửa nội dung bài viết (mọi trạng thái); không đổi Status/PublishedAt."""
+        """Lock and save content + optional status in one transaction; a failure rolls back both."""
         require_role(actor, *ADMIN_ONLY)
-        values = self._article_values(_allowed(data, ARTICLE_FIELDS, code="article_field_not_allowed"), creating=False)
-        if not values:
+        raw = _allowed(data, ARTICLE_FIELDS, code="article_field_not_allowed")
+        has_status = "Status" in raw
+        target = raw.pop("Status", None)
+        values = self._article_values(raw, creating=False)
+        if not values and not has_status:
             raise BusinessRuleError("Không có nội dung cần sửa", code="nothing_to_update")
         with self.transaction():
             article = self._lock_article(article_id)
+            if has_status:
+                values.update(self._article_state(article.Status, article.PublishedAt, target))
             if "Slug" in values and values["Slug"] != article.Slug:
                 self._ensure_slug_unique(values["Slug"], exclude_id=article_id)
             self.articles.update(article, values)
@@ -189,9 +196,12 @@ class ContentService(BaseService):
         return AdminBannerResponse.model_validate(self._get_banner(banner_id))
 
     def create_banner(self, actor: Actor, data: BannerCreate) -> AdminBannerResponse:
-        """Admin tạo banner; IsActive theo mặc định của database (true)."""
+        """Admin creates the banner and selected availability together, with no temporary public state."""
         require_role(actor, *ADMIN_ONLY)
-        values = self._banner_values(_allowed(data, BANNER_FIELDS, code="banner_field_not_allowed"), creating=True)
+        raw = _allowed(data, BANNER_FIELDS, code="banner_field_not_allowed")
+        active = raw.pop("IsActive", True)
+        values = self._banner_values(raw, creating=True)
+        values["IsActive"] = self._banner_active(active)
         _check_period(values.get("StartDate"), values.get("EndDate"))
         with self.transaction():
             banner = self.banners.create({**values, "CreatedByUserId": actor.user_id, "CreatedAt": self.now()})
@@ -199,9 +209,14 @@ class ContentService(BaseService):
             return AdminBannerResponse.model_validate(banner)
 
     def update_banner(self, actor: Actor, banner_id: uuid.UUID, data: BannerUpdate) -> AdminBannerResponse:
-        """Admin sửa banner (PATCH); khung thời gian kiểm tra với giá trị đang lưu; không đổi IsActive."""
+        """Admin saves content, time window and optional IsActive in a single transaction."""
         require_role(actor, *ADMIN_ONLY)
-        values = self._banner_values(_allowed(data, BANNER_FIELDS, code="banner_field_not_allowed"), creating=False)
+        raw = _allowed(data, BANNER_FIELDS, code="banner_field_not_allowed")
+        has_active = "IsActive" in raw
+        active = raw.pop("IsActive", None)
+        values = self._banner_values(raw, creating=False)
+        if has_active:
+            values["IsActive"] = self._banner_active(active)
         if not values:
             raise BusinessRuleError("Không có nội dung cần sửa", code="nothing_to_update")
         with self.transaction():
@@ -226,6 +241,22 @@ class ContentService(BaseService):
             self.banners.flush()
 
     # ================================================================== helpers
+
+    def _article_state(self, current: str, published_at: datetime | None, target: str) -> dict[str, Any]:
+        if target not in NEWS_ARTICLE_STATUSES:
+            raise BusinessRuleError("Trạng thái bài viết không hợp lệ", code="invalid_article_status")
+        allowed = {ARTICLE_DRAFT: (ARTICLE_DRAFT, ARTICLE_PUBLISHED),
+                   ARTICLE_PUBLISHED: (ARTICLE_PUBLISHED, ARTICLE_HIDDEN),
+                   ARTICLE_HIDDEN: (ARTICLE_HIDDEN, ARTICLE_PUBLISHED)}
+        if target not in allowed.get(current, ()):
+            raise BusinessRuleError("Không thể chuyển sang trạng thái bài viết này", code="invalid_article_transition")
+        return {"Status": target, "PublishedAt": self.now() if target == ARTICLE_PUBLISHED and published_at is None else published_at}
+
+    @staticmethod
+    def _banner_active(active: bool) -> bool:
+        if not isinstance(active, bool):
+            raise BusinessRuleError("Trạng thái banner phải là đúng hoặc sai", code="invalid_banner_status")
+        return active
 
     def _set_banner_active(self, actor: Actor, banner_id: uuid.UUID, active: bool) -> AdminBannerResponse:
         require_role(actor, *ADMIN_ONLY)

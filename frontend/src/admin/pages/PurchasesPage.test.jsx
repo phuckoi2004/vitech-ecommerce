@@ -43,7 +43,10 @@ beforeEach(() => {
     throw new Error('Không tìm thấy dữ liệu.')
   })
   api.createPurchase.mockImplementation(async (_, body) => { const saved = { ...base, ...body, PurchaseOrderCode: 'PN-NEW', PurchaseOrderId: 'po-new', Status: 'Approved', Items: body.Items.map((item, index) => ({ ...item, PurchaseOrderItemId: 'new-' + index, ReceivedQuantity: 0, LineTotal: String(Number(item.UnitPrice) * item.OrderedQuantity) })) }; orders.push(saved); return saved })
-  api.updatePurchase.mockImplementation(async (_, id, body) => update(id, body))
+  api.updatePurchase.mockImplementation(async (_, id, body) => {
+    const po = orders.find((row) => row.PurchaseOrderId === id)
+    return update(id, { ...body, ...(body.Items ? { Items: body.Items.map((line) => ({ ...po.Items.find((item) => item.ProductVariantId === line.ProductVariantId), ...line, LineTotal: String(line.OrderedQuantity * Number(line.UnitPrice)) })) } : {}) })
+  })
   api.updatePurchaseItem.mockImplementation(async (_, id, itemId, body) => update(id, { Items: orders.find((po) => po.PurchaseOrderId === id).Items.map((item) => item.PurchaseOrderItemId === itemId ? { ...item, ...body } : item) }))
   api.decidePurchase.mockImplementation(async (_, id, body) => update(id, body))
   api.cancelPurchase.mockImplementation(async (_, id) => update(id, { Status: 'Cancelled' }))
@@ -141,7 +144,7 @@ test('creation sends only chosen variants and leaves code, status, creator, tota
   await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
 })
 
-test('editing header sends only changed fields and line edits never send received quantities', async () => {
+test('editing sends the header and full desired lines atomically, never sending received quantities', async () => {
   orders = [structuredClone(base)]
   renderPage('/admin/purchases?dialog=edit&purchase=po1')
   const form = await screen.findByRole('form', { name: 'Sửa phiếu nhập' })
@@ -151,8 +154,10 @@ test('editing header sends only changed fields and line edits never send receive
   fireEvent.change(quantity, { target: { value: '4' } })
   await waitFor(() => expect(within(form).getByRole('button', { name: 'Cập nhật phiếu' })).toBeEnabled())
   fireEvent.click(within(form).getByRole('button', { name: 'Cập nhật phiếu' }))
-  await waitFor(() => expect(api.updatePurchaseItem).toHaveBeenCalledWith('access-for-test', 'po1', 'i1', { OrderedQuantity: 4 }))
-  await waitFor(() => expect(api.updatePurchase).toHaveBeenCalledWith('access-for-test', 'po1', { Note: null }))
+  await waitFor(() => expect(api.updatePurchase).toHaveBeenCalledExactlyOnceWith('access-for-test', 'po1', { SupplierId: 's1', Note: null, Items: [
+    { ProductVariantId: 'v1', OrderedQuantity: 4, UnitPrice: '1500000.00', Note: null },
+  ] }))
+  expect(api.updatePurchaseItem).not.toHaveBeenCalled()
 })
 
 test('fresh approved detail blocks editing even if a stale list originally showed Pending', async () => {

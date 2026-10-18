@@ -35,14 +35,14 @@ export default function usePurchaseDetail(purchaseId, editing, initialNotice = '
     loading: items.loading || catalog.loading, error: items.error || catalog.error,
     refresh: () => { items.refresh(); catalog.refresh() },
   }
-  const userIds = JSON.stringify([...new Set([po?.CreatedByName ? null : po?.CreatedByUserId, po?.DecidedByUserId, po?.ClosedByUserId].filter((id) => id && id !== auth.user.UserId))])
+  const userIds = JSON.stringify([...new Set([po?.CreatedByName ? null : po?.CreatedByUserId, po?.DecidedByName ? null : po?.DecidedByUserId, po?.ClosedByUserId].filter((id) => id && id !== auth.user.UserId))])
   const loadNames = useCallback(async (token, signal) => {
     const ids = JSON.parse(userIds)
     const users = await purchaseReadBatch(ids, (id) => getAdminData(token, '/admin/users/' + encodeURIComponent(id), { include_deleted: true }, signal), signal, true)
     return Object.fromEntries(ids.map((id, index) => [id, users[index]?.FullName]))
   }, [userIds])
   const users = useAdminLoad(loadNames, can('view') && auth.user.Role === 'Admin' && auth.permissions.includes('users:read') && auth.permissions.includes('users:manage') && userIds !== '[]')
-  const names = { ...users.data, ...(po?.CreatedByName ? { [po.CreatedByUserId]: po.CreatedByName } : {}), [auth.user.UserId]: auth.user.FullName }
+  const names = { ...users.data, [auth.user.UserId]: auth.user.FullName, ...(po?.CreatedByName ? { [po.CreatedByUserId]: po.CreatedByName } : {}), ...(po?.DecidedByName ? { [po.DecidedByUserId]: po.DecidedByName } : {}) }
   const showHistory = Boolean(po?.Items.some((item) => item.ReceivedQuantity > 0) || ['Receiving', 'Completed', 'Closed'].includes(po?.Status))
   const receipts = useAdminQuery(path + '/receipts', {}, can('view') && showHistory && auth.permissions.includes('purchase_history:view'))
 

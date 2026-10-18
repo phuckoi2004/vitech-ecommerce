@@ -17,6 +17,7 @@ beforeEach(() => {
     if (path === '/users/me/notifications/unread-count') return { Count: 0 }
     if (readError) throw new Error('Lỗi kết nối vận chuyển')
     if (path === '/shipping-methods') return structuredClone(rows)
+    if (path === '/admin/promotions') return { Items: [], Total: 0 }
     const row = rows.find((item) => path === '/shipping-methods/' + item.ShippingMethodId)
     if (row) return structuredClone(row)
     throw new Error('Không tìm thấy phương thức vận chuyển.')
@@ -42,6 +43,7 @@ test('empty list preserves Figma columns and new sidebar entries without sample 
   expect(screen.getByText('Hiển thị 0–0 trong 0 phương thức vận chuyển')).toBeInTheDocument()
   const nav = within(screen.getByRole('navigation', { name: 'Menu quản trị' }))
   expect(nav.getByRole('button', { name: 'Vận chuyển', exact: true })).toHaveAttribute('aria-current', 'page')
+  fireEvent.click(nav.getByRole('button', { name: 'Khuyến mãi', exact: true }))
   expect(nav.getByRole('button', { name: 'Mã giảm giá', exact: true })).toBeInTheDocument()
   expect(reads.getAdminData).toHaveBeenCalledWith('access-for-test', '/shipping-methods', { active_only: false }, expect.any(AbortSignal))
 })
@@ -158,13 +160,14 @@ test('activation prevents duplicate requests and refreshes active-status filter'
   expect(screen.getByRole('combobox', { name: 'Trạng thái' })).toHaveValue('inactive')
 })
 
-test('coupon sidebar entry opens only reserved empty content and never requests coupon data', async () => {
+test('coupon sidebar child opens the coupon list from the discount group', async () => {
   open(); await screen.findByText('Chưa có phương thức vận chuyển.', {}, { timeout: 5000 })
   reads.getAdminData.mockClear()
+  fireEvent.click(within(screen.getByRole('navigation', { name: 'Menu quản trị' })).getByRole('button', { name: 'Khuyến mãi', exact: true }))
   fireEvent.click(within(screen.getByRole('navigation', { name: 'Menu quản trị' })).getByRole('button', { name: 'Mã giảm giá', exact: true }))
-  await screen.findByRole('heading', { level: 1, name: 'Mã giảm giá' })
-  expect(screen.getByRole('main').childElementCount).toBe(0)
-  expect(reads.getAdminData.mock.calls.some(([, path]) => path.includes('/coupons') || path.includes('/promotions'))).toBe(false)
+  await screen.findByRole('heading', { level: 1, name: 'Quản lý mã giảm giá' })
+  expect(await screen.findByText('Chưa có mã giảm giá.')).toBeInTheDocument()
+  expect(reads.getAdminData.mock.calls.some(([, path]) => path === '/admin/promotions')).toBe(true)
 })
 
 test('list failures remain recoverable', async () => {

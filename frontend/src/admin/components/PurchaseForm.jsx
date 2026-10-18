@@ -12,7 +12,7 @@ function Field({ label, children, className = '' }) {
   return <label className={'flex min-w-0 flex-col gap-[5px] text-[10px] leading-3 font-medium ' + className}>{label}{children}</label>
 }
 
-export default function PurchaseForm({ po, role, suppliers, variants, busy, onSave, onCancel, onError, error, progress, blocked = false }) {
+export default function PurchaseForm({ po, role, suppliers, variants, busy, onSave, onCancel, onError, error, blocked = false }) {
   const [form, setForm] = useState(() => purchaseFormDraft(po))
   const nextKey = useRef(2)
   const edit = Boolean(po)
@@ -36,7 +36,6 @@ export default function PurchaseForm({ po, role, suppliers, variants, busy, onSa
   }
   return <form aria-label={edit ? 'Sửa phiếu nhập' : 'Tạo phiếu nhập'} onSubmit={save} className="flex min-w-0 flex-col gap-3.5">
     {error && <p role="alert" className="m-0 rounded-[9px] bg-red-50 p-3 text-xs text-red-700">{error}</p>}
-    {progress && <p role="status" className="m-0 text-xs text-admin-muted">{progress}</p>}
     <fieldset disabled={busy} className="m-0 flex min-w-0 flex-col gap-3.5 border-0 p-0">
       <section aria-label="Thông tin chung" className="flex min-w-0 flex-col gap-2.5 rounded-xl border border-admin-border bg-white p-4"><h3 className={TITLE}>Thông tin chung</h3>
         <div className="flex min-w-0 items-start gap-3">
