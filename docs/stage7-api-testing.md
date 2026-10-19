@@ -18,6 +18,12 @@ lỗi 401, 403, 404, 409, 422 và lỗi nghiệp vụ.
 
 - Dùng database PostgreSQL **riêng cho test** (`TEST_DATABASE_URL`, ví dụ project Supabase staging đã chạy
   `alembic upgrade head`). `tests/postgres_safety.py` từ chối chạy nếu trùng database của `DATABASE_URL`.
+- Với Supabase, khai báo thêm `TEST_DATABASE_PROJECT_REF` (project ref của project test, không phải bí mật).
+  `require_test_database_target` chạy trong fixture `api_engine` và `postgres_test_lock` trước khi mở kết nối: từ
+  chối khi ref thiếu/sai định dạng/không khớp URL, khi ref hoặc URL thuộc project Production được bảo vệ, khi cùng
+  project với `DATABASE_URL` (kể cả khác tên database), khi không dùng session mode cổng 5432, khi URL có tham số
+  ngoài danh sách cho phép (ví dụ `options`), hoặc khi đang đặt biến libpq `PG*` có thể đổi đích kết nối. Ngoài
+  Supabase chỉ chấp nhận PostgreSQL cục bộ (loopback). Chi tiết tại `README.md` mục 9.4.
 - Khi đã bật cờ mà database test chưa migrate đúng head, bộ test **fail** (không skip), để không báo thành công khi chưa
   chạy gì.
 - Mỗi lượt chạy giữ **khóa độc quyền** database test (sau khi kiểm tra đích database, trước khi mở kết nối làm việc).

@@ -15,11 +15,20 @@ proxy may still reach the main database. Custom proxy database-name aliases are
 unsupported; the URL must name the actual dedicated test database.
 An explicit distinct database name also establishes separation within the same
 Supabase project: Supavisor uses the database name supplied in the URL.
+
+require_test_database_target is the stricter gate every destructive entry point uses (the pg and api_engine
+fixtures and postgres_test_lock). On top of that separation it requires the declared Supabase project
+(TEST_DATABASE_PROJECT_REF, not a secret), never a protected (Production) project or the DATABASE_URL project
+whatever the database name, Supabase session mode on port 5432, only allowlisted URL query parameters and no libpq
+environment variable that could change the connection target; any other remote host is refused, while a local
+(loopback) PostgreSQL needs no project ref. It checks configuration only: URLs prove what the configuration says,
+not which server answers.
 """
 
 import ipaddress
 import os
 import re
+from collections.abc import Mapping
 from dataclasses import dataclass
 
 from sqlalchemy.engine import make_url
@@ -53,6 +62,23 @@ _DIRECT_SUPABASE_HOST = re.compile(rf"db\.({_PROJECT_REF})\.supabase\.co\Z")
 _POOLER_USERNAME = re.compile(rf".+\.({_PROJECT_REF})\Z")
 _HOST_LABEL = re.compile(r"[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\Z")
 _LOOPBACK_NAMES = frozenset({"localhost", "localhost.localdomain", "ip6-localhost", "ip6-loopback"})
+
+# Supabase projects that are never a test target, whatever the other settings say (Production).
+PROTECTED_PROJECT_REFS = frozenset({"stkvyiqosljeehbkqteb"})
+TEST_PROJECT_SETTING = "TEST_DATABASE_PROJECT_REF"
+_PROJECT_REF_FORMAT = re.compile(_PROJECT_REF)
+# Session mode: the run lock is a session-level advisory lock (transaction-mode poolers break it).
+_SUPABASE_SESSION_PORT = 5432
+# libpq query parameters that cannot change which server, database or role is reached (``options`` can).
+_ALLOWED_TEST_QUERY_KEYS = frozenset({
+    "sslmode", "sslrootcert", "sslcert", "sslkey", "sslcrl", "channel_binding", "gssencmode",
+    "connect_timeout", "application_name", "keepalives", "keepalives_idle", "keepalives_interval",
+    "keepalives_count", "tcp_user_timeout",
+})
+# libpq applies these to every parameter the URL leaves out (PGHOSTADDR and PGOPTIONS can redirect a session).
+LIBPQ_ROUTING_ENVIRONMENT = (
+    "PGHOST", "PGHOSTADDR", "PGPORT", "PGDATABASE", "PGUSER", "PGOPTIONS", "PGSERVICE", "PGSERVICEFILE",
+)
 
 
 def _refuse(setting: str, reason: str) -> None:
@@ -141,3 +167,50 @@ def require_separate_test_database(
     if (test.host, test.port) == (main.host, main.port):
         _refuse("TEST_DATABASE_URL", "it targets the DATABASE_URL database")
     _refuse("TEST_DATABASE_URL", "a separate database identity cannot be established offline")
+
+
+def require_test_database_target(
+    test_url: str | None,
+    main_url: str | None,
+    *,
+    expected_project: str | None,
+    environ: Mapping[str, str],
+) -> PostgresDatabaseIdentity:
+    """Allow only the approved test database, before any test engine, lock connection or write.
+
+    ``expected_project`` is TEST_DATABASE_PROJECT_REF; ``environ`` is the process environment libpq will read.
+    Refusals name the setting and the reason only, never a URL, host, role, password or project ref.
+    """
+    test = require_separate_test_database(test_url, main_url)
+    main = get_database_identity(main_url, setting="DATABASE_URL")
+
+    routing = [name for name in LIBPQ_ROUTING_ENVIRONMENT if (environ.get(name) or "").strip()]
+    if routing:
+        _refuse("environment", f"libpq connection variables are set ({', '.join(routing)})")
+    unsupported = sorted({key.lower() for key in make_url(test_url.strip()).query} - _ALLOWED_TEST_QUERY_KEYS)
+    if unsupported:
+        _refuse("TEST_DATABASE_URL", f"unsupported connection query parameters ({', '.join(unsupported)})")
+
+    expected = (expected_project or "").strip()
+    if test.supabase_project is None:
+        if expected:
+            _refuse(TEST_PROJECT_SETTING, "is set but TEST_DATABASE_URL is not a Supabase database")
+        if test.host != "loopback":
+            _refuse("TEST_DATABASE_URL", "only a Supabase project or a local (loopback) PostgreSQL is allowed")
+        return test
+
+    if not expected:
+        _refuse(TEST_PROJECT_SETTING, "is required for a Supabase test database")
+    if not _PROJECT_REF_FORMAT.fullmatch(expected):
+        _refuse(TEST_PROJECT_SETTING, "must be a 20-character lowercase Supabase project ref")
+    if expected in PROTECTED_PROJECT_REFS:
+        _refuse(TEST_PROJECT_SETTING, "names a protected project")
+    if test.supabase_project in PROTECTED_PROJECT_REFS:
+        _refuse("TEST_DATABASE_URL", "it targets a protected project")
+    if test.supabase_project == main.supabase_project:
+        _refuse("TEST_DATABASE_URL", "it targets the DATABASE_URL Supabase project, whatever the database name")
+    if test.supabase_project != expected:
+        _refuse("TEST_DATABASE_URL", f"it does not belong to {TEST_PROJECT_SETTING}")
+    if test.port != _SUPABASE_SESSION_PORT:
+        _refuse("TEST_DATABASE_URL", f"a Supabase test database must use session mode on port {_SUPABASE_SESSION_PORT}")
+    return test

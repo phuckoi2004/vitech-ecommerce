@@ -43,7 +43,7 @@ from app.services.order import OrderService
 from tests.postgres_safety import (
     POSTGRES_TESTS_ENABLED,
     UnsafePostgresTestDatabase,
-    require_separate_test_database,
+    require_test_database_target,
 )
 
 BACKEND = Path(__file__).resolve().parents[1]
@@ -114,7 +114,8 @@ def pg(request):
         pytest.skip("set RUN_POSTGRES_TESTS=1 to run against TEST_DATABASE_URL")
     test_url, main_url = _setting("TEST_DATABASE_URL"), _setting("DATABASE_URL")
     try:
-        require_separate_test_database(test_url, main_url)
+        require_test_database_target(test_url, main_url, expected_project=_setting("TEST_DATABASE_PROJECT_REF"),
+                                     environ=os.environ)
     except UnsafePostgresTestDatabase as error:
         pytest.fail(str(error), pytrace=False)
     request.getfixturevalue("postgres_test_lock")  # one PostgreSQL test run at a time on this database
@@ -428,12 +429,16 @@ def test_cron_cancels_expired_qr_order_and_restores_stock_once(pg, team, methods
     assert stock_of(pg, item) == 1
     secret = {"X-Internal-Secret": CRON_SECRET}
 
+    def run_job():
+        run = ok(pg.client.post("/internal/orders/expire-unpaid-qr", headers=secret))
+        return run["Processed"], run["Failed"]
+
     # Not yet 15 minutes old: the job leaves it alone.
-    assert ok(pg.client.post("/internal/orders/expire-unpaid-qr", headers=secret)) == {"Processed": 0}
+    assert run_job() == (0, 0)
     pg.execute('update "Orders" set "OrderedAt" = now() - interval \'20 minutes\' where "OrderId" = :id',
                id=order["OrderId"])
-    assert ok(pg.client.post("/internal/orders/expire-unpaid-qr", headers=secret)) == {"Processed": 1}
-    assert ok(pg.client.post("/internal/orders/expire-unpaid-qr", headers=secret)) == {"Processed": 0}
+    assert run_job() == (1, 0)
+    assert run_job() == (0, 0)
 
     detail = ok(pg.client.get(f"/orders/{order['OrderId']}", headers=customer))
     assert detail["OrderStatus"] == "Cancelled" and detail["CancelledAt"]
