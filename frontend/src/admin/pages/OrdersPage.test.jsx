@@ -8,7 +8,9 @@ import OrdersPage from './OrdersPage.jsx'
 import OrderDetailPage from './OrderDetailPage.jsx'
 
 const api = vi.hoisted(() => ({ getAdminData: vi.fn(), updateOrderStatus: vi.fn(), confirmCodDelivery: vi.fn(), updateOrderNote: vi.fn(), assignOrderSerials: vi.fn(), releaseOrderSerial: vi.fn() }))
-vi.mock('../../services/api/admin.js', () => ({ getAdminData: api.getAdminData }))
+// The breadcrumb test lands on the dashboard, which loads stock and revenue through these two reads.
+const dashboard = vi.hoisted(() => ({ getDashboardStock: vi.fn(), getRevenueSeries: vi.fn() }))
+vi.mock('../../services/api/admin.js', () => ({ getAdminData: api.getAdminData, ...dashboard }))
 vi.mock('../services/orders.js', () => api)
 
 const permissions = ['admin.portal', 'orders:view', 'orders:update']
@@ -33,8 +35,11 @@ beforeEach(() => {
   orders = []
   method = { PaymentMethodId: 'pm1', Code: 'COD', Name: 'Thanh toán khi nhận hàng', IsActive: false }
   serialItems = [{ OrderItemId: 'item1', ProductVariantId: 'v1', Sku: 'PHONE-DEN', Quantity: 1, IsSerialTracked: true, SerialNumbers: [] }]
+  dashboard.getDashboardStock.mockResolvedValue({ Items: [], Total: 0 })
+  dashboard.getRevenueSeries.mockImplementation(async (_, months) => months.map((month) => ({ month, data: { NetRevenue: '0.00', OrderCount: 0 }, error: '' })))
   api.getAdminData.mockImplementation(async (_, path, query) => {
     if (path === '/users/me/notifications/unread-count') return { Count: 0 }
+    if (path === '/admin/statistics/orders') return { TotalOrders: orders.length, ByStatus: {} }
     if (path === '/admin/orders') {
       const filtered = orders.filter((order) => (!query.order_code || order.OrderCode.includes(query.order_code)) && (!query.order_status || order.OrderStatus === query.order_status))
       return { Items: filtered.slice((query.page - 1) * query.page_size, query.page * query.page_size), Total: filtered.length, Page: query.page, PageSize: query.page_size }
