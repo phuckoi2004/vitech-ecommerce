@@ -21,6 +21,17 @@ export function paymentStatusText(order, cod) {
   return PAYMENT_STATUS[order.PaymentStatus] ?? order.PaymentStatus
 }
 
+// The page title. A transfer order is "placed, waiting for payment" until the server says Paid, so "Đặt hàng thành
+// công" is never shown for money that has not arrived; "Thanh toán thành công" only once PaymentStatus is Paid.
+// `code` is the order's payment method Code (null while unknown), `placed` whether the confirmation page opened it.
+export function orderTitle(order, { code, placed }) {
+  if (!order || order.OrderStatus === 'Cancelled') return 'Chi tiết đơn hàng'
+  const cod = code === 'COD'
+  if (code && !cod && order.PaymentStatus === 'Paid') return 'Thanh toán thành công'
+  if (!placed) return 'Chi tiết đơn hàng'
+  return cod ? 'Đặt hàng thành công' : code ? 'Đã tạo đơn hàng, chờ thanh toán' : 'Đã tạo đơn hàng'
+}
+
 // A transfer order the backend still gives a QR for: not cancelled, shipped or paid.
 export function awaitingTransfer(order) {
   return ['Pending', 'Confirmed', 'Processing'].includes(order.OrderStatus) && ['Pending', 'Failed'].includes(order.PaymentStatus)

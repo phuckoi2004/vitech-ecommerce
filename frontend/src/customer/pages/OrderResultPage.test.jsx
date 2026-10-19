@@ -487,6 +487,81 @@ describe('order page: cancelled after being paid', () => {
   })
 })
 
+describe('order page: outcome and details', () => {
+  test('a transfer order just placed is called created and waiting for payment, never a success', async () => {
+    mockApi()
+    renderAt('/don-hang/o1', { state: { order: ORDER, paymentCode: 'SEPAY' } })
+
+    expect(screen.getByRole('heading', { level: 1, name: 'Đã tạo đơn hàng, chờ thanh toán' })).toBeInTheDocument()
+    expect(await screen.findByText('VTPAY12345678')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: 'Đã tạo đơn hàng, chờ thanh toán' })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: /thành công/ })).not.toBeInTheDocument()
+    expect(within(screen.getByRole('region', { name: 'Quét mã QR để thanh toán' })).getByText('Chờ thanh toán')).toBeInTheDocument()
+  })
+
+  test('only the server saying Paid makes it a payment success, with a way to the order details', async () => {
+    const server = mockApi({ 'GET /orders/o1': { body: PAID } })
+    const user = userEvent.setup()
+    renderAt('/don-hang/o1', { state: { order: ORDER, paymentCode: 'SEPAY' } })
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Thanh toán thành công' })).toBeInTheDocument()
+    const success = screen.getByText('VieTech đã nhận được thanh toán cho đơn hàng này. Cảm ơn bạn!').closest('.order-success')
+    await user.click(within(success).getByRole('button', { name: 'Xem chi tiết đơn hàng' }))
+    expect(screen.getByRole('region', { name: 'Thông tin đơn hàng' })).toBeInTheDocument()
+    expect(server.qrRequests()).toHaveLength(0)
+  })
+
+  test('the account name, account number and amount can be copied; checking the payment reads the order at once', async () => {
+    const server = mockApi({ 'POST /orders/o1/payments/qr': { status: 201, body: { ...QR, AccountName: 'CONG TY VIETECH' } } })
+    const user = userEvent.setup()
+    renderAt('/don-hang/o1')
+    const qr = await screen.findByRole('region', { name: 'Quét mã QR để thanh toán' })
+    expect(within(qr).getByText('CONG TY VIETECH')).toBeInTheDocument()
+
+    await user.click(within(qr).getByRole('button', { name: 'Sao chép số tài khoản 0123456789' }))
+    expect(await navigator.clipboard.readText()).toBe('0123456789')
+    expect(within(qr).getByText('Đã sao chép số tài khoản.')).toBeInTheDocument()
+    await user.click(within(qr).getByRole('button', { name: 'Sao chép số tiền cần chuyển' }))
+    expect(await navigator.clipboard.readText()).toBe('313334')
+    expect(within(qr).getByText('Đã sao chép số tiền.')).toBeInTheDocument()
+
+    const before = server.reads()
+    await user.click(within(qr).getByRole('button', { name: 'Kiểm tra thanh toán' }))
+    await vi.waitFor(() => expect(server.reads()).toBe(before + 1))
+    expect(server.qrRequests()).toHaveLength(1)
+  })
+
+  test('without an account number there is nothing to copy and no account name is made up', async () => {
+    mockApi({ 'POST /orders/o1/payments/qr': { status: 201, body: { ...QR, AccountNumber: null } } })
+    renderAt('/don-hang/o1')
+    const qr = await screen.findByRole('region', { name: 'Quét mã QR để thanh toán' })
+    expect(within(qr).queryByRole('button', { name: /Sao chép số tài khoản/ })).not.toBeInTheDocument()
+    expect(within(qr).queryByText('Chủ tài khoản')).not.toBeInTheDocument()
+  })
+
+  test('the order details show the lines, the amounts that make up the total and the delivery, as the server sent them', async () => {
+    const item = { OrderItemId: 'i1', ProductVariantId: 'v1', ProductName: 'Laptop VieTech Pro 14', Sku: 'LT-14',
+      VariantInfo: 'Màu: Bạc', WarrantyMonths: 12, Quantity: 2, UnitPrice: '166666.50', DiscountAmount: '49999.00', LineTotal: '283334.00' }
+    mockApi({ 'GET /orders/o1': { body: { ...COD_ORDER, Items: [item], CustomerNote: 'Giao giờ hành chính' } } })
+    renderAt('/don-hang/o1')
+
+    const details = await screen.findByRole('region', { name: 'Thông tin đơn hàng' })
+    const line = within(within(details).getByRole('list', { name: 'Sản phẩm trong đơn hàng' })).getByRole('listitem')
+    expect(line).toHaveTextContent('Laptop VieTech Pro 14')
+    expect(line).toHaveTextContent('Màu: Bạc')
+    expect(line).toHaveTextContent('x2')
+    expect(line).toHaveTextContent(vnd(283334))
+    const value = (label) => within(details).getByText(label).nextElementSibling
+    expect(value('Tạm tính')).toHaveTextContent(vnd(333333))
+    expect(value('Phí vận chuyển')).toHaveTextContent(vnd(30000))
+    expect(value('Giảm giá')).toHaveTextContent(`−${vnd(49999)}`)
+    expect(value('Tổng cộng')).toHaveTextContent(vnd(313334))
+    expect(value('Người nhận')).toHaveTextContent('Nguyễn Văn B · 0987654321')
+    expect(value('Địa chỉ giao hàng')).toHaveTextContent(ORDER.ShippingAddress)
+    expect(value('Ghi chú')).toHaveTextContent('Giao giờ hành chính')
+  })
+})
+
 describe('order page: access', () => {
   test('an order of someone else is not shown', async () => {
     mockApi({ '/orders/x': { status: 404, body: { detail: 'Không tìm thấy đơn hàng', code: 'order_not_found' } } })

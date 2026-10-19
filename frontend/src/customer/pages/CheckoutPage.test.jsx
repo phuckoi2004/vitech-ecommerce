@@ -207,6 +207,11 @@ describe('checkout page', () => {
     expect(payments.map((radio) => radio.closest('label').textContent)).toEqual([
       'Thanh toán khi nhận hàng (COD)Trả tiền mặt khi nhận hàng.', 'Chuyển khoản QRQuét mã QR sau khi đặt hàng.'])
     expect(payments[0]).toBeChecked()
+    // What comes after placing the order follows the chosen method: a transfer is paid by QR within 15 minutes.
+    expect(screen.getByText(/Bạn thanh toán khi nhận hàng\./)).toBeInTheDocument()
+    await user.click(payments[1])
+    expect(screen.getByText(/hiển thị mã QR và thông tin chuyển khoản; vui lòng thanh toán trong 15 phút/)).toBeInTheDocument()
+    expect(screen.queryByText(/Bạn thanh toán khi nhận hàng\./)).not.toBeInTheDocument()
   })
 
   test('another saved address or a new receiver can be chosen; a new receiver is checked before the order is sent', async () => {
@@ -502,7 +507,7 @@ describe('placing the order', () => {
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Đặt hàng thành công' })).toBeInTheDocument()
     expect(screen.getByText('VT261016ABC123')).toBeInTheDocument()
-    expect(screen.getByText(vnd(83500000))).toBeInTheDocument()
+    expect(screen.getByText('Tổng thanh toán').nextElementSibling).toHaveTextContent(vnd(83500000))
     expect(screen.queryByText(vnd(83510000))).not.toBeInTheDocument()
     expect(await screen.findByText('Thanh toán khi nhận hàng (COD)')).toBeInTheDocument()
     expect(screen.queryByText('Đã thanh toán')).not.toBeInTheDocument()
@@ -524,7 +529,8 @@ describe('placing the order', () => {
     expect(server.posts().map((call) => call.body)).toEqual([{ ShippingMethodId: 's1', PaymentMethodId: 'm2', AddressId: 'a2' }])
     expect(changes.count).toBe(1)
     expect(await screen.findByText('VTPAY12345678')).toBeInTheDocument()
-    expect(screen.getByText('Chờ thanh toán')).toBeInTheDocument()
+    expect(screen.getByText('Trạng thái thanh toán').nextElementSibling).toHaveTextContent('Chờ thanh toán')
+    expect(screen.getByRole('heading', { level: 1, name: 'Đã tạo đơn hàng, chờ thanh toán' })).toBeInTheDocument()
     expect(screen.queryByText('Đã thanh toán')).not.toBeInTheDocument()
     // The confirmation page starts no payment: the QR is asked once, by the order page, after the order exists.
     const qrCalls = server.calls.filter((call) => call.endpoint === '/orders/o1/payments/qr')

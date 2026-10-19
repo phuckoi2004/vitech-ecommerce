@@ -242,7 +242,7 @@ export default function CheckoutPage() {
                       }} />)}
                   </MethodGroup>
                   <p className="checkout-payment-note"><span aria-hidden="true">ⓘ</span>
-                    Đơn hàng chỉ được tạo khi bạn xác nhận. Thanh toán trực tuyến (nếu chọn) được thực hiện sau khi đơn hàng được tạo.
+                    {paymentNote(paymentMethods.find((method) => method.PaymentMethodId === paymentMethodId))}
                   </p>
                 </CheckoutSection>
               </div>
@@ -257,6 +257,15 @@ export default function CheckoutPage() {
             </form>}
     </div>
   </div>
+}
+
+// What happens after the order is placed with the chosen method. A transfer (any method but COD) is paid by SePay QR
+// on the order page, within 15 minutes of ordering (PaymentService: an unpaid QR order is then cancelled).
+function paymentNote(method) {
+  if (!method) return 'Đơn hàng chỉ được tạo khi bạn xác nhận.'
+  if (method.Code === 'COD') return 'Đơn hàng chỉ được tạo khi bạn xác nhận. Bạn thanh toán khi nhận hàng.'
+  return 'Đơn hàng chỉ được tạo khi bạn xác nhận. Sau đó VieTech hiển thị mã QR và thông tin chuyển khoản; vui lòng '
+    + 'thanh toán trong 15 phút, quá hạn đơn hàng được huỷ tự động.'
 }
 
 // A radio group of shipping or payment methods, with its loading, error and empty states.

@@ -7,7 +7,8 @@ import Money from '../../components/shared/Money.jsx'
 import useApiData from '../../hooks/useApiData.js'
 import { listPaymentMethods } from '../../lib/catalog-api.js'
 import CancelOrder from '../components/order/CancelOrder.jsx'
-import { awaitingTransfer, ORDER_STATUS, paymentStatusText, POLL_MS, qrProblem } from '../components/order/orderPayment.js'
+import OrderDetails from '../components/order/OrderDetails.jsx'
+import { awaitingTransfer, ORDER_STATUS, orderTitle, paymentStatusText, POLL_MS, qrProblem } from '../components/order/orderPayment.js'
 import QrPayment from '../components/order/QrPayment.jsx'
 import useOrder from '../components/order/useOrder.js'
 import useQrPayment from '../components/order/useQrPayment.js'
@@ -21,8 +22,9 @@ import './OrderResultPage.css'
 // the payment methods list ('COD'); the Code passed by the confirmation page only fills in for a method missing from it.
 // - COD: statuses and the amount to pay on delivery.
 // - Transfer: the pending SePay QR (asking again returns the same QR), read again every POLL_MS until the server says
-//   Paid, the order is cancelled or the QR deadline passes. Only the server's PaymentStatus says it is paid.
-// A Pending order that is not paid can be cancelled.
+//   Paid, the order is cancelled or the QR deadline passes. Only the server's PaymentStatus says it is paid; until
+//   then the title says the order waits for payment (orderTitle), never that it succeeded.
+// A Pending order that is not paid can be cancelled. The order's lines, amounts and delivery details follow.
 export default function OrderResultPage() {
   const { orderId } = useParams()
   const location = useLocation()
@@ -44,6 +46,9 @@ export default function OrderResultPage() {
   const expired = awaiting && ((deadline !== null && now >= deadline) || Boolean(problem?.expired))
   const polling = awaiting && Boolean(qr.qr) && !expired
   const { read, reads } = loaded
+  // The Code passed by the confirmation page only fills in the title while the methods list loads.
+  const title = orderTitle(order, { code: code ?? placed?.paymentCode ?? null, placed: Boolean(placed) })
+  const paid = Boolean(order) && order.PaymentStatus === 'Paid' && order.OrderStatus !== 'Cancelled'
 
   useEffect(() => {
     document.title = order ? `Đơn hàng ${order.OrderCode} | VieTech` : 'Đơn hàng | VieTech'
@@ -85,13 +90,23 @@ export default function OrderResultPage() {
           <li aria-current="page">Đơn hàng{order ? ` ${order.OrderCode}` : ''}</li>
         </ol>
       </nav>
-      <h1 className="checkout-title">{placed ? 'Đặt hàng thành công' : 'Chi tiết đơn hàng'}</h1>
+      <h1 className="checkout-title">{title}</h1>
       {!order ? loaded.loading ? <LoadingState label="Đang tải đơn hàng…" />
         : <ErrorState title="Không thể tải đơn hàng" message={loaded.error} onRetry={loaded.refresh} />
         : <>
           {loaded.error && <p className="order-note" role="status">
             Chưa cập nhật được trạng thái mới nhất của đơn hàng.{polling ? ' Đang thử lại…' : ''}
           </p>}
+          {paid && <div className="order-success" role="status">
+            <span className="order-success-icon" aria-hidden="true">✓</span>
+            <div className="order-success-body">
+              <p>VieTech đã nhận được thanh toán cho đơn hàng này. Cảm ơn bạn!</p>
+              <button type="button" className="order-link-button"
+                onClick={() => document.getElementById('order-details')?.scrollIntoView?.({ behavior: 'smooth', block: 'start' })}>
+                Xem chi tiết đơn hàng
+              </button>
+            </div>
+          </div>}
           <dl className="checkout-readonly order-summary">
             <div><dt>Mã đơn hàng</dt><dd>{order.OrderCode}</dd></div>
             <div><dt>Trạng thái đơn hàng</dt><dd>{ORDER_STATUS[order.OrderStatus] ?? order.OrderStatus}</dd></div>
@@ -99,9 +114,6 @@ export default function OrderResultPage() {
             <div><dt>Phương thức thanh toán</dt><dd>{method?.Name ?? (cod ? 'Thanh toán khi nhận hàng (COD)' : code ? 'Chuyển khoản' : 'Chưa xác định')}</dd></div>
             <div><dt>Trạng thái thanh toán</dt><dd>{paymentStatusText(order, cod)}</dd></div>
           </dl>
-          {order.PaymentStatus === 'Paid' && order.OrderStatus !== 'Cancelled' && <p className="order-banner is-success" role="status">
-            VieTech đã nhận được thanh toán cho đơn hàng này. Cảm ơn bạn!
-          </p>}
           {order.OrderStatus === 'Cancelled' && <div className="order-banner is-cancelled" role="status">
             <p>Đơn hàng đã bị huỷ.{order.CancelReason ? ` Lý do: ${order.CancelReason}` : ''}</p>
             {/* Cancelled after the money came in (or cancelled once paid): the refund is a manual step at the shop. */}
@@ -121,7 +133,7 @@ export default function OrderResultPage() {
               : 'Đã hết thời gian thanh toán. Đơn hàng sẽ được huỷ tự động; nếu bạn đã chuyển khoản, vui lòng liên hệ VieTech để được hỗ trợ.'}</p>
             <button type="button" className="order-link-button" onClick={loaded.refresh}>Kiểm tra lại trạng thái</button>
           </div>
-            : qr.qr ? <QrPayment qr={qr.qr} now={now} />
+            : qr.qr ? <QrPayment qr={qr.qr} now={now} onCheck={loaded.refresh} />
               : problem ? <div className="order-panel is-problem">
                 <p role="alert">{problem.message}</p>
                 {problem.retry && <button type="button" className="order-link-button" onClick={qr.retry}>Thử lại</button>}
@@ -129,6 +141,7 @@ export default function OrderResultPage() {
                 : <LoadingState label="Đang tạo mã QR thanh toán…" />)}
           {order.OrderStatus === 'Pending' && order.PaymentStatus !== 'Paid' && <CancelOrder order={order} transfer={transfer}
             onCancelled={loaded.replace} onStale={loaded.refresh} />}
+          <OrderDetails order={order} />
           <p><Link className={buttonClassName({ variant: 'outline' })} to={HOME_PATH}>Tiếp tục mua sắm</Link></p>
         </>}
     </div>

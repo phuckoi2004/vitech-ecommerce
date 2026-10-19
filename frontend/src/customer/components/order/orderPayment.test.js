@@ -1,9 +1,24 @@
 // @vitest-environment node
 import { describe, expect, test } from 'vitest'
 import { ApiError, errorFromResponse } from '../../../services/api/client.js'
-import { awaitingTransfer, paymentStatusText, qrProblem, timeLeft } from './orderPayment.js'
+import { awaitingTransfer, orderTitle, paymentStatusText, qrProblem, timeLeft } from './orderPayment.js'
 
 describe('order payment rules', () => {
+  test('the title says "paid" only for a Paid transfer order and never calls an unpaid transfer a success', () => {
+    const pending = { OrderStatus: 'Pending', PaymentStatus: 'Pending' }
+    expect(orderTitle(pending, { code: 'COD', placed: true })).toBe('Đặt hàng thành công')
+    expect(orderTitle(pending, { code: 'SEPAY', placed: true })).toBe('Đã tạo đơn hàng, chờ thanh toán')
+    expect(orderTitle(pending, { code: null, placed: true })).toBe('Đã tạo đơn hàng')
+    expect(orderTitle(pending, { code: 'SEPAY', placed: false })).toBe('Chi tiết đơn hàng')
+    expect(orderTitle({ ...pending, PaymentStatus: 'Failed' }, { code: 'SEPAY', placed: true }))
+      .toBe('Đã tạo đơn hàng, chờ thanh toán')
+    expect(orderTitle({ ...pending, PaymentStatus: 'Paid' }, { code: 'SEPAY', placed: false })).toBe('Thanh toán thành công')
+    // COD collected on delivery is not a transfer success page; a cancelled order is just its details.
+    expect(orderTitle({ OrderStatus: 'Delivered', PaymentStatus: 'Paid' }, { code: 'COD', placed: false })).toBe('Chi tiết đơn hàng')
+    expect(orderTitle({ OrderStatus: 'Cancelled', PaymentStatus: 'Paid' }, { code: 'SEPAY', placed: true })).toBe('Chi tiết đơn hàng')
+    expect(orderTitle(null, { code: null, placed: false })).toBe('Chi tiết đơn hàng')
+  })
+
   test('"Đã thanh toán" only for a Paid order; a pending one reads by its method', () => {
     expect(paymentStatusText({ PaymentStatus: 'Paid' }, false)).toBe('Đã thanh toán')
     expect(paymentStatusText({ PaymentStatus: 'Pending' }, false)).toBe('Chờ thanh toán')
