@@ -120,6 +120,7 @@ class ManageShippingMethodTest(ShippingMethodTestBase):
             ({"Code": "X", "Name": "Y"}, "shipping_method_field_required"),
             ({**VALID, "Code": "X", "BaseFee": Decimal("-5")}, "invalid_shipping_fee"),
             ({**VALID, "Code": "X", "BaseFee": Decimal("1.005")}, "invalid_shipping_fee"),
+            ({**VALID, "Code": "X", "BaseFee": Decimal("30000.50")}, "invalid_shipping_fee"),  # VND nguyên đồng
             ({**VALID, "Code": "X", "EstimatedDays": True}, "invalid_estimated_days"),
             ({**VALID, "Code": "X", "IsActive": "yes"}, "invalid_is_active"),
         )

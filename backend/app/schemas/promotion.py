@@ -2,6 +2,8 @@
 
 Promotion là nơi duy nhất quản lý thông tin giảm giá (DiscountType, DiscountValue, MinOrderValue,
 MaxDiscountAmount, StartDate, EndDate). Coupon chỉ lưu mã và tham chiếu Promotion.
+Giá trị tiền (MinOrderValue, MaxDiscountAmount, DiscountValue khi FixedAmount) là VND nguyên đồng; DiscountValue khi
+Percentage được có phần thập phân.
 """
 
 import uuid
@@ -16,6 +18,7 @@ from .common import (
     PromotionStatus,
     RequestSchema,
     ResponseSchema,
+    VndAmount,
     check_end_after_start,
     relation_field,
     varchar,
@@ -26,6 +29,12 @@ def _check_percentage(discount_type: str | None, discount_value) -> None:
     """CHECK "DiscountType" <> 'Percentage' OR "DiscountValue" <= 100."""
     if discount_type == "Percentage" and discount_value is not None and discount_value > 100:
         raise ValueError("DiscountValue không được lớn hơn 100 khi DiscountType là Percentage")
+
+
+def _check_fixed_amount(discount_type: str | None, discount_value) -> None:
+    """Số tiền giảm cố định là VND nguyên đồng (service kiểm tra lại với loại giảm đang lưu khi PATCH)."""
+    if discount_type == "FixedAmount" and discount_value is not None and discount_value != discount_value.to_integral_value():
+        raise ValueError("Số tiền giảm cố định phải là VND nguyên đồng (không có phần lẻ)")
 
 
 # ---------------------------------------------------------------------------
@@ -45,8 +54,8 @@ class PromotionCreate(RequestSchema):
     Description: str | None = None
     DiscountType: DiscountTypeValue
     DiscountValue: Money
-    MinOrderValue: Money
-    MaxDiscountAmount: Money | None = None
+    MinOrderValue: VndAmount
+    MaxDiscountAmount: VndAmount | None = None
     StartDate: datetime
     EndDate: datetime
     Status: PromotionStatus
@@ -56,6 +65,7 @@ class PromotionCreate(RequestSchema):
     @model_validator(mode="after")
     def _check_constraints(self):
         _check_percentage(self.DiscountType, self.DiscountValue)
+        _check_fixed_amount(self.DiscountType, self.DiscountValue)
         check_end_after_start(self.StartDate, self.EndDate)
         return self
 
@@ -70,8 +80,8 @@ class PromotionUpdate(RequestSchema):
     Description: str | None = None
     DiscountType: DiscountTypeValue | None = None
     DiscountValue: Money | None = None
-    MinOrderValue: Money | None = None
-    MaxDiscountAmount: Money | None = None
+    MinOrderValue: VndAmount | None = None
+    MaxDiscountAmount: VndAmount | None = None
     StartDate: datetime | None = None
     EndDate: datetime | None = None
     Status: PromotionStatus | None = None
@@ -79,6 +89,7 @@ class PromotionUpdate(RequestSchema):
     @model_validator(mode="after")
     def _check_constraints(self):
         _check_percentage(self.DiscountType, self.DiscountValue)
+        _check_fixed_amount(self.DiscountType, self.DiscountValue)
         check_end_after_start(self.StartDate, self.EndDate)
         return self
 

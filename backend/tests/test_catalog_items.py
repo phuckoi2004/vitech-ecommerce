@@ -22,7 +22,7 @@ def shared_payload(product, **changes):
 
 
 def variant_payload(**changes):
-    return {"Sku": "MY-WHITE", "Color": "Trắng", "Storage": "256GB", "Price": "1234567.89",
+    return {"Sku": "MY-WHITE", "Color": "Trắng", "Storage": "256GB", "Price": "1234567",
             "MinStockLevel": 4, "IsSerialTracked": False, "IsActive": True, **changes}
 
 
@@ -39,7 +39,7 @@ def test_new_product_always_has_its_first_variant_and_one_customer_entry(catalog
     first = response.json()
     assert first["StockQuantity"] == 0 and first["Color"] == "Trắng"
     assert first["Images"][0]["IsDefault"] is True
-    assert Decimal(first["Price"]) == Decimal("1234567.89")
+    assert Decimal(first["Price"]) == Decimal("1234567")
     product_id = first["ProductId"]
     service = ProductService(session)
     detail = service.get_product_detail(uuid.UUID(product_id))
@@ -174,11 +174,23 @@ def test_shared_image_failure_rolls_back_metadata_and_images(catalog):
 
 
 @pytest.mark.parametrize("invalid", [{"Color": " "}, {"Color": ["Trắng", "Đen"]}, {"Sku": " "},
-    {"StockQuantity": 99}, {"CostPrice": "1"}, {"Price": "-1"}, {"Name": "Not shared metadata"}])
+    {"StockQuantity": 99}, {"CostPrice": "1"}, {"Price": "-1"}, {"Price": "1234567.89"}, {"Name": "Not shared metadata"}])
 def test_variant_form_rejects_invalid_or_shared_fields(catalog, invalid):
     client, _, products, _ = catalog
     response = client.post("/admin/catalog-items", json={**variant_payload(**invalid), "ProductId": str(products[0].ProductId)})
     assert response.status_code == 422, response.text
+
+
+def test_selling_price_must_be_whole_vnd(catalog):
+    client, _, products, _ = catalog
+    response = client.post("/admin/catalog-items",
+                           json={**variant_payload(Price="1234567.89"), "ProductId": str(products[0].ProductId)})
+    assert response.status_code == 422
+    assert "VND nguyên đồng" in response.json()["detail"][0]["msg"]
+    accepted = client.post("/admin/catalog-items",
+                           json={**variant_payload(Price="1234567.00", Sku="MY-WHOLE", Color="Xanh"),
+                                 "ProductId": str(products[0].ProductId)})
+    assert accepted.status_code == 201, accepted.text
 
 
 def test_parent_selection_is_explicit_and_update_cannot_reparent(catalog):

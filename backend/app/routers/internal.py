@@ -11,9 +11,11 @@ from datetime import timedelta
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
+from fastapi.responses import JSONResponse
 
 from app.integrations.sepay import SePayConfigError, SePaySettings
 from app.schemas import InternalJobResponse
+from app.services.internal_jobs import JobRun
 from app.services.order import OrderService
 from app.services.payment_webhook import PaymentWebhookService
 
@@ -47,15 +49,22 @@ Webhooks = Annotated[PaymentWebhookService, Depends(get_payment_webhook_service)
 JobLimit = Annotated[int, Query(ge=1, le=1000)]
 
 
+def job_response(run: JobRun) -> InternalJobResponse | JSONResponse:
+    """200 with the counts; 500 with the same counts when some records failed, so the cron caller sees a failure."""
+    body = InternalJobResponse(Processed=run.processed, Selected=run.selected, Skipped=run.skipped, Failed=run.failed)
+    if run.failed:
+        return JSONResponse(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, content=body.model_dump())
+    return body
+
+
 @router.post("/orders/expire-unpaid-qr", response_model=InternalJobResponse)
 def expire_unpaid_qr_orders(service: Orders, limit: JobLimit = 100):
     """Cancels QR orders left unpaid for 15 minutes (one transaction per order; safe to run repeatedly)."""
-    return InternalJobResponse(Processed=service.expire_unpaid_qr_orders(limit=limit))
+    return job_response(service.expire_unpaid_qr_orders(limit=limit))
 
 
 @router.post("/payment-webhooks/process", response_model=InternalJobResponse)
 def process_unprocessed_webhooks(service: Webhooks, limit: JobLimit = 100,
                                  older_than_minutes: Annotated[int, Query(ge=1, le=1440)] = 5):
     """Retries stored webhook events still marked Received (their first processing failed)."""
-    return InternalJobResponse(Processed=service.process_unprocessed(
-        older_than=timedelta(minutes=older_than_minutes), limit=limit))
+    return job_response(service.process_unprocessed(older_than=timedelta(minutes=older_than_minutes), limit=limit))

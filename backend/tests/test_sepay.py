@@ -246,6 +246,14 @@ class QrGatewayTest(unittest.TestCase):
         self.assertNotIn("VT000001", code)  # mã không suy ra từ mã đơn (khó đoán)
         self.assertNotEqual(code, gateway.create_qr_payment(order_code="VT000001", amount=Decimal("1")).gateway_transaction_code)
 
+    def test_records_the_receiving_account_of_this_qr_without_secrets(self):
+        request = SePayQrGateway(settings()).create_qr_payment(order_code="VT000001", amount=Decimal("130000.00"))
+        self.assertEqual(request.response_data, {
+            "provider": "SePay", "payment_code": request.gateway_transaction_code,
+            "bank": "Vietcombank", "account_number": "0123456789",
+        })
+        self.assertNotIn(SECRET, json.dumps(request.response_data) + request.qr_data)
+
     def test_amount_must_be_whole_vnd(self):
         gateway = SePayQrGateway(settings())
         for amount in (Decimal("130000.50"), Decimal("0"), Decimal("-1")):

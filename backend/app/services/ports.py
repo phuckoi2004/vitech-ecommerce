@@ -28,7 +28,11 @@ class OtpSender(Protocol):
 
 @dataclass(frozen=True)
 class QrPaymentRequest:
-    """Kết quả tạo yêu cầu thanh toán QR tại cổng thanh toán."""
+    """Kết quả tạo yêu cầu thanh toán QR tại cổng thanh toán.
+
+    ``response_data`` được lưu cùng giao dịch; khóa "bank" và "account_number" (nếu có) là tài khoản nhận tiền hiển
+    thị cho khách hàng. Không đặt bí mật/khóa API của cổng vào đây.
+    """
 
     gateway_transaction_code: str
     qr_data: str

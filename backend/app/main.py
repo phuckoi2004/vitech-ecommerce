@@ -1,3 +1,4 @@
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
@@ -31,6 +32,9 @@ from .routers.admin import users as admin_users
 from .routers.dependencies import get_return_policy
 from .routers.errors import service_error_handler
 from .services.exceptions import ServiceError
+from .services.internal_jobs import database_error_code
+
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
@@ -83,6 +87,9 @@ async def validation_error_handler(request: Request, error: RequestValidationErr
 
 @app.exception_handler(SQLAlchemyError)
 async def database_error_handler(request: Request, error: SQLAlchemyError):
+    # Type and SQLSTATE only: the error text may hold SQL parameters or connection details. Path without query string.
+    logger.error("Database error on %s %s: %s sqlstate=%s", request.method, request.url.path, type(error).__name__,
+                 database_error_code(error))
     return JSONResponse(status_code=503, content={"detail": "Không thể xử lý dữ liệu lúc này. Vui lòng thử lại"})
 
 

@@ -183,9 +183,9 @@ class DurabilityTest(WebhookTestBase):
             self.receive(1001, 130000)
         self.svc.payments.apply_bank_transfer = original
         self.events()[0].ReceivedAt = NOW - timedelta(minutes=10)
-        self.assertEqual(self.svc.process_unprocessed(), 1)
+        self.assertEqual(self.svc.process_unprocessed().processed, 1)
         self.assertEqual(self.order.PaymentStatus, "Paid")
-        self.assertEqual(self.svc.process_unprocessed(), 0)
+        self.assertEqual(self.svc.process_unprocessed().processed, 0)
 
     def test_concurrent_store_uses_existing_event(self):
         """Request khác vừa lưu cùng sự kiện giữa lúc kiểm tra và ghi: UNIQUE (giả lập) → dùng bản ghi đã có."""

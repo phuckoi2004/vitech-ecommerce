@@ -326,7 +326,13 @@ class SePayQrGateway:
         return QrPaymentRequest(
             gateway_transaction_code=code,
             qr_data=f"{self.settings.qr_image_url}?{query}",
-            response_data={"provider": "SePay", "payment_code": code},
+            # Tài khoản nhận tiền của đúng QR này, để trả lại cho khách khi gọi lại (không chứa secret).
+            response_data={
+                "provider": "SePay",
+                "payment_code": code,
+                "bank": self.settings.bank,
+                "account_number": self.settings.account_number,
+            },
         )
 
     def verify_callback(self, payload: Mapping[str, Any]) -> GatewayPaymentResult:

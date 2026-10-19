@@ -17,6 +17,7 @@ from .common import (
     RequestSchema,
     ResponseSchema,
     SerialNumberValue,
+    VndAmount,
     relation_field,
     varchar,
 )
@@ -29,7 +30,7 @@ from .common import (
 class ShippingMethodCreate(RequestSchema):
     Code: varchar(50)
     Name: varchar(255)
-    BaseFee: Money
+    BaseFee: VndAmount
     EstimatedDays: int
     IsActive: bool | None = None
 
@@ -37,7 +38,7 @@ class ShippingMethodCreate(RequestSchema):
 class ShippingMethodUpdate(RequestSchema):
     Code: varchar(50) | None = None
     Name: varchar(255) | None = None
-    BaseFee: Money | None = None
+    BaseFee: VndAmount | None = None
     EstimatedDays: int | None = None
     IsActive: bool | None = None
 

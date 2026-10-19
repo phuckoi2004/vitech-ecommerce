@@ -79,6 +79,26 @@ class PaymentTransactionResponse(ResponseSchema):
     RefundOfPaymentTransactionId: uuid.UUID | None
 
 
+class QrPaymentResponse(PaymentTransactionResponse):
+    """Yêu cầu thanh toán QR đang chờ (POST /orders/{id}/payments/qr), kèm thông tin chuyển khoản do server cấp.
+
+    Mọi giá trị lấy từ giao dịch đã lưu và đơn hàng; client hiển thị nguyên văn, không suy ra từ URL trong QrData.
+    - QrData: URL ảnh QR.
+    - TransferContent: nội dung chuyển khoản bắt buộc (mã thanh toán duy nhất của yêu cầu này).
+    - Bank, AccountNumber: tài khoản nhận tiền mà cổng thanh toán đã dùng khi tạo QR (NULL nếu cổng không cung cấp).
+    - TransferAmount: số tiền cần chuyển, VND nguyên đồng (bằng Amount).
+    - ExpiresAt: hạn thanh toán; quá hạn đơn bị hủy tự động. NULL khi đơn không còn ở trạng thái chờ xác nhận (Pending),
+      lúc đó hạn QR không còn áp dụng.
+    Không có xác nhận thanh toán ở đây: chỉ webhook đã xác thực mới chuyển đơn sang Paid.
+    """
+
+    TransferContent: str
+    Bank: str | None
+    AccountNumber: str | None
+    TransferAmount: int
+    ExpiresAt: datetime | None
+
+
 class AdminPaymentTransactionResponse(PaymentTransactionResponse):
     GatewayTransactionCode: str | None
     ResponseData: dict[str, Any] | None

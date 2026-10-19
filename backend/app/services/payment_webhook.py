@@ -22,6 +22,7 @@ from app.repositories import PaymentWebhookEventRepository
 
 from .base import BaseService, utc_now
 from .exceptions import BusinessRuleError, ConflictError, NotFoundError
+from .internal_jobs import JobRun, run_job
 from .payment import BankTransfer, PaymentService
 
 TRANSFER_IN = "in"
@@ -81,15 +82,21 @@ class PaymentWebhookService(BaseService):
             self.events.flush()
             return outcome
 
-    def process_unprocessed(self, *, older_than: timedelta = timedelta(minutes=5), limit: int = 100) -> int:
-        """Xử lý lại các sự kiện còn Received (đã lưu nhưng xử lý lỗi). Dành cho tác vụ nội bộ; trả số đã xử lý."""
+    def process_unprocessed(self, *, older_than: timedelta = timedelta(minutes=5), limit: int = 100) -> JobRun:
+        """Xử lý lại các sự kiện còn Received (đã lưu nhưng xử lý lỗi). Dành cho tác vụ nội bộ.
+
+        Tối đa ``limit`` sự kiện nhận trước ``older_than``, cũ nhất trước; mỗi sự kiện một transaction (``run_job``).
+        Sự kiện đã được xử lý ở nơi khác (SePay gửi lại) được bỏ qua. Sự kiện lỗi được rollback, ghi log, đếm vào
+        ``failed`` và giữ nguyên Received để lần chạy sau thử lại; các sự kiện sau vẫn được xử lý.
+        """
         if self.in_transaction():
             raise BusinessRuleError("Tác vụ phải là use case độc lập", code="webhook_requires_own_transaction")
-        processed = 0
-        for event_id in self.events.list_unprocessed_ids(received_before=self.now() - older_than, limit=limit):
-            if self.process_event(event_id) != "duplicate":
-                processed += 1
-        return processed
+        return run_job(
+            self,
+            "process_unprocessed_webhooks",
+            select=lambda: self.events.list_unprocessed_ids(received_before=self.now() - older_than, limit=limit),
+            handle=lambda event_id: self.process_event(event_id) != "duplicate",
+        )
 
     def _store_sepay_event(self, payload: SePayWebhookPayload, raw: dict[str, Any]) -> tuple[uuid.UUID, bool]:
         key = (PROVIDER_SEPAY, payload.accountNumber.strip(), str(payload.id))
