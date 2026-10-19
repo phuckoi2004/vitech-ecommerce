@@ -6,19 +6,17 @@ import { formatDate } from '../../lib/format.js'
 import AdminTable from '../components/AdminTable.jsx'
 import OrderBadge from '../components/OrderBadge.jsx'
 import OrderDialog from '../components/OrderDialog.jsx'
-import { PRODUCT_CONTROL, ProductButton } from '../components/ProductUi.jsx'
+import { PRODUCT_CONTROL } from '../components/ProductUi.jsx'
 import useAdminQuery from '../hooks/useAdminQuery.js'
 import { ORDER_NEXT, ORDER_PAGE_SIZE, ORDER_STATUSES, orderFilters, orderListSearch } from '../lib/orders.js'
+import useAutoFilters from '../hooks/useAutoFilters.js'
 
 function OrderSearch({ keyword, onSearch }) {
-  const [value, setValue] = useState(keyword)
-  const [source, setSource] = useState(keyword)
-  if (source !== keyword) { setSource(keyword); setValue(keyword) }
-  return <form role="search" className="flex items-end gap-2.5" onSubmit={(event) => { event.preventDefault(); onSearch(value.trim()) }}>
+  const { draft, setDraft, formProps } = useAutoFilters({ keyword }, (values) => onSearch(values.keyword))
+  return <form role="search" className="flex items-end gap-2.5" {...formProps}>
     <label className="flex w-[330px] flex-col gap-1.5 text-[11px] leading-normal font-semibold">Tìm kiếm
-      <input type="search" aria-label="Tìm kiếm đơn hàng theo mã" placeholder="Tìm kiếm đơn hàng.." title="Tìm kiếm theo mã đơn hàng" maxLength={255} className={PRODUCT_CONTROL + ' h-10 rounded-lg! px-3 text-[10px]! font-normal placeholder:text-admin-muted'} value={value} onChange={(event) => setValue(event.target.value)} />
+      <input type="search" aria-label="Tìm kiếm đơn hàng theo mã" placeholder="Tìm kiếm đơn hàng.." title="Tìm kiếm theo mã đơn hàng" maxLength={255} className={PRODUCT_CONTROL + ' h-10 rounded-lg! px-3 text-[10px]! font-normal placeholder:text-admin-muted'} value={draft.keyword} onChange={(event) => setDraft({ keyword: event.target.value })} />
     </label>
-    <ProductButton type="submit" className="mb-[5px] h-[31px]! rounded-[9px]! px-[13px]! text-[11px]!">Tìm kiếm</ProductButton>
   </form>
 }
 
@@ -80,7 +78,7 @@ export default function OrdersPage() {
     <div role="group" aria-label="Lọc trạng thái đơn hàng" className="flex min-h-10 flex-wrap items-center gap-2">
       {ORDER_STATUSES.map(([status, label, width]) => <button key={status} type="button" aria-pressed={filter.status === status} className={'h-9 cursor-pointer rounded-[9px] border border-admin-border bg-white text-[11px] font-semibold whitespace-nowrap text-admin-muted hover:bg-admin-soft aria-pressed:border-admin-blue aria-pressed:bg-admin-soft aria-pressed:text-admin-blue ' + width} onClick={() => change('status', status)}>{label}</button>)}
     </div>
-    <div className="flex min-h-[560px] min-w-0 flex-col gap-3 rounded-[14px] border border-admin-border bg-white p-[18px]">
+    <div className="admin-table-inset flex min-h-[560px] min-w-0 flex-col gap-3 rounded-[14px] border border-admin-border bg-white p-[18px]">
       <div className="flex min-h-9 items-center gap-2.5"><h3 className="m-0 text-[15px] font-semibold">Đơn hàng</h3>
         <span className="rounded-full bg-admin-soft px-[9px] py-[5px] text-[11px] font-semibold text-admin-blue">{list.loading ? 'Đang tải…' : list.error ? 'Chưa tải được' : total + ' đơn hàng'}</span>
         <span className="ml-auto text-right text-[11px] text-admin-muted">Có thể chọn một đơn để xem chi tiết hoặc cập nhật trạng thái</span>

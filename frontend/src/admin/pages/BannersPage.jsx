@@ -8,16 +8,15 @@ import { BANNER_PAGE_SIZE, BANNER_STATUSES, bannerFilter, bannerPagePath } from 
 import AdminTable from '../components/AdminTable.jsx'
 import BannerDialog from '../components/BannerDialog.jsx'
 import { BannerAction, BannerButton, BannerImage, BannerLink, BannerStatus } from '../components/BannerUi.jsx'
+import useAutoFilters from '../hooks/useAutoFilters.js'
 
 const CONTROL = 'h-[38px] w-full rounded-lg border border-admin-border bg-white px-2.5 text-[9px] text-admin-text placeholder:text-admin-text'
 function BannerFilters({ keyword, status, onSearch, onReset }) {
-  const source = JSON.stringify([keyword, status])
-  const [draft, setDraft] = useState({ source, keyword, status })
-  if (draft.source !== source) setDraft({ source, keyword, status })
-  return <form role="search" className="flex items-end gap-2.5 leading-[11px]" onSubmit={(event) => { event.preventDefault(); onSearch(draft.keyword.trim(), draft.status) }}>
+  const { draft, setDraft, formProps } = useAutoFilters({ keyword, status }, (values) => onSearch(values.keyword, values.status))
+  return <form role="search" className="admin-filterbar flex items-end gap-2.5 leading-[11px]" {...formProps}>
     <label className="flex w-[360px] flex-col gap-[5px] text-[9px] font-medium text-admin-muted">Tìm kiếm<input type="search" aria-label="Tìm banner theo tiêu đề" className={CONTROL} placeholder="Tiêu đề banner" maxLength={255} value={draft.keyword} onChange={(event) => setDraft({ ...draft, keyword: event.target.value })} /></label>
     <label className="flex w-[190px] flex-col gap-[5px] text-[9px] font-medium text-admin-muted">Trạng thái<select aria-label="Trạng thái banner" className={CONTROL} value={draft.status} onChange={(event) => setDraft({ ...draft, status: event.target.value })}><option value="">Tất cả</option>{Object.entries(BANNER_STATUSES).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
-    <div className="flex-1" /><BannerButton secondary className="text-admin-text!" onClick={() => { setDraft({ source: JSON.stringify(['', '']), keyword: '', status: '' }); onReset() }}>Xóa lọc</BannerButton><BannerButton type="submit">Tìm kiếm</BannerButton>
+    <div className="flex-1" /><BannerButton secondary className="text-admin-text!" onClick={() => { setDraft({ keyword: '', status: '' }); onReset() }}>Xóa lọc</BannerButton>
   </form>
 }
 

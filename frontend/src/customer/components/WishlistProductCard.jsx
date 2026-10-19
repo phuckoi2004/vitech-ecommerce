@@ -10,7 +10,7 @@ import '../pages/ProductPage.css'
 
 export default function WishlistProductCard({ product, unavailable = false }) {
   const variants = productVariants(product)
-  const [selectedId, setSelectedId] = useState(initialVariant(variants)?.ProductVariantId ?? '')
+  const [selectedId, setSelectedId] = useState(initialVariant(variants, product.DefaultVariantId)?.ProductVariantId ?? '')
   const [choosing, setChoosing] = useState(false)
   const [busy, setBusy] = useState(false)
   const [notice, setNotice] = useState(null)

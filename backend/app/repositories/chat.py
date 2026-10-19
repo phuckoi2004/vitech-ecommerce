@@ -1,8 +1,9 @@
 """Repositories cho Conversations, Messages. Không gọi AI service."""
 
 import uuid
+from datetime import datetime
 
-from sqlalchemy import func, select
+from sqlalchemy import and_, func, or_, select, update
 from sqlalchemy.orm import aliased, selectinload
 
 from app.models import Conversation, Message, User
@@ -17,9 +18,13 @@ class ConversationRepository(BaseRepository[Conversation]):
         """Only enrich IDs already authorized by the service; two queries per page, no N+1/history load."""
         if not conversation_ids:
             return {}
+        unread = (select(Message.ConversationId, func.count().label('Count'))
+                  .where(Message.ConversationId.in_(conversation_ids), Message.SenderType == 'Customer', Message.IsRead.is_(False))
+                  .group_by(Message.ConversationId).subquery())
         customers = self.session.execute(
-            select(Conversation.ConversationId, User.FullName, User.Email)
+            select(Conversation.ConversationId, User.FullName, User.Email, func.coalesce(unread.c.Count, 0))
             .join(User, User.UserId == Conversation.CustomerId)
+            .outerjoin(unread, unread.c.ConversationId == Conversation.ConversationId)
             .where(Conversation.ConversationId.in_(conversation_ids))
         ).all()
         ranked = select(
@@ -32,7 +37,7 @@ class ConversationRepository(BaseRepository[Conversation]):
         latest = aliased(Message, ranked)
         messages = self.session.scalars(select(latest).where(ranked.c.message_rank == 1)).all()
         by_id = {message.ConversationId: message for message in messages}
-        return {id_: (name, email, by_id.get(id_)) for id_, name, email in customers}
+        return {id_: (name, email, by_id.get(id_), int(count)) for id_, name, email, count in customers}
 
     def get_detail(self, conversation_id: uuid.UUID) -> Conversation | None:
         """Conversation kèm toàn bộ Messages; với hội thoại dài nên dùng MessageRepository có phân trang."""
@@ -103,6 +108,28 @@ class ConversationRepository(BaseRepository[Conversation]):
 
 class MessageRepository(BaseRepository[Message]):
     model = Message
+
+    def list_window(self, conversation_id: uuid.UUID, *, limit: int, latest: bool = False,
+                    after: tuple[datetime, uuid.UUID] | None = None,
+                    before: tuple[datetime, uuid.UUID] | None = None) -> list[Message]:
+        conditions = [Message.ConversationId == conversation_id]
+        if after:
+            at, id_ = after
+            conditions.append(or_(Message.SentAt > at, and_(Message.SentAt == at, Message.MessageId > id_)))
+        if before:
+            at, id_ = before
+            conditions.append(or_(Message.SentAt < at, and_(Message.SentAt == at, Message.MessageId < id_)))
+        reverse = latest or before is not None
+        order = (Message.SentAt.desc(), Message.MessageId.desc()) if reverse else (Message.SentAt, Message.MessageId)
+        rows = self.get_all(*conditions, order_by=order, limit=limit)
+        return list(reversed(rows)) if reverse else rows
+
+    def mark_read(self, conversation_id: uuid.UUID, ids: list[uuid.UUID], sender_types: tuple[str, ...]) -> int:
+        result = self.session.execute(update(Message).where(
+            Message.ConversationId == conversation_id, Message.MessageId.in_(ids),
+            Message.SenderType.in_(sender_types), Message.IsRead.is_(False),
+        ).values(IsRead=True))
+        return result.rowcount
 
     def list_by_conversation(
         self,

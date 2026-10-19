@@ -98,20 +98,63 @@ test.each(['Staff', 'Admin'])('%s cannot open a customer review composer', async
   expect(calls.some((call) => call.path === '/orders')).toBe(false)
 })
 
-test('the histogram counts all pages, star filtering goes to the API, and changing the filter resets pagination', async () => {
+test('the histogram counts all pages, load more appends reviews, and a star filter starts a fresh list', async () => {
   const reviews = Array.from({ length: 12 }, (_, index) => review(String(index), index < 10 ? 5 : 2))
   const { calls } = mockApi({ reviews }); const { onSummaryChange } = show(); const user = userEvent.setup()
   await screen.findByText('Nội dung đánh giá 0')
   expect(await screen.findByRole('button', { name: 'Lọc 5 sao, 10 đánh giá' })).toBeInTheDocument()
   expect(onSummaryChange).toHaveBeenLastCalledWith(expect.objectContaining({ count: 12, rating: 4.5 }))
-  expect(screen.getAllByRole('article')).toHaveLength(5)
-  await user.click(screen.getByRole('button', { name: 'Sau', exact: true }))
+  expect(screen.getAllByRole('article')).toHaveLength(3)
+  await user.click(screen.getByRole('button', { name: 'Xem thêm đánh giá' }))
   expect(await screen.findByText('Nội dung đánh giá 5')).toBeInTheDocument()
-  expect(calls.some((call) => call.query.page === '2' && call.query.page_size === '5')).toBe(true)
+  expect(screen.getByText('Nội dung đánh giá 0')).toBeInTheDocument()
+  expect(screen.getAllByRole('article')).toHaveLength(6)
+  expect(calls.some((call) => call.query.page === '2' && call.query.page_size === '3')).toBe(true)
   await user.click(within(screen.getByRole('group', { name: 'Lọc đánh giá theo số sao' })).getByRole('button', { name: '2', exact: true }))
   expect(await screen.findByText('Nội dung đánh giá 10')).toBeInTheDocument()
   expect(screen.getAllByRole('article')).toHaveLength(2)
-  expect(calls.at(-1).query).toMatchObject({ rating: '2', page: '1', page_size: '5' })
+  expect(calls.at(-1).query).toMatchObject({ rating: '2', page: '1', page_size: '3' })
+  expect(screen.queryByRole('button', { name: 'Xem thêm đánh giá' })).not.toBeInTheDocument()
+})
+
+test('a failed load more keeps earlier reviews and retry appends once until all reviews are visible', async () => {
+  const { controls } = mockApi({ reviews: Array.from({ length: 7 }, (_, index) => review(String(index))) })
+  show(); const user = userEvent.setup()
+  await screen.findByText('Nội dung đánh giá 0')
+  controls.listError = true
+  await user.click(screen.getByRole('button', { name: 'Xem thêm đánh giá' }))
+  const alert = await screen.findByRole('alert')
+  expect(screen.getAllByRole('article')).toHaveLength(3)
+  controls.listError = false
+  await user.click(within(alert).getByRole('button', { name: 'Thử lại' }))
+  await screen.findByText('Nội dung đánh giá 5')
+  expect(screen.getAllByRole('article')).toHaveLength(6)
+  await user.click(screen.getByRole('button', { name: 'Xem thêm đánh giá' }))
+  await screen.findByText('Nội dung đánh giá 6')
+  expect(screen.getAllByRole('article')).toHaveLength(7)
+  expect(screen.queryByRole('button', { name: 'Xem thêm đánh giá' })).not.toBeInTheDocument()
+})
+
+test('switching star filters during load more discards the late page and preserves only matching reviews', async () => {
+  mockApi({ reviews: Array.from({ length: 8 }, (_, index) => review(String(index), index < 6 ? 5 : 2)) })
+  const fetch = globalThis.fetch
+  let release
+  const gate = new Promise(resolve => { release = resolve })
+  vi.stubGlobal('fetch', vi.fn(async (input, options) => {
+    const url = new URL(input, 'http://localhost')
+    if (url.searchParams.get('page') === '2') await gate
+    return fetch(input, options)
+  }))
+  show(); const user = userEvent.setup()
+  await screen.findByText('Nội dung đánh giá 0')
+  await user.click(screen.getByRole('button', { name: 'Xem thêm đánh giá' }))
+  expect(screen.getAllByRole('article')).toHaveLength(3)
+  expect(screen.getByRole('button', { name: 'Xem thêm đánh giá' })).toBeDisabled()
+  await user.click(within(screen.getByRole('group', { name: 'Lọc đánh giá theo số sao' })).getByRole('button', { name: '2', exact: true }))
+  await screen.findByText('Nội dung đánh giá 6')
+  await act(async () => release())
+  expect(screen.getAllByRole('article')).toHaveLength(2)
+  expect(screen.queryByText('Nội dung đánh giá 0')).not.toBeInTheDocument()
 })
 
 test('a failed list remains retryable and is never presented as an empty review list', async () => {

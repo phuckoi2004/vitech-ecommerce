@@ -23,7 +23,9 @@ REMOTE_HEAD = "b81569bc34b0"
 MERGE_HEAD = "c6a4e2b8d901"
 # Head after the merge: drops the unused Stage 4 OtpChallenges table (decision 11/10/2026).
 OTP_HEAD = "3d9f987f3c6f"
-HEAD = "7e4c9b2d1a60"
+WORKFLOW_HEAD = "7e4c9b2d1a60"
+CATEGORY_IMAGE_HEAD = "6f8a2c4d9b10"
+HEAD = "71a4d9c8e620"
 COUPON_REVISION = "213feab4a632"
 STATUS_REVISION = "dd773e03e503"
 TRANSACTION_TYPE_REVISION = "9b10f42fc70d"
@@ -83,10 +85,12 @@ def test_unique_revision_ids_and_one_complete_canonical_graph():
     duplicates = {revision: [name for name, identifier in identifiers if identifier == revision]
                   for revision, count in counts.items() if count > 1}
     assert duplicates == {}, f"Duplicate Alembic revision identifiers: {duplicates}"
-    assert len(identifiers) == 23
+    assert len(identifiers) == 25
     graph = scripts()
     assert graph.get_heads() == [HEAD]
-    assert graph.get_revision(HEAD).down_revision == OTP_HEAD
+    assert graph.get_revision(HEAD).down_revision == CATEGORY_IMAGE_HEAD
+    assert graph.get_revision(CATEGORY_IMAGE_HEAD).down_revision == WORKFLOW_HEAD
+    assert graph.get_revision(WORKFLOW_HEAD).down_revision == OTP_HEAD
     assert graph.get_revision(OTP_HEAD).down_revision == MERGE_HEAD
     assert graph.get_bases() == ["2cb2e7418b06"]
     assert {revision.revision for revision in graph.walk_revisions()} == set(counts)
@@ -149,6 +153,15 @@ def test_head_drops_otp_challenges_and_downgrade_recreates_it_without_touching_u
     assert 'CREATE TABLE "OtpChallenges"' in downgrade_sql
     assert 'ENABLE ROW LEVEL SECURITY' in downgrade_sql
     assert 'UPDATE "Users"' not in downgrade_sql
+
+
+def test_category_image_migration_adds_only_an_optional_column():
+    module = scripts().get_revision(CATEGORY_IMAGE_HEAD).module
+    sql = render(module.upgrade)
+    assert 'ALTER TABLE "Categories" ADD COLUMN "ImageUrl" VARCHAR(500)' in sql
+    assert 'NOT NULL' not in sql
+    assert not re.search(r'\b(?:UPDATE|DELETE|INSERT|DROP)\b', sql)
+    assert 'DROP COLUMN "ImageUrl"' in render(module.downgrade)
 
 
 def test_shared_guard_upgrades_adopt_matching_checks_reject_bad_definitions_and_validate_data():

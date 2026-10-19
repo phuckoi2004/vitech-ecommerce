@@ -39,7 +39,11 @@ beforeEach(() => {
     throw new Error('Không tìm thấy phiếu nhập.')
   })
   api.createPurchase.mockImplementation(async (_, body) => { po = { ...base, ...body, Status: 'Approved', CreatedAt: '2026-10-14T06:00:00Z', Items: body.Items.map((item, index) => ({ ...item, PurchaseOrderItemId: 'i' + (index + 1), ReceivedQuantity: 0, LineTotal: String(item.OrderedQuantity * Number(item.UnitPrice)) })) }; return structuredClone(po) })
-  api.updatePurchase.mockImplementation(async (_, __, body) => { po = { ...po, ...body }; return structuredClone(po) })
+  api.updatePurchase.mockImplementation(async (_, __, body) => {
+    const Items = body.Items.map((item, index) => ({ ...po.Items.find((old) => old.ProductVariantId === item.ProductVariantId), PurchaseOrderItemId: 'saved-' + index, ReceivedQuantity: 0, ...item, LineTotal: String(item.OrderedQuantity * Number(item.UnitPrice)) }))
+    po = { ...po, ...body, Items, TotalAmount: String(Items.reduce((sum, item) => sum + Number(item.LineTotal), 0)) }
+    return structuredClone(po)
+  })
   api.updatePurchaseItem.mockImplementation(async (_, __, id, body) => { po.Items = po.Items.map((item) => item.PurchaseOrderItemId === id ? { ...item, ...body, LineTotal: String((body.OrderedQuantity ?? item.OrderedQuantity) * Number(body.UnitPrice ?? item.UnitPrice)) } : item); return structuredClone(po) })
   api.addPurchaseItem.mockImplementation(async (_, __, body) => { po.Items.push({ ...body, PurchaseOrderItemId: 'i-new', ReceivedQuantity: 0, LineTotal: String(body.OrderedQuantity * Number(body.UnitPrice)) }); return structuredClone(po) })
   api.removePurchaseItem.mockImplementation(async (_, __, id) => { po.Items = po.Items.filter((item) => item.PurchaseOrderItemId !== id); return structuredClone(po) })
@@ -102,7 +106,7 @@ test('saving a new order submits entered unit prices only and opens its detail u
   expect(router.state.location.pathname).toBe('/admin/purchases/po1')
   expect(router.state.location.search).toBe('?status=Pending')
   expect(screen.getByText('Đã tạo phiếu nhập.')).toBeInTheDocument()
-  expect(screen.getByText('13:00 14/10/2026')).toBeInTheDocument()
+  expect(within(screen.getByRole('region', { name: 'Thông tin phiếu nhập' })).getByText('13:00 14/10/2026')).toBeInTheDocument()
 })
 
 test('edit uses the stored date; removing/replacing variants stays in the draft until the single update action', async () => {
@@ -118,10 +122,35 @@ test('edit uses the stored date; removing/replacing variants stays in the draft 
   fireEvent.click(screen.getByRole('button', { name: 'Cập nhật phiếu' }))
   await screen.findByText('Đã cập nhật phiếu nhập.')
   expect(router.state.location.pathname).toBe('/admin/purchases/po1')
-  expect(api.addPurchaseItem).toHaveBeenCalledWith('access-for-test', 'po1', { ProductVariantId: 'v2', OrderedQuantity: 1, UnitPrice: '3200', Note: null })
-  expect(api.removePurchaseItem).toHaveBeenCalledWith('access-for-test', 'po1', 'i1')
-  expect(api.updatePurchase).not.toHaveBeenCalled()
+  expect(api.updatePurchase).toHaveBeenCalledExactlyOnceWith('access-for-test', 'po1', { SupplierId: 's1', Note: 'Ghi chú cũ', Items: [{ ProductVariantId: 'v2', OrderedQuantity: 1, UnitPrice: '3200', Note: null }] })
+  expect(api.addPurchaseItem).not.toHaveBeenCalled()
+  expect(api.removePurchaseItem).not.toHaveBeenCalled()
   expect(po.CreatedAt).toBe(base.CreatedAt)
+})
+
+test('failed edit keeps the complete draft; retry sends one complete request and blocks duplicate saves', async () => {
+  api.updatePurchase.mockRejectedValueOnce(new Error('Không thể lưu phiếu.'))
+  const router = renderPage('/admin/purchases/po1/edit')
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Cập nhật phiếu' })).toBeEnabled())
+  fillLine(1, 'v2', 4, 1250)
+  fireEvent.change(screen.getByRole('textbox', { name: 'Ghi chú phiếu' }), { target: { value: 'Ghi chú mới' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Cập nhật phiếu' }))
+  await screen.findByText('Không thể lưu phiếu.')
+  expect(po).toEqual(base)
+  expect(router.state.location.pathname).toBe('/admin/purchases/po1/edit')
+  expect(screen.getByRole('combobox', { name: 'Sản phẩm / biến thể dòng 1' })).toHaveValue('v2')
+  expect(screen.getByRole('spinbutton', { name: 'Số lượng đặt dòng 1' })).toHaveValue(4)
+  expect(screen.getByRole('textbox', { name: 'Ghi chú phiếu' })).toHaveValue('Ghi chú mới')
+  let finish
+  api.updatePurchase.mockImplementationOnce(() => new Promise((resolve) => { finish = resolve }))
+  fireEvent.click(screen.getByRole('button', { name: 'Cập nhật phiếu' }))
+  expect(screen.getByRole('button', { name: 'Hủy', exact: true })).toBeDisabled()
+  fireEvent.submit(screen.getByRole('form', { name: 'Sửa phiếu nhập' }))
+  expect(api.updatePurchase).toHaveBeenCalledTimes(2)
+  expect(api.updatePurchase.mock.calls[0]).toEqual(api.updatePurchase.mock.calls[1])
+  expect(api.addPurchaseItem).not.toHaveBeenCalled()
+  expect(api.removePurchaseItem).not.toHaveBeenCalled()
+  await act(async () => finish(structuredClone(po)))
 })
 
 test('failed create retains the complete draft and blocks repeat submission and navigation controls while retry is pending', async () => {

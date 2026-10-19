@@ -9,16 +9,15 @@ import { SupplierAction, SupplierButton, SupplierStatus } from '../components/Su
 import { useAdminLoad } from '../hooks/useAdminQuery.js'
 import { filterSuppliers, SUPPLIER_PAGE_SIZE, supplierFilters } from '../lib/suppliers.js'
 import { getSupplierDirectory } from '../services/suppliers.js'
+import useAutoFilters from '../hooks/useAutoFilters.js'
 
 function SupplierFilters({ keyword, status, onApply, onClear }) {
-  const [draft, setDraft] = useState({ keyword, status })
-  const [source, setSource] = useState({ keyword, status })
-  if (source.keyword !== keyword || source.status !== status) { setSource({ keyword, status }); setDraft({ keyword, status }) }
+  const { draft, setDraft, formProps } = useAutoFilters({ keyword, status }, (values) => onApply(values.keyword, values.status))
   const control = PRODUCT_CONTROL + ' h-10 rounded-lg! px-[11px] text-[10px]! font-normal placeholder:text-admin-muted'
-  return <form role="search" className="flex items-end gap-2.5" onSubmit={(event) => { event.preventDefault(); onApply(draft.keyword.trim(), draft.status) }}>
+  return <form role="search" className="admin-filterbar flex items-end gap-2.5" {...formProps}>
     <label className="flex w-[360px] shrink-0 flex-col gap-[5px] text-[10px] leading-[normal] font-medium">Tìm kiếm<input type="search" aria-label="Tìm nhà cung cấp theo mã, tên, email hoặc số điện thoại" placeholder="Mã / tên / email / SĐT" maxLength={255} className={control} value={draft.keyword} onChange={(event) => setDraft((previous) => ({ ...previous, keyword: event.target.value }))} /></label>
     <label className="flex w-[190px] shrink-0 flex-col gap-[5px] text-[10px] leading-[normal] font-medium">Trạng thái<span className="relative"><select aria-label="Trạng thái" className={control + ' cursor-pointer appearance-none pr-8 text-admin-muted'} value={draft.status} onChange={(event) => setDraft((previous) => ({ ...previous, status: event.target.value }))}><option value="">Tất cả trạng thái</option><option value="active">Hoạt động</option><option value="hidden">Ẩn</option></select><span aria-hidden="true" className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-[10px] text-admin-muted">▼</span></span></label>
-    <SupplierButton secondary className="ml-auto mb-1!" onClick={() => { setDraft({ keyword: '', status: '' }); onClear() }}>Xóa lọc</SupplierButton><SupplierButton type="submit" className="mb-1!">Tìm kiếm</SupplierButton>
+    <SupplierButton secondary className="ml-auto mb-1!" onClick={() => { setDraft({ keyword: '', status: '' }); onClear() }}>Xóa lọc</SupplierButton>
   </form>
 }
 

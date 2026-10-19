@@ -1,8 +1,8 @@
 """Promotion / Coupon services.
 
 Nguồn nghiệp vụ: docs/business-requirements.md mục 5, 6, 17 và các quyết định đã chốt:
-- Admin quản lý trạng thái Promotion (Draft, Scheduled, Active, Expired, Cancelled);
-  khi áp dụng kiểm tra Status = Active và StartDate <= hiện tại <= EndDate.
+- Scheduled/Active tự đồng bộ theo giờ máy chủ; Draft/Cancelled là quyết định của Admin.
+- Coupon chỉ có Active/Upcoming/Exhausted/Ended; IsActive do hệ thống tính, không có tạm ngừng.
 - Promotion đang Active: không sửa các trường ảnh hưởng điều kiện/giá trị giảm và phạm vi áp dụng.
 - Không xóa Promotion/Coupon đã được dữ liệu nghiệp vụ tham chiếu; dùng Cancelled / IsActive = false.
 - Coupon.Code không phân biệt hoa thường; Coupon chỉ tham chiếu Promotion.
@@ -52,6 +52,7 @@ from .actor import ADMIN_ONLY, CUSTOMER_ONLY, Actor, require_role
 from .base import BaseService, utc_now
 from .catalog import is_variant_sellable
 from .exceptions import BusinessRuleError, ConflictError, NotFoundError
+from .promotion_state import aware, coupon_status, promotion_status
 
 PROMOTION_ACTIVE = "Active"
 PROMOTION_CANCELLED = "Cancelled"
@@ -92,7 +93,7 @@ def money(value: Decimal) -> Decimal:
 
 def is_promotion_in_effect(promotion: Promotion, now: datetime) -> bool:
     """Promotion đang áp dụng: Status Active và now nằm trong [StartDate, EndDate]."""
-    return promotion.Status == PROMOTION_ACTIVE and promotion.StartDate <= now <= promotion.EndDate
+    return promotion_status(promotion, now) == PROMOTION_ACTIVE and aware(promotion.StartDate) <= aware(now) <= aware(promotion.EndDate)
 
 
 def is_whole_vnd(value: Decimal) -> bool:
@@ -184,20 +185,22 @@ class PromotionService(BaseService):
     ) -> PageResponse[AdminPromotionResponse]:
         require_role(actor, *ADMIN_ONLY)
         offset, limit = self._page_args(page, page_size)
-        items = self.promotions.list_promotions(status=status, offset=offset, limit=limit)
-        return PageResponse[AdminPromotionResponse](
-            Items=[AdminPromotionResponse.model_validate(p) for p in items],
-            Total=self.promotions.count_promotions(status=status),
-            Page=page,
-            PageSize=page_size,
-        )
+        with self.transaction():
+            self._synchronize()
+            items = self.promotions.list_promotions(status=status, offset=offset, limit=limit)
+            return PageResponse[AdminPromotionResponse](
+                Items=[self._response(p, detail=False) for p in items],
+                Total=self.promotions.count_promotions(status=status), Page=page, PageSize=page_size,
+            )
 
     def get_promotion(self, actor: Actor, promotion_id: uuid.UUID) -> AdminPromotionDetailResponse:
         require_role(actor, *ADMIN_ONLY)
-        promotion = self.promotions.get_detail(promotion_id)
-        if promotion is None:
-            raise NotFoundError("Không tìm thấy chương trình khuyến mãi", code="promotion_not_found")
-        return AdminPromotionDetailResponse.model_validate(promotion)
+        with self.transaction():
+            self._synchronize()
+            promotion = self.promotions.get_detail(promotion_id)
+            if promotion is None:
+                raise NotFoundError("Không tìm thấy chương trình khuyến mãi", code="promotion_not_found")
+            return self._response(promotion)
 
     def create_promotion(self, actor: Actor, data: PromotionCreate) -> AdminPromotionDetailResponse:
         """Admin tạo Promotion; CreatedByUserId là Actor (không nhận từ client)."""
@@ -207,58 +210,58 @@ class PromotionService(BaseService):
             _check_fixed_amount(values.get("DiscountType"), values.get("DiscountValue"))
             product_ids, category_ids = self._valid_targets(data.ProductIds, data.CategoryIds)
             promotion = self.promotions.create({**values, "CreatedByUserId": actor.user_id})
+            promotion.Status = promotion_status(promotion, self.now())
             self.promotions.flush()
             self._replace_targets(promotion.PromotionId, product_ids, category_ids)
             self.promotions.flush()
-            return AdminPromotionDetailResponse.model_validate(self.promotions.get_detail(promotion.PromotionId))
+            return self._response(self.promotions.get_detail(promotion.PromotionId))
 
     def update_promotion(self, actor: Actor, promotion_id: uuid.UUID, data: PromotionUpdate) -> AdminPromotionDetailResponse:
         """Cập nhật Promotion. Đang Active: chỉ được đổi Name, Description, Status."""
         require_role(actor, *ADMIN_ONLY)
         with self.transaction():
             promotion = self._lock(promotion_id)
-            values = data.model_dump(exclude_unset=True)
+            promotion.Status = promotion_status(promotion, self.now())
+            values = data.model_dump(exclude_unset=True, exclude={"ProductIds", "CategoryIds"})
+            target_values = data.model_dump(exclude_unset=True, include={"ProductIds", "CategoryIds"})
             if promotion.Status == PROMOTION_ACTIVE:
                 changed = sorted(f for f in LOCKED_WHEN_ACTIVE if f in values and values[f] != getattr(promotion, f))
+                for field, repository, key in (("ProductIds", self.promotion_products, "ProductId"), ("CategoryIds", self.promotion_categories, "CategoryId")):
+                    if field in target_values and set(target_values[field]) != {getattr(item, key) for item in repository.list_by_promotion(promotion_id)}:
+                        changed.append(field)
                 if changed:
                     raise BusinessRuleError(
                         f"Không sửa {', '.join(changed)} khi khuyến mãi đang Active", code="promotion_active_locked"
                     )
             # Kiểm tra lại các CHECK với giá trị sau cập nhật (kết hợp giá trị đang lưu).
             merged = {f: values.get(f, getattr(promotion, f)) for f in ("DiscountType", "DiscountValue", "StartDate", "EndDate")}
-            if merged["EndDate"] < merged["StartDate"]:
+            if aware(merged["EndDate"]) < aware(merged["StartDate"]):
                 raise BusinessRuleError("EndDate phải lớn hơn hoặc bằng StartDate", code="invalid_promotion_period")
             if merged["DiscountType"] == PERCENTAGE and merged["DiscountValue"] > 100:
                 raise BusinessRuleError("Giảm theo phần trăm không quá 100", code="invalid_discount_value")
             # Chỉ khi loại/giá trị giảm thay đổi: sửa tên/mô tả của dữ liệu cũ có phần lẻ vẫn được.
             if "DiscountType" in values or "DiscountValue" in values:
                 _check_fixed_amount(merged["DiscountType"], merged["DiscountValue"])
+            # Validate everything first, then save metadata and scope in ONE transaction.
+            products, categories = self._valid_targets(target_values.get("ProductIds", []), target_values.get("CategoryIds", []))
             self.promotions.update(promotion, values)
+            promotion.Status = promotion_status(promotion, self.now())
+            if "ProductIds" in target_values:
+                self.promotion_products.delete_by_promotion(promotion_id)
+                self._replace_targets(promotion_id, products, [])
+            if "CategoryIds" in target_values:
+                self.promotion_categories.delete_by_promotion(promotion_id)
+                self._replace_targets(promotion_id, [], categories)
             self.promotions.flush()
-            return AdminPromotionDetailResponse.model_validate(self.promotions.get_detail(promotion_id))
+            self.coupons.synchronize(self.now(), promotion_id)
+            self.session.expire(promotion)
+            return self._response(self.promotions.get_detail(promotion_id))
 
     def update_targets(
         self, actor: Actor, promotion_id: uuid.UUID, data: PromotionTargetsUpdate
     ) -> AdminPromotionDetailResponse:
         """Thay danh sách sản phẩm/danh mục áp dụng (trường không gửi = giữ nguyên). Không cho khi đang Active."""
-        require_role(actor, *ADMIN_ONLY)
-        with self.transaction():
-            promotion = self._lock(promotion_id)
-            if promotion.Status == PROMOTION_ACTIVE:
-                raise BusinessRuleError(
-                    "Không sửa phạm vi áp dụng khi khuyến mãi đang Active", code="promotion_active_locked"
-                )
-            values = data.model_dump(exclude_unset=True)
-            product_ids, category_ids = self._valid_targets(values.get("ProductIds") or [], values.get("CategoryIds") or [])
-            if values.get("ProductIds") is not None:
-                self.promotion_products.delete_by_promotion(promotion_id)
-                self._replace_targets(promotion_id, product_ids, [])
-            if values.get("CategoryIds") is not None:
-                self.promotion_categories.delete_by_promotion(promotion_id)
-                self._replace_targets(promotion_id, [], category_ids)
-            self.promotions.flush()
-            self.session.expire(promotion)
-            return AdminPromotionDetailResponse.model_validate(self.promotions.get_detail(promotion_id))
+        return self.update_promotion(actor, promotion_id, PromotionUpdate(**data.model_dump(exclude_unset=True)))
 
     def cancel_promotion(self, actor: Actor, promotion_id: uuid.UUID) -> AdminPromotionDetailResponse:
         require_role(actor, *ADMIN_ONLY)
@@ -268,7 +271,8 @@ class PromotionService(BaseService):
                 raise BusinessRuleError("Khuyến mãi đã bị hủy", code="promotion_already_cancelled")
             promotion.Status = PROMOTION_CANCELLED
             self.promotions.flush()
-            return AdminPromotionDetailResponse.model_validate(self.promotions.get_detail(promotion_id))
+            self.coupons.synchronize(self.now(), promotion_id)
+            return self._response(self.promotions.get_detail(promotion_id))
 
     def delete_promotion(self, actor: Actor, promotion_id: uuid.UUID) -> None:
         """Xóa Promotion chưa có Coupon (FK RESTRICT). Đã có Coupon thì dùng cancel_promotion."""
@@ -280,6 +284,16 @@ class PromotionService(BaseService):
                     "Khuyến mãi đã có mã giảm giá; hãy hủy (Cancelled) thay vì xóa", code="promotion_in_use"
                 )
             self.promotions.delete(promotion)
+
+    def _response(self, promotion: Promotion, *, detail: bool = True):
+        schema = AdminPromotionDetailResponse if detail else AdminPromotionResponse
+        return schema.model_validate(promotion).model_copy(update={"EvaluatedAt": self.now()})
+
+    def _synchronize(self) -> None:
+        # Just-in-time synchronization: no browser clock or external cron is required.
+        now = self.now()
+        self.promotions.synchronize(now)
+        self.coupons.synchronize(now)
 
     def _lock(self, promotion_id: uuid.UUID) -> Promotion:
         promotion = self.promotions.get_by_id_for_update(promotion_id)
@@ -331,26 +345,36 @@ class CouponService(BaseService):
         self, actor: Actor, promotion_id: uuid.UUID, *, is_active: bool | None = None
     ) -> list[AdminCouponResponse]:
         require_role(actor, *ADMIN_ONLY)
-        if self.promotions.get_by_id(promotion_id) is None:
-            raise NotFoundError("Không tìm thấy chương trình khuyến mãi", code="promotion_not_found")
-        return [AdminCouponResponse.model_validate(c) for c in self.coupons.list_by_promotion(promotion_id, is_active=is_active)]
+        with self.transaction():
+            self._synchronize()
+            if self.promotions.get_by_id(promotion_id) is None:
+                raise NotFoundError("Không tìm thấy chương trình khuyến mãi", code="promotion_not_found")
+            return [self._response(c) for c in self.coupons.list_by_promotion(promotion_id, is_active=is_active)]
 
     def get_coupon(self, actor: Actor, coupon_id: uuid.UUID) -> AdminCouponResponse:
         require_role(actor, *ADMIN_ONLY)
-        return AdminCouponResponse.model_validate(self._get(coupon_id))
+        with self.transaction():
+            self._synchronize()
+            return self._response(self._get(coupon_id))
 
     def create_coupon(self, actor: Actor, data: CouponCreate) -> AdminCouponResponse:
         """Admin tạo Coupon; CreatedByUserId là Actor (không nhận từ client)."""
         require_role(actor, *ADMIN_ONLY)
         with self.transaction():
             values = data.model_dump(exclude_unset=True)
-            if self.promotions.get_by_id(values["PromotionId"]) is None:
+            # IsActive is server-owned; old clients may send it but cannot override availability.
+            values.pop("IsActive", None)
+            promotion = self.promotions.get_by_id(values["PromotionId"])
+            if promotion is None:
                 raise NotFoundError("Không tìm thấy chương trình khuyến mãi", code="promotion_not_found")
             if self.coupons.exists_by_code(values["Code"]):
                 raise ConflictError("Mã giảm giá đã tồn tại", code="coupon_code_exists")
             coupon = self.coupons.create({**values, "CreatedByUserId": actor.user_id})
+            coupon.promotion = promotion
             self.coupons.flush()
-            return AdminCouponResponse.model_validate(coupon)
+            coupon.IsActive = coupon_status(coupon, self.now()) == "Active"
+            self.coupons.flush()
+            return self._response(coupon)
 
     def update_coupon(self, actor: Actor, coupon_id: uuid.UUID, data: CouponUpdate) -> AdminCouponResponse:
         require_role(actor, *ADMIN_ONLY)
@@ -358,26 +382,31 @@ class CouponService(BaseService):
             # Khóa dòng: UsedCount có thể đang được đơn hàng khác cập nhật.
             coupon = self._get(coupon_id, lock=True)
             values = data.model_dump(exclude_unset=True)
+            values.pop("IsActive", None)
             if "Code" in values and self.coupons.exists_by_code(values["Code"], coupon_id):
                 raise ConflictError("Mã giảm giá đã tồn tại", code="coupon_code_exists")
-            if "PromotionId" in values and self.promotions.get_by_id(values["PromotionId"]) is None:
-                raise NotFoundError("Không tìm thấy chương trình khuyến mãi", code="promotion_not_found")
+            if "PromotionId" in values:
+                promotion = self.promotions.get_by_id(values["PromotionId"])
+                if promotion is None:
+                    raise NotFoundError("Không tìm thấy chương trình khuyến mãi", code="promotion_not_found")
+                coupon.promotion = promotion
             if values.get("UsageLimit") is not None and values["UsageLimit"] < coupon.UsedCount:
                 raise BusinessRuleError(
                     f"UsageLimit không được nhỏ hơn số lượt đã dùng ({coupon.UsedCount})", code="usage_limit_below_used"
                 )
             self.coupons.update(coupon, values)
+            coupon.IsActive = coupon_status(coupon, self.now()) == "Active"
             self.coupons.flush()
-            return AdminCouponResponse.model_validate(coupon)
+            return self._response(coupon)
 
     def delete_coupon(self, actor: Actor, coupon_id: uuid.UUID) -> None:
-        """Xóa coupon chưa được đơn hàng dùng (FK RESTRICT). Đã dùng thì vô hiệu hóa bằng IsActive = false."""
+        """Chỉ xóa coupon chưa được đơn hàng dùng (FK RESTRICT)."""
         require_role(actor, *ADMIN_ONLY)
         with self.transaction():
             coupon = self._get(coupon_id, lock=True)
             if self.orders.exists(Order.CouponId == coupon_id):
                 raise BusinessRuleError(
-                    "Mã giảm giá đã được sử dụng; hãy vô hiệu hóa (IsActive = false)", code="coupon_in_use"
+                    "Mã giảm giá đã được đơn hàng sử dụng nên không thể xóa", code="coupon_in_use"
                 )
             self.coupons.delete(coupon)
 
@@ -428,6 +457,7 @@ class CouponService(BaseService):
             eligible, discount = self._evaluate(coupon, lines, subtotal)
             allocate_discount(discount, eligible)
             coupon.UsedCount += 1
+            coupon.IsActive = coupon_status(coupon, self.now()) == "Active"
             return coupon, discount
 
     def release_coupon_usage(self, coupon_id: uuid.UUID) -> None:
@@ -437,8 +467,21 @@ class CouponService(BaseService):
             coupon = self.coupons.get_by_id_for_update(coupon_id)
             if coupon is not None and coupon.UsedCount > 0:
                 coupon.UsedCount -= 1
+                coupon.IsActive = coupon_status(coupon, self.now()) == "Active"
 
     # ---------------------------------------------------------- Helpers
+
+    def _synchronize(self) -> None:
+        now = self.now()
+        self.promotions.synchronize(now)
+        self.coupons.synchronize(now)
+
+    def _response(self, coupon: Coupon) -> AdminCouponResponse:
+        now = self.now()
+        status = coupon_status(coupon, now)
+        fields = {key: getattr(coupon, key) for key in AdminCouponResponse.model_fields if key not in {"Status", "EvaluatedAt", "CreatedByName"}}
+        return AdminCouponResponse(**{**fields, "IsActive": status == "Active", "Status": status, "EvaluatedAt": now,
+                                     "CreatedByName": getattr(coupon.created_by, "FullName", None)})
 
     def _get(self, coupon_id: uuid.UUID, *, lock: bool = False) -> Coupon:
         coupon = self.coupons.get_by_id_for_update(coupon_id) if lock else self.coupons.get_by_id(coupon_id)
@@ -450,12 +493,13 @@ class CouponService(BaseService):
         self, coupon: Coupon | None, lines: Sequence[DiscountLine], subtotal: Decimal
     ) -> tuple[list[DiscountLine], Decimal]:
         """Kiểm tra coupon/promotion và điều kiện đơn; trả các dòng được giảm và tổng tiền giảm."""
-        if coupon is None or not coupon.IsActive:
+        if coupon is None:
             raise BusinessRuleError("Mã giảm giá không hợp lệ", code="coupon_invalid")
         promotion = coupon.promotion
-        if not is_promotion_in_effect(promotion, self.now()):
-            raise BusinessRuleError("Mã giảm giá không còn hiệu lực", code="coupon_expired")
-        if coupon.UsageLimit is not None and coupon.UsedCount >= coupon.UsageLimit:
+        state = coupon_status(coupon, self.now())
+        if state in {"Ended", "Upcoming"}:
+            raise BusinessRuleError("Mã giảm giá chưa có hiệu lực hoặc đã hết chương trình", code="coupon_expired")
+        if state == "Exhausted":
             raise BusinessRuleError("Mã giảm giá đã hết lượt sử dụng", code="coupon_usage_exceeded")
         if subtotal < promotion.MinOrderValue:
             raise BusinessRuleError("Đơn hàng chưa đạt giá trị tối thiểu của mã giảm giá", code="coupon_min_order_value")

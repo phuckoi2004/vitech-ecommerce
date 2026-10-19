@@ -20,7 +20,7 @@ import './ProductPage.css'
 
 function ProductDetails({ product }) {
   const variants = productVariants(product)
-  const [variantId, setVariantId] = useState(initialVariant(variants)?.ProductVariantId ?? '')
+  const [variantId, setVariantId] = useState(initialVariant(variants, product.DefaultVariantId)?.ProductVariantId ?? '')
   const [busy, setBusy] = useState('')
   const [notice, setNotice] = useState(null)
   const [loginPrompt, setLoginPrompt] = useState(false)
@@ -74,7 +74,7 @@ function ProductDetails({ product }) {
       </div>
     </header>
     <div className="pd-main-grid grid grid-cols-1 items-start gap-5 min-[1000px]:grid-cols-[520fr_750fr]">
-      <ProductGallery product={product} />
+      <ProductGallery key={variant?.ProductVariantId} product={product} variant={variant} />
       <ProductPurchasePanel variants={variants} variant={variant} onSelect={select} busy={busy} notice={notice} ready={ready}
         onCart={() => act('cart')} onBuy={() => act('buy')}
         onConsult={consult} />

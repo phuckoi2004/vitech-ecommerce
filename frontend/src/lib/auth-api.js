@@ -101,8 +101,8 @@ export function resendOtp(challengeId) {
 }
 
 // Refresh rotates a single-use cookie shared by the customer site and the internal area.
-// Share one request across StrictMode effects and callers so a second request cannot
-// replay the previous refresh token.
+// Share one request across StrictMode effects and callers; a browser lock also
+// serializes rotations in different tabs so they cannot replay the same cookie.
 export function cancelPendingRefresh() {
   // A response from the previous session must not replace cookies from a new one.
   const pendingController = refreshController
@@ -114,10 +114,19 @@ export function cancelPendingRefresh() {
 
 function rotateRefresh() {
   if (refreshRequest) return refreshRequest
-  const csrfToken = readCsrfToken()
-  if (!csrfToken) return Promise.reject(new AuthApiError('Vui lòng đăng nhập để tiếp tục.', 401))
   const controller = new AbortController()
-  const pending = request('/refresh', { csrfToken, signal: controller.signal }).finally(() => {
+  async function rotate() {
+    controller.signal.throwIfAborted()
+    // Another tab may have rotated both cookies while this tab waited for the lock.
+    const csrfToken = readCsrfToken()
+    if (!csrfToken) throw new AuthApiError('Vui lòng đăng nhập để tiếp tục.', 401)
+    return request('/refresh', { csrfToken, signal: controller.signal })
+  }
+  const locks = globalThis.navigator?.locks
+  const rotation = locks?.request
+    ? locks.request('vietech-auth-refresh', { signal: controller.signal }, rotate)
+    : rotate()
+  const pending = rotation.finally(() => {
     // An aborted request may finish after another rotation has already started.
     if (refreshRequest !== pending) return
     refreshRequest = null

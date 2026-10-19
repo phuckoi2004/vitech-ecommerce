@@ -114,12 +114,12 @@ export default function ProductsPage() {
       <ProductButton secondary onClick={() => setParams({})}>Đặt lại</ProductButton>
     </div>
     {lookupError && <p role="alert" className="text-xs text-admin-red">Không tải được bộ lọc: {lookupError} <button type="button" className="cursor-pointer border-0 bg-transparent text-admin-blue underline" onClick={() => { categories.refresh(); brands.refresh() }}>Thử lại bộ lọc</button></p>}
-    <section className="flex min-h-[700px] min-w-0 flex-col gap-3 rounded-[14px] border border-admin-border bg-white p-[18px] max-sm:p-3" aria-label="Sản phẩm">
-      <header className="flex min-h-9 flex-wrap items-center gap-2.5"><h3 className="m-0 text-[15px] font-semibold">Sản phẩm</h3><span className="rounded-full bg-admin-soft px-[9px] py-[5px] text-[11px] font-semibold text-admin-blue">{list.loading || list.error ? '—' : total} biến thể</span>
+    <section className="flex min-w-0 flex-col gap-4 overflow-hidden rounded-[16px] border border-admin-border bg-white" aria-label="Sản phẩm">
+      <header className="flex min-h-9 flex-wrap items-center gap-2.5 px-5 pt-5"><h3 className="m-0 text-[15px] font-semibold">Sản phẩm</h3><span className="rounded-full bg-admin-soft px-[9px] py-[5px] text-[11px] font-semibold text-admin-blue">{list.loading || list.error ? '—' : total} biến thể</span>
         <span className="ml-auto text-[11px] text-admin-muted">{list.loading ? 'Đang cập nhật dữ liệu…' : list.error ? 'Chưa cập nhật được dữ liệu' : list.updatedAt ? `Cập nhật dữ liệu gần nhất: ${list.updatedAt.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}` : ''}</span>
       </header>
       <AdminTable variant="products" columns={columns} rows={list.data?.Items ?? []} rowKey="ProductVariantId" loading={list.loading} error={list.error} onRetry={list.refresh} emptyText="Chưa có biến thể phù hợp." label="Danh sách sản phẩm" className="min-w-[980px] table-fixed" />
-      <div className="mt-auto min-h-8 pt-1">{!list.loading && !list.error && <Pagination variant="admin" itemLabel="biến thể" page={query.page} pageSize={query.page_size} total={total} onPageChange={(value) => change('page', String(value))} />}</div>
+      <div className="mt-auto min-h-8 px-5 pt-1 pb-5">{!list.loading && !list.error && <Pagination variant="admin" itemLabel="biến thể" page={query.page} pageSize={query.page_size} total={total} onPageChange={(value) => change('page', String(value))} />}</div>
     </section>
     {permittedDialog && dialog === 'shared' && productId && <ProductDialog key={`shared-${productId}`} mode="shared" productId={productId} categories={categories} brands={brands} onClose={() => open(null)} onDone={done} />}
     {permittedDialog && dialog === 'delete' && variantId && <ProductDeleteDialog key={variantId} variantId={variantId} onClose={() => open(null)} onDone={done} />}

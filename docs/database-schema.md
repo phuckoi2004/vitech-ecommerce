@@ -133,6 +133,7 @@ Ký hiệu trong các bảng dưới: **NN** = NOT NULL, **PK** = Primary Key, *
 | Name | varchar(255) | x | | |
 | Slug | varchar(300) | x | | UQ |
 | Description | text | | | |
+| ImageUrl | varchar(500) | | | Ảnh danh mục tùy chọn; có thể để NULL |
 | DisplayOrder | integer | x | 0 | |
 | IsActive | boolean | x | true | |
 
@@ -685,12 +686,14 @@ CHECK `Internal_NoPublicNote`: `NOT "IsInternal" OR "Note" IS NULL` (migration `
 | ThumbnailUrl | varchar(500) | | | |
 | Status | varchar(30) | x | | CHECK IN (Draft, Published, Hidden) |
 | PublishedAt | timestamptz | | | |
+| ViewCount | bigint | x | 0 | CHECK >= 0; số lượt mở bài đã đăng |
 | CreatedAt | timestamptz | x | now() | |
 
-Nghiệp vụ (ContentService, đợt 5.5; không đổi schema):
+Nghiệp vụ (ContentService, đợt 5.5; bổ sung lượt xem theo yêu cầu giao diện):
 - Chỉ Admin tạo/sửa/đăng/ẩn và xem bài chưa đăng. Bài mới luôn `Draft`; client không gửi `Status`/`PublishedAt`/`CreatedByUserId`.
 - Đăng: `Draft`/`Hidden → Published`; `PublishedAt` = thời điểm đăng lần đầu (đăng lại sau khi ẩn giữ nguyên). Ẩn: `Published → Hidden`.
 - Công khai: chỉ bài `Published` (danh sách theo `PublishedAt` mới nhất; xem theo `Slug`). Slug không rỗng, không có khoảng trắng, không trùng (UQ).
+- `POST /news/{slug}/views` tăng một lượt mở bài bằng phép cộng trong database. Chỉ đếm bài `Published`; không đếm khi đọc danh sách, đọc chi tiết qua GET hoặc xem trong Admin. Đây là lượt mở trang, gồm cả tải lại, không phải số người duy nhất. Client không được tự đặt `ViewCount` khi tạo/sửa bài.
 - Chưa có căn cứ, chưa triển khai: xóa bài, đưa bài đã đăng về `Draft`, hẹn giờ đăng, quyền nội dung của Staff.
 
 ### 3.36. Banners

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Pagination } from '../../components/shared/index.js'
 import { formatDate } from '../../lib/format.js'
@@ -7,22 +7,23 @@ import { getReturnDirectory } from '../services/returns.js'
 import { filterReturns, RETURN_PAGE_SIZE, RETURN_STATUSES, returnFilters, returnListSearch, returnTypeLabel } from '../lib/returns.js'
 import AdminTable from '../components/AdminTable.jsx'
 import { ReturnButton, ReturnStatus } from '../components/ReturnUi.jsx'
+import useAutoFilters from '../hooks/useAutoFilters.js'
 
 function ReturnFilters({ filter, onApply }) {
-  const sourceKey = JSON.stringify([filter.keyword, filter.status, filter.from, filter.to])
-  const [source, setSource] = useState(sourceKey), [draft, setDraft] = useState(filter)
-  if (source !== sourceKey) { setSource(sourceKey); setDraft(filter) }
+  const { draft, setDraft, formProps } = useAutoFilters({ keyword: filter.keyword, status: filter.status, from: filter.from, to: filter.to }, onApply, {
+    validate: (values) => !(values.from && values.to && values.from > values.to),
+  })
   const change = (key, value) => setDraft((previous) => ({ ...previous, [key]: value }))
   const control = 'h-10 w-full rounded-lg border border-admin-border bg-white px-3 text-[10px] leading-[normal] font-normal text-admin-text placeholder:text-admin-muted'
   const field = 'flex shrink-0 flex-col gap-1.5 text-[10px] leading-[normal] font-medium'
   const rangeError = draft.from && draft.to && draft.from > draft.to
-  return <form role="search" onSubmit={(event) => { event.preventDefault(); if (!rangeError) onApply(draft) }}>
-    <div className="flex items-end gap-2.5">
+  return <form role="search" {...formProps}>
+    <div className="admin-filterbar flex items-end gap-2.5">
       <label className={field + ' w-[330px]'}>Tìm kiếm<input type="search" aria-label="Tìm mã yêu cầu, khách hàng hoặc sản phẩm" className={control} maxLength={255} placeholder="Mã yêu cầu / khách hàng / sản phẩm" value={draft.keyword} onChange={(event) => change('keyword', event.target.value)} /></label>
       <label className={field + ' w-[180px]'}>Trạng thái<select aria-label="Trạng thái" className={control} value={draft.status} onChange={(event) => change('status', event.target.value)}><option value="">Tất cả trạng thái</option>{RETURN_STATUSES.map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label>
       <label className={field + ' w-[150px]'}>Từ ngày<input type="date" aria-label="Từ ngày" className={control} value={draft.from} onChange={(event) => change('from', event.target.value)} /></label>
       <label className={field + ' w-[150px]'}>Đến ngày<input type="date" aria-label="Đến ngày" className={control} value={draft.to} onChange={(event) => change('to', event.target.value)} /></label>
-      <div className="ml-auto flex shrink-0 items-center gap-2.5 pb-1"><ReturnButton secondary className="text-admin-text!" onClick={() => { const empty = { keyword: '', status: '', from: '', to: '' }; setDraft(empty); onApply(empty) }}>Xóa lọc</ReturnButton><ReturnButton type="submit" disabled={!!rangeError}>Tìm kiếm</ReturnButton></div>
+      <div className="ml-auto flex shrink-0 items-center gap-2.5 pb-1"><ReturnButton secondary className="text-admin-text!" onClick={() => { const empty = { keyword: '', status: '', from: '', to: '' }; setDraft(empty); onApply(empty) }}>Xóa lọc</ReturnButton></div>
     </div>
     {rangeError && <p role="alert" className="mt-2 mb-0 text-[11px] text-admin-red">Từ ngày không được sau Đến ngày.</p>}
   </form>

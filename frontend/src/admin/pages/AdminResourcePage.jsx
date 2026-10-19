@@ -41,7 +41,7 @@ function ListView({ config, params = {} }) {
   const isArray = Array.isArray(state.data)
   const rows = config.rows ? config.rows(state.data) : isArray ? state.data : state.data?.Items ?? []
   return <>
-    <section className="min-h-[310px] min-w-0 rounded-[14px] border border-admin-border bg-white p-[18px]" aria-label={config.label}>
+    <section className="admin-table-inset min-h-[310px] min-w-0 rounded-[14px] border border-admin-border bg-white p-[18px]" aria-label={config.label}>
       <div className="mb-[13px] flex items-center justify-between gap-3"><h3 className="m-0 text-[15px] font-semibold">{config.label}</h3><button type="button" className="cursor-pointer border-0 bg-transparent p-0 text-xs text-admin-red hover:underline" onClick={state.refresh} disabled={state.loading}>Làm mới</button></div>
       <DataTable columns={config.columns} rows={rows} rowKey={config.rowKey} loading={state.loading} error={state.error} onRetry={state.refresh} />
       {!isArray && !config.rows && <Pagination page={page} total={state.data?.Total ?? 0} loading={state.loading} onPage={setPage} />}

@@ -15,32 +15,31 @@ from fastapi.routing import APIRoute
 from fastapi.testclient import TestClient
 
 from app.core.dependencies import get_current_actor, get_optional_actor
+from app.core.storage import get_avatar_storage
+from app.database import get_db
 from app.main import app
 from app.routers import dependencies as deps
+from app.routers.statistics import get_report_service
 from app.services import Actor
 from app.services.exceptions import NotFoundError
 
 SERVICE_PROVIDERS = [value for name, value in vars(deps).items()
-                     if name.startswith("get_") and name.endswith("_service")]
+                     if name.startswith("get_") and name.endswith("_service")] + [get_report_service]
 BUSINESS_MODULES = ("catalog", "wishlist_cart", "orders", "payments", "promotions", "purchasing", "reviews",
                     "chat", "service_requests", "content", "statistics")
 STAGE5_ACCOUNT_PATHS = ("/auth", "/users/me/avatar", "/users/me/default-address", "/admin/users")
 # Legacy repair-centre, independent-approval and return-finance endpoints paused for business consultation
 # (app/routers/service_requests.py: paused_service_workflow). They answer service_workflow_paused and never reach a
 # Service; listed explicitly so no other route can be exempted silently.
-PAUSED_ROUTES = frozenset({
-    "/admin/warranty-requests/{request_id}/inspect",
-    "/admin/warranty-requests/{request_id}/hand-over",
-    "/admin/warranty-requests/{request_id}/start-processing",
-    "/admin/warranty-requests/{request_id}/propose-result",
-    "/admin/warranty-requests/{request_id}/approve-result",
-    "/admin/warranty-requests/{request_id}/reject-result",
-    "/admin/warranty-requests/{request_id}/complete",
-    "/admin/return-requests/{request_id}/inspect",
-    "/admin/return-requests/{request_id}/approve",
-    "/admin/return-requests/{request_id}/refund",
-    "/admin/return-requests/{request_id}/confirm-refund",
-})
+PAUSED_WORKFLOW_PATHS = {
+    f"/admin/{resource}/{{request_id}}/{action}"
+    for resource, actions in (
+        ("warranty-requests", ("inspect", "hand-over", "start-processing", "propose-result",
+                               "approve-result", "reject-result", "complete")),
+        ("return-requests", ("inspect", "approve", "refund", "confirm-refund")),
+    )
+    for action in actions
+}
 
 
 class Recorder:
@@ -73,7 +72,11 @@ def is_paused(route):
 
 
 def expected_method(route):
-    names = re.findall(r"service\.(\w+)\(", inspect.getsource(route.endpoint))
+    source = inspect.getsource(route.endpoint)
+    names = re.findall(r"service\.(\w+)\(", source)
+    if route.path in PAUSED_WORKFLOW_PATHS:
+        assert names == [] and "return paused_service_workflow()" in source, route.path
+        return None
     assert len(names) == 1, (route.path, names)
     return names[0]
 
@@ -96,6 +99,10 @@ def has_required_body(route):
     return bool(body) and any(param.field_info.is_required() for param in body)
 
 
+def unexpected_database_dependency():
+    raise AssertionError("Router wiring tests must replace every database-backed service.")
+
+
 @pytest.fixture
 def harness():
     recorder = Recorder()
@@ -105,6 +112,8 @@ def harness():
         app.dependency_overrides[provider] = lambda: recorder
     app.dependency_overrides[get_current_actor] = lambda: state["actor"]
     app.dependency_overrides[get_optional_actor] = lambda: state["actor"]
+    app.dependency_overrides[get_avatar_storage] = lambda: None
+    app.dependency_overrides[get_db] = unexpected_database_dependency
     try:
         with TestClient(app) as client:
             yield client, recorder, state
@@ -122,12 +131,9 @@ def call(client, route, *, json=None):
 def test_every_business_service_method_is_reachable_through_one_route():
     routes = list(business_routes())
     assert len(routes) > 180
-    assert {route.path for route in routes if is_paused(route)} == PAUSED_ROUTES
+    assert {route.path for route in routes if is_paused(route)} == PAUSED_WORKFLOW_PATHS
     for route in routes:
-        if is_paused(route):
-            assert not re.findall(r"service\.(\w+)\(", inspect.getsource(route.endpoint)), route.path
-            continue
-        expected_method(route)  # exactly one Service call per endpoint: no business logic in Routers
+        expected_method(route)  # Active endpoints delegate; paused endpoints cannot call a service.
 
 
 def test_routes_without_required_body_call_their_service_method(harness):
@@ -138,14 +144,15 @@ def test_routes_without_required_body_call_their_service_method(harness):
             continue
         recorder.calls.clear()
         response = call(client, route)
-        if is_paused(route):
+        method = expected_method(route)
+        if method is None:
             assert response.status_code == 400, (route.path, response.status_code, response.text)
             assert response.json()["code"] == "service_workflow_paused", route.path
             assert recorder.calls == [], route.path
             continue
         assert response.status_code == 404, (route.path, response.status_code, response.text)
         assert response.json()["code"] == "probe", route.path
-        assert [name for name, _, _ in recorder.calls] == [expected_method(route)], route.path
+        assert [name for name, _, _ in recorder.calls] == [method], route.path
         checked += 1
     assert checked > 100
 
@@ -206,7 +213,7 @@ def test_public_reads_pass_no_actor_when_signed_out(harness):
     assert recorder.calls[-1] == ("list_categories", (), {"actor": None, "active_only": True, "parent_id": None,
                                                           "roots_only": False})
     assert client.get("/products", params={"keyword": "iphone", "page": 2}).status_code == 404
-    assert recorder.calls[-1][2] == {"keyword": "iphone", "category_id": None, "brand_id": None, "include_descendants": False, "page": 2,
+    assert recorder.calls[-1][2] == {"keyword": "iphone", "category_id": None, "brand_id": None, "include_descendants": False, "min_price": None, "max_price": None, "page": 2,
                                      "page_size": 20}
 
 
@@ -254,9 +261,11 @@ def test_optional_note_bodies_may_be_omitted(harness):
     client, recorder, _ = harness
     request_id = uuid.uuid4()
     assert client.post(f"/admin/warranty-requests/{request_id}/receive").status_code == 404
-    assert recorder.calls[-1][1][2] is None
+    name, args, _ = recorder.calls[-1]
+    assert name == "receive_status" and args[1] == request_id and args[2] is None
+    # The receive step (New -> Inspecting in WarrantyService.receive_status) keeps an optional step note.
     client.post(f"/admin/warranty-requests/{request_id}/receive", json={"Note": "Đã nhận máy"})
-    assert recorder.calls[-1][1][2].Note == "Đã nhận máy"
+    assert recorder.calls[-1][0] == "receive_status" and recorder.calls[-1][1][2].Note == "Đã nhận máy"
 
 
 def test_page_size_is_bounded(harness):

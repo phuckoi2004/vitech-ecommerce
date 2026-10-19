@@ -1,12 +1,9 @@
 import Button from '../../../components/shared/Button.jsx'
 import Money from '../../../components/shared/Money.jsx'
-import burgundy from '../../../assets/storefront/product-detail/burgundy.svg'
-import iceBlue from '../../../assets/storefront/product-detail/ice-blue.svg'
-import black from '../../../assets/storefront/product-detail/black.svg'
-import silver from '../../../assets/storefront/product-detail/silver.svg'
+import ConsultationButton from '../ConsultationButton.jsx'
+import { productColorSwatch } from '../../../lib/product-colors.js'
 import { canPurchase, colorLabel, variantPrice, versionLabel } from '../../../lib/product-detail.js'
 
-const SWATCHES = { 'đỏ burgundy': burgundy, 'băng thanh': iceBlue, 'đen': black, 'bạc': silver }
 // Display-only examples requested by the user; these never change a price, coupon or order.
 const DEMO_OFFERS = [
   'Thu cũ lên đời: trợ giá đến 5 triệu đồng.',
@@ -17,7 +14,7 @@ const DEMO_OFFERS = [
 
 export default function ProductPurchasePanel({ variants, variant, onSelect, busy, notice, ready, onCart, onBuy, onConsult }) {
   const versions = [...new Set(variants.map(versionLabel))]
-  const colors = [...new Set(variants.map(colorLabel))]
+  const colors = [...new Set(variants.filter((item) => item.Color?.trim()).map(colorLabel))]
   const selectedVersion = variant ? versionLabel(variant) : ''
   const selectedColor = variant ? colorLabel(variant) : ''
   const sameCombination = variants.filter((item) => versionLabel(item) === selectedVersion && colorLabel(item) === selectedColor)
@@ -42,11 +39,11 @@ export default function ProductPurchasePanel({ variants, variant, onSelect, busy
       {colors.length ? <div className="pd-options" role="group" aria-label="Chọn màu sắc">
         {colors.map((color) => {
           const candidate = variants.find((item) => versionLabel(item) === selectedVersion && colorLabel(item) === color)
-          const swatch = SWATCHES[color.toLocaleLowerCase('vi-VN')]
+          const swatch = productColorSwatch(color)
           return <button type="button" key={color} className="pd-option pd-color" aria-pressed={color === selectedColor}
             disabled={!!busy || !candidate} title={!candidate ? `Không có màu ${color} cho phiên bản ${selectedVersion}` : undefined}
             onClick={() => onSelect(candidate)}>
-            {swatch && <img src={swatch} alt="" width="16" height="16" />}{color}
+            {swatch && <span aria-hidden="true" className="pd-color-swatch" style={{ background: swatch }} />}{color}
           </button>
         })}
       </div> : <p className="pd-muted">Đang cập nhật màu sắc.</p>}
@@ -68,7 +65,7 @@ export default function ProductPurchasePanel({ variants, variant, onSelect, busy
     <Button className="pd-buy" disabled={disabled || !purchasable} loading={busy === 'buy'} onClick={onBuy}>MUA NGAY</Button>
     <div className="pd-cta-row grid grid-cols-2 gap-2.5 max-[380px]:grid-cols-1">
       <Button variant="outline" className="pd-add" disabled={disabled || !purchasable} loading={busy === 'cart'} onClick={onCart}>Thêm vào giỏ hàng</Button>
-      <Button variant="secondary" className="pd-consult" disabled={!ready} onClick={onConsult}>Tư vấn ngay</Button>
+      <ConsultationButton className="pd-consult" disabled={!ready} onStaff={onConsult} />
     </div>
     {notice && <p className={`pd-notice ${notice.ok ? 'is-success' : ''}`} role={notice.ok ? 'status' : 'alert'}>{notice.text}</p>}
   </section>

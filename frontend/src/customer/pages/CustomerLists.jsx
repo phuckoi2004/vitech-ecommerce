@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useEffect, useRef, useState } from 'react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import Button from '../../components/shared/Button.jsx'
 import EmptyState from '../../components/shared/EmptyState.jsx'
 import ErrorState from '../../components/shared/ErrorState.jsx'
@@ -13,6 +13,9 @@ import { formatDateTime } from '../../lib/format.js'
 import { HOME_PATH } from '../routes/paths.js'
 import WishlistProductCard from '../components/WishlistProductCard.jsx'
 import { readWishlistProducts } from '../hooks/useWishlistProduct.js'
+import useNotificationData from '../hooks/useNotificationData.js'
+import { customerNotificationTarget } from '../notifications.js'
+import NotificationDetailDialog from '../components/NotificationDetailDialog.jsx'
 import './ShoppingPages.css'
 
 export function WishlistPage() {
@@ -51,32 +54,56 @@ export function WishlistPage() {
 
 export function NotificationsPage() {
   const send = useCustomerRequest()
+  const { user } = useCustomerSession()
+  const navigate = useNavigate()
+  const location = useLocation()
   const [page, setPage] = useState(1)
-  const notices = useApiData(`my-notifications:${page}`, (signal) => send('/users/me/notifications', { query: { page, page_size: 20 }, signal }))
+  const notices = useNotificationData(user ? `my-notifications:${user.UserId}:${page}` : null, (signal) => send('/users/me/notifications', { query: { page, page_size: 20 }, signal }))
   const [busy, setBusy] = useState('')
-  const [error, setError] = useState('')
-  async function mark(id) {
-    setBusy(id || 'all'); setError('')
+  const [error, setError] = useState(null)
+  const [selected, setSelected] = useState(null)
+  const lock = useRef(false), mounted = useRef(false), locationKey = useRef(location.key)
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false } }, [])
+  useEffect(() => { locationKey.current = location.key }, [location.key])
+  async function mark(id, item, target) {
+    if (lock.current) return false
+    lock.current = true
+    setBusy(id || 'all'); setError(null)
     try {
       await send(id ? `/users/me/notifications/${encodeURIComponent(id)}/read` : '/users/me/notifications/read-all', { method: 'POST' })
-      notices.reload()
       window.dispatchEvent(new Event('vietech-notifications-changed'))
-    } catch (failure) { setError(failure.message) }
-    finally { setBusy('') }
+      return true
+    } catch (failure) { if (mounted.current) setError({ id, item, target, message: failure.message }); return false }
+    finally { lock.current = false; if (mounted.current) setBusy('') }
+  }
+  async function openNotification(item, target) {
+    const origin = location.key
+    if (!item.IsRead && !await mark(item.NotificationId, item, target)) return
+    if (!mounted.current || locationKey.current !== origin) return
+    if (target.kind === 'detail') setSelected(target)
+    else navigate(target.to)
   }
   return <div className="shopping-page"><h1>Thông báo</h1>
-    {error && <p role="alert">{error}</p>}
-    {notices.loading ? <LoadingState /> : notices.error ? <ErrorState message={notices.error} onRetry={notices.reload} />
+    {error && <div role="alert" className="shopping-notice">{error.message} <button type="button" disabled={!!busy}
+      onClick={() => error.target ? openNotification(error.item, error.target) : mark(error.id)}>Thử lại</button></div>}
+    {notices.error && <ErrorState title="Không cập nhật được danh sách thông báo" message={notices.error} onRetry={notices.reload} />}
+    {notices.loading ? <LoadingState /> : !notices.data ? null
       : !notices.data.Items.length ? <EmptyState title="Chưa có thông báo" /> : <>
         <Button variant="outline" loading={busy === 'all'} disabled={!!busy} onClick={() => mark()}>Đánh dấu tất cả đã đọc</Button>
-        {notices.data.Items.map((item) => <article className="shopping-line" key={item.NotificationId}>
-          <div><h2>{item.Title}{!item.IsRead && ' · Chưa đọc'}</h2><p className="shopping-text">{item.Content}</p>
+        {notices.data.Items.map((item) => {
+          const target = customerNotificationTarget(item)
+          return <article className="shopping-line notification-item" key={item.NotificationId}>
+          <div><h2>{target ? target.kind === 'link' ? <Link to={target.to} onClick={event => {
+            if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+            event.preventDefault(); void openNotification(item, target)
+          }}>{item.Title}</Link> : <button className="notification-open" type="button" disabled={!!busy} onClick={() => openNotification(item, target)}>{item.Title}</button> : item.Title}{!item.IsRead && ' · Chưa đọc'}</h2><p className="shopping-text">{item.Content}</p>
             <time dateTime={item.CreatedAt}>{formatDateTime(item.CreatedAt)}</time>
           </div>
           {!item.IsRead && <Button variant="outline" loading={busy === item.NotificationId} disabled={!!busy}
             onClick={() => mark(item.NotificationId)}>Đánh dấu đã đọc</Button>}
-        </article>)}
-        <Pagination page={page} pageSize={20} total={notices.data.Total} onPageChange={setPage} />
+        </article>})}
+        <Pagination page={page} pageSize={20} total={notices.data.Total} onPageChange={setPage} disabled={!!busy} />
       </>}
+    {selected && <NotificationDetailDialog target={selected} onClose={() => setSelected(null)} />}
   </div>
 }

@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
-import { beforeEach, expect, test, vi } from 'vitest'
+import { beforeAll, beforeEach, expect, test, vi } from 'vitest'
 import { AuthContext } from '../../auth/context.js'
 import { makeAuth } from '../../test/auth.js'
 import { adminRoutes } from '../routes/index.jsx'
@@ -12,6 +12,11 @@ vi.mock('../services/product-media.js', () => ({ uploadProductImage: api.uploadP
 const permissions = ['admin.portal', 'news:view', 'news:create', 'news:update', 'news:delete', 'banners:view', 'users:read']
 const article = { NewsArticleId: 'a1', Title: 'Tin tức từ API', Slug: 'tin-tu-api', Summary: 'Tóm tắt thật', Content: 'Nội dung thật', ThumbnailUrl: null, Status: 'Published', PublishedAt: '2026-10-12T01:30:00Z', CreatedAt: '2026-10-10T01:30:00Z', CreatedByUserId: 'other-admin' }
 let articles
+// These tests exercise form interactions, independently of the lazy editor chunk's load time.
+beforeAll(async () => { await import('./NewsWorkspacePage.jsx') })
+function setNewsContent(scope, value) {
+  act(() => { scope.getByRole('textbox', { name: 'Nội dung' }).editor.commands.setContent(value) })
+}
 function renderPage(path = '/admin/news', granted = permissions) {
   const router = createMemoryRouter(adminRoutes, { initialEntries: [path] })
   render(<AuthContext.Provider value={makeAuth({ role: 'Admin', permissions: granted })}><RouterProvider router={router} /></AuthContext.Provider>)
@@ -29,7 +34,7 @@ beforeEach(() => {
     throw new Error('Không tìm thấy bài viết.')
   })
   api.deleteNews.mockImplementation(async (_, id) => { articles = articles.filter((row) => row.NewsArticleId !== id) })
-  api.createNews.mockImplementation(async (_, body) => { const row = { ...article, ...body, NewsArticleId: 'new', Status: 'Draft', PublishedAt: null }; articles.push(row); return row })
+  api.createNews.mockImplementation(async (_, body) => { const row = { ...article, NewsArticleId: 'created-article', Status: 'Draft', PublishedAt: null, ...body }; articles.push(row); return row })
   api.updateNews.mockImplementation(async (_, id, body) => { articles = articles.map((row) => row.NewsArticleId === id ? { ...row, ...body } : row); return articles.find((row) => row.NewsArticleId === id) })
   api.publishNews.mockImplementation(async (_, id) => { articles = articles.map((row) => row.NewsArticleId === id ? { ...row, Status: 'Published' } : row); return articles.find((row) => row.NewsArticleId === id) })
   api.hideNews.mockImplementation(async (_, id) => { articles = articles.map((row) => row.NewsArticleId === id ? { ...row, Status: 'Hidden' } : row); return articles.find((row) => row.NewsArticleId === id) })
@@ -57,7 +62,7 @@ test('empty news retains six columns, accurate zero counts and the new dropdown 
   expect(router.state.location.pathname).toBe('/admin/banners')
 })
 
-test('search covers every API page, then combines status and resets pagination only on submit', async () => {
+test('typing searches every API page, combines status and resets pagination automatically', async () => {
   articles = Array.from({ length: 101 }, (_, i) => ({ ...article, NewsArticleId: 'a' + i, Title: 'Bài ' + i, Slug: 'bai-' + i, Status: i === 100 ? 'Draft' : 'Published' }))
   const router = renderPage('/admin/news?page=2')
   await screen.findByText('101 bài viết')
@@ -65,7 +70,7 @@ test('search covers every API page, then combines status and resets pagination o
   fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'bai-100' } })
   fireEvent.change(screen.getByRole('combobox', { name: 'Trạng thái tin tức' }), { target: { value: 'Draft' } })
   expect(router.state.location.search).toBe('?page=2')
-  fireEvent.click(screen.getByRole('button', { name: 'Tìm kiếm', exact: true }))
+  expect(screen.queryByRole('button', { name: 'Tìm kiếm', exact: true })).not.toBeInTheDocument()
   await screen.findByText('1 bài viết')
   expect(screen.getByRole('button', { name: 'Xem Bài 100' })).toBeInTheDocument()
   expect(router.state.location.search).toContain('keyword=bai-100')
@@ -104,17 +109,19 @@ test('create and edit whitelist content fields; new items are drafts and edits p
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   expect(screen.getByRole('button', { name: 'Tin tức', exact: true })).toHaveAttribute('aria-current', 'page')
   fireEvent.change(within(dialog).getByRole('textbox', { name: 'Tiêu đề' }), { target: { value: 'Bài mới' } })
-  fireEvent.change(within(dialog).getByRole('textbox', { name: 'Nội dung' }), { target: { value: 'Nội dung mới' } })
+  setNewsContent(within(dialog), 'Nội dung mới')
+  act(() => { within(dialog).getByRole('textbox', { name: 'Nội dung' }).editor.commands.selectAll() })
+  fireEvent.click(within(dialog).getByRole('button', { name: 'In đậm (Ctrl + B)' }))
   expect(within(dialog).getByRole('textbox', { name: 'Slug' })).toHaveValue('bai-moi')
   fireEvent.click(within(dialog).getByRole('button', { name: 'Lưu tin tức' }))
-  await waitFor(() => expect(api.createNews).toHaveBeenCalledWith('access-for-test', { Title: 'Bài mới', Slug: 'bai-moi', Summary: null, Content: 'Nội dung mới', ThumbnailUrl: null }))
+  await waitFor(() => expect(api.createNews).toHaveBeenCalledWith('access-for-test', { Title: 'Bài mới', Slug: 'bai-moi', Summary: null, Content: '<p><strong>Nội dung mới</strong></p>', ThumbnailUrl: null, Status: 'Draft' }))
   fireEvent.click(await screen.findByRole('button', { name: 'Sửa Bài mới' }))
   const edit = await screen.findByRole('region', { name: 'Sửa tin tức' })
-  expect(router.state.location.pathname).toBe('/admin/news/new/edit')
+  expect(router.state.location.pathname).toBe('/admin/news/created-article/edit')
   fireEvent.change(await within(edit).findByRole('textbox', { name: 'Tiêu đề' }), { target: { value: 'Tên đã sửa' } })
   fireEvent.click(within(edit).getByRole('button', { name: 'Cập nhật' }))
-  await waitFor(() => expect(api.updateNews).toHaveBeenCalledWith('access-for-test', 'new', expect.objectContaining({ Title: 'Tên đã sửa', Slug: 'bai-moi' })))
-  expect(api.updateNews.mock.calls[0][2]).not.toHaveProperty('Status')
+  await waitFor(() => expect(api.updateNews).toHaveBeenCalledWith('access-for-test', 'created-article', expect.objectContaining({ Title: 'Tên đã sửa', Slug: 'bai-moi' })))
+  expect(api.updateNews.mock.calls[0][2]).toHaveProperty('Status', 'Draft')
   expect(api.updateNews.mock.calls[0][2]).not.toHaveProperty('CreatedByUserId')
 })
 
@@ -152,7 +159,7 @@ test('view-only deep links cannot open write dialogs or invoke a write', async (
   for (const mode of ['edit', 'new']) { await act(() => router.navigate('/admin/news?dialog=' + mode + '&article=a1')); expect(screen.queryByRole('dialog')).not.toBeInTheDocument() }
   fireEvent.click(screen.getByRole('button', { name: 'Xem ' + article.Title }))
   const dialog = await screen.findByRole('region', { name: 'Chi tiết tin tức' })
-  await within(dialog).findByDisplayValue(article.Content)
+  await within(dialog).findByText(article.Content)
   expect(router.state.location.pathname).toBe('/admin/news/a1')
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   expect(within(dialog).queryByRole('button', { name: 'Sửa tin tức' })).not.toBeInTheDocument()
@@ -176,7 +183,7 @@ test('dedicated detail/edit pages reload directly, keep sidebar and preserve lis
   articles = [article]
   const router = renderPage('/admin/news/a1?keyword=tin-tu&page=2')
   const detail = await screen.findByRole('region', { name: 'Chi tiết tin tức' })
-  await within(detail).findByDisplayValue(article.Content)
+  await within(detail).findByText(article.Content)
   expect(within(detail).getByRole('textbox', { name: 'Thời điểm đăng' })).toHaveValue('12/10/2026 08:30')
   expect(within(detail).getByRole('textbox', { name: 'Tiêu đề' })).toHaveAttribute('readonly')
   expect(screen.getByRole('heading', { level: 1, name: 'Chi tiết tin tức' })).toBeInTheDocument()
@@ -184,7 +191,7 @@ test('dedicated detail/edit pages reload directly, keep sidebar and preserve lis
   fireEvent.click(within(detail).getByRole('button', { name: 'Sửa tin tức' }))
   const editor = await screen.findByRole('region', { name: 'Sửa tin tức' })
   expect(router.state.location.pathname).toBe('/admin/news/a1/edit')
-  expect(within(editor).getAllByRole('option').map((item) => item.value)).toEqual(['Published', 'Hidden'])
+  expect(within(within(editor).getByRole('combobox', { name: 'Trạng thái' })).getAllByRole('option').map((item) => item.value)).toEqual(['Published', 'Hidden'])
   fireEvent.click(within(editor).getByRole('button', { name: 'Hủy' }))
   await screen.findByRole('heading', { level: 1, name: 'Quản lý tin tức' })
   expect(router.state.location.pathname).toBe('/admin/news')
@@ -197,47 +204,59 @@ test('update failures overlay the editor, preserve the draft and allow retry wit
   const router = renderPage('/admin/news/a1/edit')
   const editor = within(await screen.findByRole('region', { name: 'Sửa tin tức' }))
   fireEvent.change(editor.getByRole('textbox', { name: 'Tiêu đề' }), { target: { value: 'Nội dung chưa mất' } })
+  fireEvent.change(editor.getByRole('combobox', { name: 'Trạng thái' }), { target: { value: 'Hidden' } })
   api.updateNews.mockRejectedValueOnce(new Error('Slug đã tồn tại.'))
   fireEvent.click(editor.getByRole('button', { name: 'Cập nhật' }))
   const error = await screen.findByRole('dialog', { name: 'Không thể cập nhật tin tức' })
   expect(within(error).getByText('Hệ thống gặp lỗi khi thay đổi dữ liệu. Dữ liệu cũ được giữ nguyên.')).toBeInTheDocument()
   expect(router.state.location.pathname).toBe('/admin/news/a1/edit')
   expect(articles[0].Title).toBe(article.Title)
+  expect(articles[0].Status).toBe(article.Status)
   fireEvent.click(within(error).getByRole('button', { name: 'Đóng thông báo' }))
   expect(editor.getByRole('textbox', { name: 'Tiêu đề' })).toHaveValue('Nội dung chưa mất')
+  expect(editor.getByRole('combobox', { name: 'Trạng thái' })).toHaveValue('Hidden')
   fireEvent.click(editor.getByRole('button', { name: 'Cập nhật' }))
   await screen.findByText('Đã cập nhật tin tức.')
   expect(api.updateNews).toHaveBeenCalledTimes(2)
+  expect(api.updateNews.mock.calls[0]).toEqual(api.updateNews.mock.calls[1])
+  expect(articles[0]).toMatchObject({ Title: 'Nội dung chưa mất', Status: 'Hidden' })
+  expect(api.hideNews).not.toHaveBeenCalled()
 })
 
-test('status-only changes use workflow APIs and never send client timestamps or Status in PATCH', async () => {
+test('status-only form changes use one PATCH and never send client publication timestamps', async () => {
   articles = [article]
   renderPage('/admin/news/a1/edit')
   const editor = within(await screen.findByRole('region', { name: 'Sửa tin tức' }))
   fireEvent.change(editor.getByRole('combobox', { name: 'Trạng thái' }), { target: { value: 'Hidden' } })
   fireEvent.click(editor.getByRole('button', { name: 'Cập nhật' }))
   await screen.findByText('Đã cập nhật tin tức.')
-  expect(api.hideNews).toHaveBeenCalledWith('access-for-test', 'a1')
-  expect(api.updateNews).not.toHaveBeenCalled()
+  expect(api.updateNews).toHaveBeenCalledExactlyOnceWith('access-for-test', 'a1', expect.objectContaining({ Status: 'Hidden' }))
+  expect(api.updateNews.mock.calls[0][2]).not.toHaveProperty('PublishedAt')
+  expect(api.hideNews).not.toHaveBeenCalled()
   expect(articles[0].PublishedAt).toBe(article.PublishedAt)
 })
 
-test('a publish failure after create reports the saved draft and retries publication without creating duplicates', async () => {
+test('create sends content and publication together; failure retains the draft and retry creates one published article', async () => {
   renderPage('/admin/news/new')
   const editor = within(await screen.findByRole('region', { name: 'Thêm tin tức' }))
   fireEvent.change(editor.getByRole('textbox', { name: 'Tiêu đề' }), { target: { value: 'Bài đăng mới' } })
-  fireEvent.change(editor.getByRole('textbox', { name: 'Nội dung' }), { target: { value: 'Đã viết xong' } })
+  setNewsContent(editor, 'Đã viết xong')
   fireEvent.change(editor.getByRole('combobox', { name: 'Trạng thái' }), { target: { value: 'Published' } })
-  api.publishNews.mockRejectedValueOnce(new Error('Chưa đăng được.'))
+  api.createNews.mockRejectedValueOnce(new Error('Chưa lưu được.'))
   fireEvent.click(editor.getByRole('button', { name: 'Lưu tin tức' }))
   const error = await screen.findByRole('dialog', { name: 'Không thể lưu tin tức' })
-  expect(within(error).getByText('Nội dung đã được lưu, nhưng chưa đổi được trạng thái. Bạn có thể thử lại mà không tạo thêm bài viết.')).toBeInTheDocument()
-  expect(articles).toHaveLength(1)
+  expect(within(error).getByText('Chưa lưu được.')).toBeInTheDocument()
+  expect(articles).toHaveLength(0)
+  expect(editor.getByRole('textbox', { name: 'Tiêu đề' })).toHaveValue('Bài đăng mới')
+  expect(editor.getByRole('combobox', { name: 'Trạng thái' })).toHaveValue('Published')
   fireEvent.click(within(error).getByRole('button', { name: 'Đóng thông báo' }))
   fireEvent.click(editor.getByRole('button', { name: 'Lưu tin tức' }))
   await screen.findByText('Đã thêm tin tức.')
-  expect(api.createNews).toHaveBeenCalledTimes(1)
-  expect(api.publishNews).toHaveBeenCalledTimes(2)
+  expect(api.createNews).toHaveBeenCalledTimes(2)
+  expect(api.createNews.mock.calls[0]).toEqual(api.createNews.mock.calls[1])
+  expect(api.createNews).toHaveBeenLastCalledWith('access-for-test', expect.objectContaining({ Status: 'Published', Title: 'Bài đăng mới', Content: '<p>Đã viết xong</p>' }))
+  expect(api.publishNews).not.toHaveBeenCalled()
+  expect(articles).toHaveLength(1)
   expect(articles[0].Status).toBe('Published')
 })
 
@@ -245,7 +264,7 @@ test('local image upload blocks save/cancel until ready and only the uploaded UR
   renderPage('/admin/news/new')
   const editor = within(await screen.findByRole('region', { name: 'Thêm tin tức' }))
   fireEvent.change(editor.getByRole('textbox', { name: 'Tiêu đề' }), { target: { value: 'Bài có ảnh' } })
-  fireEvent.change(editor.getByRole('textbox', { name: 'Nội dung' }), { target: { value: 'Nội dung có ảnh' } })
+  setNewsContent(editor, 'Nội dung có ảnh')
   expect(editor.queryByRole('textbox', { name: /URL|Ảnh đại diện/ })).not.toBeInTheDocument()
   let finish
   api.uploadProductImage.mockImplementationOnce(() => new Promise((resolve) => { finish = resolve }))
@@ -256,6 +275,41 @@ test('local image upload blocks save/cancel until ready and only the uploaded UR
   await act(() => finish({ ImageUrl: 'https://storage.example.test/news.png' }))
   fireEvent.click(editor.getByRole('button', { name: 'Lưu tin tức' }))
   await waitFor(() => expect(api.createNews).toHaveBeenCalledWith('access-for-test', expect.objectContaining({ ThumbnailUrl: 'https://storage.example.test/news.png' })))
+})
+
+test('formatting without content cannot create an empty article', async () => {
+  renderPage('/admin/news/new')
+  const editor = within(await screen.findByRole('region', { name: 'Thêm tin tức' }))
+  fireEvent.change(editor.getByRole('textbox', { name: 'Tiêu đề' }), { target: { value: 'Bài chưa có nội dung' } })
+  setNewsContent(editor, '<p><strong> </strong></p>')
+  fireEvent.click(editor.getByRole('button', { name: 'Lưu tin tức' }))
+  expect(await editor.findByRole('alert')).toHaveTextContent('Vui lòng nhập tiêu đề, nội dung và slug hợp lệ.')
+  expect(api.createNews).not.toHaveBeenCalled()
+})
+
+test('an image inserted in article content blocks saving until uploaded and appears in the saved preview', async () => {
+  renderPage('/admin/news/new')
+  const editor = within(await screen.findByRole('region', { name: 'Thêm tin tức' }))
+  fireEvent.change(editor.getByRole('textbox', { name: 'Tiêu đề' }), { target: { value: 'Ảnh trong bài viết' } })
+  setNewsContent(editor, 'Phần mở đầu')
+  fireEvent.click(editor.getByRole('button', { name: 'Chèn hoặc sửa ảnh' }))
+  fireEvent.change(editor.getByRole('textbox', { name: 'Mô tả ảnh' }), { target: { value: 'Ảnh minh họa trong bài' } })
+  let finish
+  api.uploadProductImage.mockImplementationOnce(() => new Promise(resolve => { finish = resolve }))
+  const file = new File(['image-for-test'], 'inline-news.png', { type: 'image/png' })
+  fireEvent.change(editor.getByLabelText('Chọn ảnh để chèn vào nội dung'), { target: { files: [file] } })
+  expect(api.uploadProductImage).toHaveBeenCalledWith('access-for-test', file)
+  const save = editor.getByRole('button', { name: 'Lưu tin tức' })
+  expect(save).toBeDisabled()
+  fireEvent.submit(save.closest('form'))
+  expect(api.createNews).not.toHaveBeenCalled()
+  await act(() => finish({ ImageUrl: 'https://storage.example.test/inline-news.png' }))
+  fireEvent.click(save)
+  await screen.findByText('Đã thêm tin tức.')
+  expect(api.createNews).toHaveBeenCalledWith('access-for-test', expect.objectContaining({ Content: expect.stringContaining('src="https://storage.example.test/inline-news.png"'), ThumbnailUrl: null }))
+  fireEvent.click(await screen.findByRole('button', { name: 'Xem Ảnh trong bài viết' }))
+  const preview = within(await screen.findByRole('region', { name: 'Chi tiết tin tức' }))
+  expect(await preview.findByRole('img', { name: 'Ảnh minh họa trong bài' })).toHaveAttribute('src', 'https://storage.example.test/inline-news.png')
 })
 
 test('write requests guard repeat clicks and missing details cannot create an empty edit form', async () => {

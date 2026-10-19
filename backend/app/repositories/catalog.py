@@ -179,6 +179,8 @@ class ProductRepository(BaseRepository[Product]):
         status: str | None,
         include_deleted: bool,
         name_contains: str | None = None,
+        min_price: Decimal | None = None,
+        max_price: Decimal | None = None,
     ) -> list:
         conditions = []
         if name_contains:
@@ -193,6 +195,17 @@ class ProductRepository(BaseRepository[Product]):
             conditions.append(Product.Status == status)
         if not include_deleted:
             conditions.append(Product.IsDeleted.is_(False))
+        if min_price is not None or max_price is not None:
+            # Match the "from" price shown to customers, using only visible variants.
+            price = select(func.min(ProductVariant.Price)).where(
+                ProductVariant.ProductId == Product.ProductId,
+                ProductVariant.IsActive.is_(True),
+                ProductVariant.IsDeleted.is_(False),
+            ).correlate(Product).scalar_subquery()
+            if min_price is not None:
+                conditions.append(price >= min_price)
+            if max_price is not None:
+                conditions.append(price <= max_price)
         return conditions
 
     def list_products(
@@ -203,12 +216,14 @@ class ProductRepository(BaseRepository[Product]):
         status: str | None = None,
         include_deleted: bool = False,
         name_contains: str | None = None,
+        min_price: Decimal | None = None,
+        max_price: Decimal | None = None,
         offset: int | None = None,
         limit: int | None = None,
     ) -> list[Product]:
         """Danh sách sản phẩm (không load relationship)."""
         return self.get_all(
-            *self._filters(category_ids, brand_id, status, include_deleted, name_contains),
+            *self._filters(category_ids, brand_id, status, include_deleted, name_contains, min_price, max_price),
             order_by=(Product.CreatedAt.desc(), Product.ProductId),
             offset=offset,
             limit=limit,
@@ -222,8 +237,10 @@ class ProductRepository(BaseRepository[Product]):
         status: str | None = None,
         include_deleted: bool = False,
         name_contains: str | None = None,
+        min_price: Decimal | None = None,
+        max_price: Decimal | None = None,
     ) -> int:
-        return self.count(*self._filters(category_ids, brand_id, status, include_deleted, name_contains))
+        return self.count(*self._filters(category_ids, brand_id, status, include_deleted, name_contains, min_price, max_price))
 
 
 class ProductVariantRepository(BaseRepository[ProductVariant]):

@@ -69,7 +69,7 @@ test('search covers later API pages, ignores Vietnamese accents and combines wit
   expect(api.getAdminData).toHaveBeenCalledWith('access-for-test', '/admin/suppliers', { active_only: false, page: 2, page_size: 100 }, expect.any(AbortSignal))
   fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'doi tac tan cuoi' } })
   fireEvent.change(screen.getByRole('combobox', { name: 'Trạng thái' }), { target: { value: 'hidden' } })
-  fireEvent.submit(screen.getByRole('search'))
+  expect(screen.queryByRole('button', { name: 'Tìm kiếm', exact: true })).not.toBeInTheDocument()
   await screen.findByText('1 nhà cung cấp')
   expect(screen.getByText('Đối tác tận cuối')).toBeInTheDocument()
   expect(router.state.location.search).toBe('?keyword=doi+tac+tan+cuoi&status=hidden')

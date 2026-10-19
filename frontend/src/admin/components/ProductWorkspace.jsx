@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { Fragment, useEffect, useRef, useState } from 'react'
 import Button from '../../components/shared/Button.jsx'
 import { ErrorState, LoadingState } from '../../components/shared/index.js'
 import useInternalAuth from '../../hooks/useInternalAuth.js'
@@ -11,8 +11,7 @@ import AdminImagePicker from './AdminImagePicker.jsx'
 import VariantImageSelection from './VariantImageSelection.jsx'
 import Modal from './Modal.jsx'
 import { ParentPicker, ProductDeleteDialog } from './ProductDialogs.jsx'
-import { sharedBody, sharedForm } from '../lib/product-form.js'
-import { isAllowedProductImage, PRODUCT_IMAGE_RULE } from '../lib/product-images.js'
+import { SPECIFICATION_EDITOR, sharedBody, sharedForm, specificationEntries } from '../lib/product-form.js'
 import { ProductButton } from './ProductUi.jsx'
 import StockQuantity from './StockQuantity.jsx'
 import RichTextContent from '../../components/shared/RichTextContent.jsx'
@@ -48,60 +47,26 @@ function ProductDetailsPage({ item, onClose, onDone, onEdit, onEditShared, onAdd
   const auth = useInternalAuth(), [deleting, setDeleting] = useState(false)
   const can = (action) => auth.permissions.includes('products:' + action)
   const [status, statusClasses] = productStatus(item)
+  const specifications = specificationEntries(item.Specifications)
   return <section className="-mt-0.5 flex min-w-0 flex-col gap-5" aria-label="Chi tiết sản phẩm">
-    <header className="flex h-[41px] items-center justify-between"><h2 className="m-0 text-xl font-bold">Thông tin chi tiết sản phẩm</h2><ProductButton secondary className="text-admin-text!" onClick={onClose}>Quay lại</ProductButton></header>
-    <div className="grid grid-cols-[360px_minmax(0,1fr)] items-start gap-5">
+    <header className="flex min-h-[44px] flex-wrap items-center justify-between gap-3"><h2 className="m-0 text-xl font-bold">Thông tin chi tiết sản phẩm</h2><ProductButton secondary className="text-admin-text!" onClick={onClose}>Quay lại</ProductButton></header>
+    <div className="grid grid-cols-[360px_minmax(0,1fr)] items-start gap-5 max-[1100px]:grid-cols-1">
       <ProductGallery item={item} />
       <article className={CARD + ' flex flex-col gap-[18px] px-6 py-[22px]'}>
         <div><h3 className="m-0 text-[22px] leading-normal font-bold break-words">{item.Name}</h3><p className="mt-[5px] mb-0 text-xs font-medium text-admin-muted">Mã sản phẩm: {item.Sku}</p>{item.IsDefaultVariant && <p className="mt-2 mb-0 text-xs font-semibold text-admin-blue">Biến thể mặc định</p>}</div>
         <hr className="m-0 w-full border-0 border-t border-admin-border" />
         <dl className="m-0 flex flex-col gap-3 text-xs">{[
           ['Danh mục', item.Category?.Name], ['Thương hiệu', item.Brand?.Name], ['Giá bán', formatMoney(item.Price)], ['Số lượng tồn kho', <StockQuantity key="stock" variant={item} detailed />],
-          ['Trạng thái', status], ['Màu sắc', item.Color], ['Dung lượng', item.Storage],
-        ].map(([label, value]) => <div key={label} className="grid grid-cols-[180px_minmax(0,1fr)] gap-2"><dt className="font-medium text-admin-muted">{label}</dt><dd className={'m-0 font-semibold break-words ' + (label === 'Trạng thái' && item.IsActive && item.Status === 'Active' ? 'text-green-600' : '')}>{value ?? '—'}</dd></div>)}</dl>
+          ['Trạng thái', <span key="status" className={'inline-block rounded-full px-2.5 py-1.5 text-[11px] ' + statusClasses}>{status}</span>], ['Màu sắc', item.Color], ['Dung lượng', item.Storage],
+        ].map(([label, value]) => <div key={label} className="grid grid-cols-[180px_minmax(0,1fr)] gap-2"><dt className="font-medium text-admin-muted">{label}</dt><dd className="m-0 font-semibold break-words">{value ?? '—'}</dd></div>)}</dl>
         <div><h4 className="m-0 text-[13px] font-semibold">Mô tả sản phẩm</h4><RichTextContent value={item.Description} className="mt-[7px] max-h-[420px] overflow-y-auto" fallback={<p className="mt-[7px] mb-0 text-xs leading-normal text-admin-muted">Chưa có mô tả sản phẩm.</p>} /></div>
-        <details className="text-xs"><summary className="cursor-pointer font-semibold">Thông tin bổ sung</summary><dl className="mt-3 grid grid-cols-[180px_1fr] gap-y-3"><dt>Bảo hành</dt><dd>{item.WarrantyMonths} tháng</dd><dt>Ngưỡng cảnh báo tồn</dt><dd>{item.MinStockLevel}</dd><dt>Quản lý Serial / IMEI</dt><dd>{item.IsSerialTracked ? 'Có' : 'Không'}</dd></dl>{item.Specifications && <pre className="overflow-auto rounded-lg bg-admin-page p-3">{JSON.stringify(item.Specifications, null, 2)}</pre>}</details>
+        <div><h4 className="m-0 text-[13px] font-semibold">Thông số kỹ thuật</h4>{specifications.length ? <dl className="mt-[7px] mb-0 grid max-h-[420px] grid-cols-[180px_minmax(0,1fr)] gap-x-2 gap-y-2 overflow-y-auto text-xs">{specifications.map(([name, value]) => <Fragment key={name}><dt className="font-medium text-admin-muted">{name}</dt><dd className="m-0 break-words">{value}</dd></Fragment>)}</dl> : <p className="mt-[7px] mb-0 text-xs text-admin-muted">Chưa có thông số kỹ thuật.</p>}</div>
+        <details className="text-xs"><summary className="cursor-pointer font-semibold">Thông tin bổ sung</summary><dl className="mt-3 grid grid-cols-[180px_1fr] gap-y-3"><dt>Bảo hành</dt><dd>{item.WarrantyMonths} tháng</dd><dt>Ngưỡng cảnh báo tồn</dt><dd>{item.MinStockLevel}</dd><dt>Quản lý Serial / IMEI</dt><dd>{item.IsSerialTracked ? 'Có' : 'Không'}</dd></dl></details>
       </article>
     </div>
-    <footer className="flex items-center gap-2.5">{can('delete') && <ProductButton secondary className="border-admin-red! text-admin-red!" onClick={() => setDeleting(true)}>Xóa sản phẩm</ProductButton>}<div className="flex-1" />{can('create') && <ProductButton secondary className="text-admin-text!" onClick={onNew}>Thêm sản phẩm mới</ProductButton>}{can('update') && <ProductButton onClick={onEdit}>Sửa chi tiết sản phẩm</ProductButton>}</footer>
-    <div className="flex justify-end gap-3">{can('create') && <button type="button" className="cursor-pointer text-xs text-admin-blue hover:underline" onClick={() => onAddVariant(item.ProductId)}>Thêm biến thể cùng sản phẩm</button>}{can('update') && <button type="button" className="cursor-pointer text-xs text-admin-blue hover:underline" onClick={() => onEditShared(item.ProductId)}>Sửa thông tin chung</button>}</div>
+    <footer className="flex flex-wrap items-center gap-2.5">{can('delete') && <ProductButton secondary className="border-admin-red! text-admin-red!" onClick={() => setDeleting(true)}>Xóa sản phẩm</ProductButton>}<div className="flex-1" />{can('create') && <ProductButton secondary className="text-admin-text!" onClick={onNew}>Thêm sản phẩm mới</ProductButton>}{can('update') && <ProductButton onClick={onEdit}>Sửa chi tiết sản phẩm</ProductButton>}</footer>
+    <div className="flex flex-wrap justify-end gap-3">{can('create') && <button type="button" className="cursor-pointer text-xs text-admin-blue hover:underline" onClick={() => onAddVariant(item.ProductId)}>Thêm biến thể cùng sản phẩm</button>}{can('update') && <button type="button" className="cursor-pointer text-xs text-admin-blue hover:underline" onClick={() => onEditShared(item.ProductId)}>Sửa thông tin chung</button>}</div>
     {deleting && <ProductDeleteDialog variantId={item.ProductVariantId} onClose={() => setDeleting(false)} onDone={onDone} />}
-  </section>
-}
-
-function ProductImages({ form, change, disabled, onUploadBusy }) {
-  const auth = useInternalAuth(), input = useRef(null), uploading = useRef(false), mounted = useRef(true)
-  const [error, setError] = useState(''), [progress, setProgress] = useState('')
-  useEffect(() => { mounted.current = true; return () => { mounted.current = false } }, [])
-  async function upload(files) {
-    if (disabled || uploading.current || !files?.length) return
-    const batch = [...files]
-    if (!batch.every(isAllowedProductImage)) { setError(PRODUCT_IMAGE_RULE); return }
-    uploading.current = true; onUploadBusy(true); setError('')
-    const images = [...form.Images]
-    try {
-      for (const [index, file] of batch.entries()) {
-        if (!mounted.current) break
-        setProgress(`Đang tải ảnh ${index + 1}/${batch.length}…`)
-        const saved = await auth.withAccessToken((token) => uploadProductImage(token, file))
-        if (mounted.current) { images.push({ ImageUrl: saved.ImageUrl, IsDefault: !images.length }); change('Images', [...images]) }
-      }
-    } catch (failure) { if (mounted.current) setError(failure.message) }
-    finally { uploading.current = false; if (mounted.current) { setProgress(''); onUploadBusy(false); if (input.current) input.current.value = '' } }
-  }
-  function remove(index) {
-    const images = form.Images.filter((_, i) => i !== index)
-    if (images.length && !images.some((image) => image.IsDefault)) images[0] = { ...images[0], IsDefault: true }
-    change('Images', images)
-  }
-  const main = form.Images.find((image) => image.IsDefault) ?? form.Images[0]
-  return <section className={CARD + ' flex flex-col gap-3.5'} aria-label="Hình ảnh sản phẩm"><h3 className="m-0 text-[15px] font-semibold">Hình ảnh sản phẩm</h3>
-    <div className="flex h-[220px] flex-col items-center justify-center gap-2 rounded-xl border border-admin-border bg-admin-page p-2" onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); void upload(event.dataTransfer.files) }}>{main?.ImageUrl ? <div className="min-h-0 flex-1 w-full"><ProductPhoto key={main.ImageUrl} src={main.ImageUrl} name={form.Name || 'Ảnh sản phẩm'} /></div> : <p className="m-0 text-[13px] font-semibold text-admin-muted">Chưa có ảnh sản phẩm</p>}{!disabled && <button type="button" className="cursor-pointer text-[11px] text-admin-red hover:underline" onClick={() => input.current?.click()}>{main?.ImageUrl ? 'Thay đổi / tải ảnh mới' : 'Chọn hoặc kéo thả ảnh để tải lên'}</button>}{progress && <p role="status" className="m-0 text-xs text-admin-muted">{progress}</p>}<input ref={input} type="file" className="sr-only" aria-label="Tải ảnh sản phẩm" accept="image/jpeg,image/png,image/webp" multiple disabled={disabled} onChange={(event) => void upload(event.target.files)} /></div>
-    {error && <p role="alert" className="m-0 text-xs text-admin-red">{error}</p>}
-    {!disabled && <p className="m-0 text-[11px] text-admin-muted">JPG, PNG hoặc WEBP, tối đa 2 MB mỗi ảnh.</p>}
-    <p className="m-0 text-[11px] text-admin-muted">Ảnh được dùng chung cho các biến thể cùng sản phẩm.</p>
-    {form.Images.map((image, index) => <div key={index} className="flex flex-col gap-2"><ProductField id={'product-image-' + index} label={'Đường dẫn ảnh ' + (index + 1)} type="url" pattern="https?://.+" required maxLength={500} placeholder="https://..." value={image.ImageUrl} disabled={disabled} onChange={(event) => change('Images', form.Images.map((entry, i) => i === index ? { ...entry, ImageUrl: event.target.value } : entry))} /><div className="flex justify-between"><label className="flex items-center gap-1.5 text-[11px]"><input type="radio" name="default-image" aria-label={'Ảnh mặc định ' + (index + 1)} checked={image.IsDefault} disabled={disabled} onChange={() => change('Images', form.Images.map((entry, i) => ({ ...entry, IsDefault: i === index })))} />Mặc định</label><button type="button" disabled={disabled} className="cursor-pointer text-[11px] text-admin-red disabled:opacity-40" onClick={() => remove(index)} aria-label={'Bỏ ảnh ' + (index + 1)}>Bỏ ảnh</button></div></div>)}
-    {!disabled && <ProductButton secondary onClick={() => change('Images', [...form.Images, { ImageUrl: '', IsDefault: !form.Images.length }])}>+ Thêm ảnh</ProductButton>}
   </section>
 }
 
@@ -130,6 +95,14 @@ function ProductFormPage({ item, presetProductId, editShared, categories, brands
   const defaultUrl = selectedUrls.includes(choice.defaultUrl) ? choice.defaultUrl : selectedUrls[0] ?? null
   const change = (key, value) => setForm((previous) => ({ ...previous, [key]: value }))
   const changeShared = (key, value) => setShared((previous) => ({ ...previous, [key]: value }))
+  function changeGallery(images) {
+    const added = images.map((image) => image.ImageUrl).filter((url) => !gallery.some((image) => image.ImageUrl === url))
+    if (commonEditable) changeShared('Images', images)
+    else setGalleries((previous) => ({ ...previous, [galleryKey]: images }))
+    // Photos added while editing a variant belong to it, so several can be added and saved at once
+    // without them showing up on the other colours.
+    if (!editingShared && added.length) setSelections((previous) => ({ ...previous, [galleryKey]: { urls: [...selectedUrls, ...added], defaultUrl: defaultUrl ?? added[0] } }))
+  }
   const uploadDescriptionImage = async (file) => (await auth.withAccessToken((token) => uploadProductImage(token, file))).ImageUrl
   const lookupsError = commonEditable && (categories.error || brands.error)
   const blocked = commonEditable ? categories.loading || brands.loading || Boolean(lookupsError) : !item && (!parent.data || parent.loading || Boolean(parent.error))
@@ -153,7 +126,9 @@ function ProductFormPage({ item, presetProductId, editShared, categories, brands
         body = { ...form, Sku: form.Sku.trim(), Color: form.Color.trim(), Storage: form.Storage.trim() || null, Price: String(form.Price), MinStockLevel: Number(form.MinStockLevel) }
         body.VariantImageUrls = selectedUrls
         body.DefaultImageUrl = defaultUrl
-        body.IsDefaultVariant = newProduct || makeDefault
+        // Only a newly ticked box changes the default; re-saving an older form of the default variant must not
+        // take the default back from a variant chosen since.
+        body.IsDefaultVariant = newProduct || (makeDefault && !item?.IsDefaultVariant)
         if (!newProduct) body.AdditionalImages = gallery.filter((image) => !originalImages.some((original) => original.ImageUrl === image.ImageUrl)).map(({ ImageUrl }) => ({ ImageUrl }))
         if (newProduct) body.Product = sharedBody(shared)
         else if (!item) { if (!parent.data || parent.error || parent.loading) throw new Error('Vui lòng chọn sản phẩm đã có.'); body.ProductId = parentId }
@@ -169,11 +144,11 @@ function ProductFormPage({ item, presetProductId, editShared, categories, brands
       {(error || lookupsError || parent.error) && <p role="alert" className="m-0 rounded-[10px] bg-admin-red/5 p-3 text-xs text-admin-red">{error || lookupsError || parent.error}</p>}
       {lookupsError && <ProductButton secondary onClick={() => { categories.refresh(); brands.refresh() }}>Thử lại danh mục / thương hiệu</ProductButton>}
       <fieldset disabled={busy || uploading || Boolean(pending)} className="m-0 min-w-0 border-0 p-0">
-        <div className="grid grid-cols-[minmax(0,1fr)_360px] items-start gap-5">
+        <div className="grid grid-cols-[minmax(0,1fr)_360px] items-start gap-5 max-[1100px]:grid-cols-1">
           <div className="flex min-w-0 flex-col gap-[18px]">
             <section className={CARD + ' flex flex-col gap-3.5'}><h3 className="m-0 text-[15px] font-semibold">Thông tin chung</h3>
               {!item && <div role="radiogroup" aria-label="Cách thêm sản phẩm" className="flex gap-4 text-xs"><label className="flex items-center gap-2"><input type="radio" name="product-target" checked={target === 'new'} onChange={() => setTarget('new')} />Sản phẩm mới</label><label className="flex items-center gap-2"><input type="radio" name="product-target" checked={target === 'existing'} onChange={() => setTarget('existing')} />Biến thể của sản phẩm đã có</label></div>}
-              {!item && target === 'existing' && <ParentPicker value={parentId} onChange={setParentId} selected={parent.data} lookup={{ ...lookup, page, setPage, search: (value) => { setKeyword(value); setPage(1) } }} />}
+              {!item && target === 'existing' && <ParentPicker value={parentId} onChange={setParentId} selected={parent.data} lookup={{ ...lookup, keyword, page, setPage, search: (value) => { setKeyword(value); setPage(1) } }} />}
               {item && <div className="flex gap-2 text-xs"><button type="button" className={'cursor-pointer rounded-lg px-3 py-2 ' + (!editingShared ? 'bg-admin-soft text-admin-blue' : 'bg-admin-page text-admin-muted')} onClick={() => { setEditingShared(false); setError('') }}>Sửa biến thể</button><button type="button" className={'cursor-pointer rounded-lg px-3 py-2 ' + (editingShared ? 'bg-admin-soft text-admin-blue' : 'bg-admin-page text-admin-muted')} onClick={() => { setEditingShared(true); setError('') }}>Sửa thông tin chung</button></div>}
               <div className="flex w-full max-w-[520px] flex-col gap-3.5">
                 {!editingShared && <label className="flex items-center gap-2 text-xs"><input type="checkbox" aria-label="Biến thể mặc định" checked={newProduct || makeDefault} disabled={newProduct || Boolean(item?.IsDefaultVariant)} onChange={(event) => setMakeDefault(event.target.checked)} />{newProduct ? 'Biến thể đầu tiên là biến thể mặc định' : 'Đặt làm biến thể mặc định của sản phẩm'}</label>}
@@ -182,13 +157,14 @@ function ProductFormPage({ item, presetProductId, editShared, categories, brands
                 <div className="grid grid-cols-2 gap-3.5"><ProductSelect id="product-category" label="Danh mục" options={(categories.data ?? []).map((entry) => [entry.CategoryId, entry.Name + (entry.IsActive ? '' : ' (đã ẩn)')])} required disabled={!commonEditable || categories.loading} value={common.CategoryId} onChange={(event) => changeShared('CategoryId', event.target.value)} /><ProductSelect id="product-brand" label="Thương hiệu" options={(brands.data ?? []).map((entry) => [entry.BrandId, entry.Name + (entry.IsActive ? '' : ' (đã ẩn)')])} required disabled={!commonEditable || brands.loading} value={common.BrandId} onChange={(event) => changeShared('BrandId', event.target.value)} /></div>
               </div>
               <RichTextEditor id="product-description" label="Mô tả" labelClassName="text-xs font-medium" readOnly={!commonEditable} disabled={busy || uploading || Boolean(pending)} value={common.Description} onChange={(value) => changeShared('Description', value)} onUploadImage={uploadDescriptionImage} onUploadBusy={setUploading} />
+              <RichTextEditor id="product-specifications" label="Thông số kỹ thuật" labelClassName="text-xs font-medium" {...SPECIFICATION_EDITOR} readOnly={!commonEditable} disabled={busy || uploading || Boolean(pending)} value={common.Specifications} onChange={(value) => changeShared('Specifications', value)} />
               <div className="grid w-full max-w-[520px] grid-cols-2 gap-3.5"><ProductField id="product-color" label="Màu sắc" required maxLength={50} disabled={editingShared} placeholder="Một màu cho mỗi biến thể" value={form.Color} onChange={(event) => change('Color', event.target.value)} /><ProductField id="product-storage" label="Dung lượng" maxLength={50} disabled={editingShared} value={form.Storage} onChange={(event) => change('Storage', event.target.value)} /></div>
-              <details className="text-xs"><summary className="cursor-pointer text-admin-blue">Thông tin bổ sung</summary><div className="mt-3 flex max-w-[520px] flex-col gap-3.5"><ProductField id="product-warranty" label="Bảo hành (tháng)" type="number" required min={0} step={1} disabled={!commonEditable} value={common.WarrantyMonths} onChange={(event) => changeShared('WarrantyMonths', event.target.value)} /><ProductField id="product-specifications" label="Thông số kỹ thuật (JSON)"><textarea id="product-specifications" rows={3} className={CONTROL + ' h-auto py-3 font-mono'} disabled={!commonEditable} placeholder={'{"RAM":"16GB"}'} value={common.Specifications} onChange={(event) => changeShared('Specifications', event.target.value)} /></ProductField></div></details>
+              <details className="text-xs"><summary className="cursor-pointer text-admin-blue">Thông tin bổ sung</summary><div className="mt-3 flex max-w-[520px] flex-col gap-3.5"><ProductField id="product-warranty" label="Bảo hành (tháng)" type="number" required min={0} step={1} disabled={!commonEditable} value={common.WarrantyMonths} onChange={(event) => changeShared('WarrantyMonths', event.target.value)} /></div></details>
             </section>
             {!editingShared && <VariantImageSelection images={gallery} selected={selectedUrls} defaultUrl={defaultUrl} sku={form.Sku} color={form.Color} onChange={(urls, selectedDefault) => setSelections((previous) => ({ ...previous, [galleryKey]: { urls, defaultUrl: selectedDefault } }))} />}
             <section className={CARD + ' flex flex-col gap-3.5'}><h3 className="m-0 text-[15px] font-semibold">Giá và tồn kho</h3><div className="grid max-w-[520px] grid-cols-2 gap-3.5"><ProductField id="product-price" label="Giá bán (đồng)" type="number" required min={0} max="9999999999999" step="1" placeholder="Nhập giá bán" disabled={editingShared} value={form.Price} onChange={(event) => change('Price', event.target.value)} /><ProductField id="product-stock" label="Số lượng tồn kho" type="number" readOnly value={item?.StockQuantity ?? 0} /></div><p className="m-0 text-[11px] text-admin-muted">Tồn kho được cập nhật qua nhập hàng; biến thể mới có tồn kho bằng 0.</p><details className="text-xs"><summary className="cursor-pointer text-admin-blue">Thiết lập biến thể</summary><div className="mt-3 flex max-w-[520px] flex-col gap-3"><ProductField id="product-min" label="Ngưỡng cảnh báo tồn" type="number" min={0} step={1} required disabled={editingShared} value={form.MinStockLevel} onChange={(event) => change('MinStockLevel', event.target.value)} /><label className="flex gap-2"><input type="checkbox" disabled={editingShared} checked={form.IsActive} onChange={(event) => change('IsActive', event.target.checked)} />Đang hoạt động</label><label className="flex gap-2"><input type="checkbox" disabled={editingShared} checked={form.IsSerialTracked} onChange={(event) => change('IsSerialTracked', event.target.checked)} />Quản lý Serial / IMEI</label></div></details></section>
           </div>
-          <aside className="flex min-w-0 flex-col gap-[18px]"><AdminImagePicker title="Bộ ảnh sản phẩm" images={gallery} onChange={(images) => commonEditable ? changeShared('Images', images) : setGalleries((previous) => ({ ...previous, [galleryKey]: images }))} disabled={busy || uploading || Boolean(pending) || (!item && !newProduct && !parent.data)} onUploadBusy={setUploading} showDefault={commonEditable} canRemove={(image) => commonEditable || !originalImages.some((original) => original.ImageUrl === image.ImageUrl)} hint={editingShared ? 'Quản lý bộ ảnh chung. Bỏ ảnh ở đây cũng bỏ ảnh đó khỏi các biến thể đang dùng.' : 'Ảnh tải từ máy được đưa vào bộ ảnh Product. Chọn ảnh cho SKU ở mục “Ảnh của biến thể”.'} /><div className={CARD + ' flex flex-col gap-2 p-[18px]'}><h3 className="m-0 text-sm font-semibold">{item ? 'Lưu ý xử lý' : 'Lưu ý khi thêm mới'}</h3><p className="m-0 text-[11px] leading-normal text-admin-muted">{editingShared ? 'Thay đổi tên, danh mục, thương hiệu, mô tả, bảo hành, trạng thái và bộ ảnh áp dụng cho sản phẩm chung.' : item ? 'SKU, màu sắc, dung lượng, giá và ảnh đã chọn chỉ áp dụng cho biến thể này. Thông tin chung được chỉnh ở “Sửa thông tin chung”.' : 'Mỗi biến thể có một SKU, một màu sắc và những ảnh được chọn từ bộ ảnh Product. Biến thể đầu tiên là mặc định.'}</p></div></aside>
+          <aside className="flex min-w-0 flex-col gap-[18px]"><AdminImagePicker title="Bộ ảnh sản phẩm" images={gallery} onChange={changeGallery} disabled={busy || uploading || Boolean(pending) || (!item && !newProduct && !parent.data)} onUploadBusy={setUploading} showDefault={commonEditable} canRemove={(image) => commonEditable || !originalImages.some((original) => original.ImageUrl === image.ImageUrl)} hint={editingShared ? 'Quản lý bộ ảnh chung. Bỏ ảnh ở đây cũng bỏ ảnh đó khỏi các biến thể đang dùng.' : 'Ảnh tải từ máy hoặc thêm bằng đường dẫn được đưa vào bộ ảnh Product và tự chọn cho biến thể này. Bỏ hoặc chọn thêm ở mục “Ảnh của biến thể”.'} /><div className={CARD + ' flex flex-col gap-2 p-[18px]'}><h3 className="m-0 text-sm font-semibold">{item ? 'Lưu ý xử lý' : 'Lưu ý khi thêm mới'}</h3><p className="m-0 text-[11px] leading-normal text-admin-muted">{editingShared ? 'Thay đổi tên, danh mục, thương hiệu, mô tả, bảo hành, trạng thái và bộ ảnh áp dụng cho sản phẩm chung.' : item ? 'SKU, màu sắc, dung lượng, giá và ảnh đã chọn chỉ áp dụng cho biến thể này. Thông tin chung được chỉnh ở “Sửa thông tin chung”.' : 'Mỗi biến thể có một SKU, một màu sắc và những ảnh được chọn từ bộ ảnh Product. Biến thể đầu tiên là mặc định.'}</p></div></aside>
         </div>
       </fieldset>
       <footer className="flex items-center gap-2.5"><p className="m-0 flex-1 text-[11px] text-admin-muted">{item ? 'Thay đổi được lưu sau khi bạn xác nhận.' : 'Sản phẩm chỉ được tạo sau khi bấm “Thêm sản phẩm”.'}</p><ProductButton secondary className="text-admin-text!" disabled={busy || uploading} onClick={onClose}>Hủy</ProductButton><ProductButton type="submit" loading={busy} disabled={uploading || blocked || Boolean(pending)}>{item ? 'Lưu thay đổi' : 'Thêm sản phẩm'}</ProductButton></footer>

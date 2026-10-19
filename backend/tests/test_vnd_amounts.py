@@ -99,6 +99,21 @@ class _RecordingPromotionRepo(FakePromotionRepo):
         raise _ReachedDetail()
 
 
+class _RecordingCouponRepo:
+    """After saving, update_promotion re-evaluates the promotion's coupons (coupon lifecycle)."""
+
+    def __init__(self):
+        self.synchronized = []
+
+    def synchronize(self, now, promotion_id=None):
+        self.synchronized.append(promotion_id)
+
+
+class _PromotionUpdateSession(FakeSession):
+    def expire(self, obj):  # update_promotion reloads the promotion after the coupon sync; nothing is cached here
+        pass
+
+
 class PromotionUpdateServiceTest(unittest.TestCase):
     """PATCH is rechecked with the stored discount type (the schema cannot know it)."""
 
@@ -106,8 +121,9 @@ class PromotionUpdateServiceTest(unittest.TestCase):
         self.db = InMemoryDB()
         self.f = Factory(self.db)
         self.admin = self.f.user("Admin")
-        self.svc = PromotionService(FakeSession(self.db), clock=fixed_clock)
+        self.svc = PromotionService(_PromotionUpdateSession(self.db), clock=fixed_clock)
         self.svc.promotions = _RecordingPromotionRepo(self.db)
+        self.svc.coupons = _RecordingCouponRepo()
 
     def stored(self, kind, value):
         return self.db.add(Promotion(
@@ -137,6 +153,7 @@ class PromotionUpdateServiceTest(unittest.TestCase):
         with self.assertRaises(_ReachedDetail):  # passed the checks and saved; the stub stops at reading details
             self.update(promotion, Name="Đổi tên")
         self.assertEqual(self.svc.promotions.updates, [{"Name": "Đổi tên"}])
+        self.assertEqual(self.svc.coupons.synchronized, [promotion.PromotionId])
 
 
 # ======================================================================

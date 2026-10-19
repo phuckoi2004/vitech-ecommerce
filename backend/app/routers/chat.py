@@ -6,6 +6,7 @@ future AI integration (``ChatService.record_ai_reply``), not through these route
 """
 
 import uuid
+from datetime import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query, status
@@ -22,6 +23,8 @@ from app.schemas import (
     PageResponse,
 )
 from app.services.chat import ChatService
+from app.schemas.chat import MessageReadRequest
+from app.services.exceptions import BusinessRuleError
 
 from .dependencies import CurrentActor, InternalOnly, Page, PageSize, get_chat_service
 
@@ -99,6 +102,28 @@ def claim_conversation(conversation_id: uuid.UUID, service: Chat, actor: Current
 @admin_router.get("/conversations/{conversation_id}", response_model=AdminConversationDetailResponse)
 def admin_get_conversation(conversation_id: uuid.UUID, service: Chat, actor: CurrentActor):
     return service.get_conversation(actor, conversation_id)
+
+
+@admin_router.get('/conversations/{conversation_id}/summary', response_model=AdminConversationResponse)
+def conversation_summary(conversation_id: uuid.UUID, service: Chat, actor: CurrentActor):
+    return service.get_summary(actor, conversation_id)
+
+
+@admin_router.get('/conversations/{conversation_id}/message-window', response_model=PageResponse[AdminMessageResponse])
+def message_window(conversation_id: uuid.UUID, service: Chat, actor: CurrentActor,
+                   limit: Annotated[int, Query(ge=1, le=100)] = 50, latest: bool = False,
+                   after_sent_at: datetime | None = None, after_message_id: uuid.UUID | None = None,
+                   before_sent_at: datetime | None = None, before_message_id: uuid.UUID | None = None):
+    if (after_sent_at is None) != (after_message_id is None) or (before_sent_at is None) != (before_message_id is None):
+        raise BusinessRuleError('Cần cả thời gian và mã tin nhắn để phân trang', code='invalid_message_cursor')
+    return service.message_window(actor, conversation_id, limit=limit, latest=latest,
+                                  after=(after_sent_at, after_message_id) if after_sent_at else None,
+                                  before=(before_sent_at, before_message_id) if before_sent_at else None)
+
+
+@admin_router.post('/conversations/{conversation_id}/read', response_model=dict[str, int])
+def mark_messages_read(conversation_id: uuid.UUID, data: MessageReadRequest, service: Chat, actor: CurrentActor):
+    return service.mark_messages_read(actor, conversation_id, data.MessageIds)
 
 
 @admin_router.get("/conversations/{conversation_id}/messages", response_model=PageResponse[AdminMessageResponse])

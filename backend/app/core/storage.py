@@ -1,5 +1,8 @@
 """Avatar files in Supabase Storage through its REST API (no extra dependency)."""
 
+import base64
+import binascii
+import json
 import os
 import re
 import urllib.parse
@@ -16,6 +19,20 @@ from .errors import AuthError
 
 AVATAR_MAX_BYTES = 2 * 1024 * 1024
 AVATAR_EXTENSIONS = {"image/jpeg": "jpg", "image/png": "png", "image/webp": "webp"}
+
+
+def _is_server_key(key: str) -> bool:
+    """Reject placeholders/public keys before upload; Supabase still verifies the key itself."""
+    if re.fullmatch(r"sb_secret_[A-Za-z0-9_-]+", key):
+        return True
+    parts = key.split(".")
+    if len(parts) != 3 or any(not re.fullmatch(r"[A-Za-z0-9_-]+", part) for part in parts):
+        return False
+    try:
+        payload = json.loads(base64.urlsafe_b64decode(parts[1] + "=" * (-len(parts[1]) % 4)))
+    except (ValueError, binascii.Error):
+        return False
+    return isinstance(payload, dict) and payload.get("role") == "service_role"
 
 
 def detect_image_type(data: bytes) -> str | None:
@@ -92,8 +109,9 @@ def get_avatar_storage() -> AvatarStorage | None:
     key = secret_key or os.getenv("SUPABASE_SERVICE_ROLE_KEY", "").strip()
     if not url or not key:
         return None
-    if (secret_key and not secret_key.startswith("sb_secret_")) or key.startswith("sb_publishable_") or "\r" in key or "\n" in key:
-        raise AuthError(503, "Kho avatar cần SUPABASE_SECRET_KEY dạng sb_secret_ hoặc SUPABASE_SERVICE_ROLE_KEY của server.")
+    if (secret_key and not secret_key.startswith("sb_secret_")) or not _is_server_key(key):
+        raise AuthError(503, "Khóa Supabase Storage không hợp lệ. Cấu hình SUPABASE_SECRET_KEY dạng sb_secret_... "
+                        "hoặc SUPABASE_SERVICE_ROLE_KEY dạng JWT service_role trong backend/.env.")
     try:
         parsed = urllib.parse.urlsplit(url)
         parsed.port

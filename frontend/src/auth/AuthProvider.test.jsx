@@ -56,15 +56,18 @@ afterEach(() => {
 })
 
 describe('API calls with the access token', () => {
-  test('a 401 renews the session once and retries once with the new token', async () => {
+  test.each(['Admin', 'Customer'])('a %s session stays signed in when an expired access token is renewed', async (role) => {
     const calls = backend({
+      login: sessionData(role),
+      renewed: sessionData(role, 'renewed'),
       resource: (_url, options) => (options.headers.Authorization === 'Bearer renewed-access'
         ? jsonResponse({ ok: true })
         : jsonResponse({ detail: 'Phiên đăng nhập không hợp lệ hoặc đã hết hạn.' }, 401)),
     })
     const { result } = renderAuth()
     await waitFor(() => expect(result.current.sessionReady).toBe(true))
-    await act(() => result.current.signInInternal('admin@example.com', 'Password1!'))
+    const signIn = role === 'Customer' ? result.current.signInCustomer : result.current.signInInternal
+    await act(() => signIn('user@example.com', 'Password1!'))
     setCsrfCookie('csrf-1')
     let data
     await act(async () => {
@@ -76,6 +79,8 @@ describe('API calls with the access token', () => {
     expect(calls.filter((call) => call.url === '/api/admin/users').map((call) => call.headers.Authorization))
       .toEqual(['Bearer initial-access', 'Bearer renewed-access'])
     expect(result.current.accessToken).toBe('renewed-access')
+    expect(result.current.role).toBe(role)
+    expect(result.current.endReason).toBeNull()
   })
 
   test('a second 401 after the retry is returned without another refresh (no refresh loop)', async () => {

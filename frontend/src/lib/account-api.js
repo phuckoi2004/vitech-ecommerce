@@ -31,8 +31,8 @@ export function saveDefaultAddress(accessToken, address) {
 }
 
 // {Count}: unread notifications of the signed-in user (header bell).
-export function getUnreadNotificationCount(accessToken) {
-  return apiRequest('/users/me/notifications/unread-count', { method: 'GET', accessToken })
+export function getUnreadNotificationCount(accessToken, { signal } = {}) {
+  return apiRequest('/users/me/notifications/unread-count', { method: 'GET', accessToken, signal })
 }
 
 export function changePassword(accessToken, currentPassword, newPassword, confirmPassword) {

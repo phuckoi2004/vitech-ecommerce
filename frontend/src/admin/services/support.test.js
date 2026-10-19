@@ -1,5 +1,5 @@
 import { afterEach, expect, test, vi } from 'vitest'
-import { claimSupportConversation, closeSupportConversation, getSupportInbox, getSupportPage, sendSupportMessage } from './support.js'
+import { claimSupportConversation, closeSupportConversation, getSupportConversation, getSupportInbox, getSupportMessages, getSupportPage, markSupportRead, sendSupportMessage } from './support.js'
 
 afterEach(() => vi.unstubAllGlobals())
 test('inbox reads the waiting queue and only the signed-in operator’s open assignments', async () => {
@@ -30,4 +30,30 @@ test('chat writes use server-assigned identities and never send client ownership
   expect(fetch.mock.calls[0][1].body).toBeUndefined()
   expect(JSON.parse(fetch.mock.calls[1][1].body)).toEqual({ MessageType: 'Text', Content: 'Phản hồi' })
   expect(fetch.mock.calls[2][1].body).toBeUndefined()
+})
+
+test('history, Admin all, summary, cursor window and read operations use separate authorized endpoints', async () => {
+  const fetch = vi.fn(async () => new Response(JSON.stringify({ Items: [], Total: 0 })))
+  vi.stubGlobal('fetch', fetch)
+  const signal = new AbortController().signal
+  await getSupportPage('token', 'closed', 1, signal, 'Staff')
+  await getSupportPage('token', 'closed', 1, signal, 'Admin')
+  await getSupportPage('token', 'all', 1, signal, 'Admin')
+  expect(fetch.mock.calls.slice(0, 3).map(([url]) => url)).toEqual([
+    '/api/admin/conversations/assigned?status=Closed&page=1&page_size=100',
+    '/api/admin/conversations?status=Closed&page=1&page_size=100',
+    '/api/admin/conversations?page=1&page_size=100',
+  ])
+  await getSupportConversation('token', 'c1', signal)
+  expect(fetch.mock.calls.at(-1)[0]).toBe('/api/admin/conversations/c1/summary')
+  await getSupportMessages('token', 'c1', { after_sent_at: '2026-10-16T08:00:00Z', after_message_id: 'm1' }, signal)
+  const url = new URL(fetch.mock.calls.at(-1)[0], 'http://localhost')
+  expect(url.pathname).toBe('/api/admin/conversations/c1/message-window')
+  expect(url.searchParams.get('limit')).toBe('50')
+  expect(url.searchParams.get('after_sent_at')).toBe('2026-10-16T08:00:00Z')
+  await markSupportRead('token', 'c1', ['m1'])
+  const [path, options] = fetch.mock.calls.at(-1)
+  expect(path).toBe('/api/admin/conversations/c1/read')
+  expect(options.method).toBe('POST')
+  expect(JSON.parse(options.body)).toEqual({ MessageIds: ['m1'] })
 })

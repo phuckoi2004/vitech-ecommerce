@@ -1,20 +1,45 @@
-import { useEffect, useId, useRef, useState } from 'react'
+import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import Button from '../../components/shared/Button.jsx'
 import ErrorState from '../../components/shared/ErrorState.jsx'
 import LoadingState from '../../components/shared/LoadingState.jsx'
 import useApiData from '../../hooks/useApiData.js'
 import useCustomerRequest from '../../hooks/useCustomerRequest.js'
 import { formatDateTime } from '../../lib/format.js'
+import useChatDraft from '../chat-drafts.js'
+import { productPath } from '../routes/paths.js'
 import './ShoppingPages.css'
 import './ChatPage.css'
 
+function ChatMessageContent({ message, onImageLoad }) {
+  const imageUrl = message.Metadata?.ImageUrl || message.Content
+  const safeImage = typeof imageUrl === 'string' && /^https:\/\//i.test(imageUrl)
+  const slug = message.Metadata?.Slug
+  const productName = message.Metadata?.ProductName || 'Sản phẩm được tư vấn'
+  const [imageFailed, setImageFailed] = useState(false)
+  return <>
+    {message.MessageType === 'Image' && (safeImage
+      ? <a className="chat-attachment" href={imageUrl} target="_blank" rel="noreferrer" aria-label="Xem ảnh đính kèm">
+        {!imageFailed && <img src={imageUrl} alt={message.Content || 'Ảnh đính kèm'} loading="lazy" onLoad={onImageLoad} onError={() => setImageFailed(true)} />}
+        <span>Xem ảnh đính kèm</span>
+      </a> : <p>Ảnh đính kèm không khả dụng.</p>)}
+    {message.MessageType === 'Product' && (typeof slug === 'string' && slug.trim()
+      ? <Link className="chat-product-link" to={productPath(slug)}>{productName}</Link>
+      : <p className="chat-product-link">{productName}</p>)}
+    {message.Content && <p>{message.Content}</p>}
+  </>
+}
+
 function ChatThread({ conversationId, send, onClosed, paused = false }) {
   const [detail, setDetail] = useState(null)
-  const [error, setError] = useState('')
-  const [text, setText] = useState('')
+  const [loadError, setLoadError] = useState('')
+  const [actionError, setActionError] = useState(null)
+  const [text, setText, clearDraft] = useChatDraft(conversationId)
   const [busy, setBusy] = useState('')
   const [version, setVersion] = useState(0)
-  const bottom = useRef(null)
+  const scroll = useRef(null)
+  const nearBottom = useRef(true)
+  const actionLock = useRef(false)
   const composer = useRef(null)
   const active = detail?.ConversationId === conversationId ? detail : null
   const messages = [...(active?.Messages ?? [])].sort((left, right) => Date.parse(left.SentAt) - Date.parse(right.SentAt))
@@ -31,8 +56,8 @@ function ChatThread({ conversationId, send, onClosed, paused = false }) {
       fetching = true
       try {
         const response = await send(`/conversations/${encodeURIComponent(conversationId)}`, { signal: controller.signal })
-        if (!controller.signal.aborted) { setDetail(response); setError('') }
-      } catch (failure) { if (!controller.signal.aborted) setError(failure.message) }
+        if (!controller.signal.aborted) { setDetail(response); setLoadError('') }
+      } catch (failure) { if (!controller.signal.aborted) setLoadError(failure.message) }
       finally { fetching = false }
     }
     refresh()
@@ -41,7 +66,10 @@ function ChatThread({ conversationId, send, onClosed, paused = false }) {
     return () => { controller.abort(); window.clearInterval(timer); document.removeEventListener('visibilitychange', refresh) }
   }, [conversationId, send, version, paused])
 
-  useEffect(() => { bottom.current?.scrollIntoView?.({ block: 'nearest' }) }, [count])
+  function followLatest() {
+    if (nearBottom.current && scroll.current) scroll.current.scrollTop = scroll.current.scrollHeight
+  }
+  useLayoutEffect(() => { followLatest() }, [count])
   useEffect(() => {
     if (!composer.current) return
     composer.current.style.height = 'auto'
@@ -49,43 +77,58 @@ function ChatThread({ conversationId, send, onClosed, paused = false }) {
   }, [text, active?.Status])
   useEffect(() => { if (!paused && !busy && active?.Status === 'Open') composer.current?.focus() }, [busy, active?.Status, paused])
 
-  async function submit(event) {
-    event.preventDefault()
-    const content = text.trim()
-    if (!content || busy) return
-    setBusy('send'); setError('')
+  async function sendMessage(draft) {
+    const content = draft.trim()
+    if (!content || actionLock.current) return
+    actionLock.current = true
+    setBusy('send'); setActionError(null)
     try {
       const message = await send(`/conversations/${encodeURIComponent(conversationId)}/messages`, {
         method: 'POST', body: { MessageType: 'Text', Content: content },
       })
+      nearBottom.current = true
       setDetail((current) => ({ ...current, Messages: [...(current?.Messages ?? []).filter((item) => item.MessageId !== message.MessageId), message] }))
-      setText(''); setVersion((value) => value + 1)
-    } catch (failure) { setError(failure.message) }
-    finally { setBusy('') }
+      clearDraft(draft); setVersion((value) => value + 1)
+    } catch (failure) { setActionError({ operation: 'send', message: failure.message, draft }) }
+    finally { actionLock.current = false; setBusy('') }
+  }
+
+  function submit(event) {
+    event.preventDefault()
+    sendMessage(text)
   }
 
   async function close() {
-    setBusy('close'); setError('')
+    if (actionLock.current) return
+    actionLock.current = true
+    setBusy('close'); setActionError(null)
     try {
       const closed = await send(`/conversations/${encodeURIComponent(conversationId)}/close`, { method: 'POST' })
       setDetail((current) => ({ ...current, ...closed, Status: 'Closed' }))
       onClosed(closed)
     }
-    catch (failure) { setError(failure.message) }
-    finally { setBusy('') }
+    catch (failure) { setActionError({ operation: 'close', message: failure.message }) }
+    finally { actionLock.current = false; setBusy('') }
   }
 
   return <section className="chat-thread" aria-label="Hội thoại với nhân viên">
     {active?.Status === 'Closed' && <p className="chat-closed-status" role="status">Hội thoại đã kết thúc</p>}
-    {error && <p className="shopping-notice" role="alert">{error} <button type="button" onClick={() => setVersion((value) => value + 1)}>Thử lại</button></p>}
-    {!active && !error ? <LoadingState /> : <>
-      <div className="chat-messages" role="log" aria-label="Tin nhắn" aria-live="polite">
+    {loadError && <p className="shopping-notice" role="alert">{loadError} <button type="button" onClick={() => setVersion((value) => value + 1)}>Thử lại</button></p>}
+    {actionError && <div className="shopping-notice" role="alert">
+      {actionError.message}
+      {actionError.operation === 'send' && <p className="chat-failed-text">Tin chưa gửi: {actionError.draft}</p>}
+      <button type="button" disabled={!!busy || active?.Status !== 'Open'} onClick={() => actionError.operation === 'send' ? sendMessage(actionError.draft) : close()}>Thử lại</button>
+    </div>}
+    {!active ? !loadError && <LoadingState /> : <>
+      <div ref={scroll} className="chat-messages" role="log" aria-label="Tin nhắn" aria-live="polite"
+        onScroll={(event) => {
+          const node = event.currentTarget
+          nearBottom.current = node.scrollHeight - node.scrollTop - node.clientHeight <= 64
+        }}>
         {messages.length ? messages.map((message) => <article key={message.MessageId}
           className={`chat-message ${message.SenderType === 'Customer' ? 'is-mine' : ''}`}>
           <strong>{message.SenderType === 'Customer' ? 'Bạn' : message.SenderType === 'Staff' ? 'Nhân viên VieTech' : 'Trợ lý'}</strong>
-          {message.MessageType === 'Image' && /^https:\/\//.test(message.Content)
-            ? <a href={message.Content} target="_blank" rel="noreferrer">Xem ảnh đính kèm</a>
-            : <p>{message.Content}</p>}
+          <ChatMessageContent message={message} onImageLoad={followLatest} />
           <time dateTime={message.SentAt}>{formatDateTime(message.SentAt)}</time>
         </article>) : <div className="chat-welcome">
           <span className="chat-welcome-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
@@ -94,7 +137,6 @@ function ChatThread({ conversationId, send, onClosed, paused = false }) {
           <strong>Bạn cần hỗ trợ gì?</strong>
           <p>Gửi lời nhắn để nhân viên VieTech tiếp nhận và hỗ trợ bạn.</p>
         </div>}
-        <div ref={bottom} />
       </div>
       {active?.Status === 'Open' && <form className="chat-compose" aria-label="Soạn tin nhắn" onSubmit={submit}>
         <label htmlFor="staff-message" className="sr-only">Nội dung tin nhắn</label>
@@ -120,7 +162,7 @@ function ChatThread({ conversationId, send, onClosed, paused = false }) {
 
 // Mounted only after a customer opens chat (or returns here after signing in).
 // The server reuses an open Staff conversation; initialization never closes a different conversation.
-export function StaffChat({ onDismiss, titleId }) {
+export function StaffChat({ onDismiss, titleId, initialConversationId = '' }) {
   const send = useCustomerRequest()
   const [historyPage, setHistoryPage] = useState(1)
   const conversations = useApiData(`my-conversations:${historyPage}`, (signal) => send('/conversations', { query: { page: historyPage, page_size: 20 }, signal }))
@@ -146,6 +188,14 @@ export function StaffChat({ onDismiss, titleId }) {
     const controller = new AbortController()
     async function openChat() {
       try {
+        if (initialConversationId) {
+          const conversation = await send(`/conversations/${encodeURIComponent(initialConversationId)}`, { signal: controller.signal })
+          if (!controller.signal.aborted) {
+            setSession(conversation.Mode === 'Staff' ? { conversation } : { blocked: conversation })
+            reloadHistory()
+          }
+          return
+        }
         const response = await send('/conversations', { query: { status: 'Open', page_size: 1 }, signal: controller.signal })
         if (controller.signal.aborted) return
         const open = response.Items?.[0]
@@ -163,7 +213,7 @@ export function StaffChat({ onDismiss, titleId }) {
     }
     openChat()
     return () => controller.abort()
-  }, [send, attempt, reloadHistory])
+  }, [send, attempt, reloadHistory, initialConversationId])
 
   useEffect(() => () => creation.current?.abort(), [])
   useEffect(() => {
@@ -257,7 +307,9 @@ export function StaffChat({ onDismiss, titleId }) {
 }
 
 export default function ChatPage() {
+  const [params] = useSearchParams()
+  const id = params.get('conversation') || ''
   return <div className="shopping-page chat-page"><h1 className="sr-only">Chat với nhân viên</h1>
-    <StaffChat />
+    <StaffChat key={id} initialConversationId={id} />
   </div>
 }

@@ -1,0 +1,3776 @@
+{
+ "batch": "catalog-colors-2026-10-18",
+ "prepared_at": "2026-10-17T17:37:05.979561+00:00",
+ "purpose": "Màu sắc tham khảo từ trang nguồn của bộ sản phẩm mẫu; mỗi màu mới có tồn mẫu 10 đơn vị.",
+ "sample_quantity_per_variant": 10,
+ "sample_cost_ratio": "0.80",
+ "products": [
+  {
+   "slug": "iphone-13-128gb-c5c5aae6",
+   "name": "iPhone 13 128GB",
+   "sku": "VT-DEMO-20261017-C5C5AAE68AEE",
+   "source_url": "https://cellphones.com.vn/iphone-13.html",
+   "base_color": "Trắng",
+   "colors": [
+    {
+     "color": "Đỏ",
+     "price": 13490000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/f/i/file_3_10.jpg"
+    },
+    {
+     "color": "Hồng",
+     "price": 13490000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/h/_/h_ng_4.jpg"
+    },
+    {
+     "color": "Xanh lá",
+     "price": 13490000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/x/n/xnnah_kas_3.png"
+    },
+    {
+     "color": "Đen",
+     "price": 15290000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/_/e/_en_2_5.jpg"
+    },
+    {
+     "color": "Trắng",
+     "price": 14290000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/t/r/tr_ng_5.jpg"
+    },
+    {
+     "color": "Xanh dương",
+     "price": 13490000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/d/_/d_ng_3.jpg"
+    }
+   ]
+  },
+  {
+   "slug": "honor-600-5g-8gb-256gb-28c40e34",
+   "name": "HONOR 600 5G 8GB 256GB",
+   "sku": "VT-DEMO-20261017-28C40E34C531",
+   "source_url": "https://cellphones.com.vn/dien-thoai-honor-600.html",
+   "base_color": "Cam",
+   "colors": [
+    {
+     "color": "Cam",
+     "price": 14490000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/d/i/dien-thoai-honor-600-5g_2.jpg"
+    },
+    {
+     "color": "Vàng Trắng",
+     "price": 14490000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/d/i/dien-thoai-honor-600-5g-1_1.jpg"
+    },
+    {
+     "color": "Đen",
+     "price": 14490000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/d/i/dien-thoai-honor-600-5g-2_2.jpg"
+    }
+   ]
+  },
+  {
+   "slug": "dien-thoai-itel-p55-plus-nfc-8gb-256gb-93ce1d13",
+   "name": "Điện thoại Itel P55 Plus NFC 8GB 256GB",
+   "sku": "VT-DEMO-20261017-93CE1D139A16",
+   "source_url": "https://cellphones.com.vn/dien-thoai-itel-p55-plus-8gb-256gb.html",
+   "base_color": "Tím",
+   "colors": [
+    {
+     "color": "Tím",
+     "price": 3409000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/d/i/dien-thoai-itel-p55-plus-8gb-256gb_2__2_1.png"
+    },
+    {
+     "color": "Xanh lá",
+     "price": 3409000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/d/i/dien-thoai-itel-p55-plus-8gb-256gb_1__2_1.png"
+    },
+    {
+     "color": "Đen",
+     "price": 3409000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/d/i/dien-thoai-itel-p55-plus-8gb-256gb.1_1_2.png"
+    }
+   ]
+  },
+  {
+   "slug": "meizu-lucky-08-5g-8gb-256gb-950811a0",
+   "name": "Meizu Lucky 08 5G 8GB 256GB",
+   "sku": "VT-DEMO-20261017-950811A0E80F",
+   "source_url": "https://cellphones.com.vn/dien-thoai-meizu-lucky-08-8gb-256gb.html",
+   "base_color": "Đen",
+   "colors": [
+    {
+     "color": "Đen",
+     "price": 5500000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/m/e/meizu-lucky-08-den.jpg"
+    },
+    {
+     "color": "Xanh lá",
+     "price": 5500000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/m/e/meizu-lucky-08_1.jpg"
+    },
+    {
+     "color": "Trắng",
+     "price": 5500000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/m/e/meizu-lucky-08-tr_1.jpg"
+    }
+   ]
+  },
+  {
+   "slug": "nubia-neo-5-gt-special-edition-12gb-256gb-eb613462",
+   "name": "Nubia Neo 5 GT Special Edition 12GB 256GB",
+   "sku": "VT-DEMO-20261017-EB6134624B74",
+   "source_url": "https://cellphones.com.vn/dien-thoai-nubia-neo-5-gt-special-edition.html",
+   "base_color": "Bạc",
+   "colors": [
+    {
+     "color": "Bạc",
+     "price": 12990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/n/u/nubia-neo-5-gt-special-edition-1.jpg"
+    },
+    {
+     "color": "Đen",
+     "price": 12990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/n/u/nubia-neo-5-gt-special-edition.jpg"
+    }
+   ]
+  },
+  {
+   "slug": "oppo-find-x8-16gb-512gb-a73a884b",
+   "name": "OPPO Find X8 16GB 512GB",
+   "sku": "VT-DEMO-20261017-A73A884B92A0",
+   "source_url": "https://cellphones.com.vn/dien-thoai-oppo-find-x8.html",
+   "base_color": "Xám",
+   "colors": [
+    {
+     "color": "Xám",
+     "price": 18490000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/c/o/combo_product_find_x8_-_grey_1.png"
+    },
+    {
+     "color": "Đen",
+     "price": 18490000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/c/o/combo_product_find_x8_-_black_1.png"
+    }
+   ]
+  },
+  {
+   "slug": "samsung-galaxy-a07-5g-4gb-128gb-b208d709",
+   "name": "Samsung Galaxy A07 5G 4GB 128GB",
+   "sku": "VT-DEMO-20261017-B208D709B5B4",
+   "source_url": "https://cellphones.com.vn/dien-thoai-samsung-galaxy-a07-5g.html",
+   "base_color": "Đen",
+   "colors": [
+    {
+     "color": "Đen",
+     "price": 4490000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/s/a/samsung-galaxy-a07-5g-2_2.jpg"
+    },
+    {
+     "color": "Xanh ngọc bích",
+     "price": 4490000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/s/a/samsung-galaxy-a07-5g-1_2.jpg"
+    },
+    {
+     "color": "Tím",
+     "price": 4490000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/s/a/samsung-galaxy-a07-5g_2.jpg"
+    }
+   ]
+  },
+  {
+   "slug": "xiaomi-17t-pro-5g-12gb-512gb-c134e4a8",
+   "name": "Xiaomi 17T Pro 5G 12GB 512GB",
+   "sku": "VT-DEMO-20261017-C134E4A89829",
+   "source_url": "https://cellphones.com.vn/dien-thoai-xiaomi-17t-pro.html",
+   "base_color": "Xanh Đậm",
+   "colors": [
+    {
+     "color": "Xanh Đậm",
+     "price": 19990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/x/i/xiaomi-17t-pro-1_2.jpg"
+    },
+    {
+     "color": "Đen",
+     "price": 19990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/x/i/xiaomi-17t-pro_2.jpg"
+    }
+   ]
+  },
+  {
+   "slug": "dien-thoai-iphone-16-pro-max-256gb-cd854430",
+   "name": "Điện thoại iPhone 16 Pro Max 256GB",
+   "sku": "VT-DEMO-20261017-CD8544302DD5",
+   "source_url": "https://cellphones.com.vn/iphone-16-pro-max.html",
+   "base_color": "Titan Đen",
+   "colors": [
+    {
+     "color": "Titan Đen",
+     "price": 30990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/i/p/iphone-16-pro-max-titan-den.png"
+    },
+    {
+     "color": "Titan Tự Nhiên",
+     "price": 30990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/i/p/iphone-16-pro-max-titan-tu-nhien.png"
+    },
+    {
+     "color": "Titan Trắng",
+     "price": 30990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/i/p/iphone-16-pro-max-titan-trang.png"
+    },
+    {
+     "color": "Titan Sa Mạc",
+     "price": 30990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/i/p/iphone-16-pro-max-titan-sa-mac.png"
+    }
+   ]
+  },
+  {
+   "slug": "honor-x7d-5g-8gb-256gb-b3f8936d",
+   "name": "HONOR X7d 5G 8GB 256GB",
+   "sku": "VT-DEMO-20261017-B3F8936DFBE0",
+   "source_url": "https://cellphones.com.vn/dien-thoai-honor-x7d-5g-8gb-256gb.html",
+   "base_color": "Đen",
+   "colors": [
+    {
+     "color": "Đen",
+     "price": 6890000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/d/i/dien-thoai-honor-x7d-5g-8gb-256gb_1.jpg"
+    }
+   ]
+  },
+  {
+   "slug": "dien-thoai-meizu-mblu-22-pro-nfc-4gb-128gb-73696a3a",
+   "name": "Điện thoại Meizu Mblu 22 Pro NFC 4GB 128GB",
+   "sku": "VT-DEMO-20261017-73696A3A68E3",
+   "source_url": "https://cellphones.com.vn/dien-thoai-meizu-mblu-22-pro.html",
+   "base_color": "Trắng",
+   "colors": [
+    {
+     "color": "Trắng",
+     "price": 3315000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/m/e/meizu-mblu-22-pro.jpg"
+    },
+    {
+     "color": "Đen",
+     "price": 3315000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/m/e/meizu-mblu-22-pro-black.jpg"
+    },
+    {
+     "color": "Xanh dương",
+     "price": 3315000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/m/e/meizu-mblu-22-pro.png"
+    }
+   ]
+  },
+  {
+   "slug": "oppo-reno15-5g-12gb-256gb-1fbc509b",
+   "name": "OPPO Reno15 5G 12GB 256GB",
+   "sku": "VT-DEMO-20261017-1FBC509BEAEF",
+   "source_url": "https://cellphones.com.vn/dien-thoai-oppo-reno15.html",
+   "base_color": "Xanh dương",
+   "colors": [
+    {
+     "color": "Xanh dương",
+     "price": 13990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/o/p/oppo-reno15-02_14.jpg"
+    },
+    {
+     "color": "Trắng",
+     "price": 13990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/o/p/oppo-reno15-01_14.jpg"
+    }
+   ]
+  },
+  {
+   "slug": "samsung-galaxy-a37-5g-8gb-128gb-3756e423",
+   "name": "Samsung Galaxy A37 5G 8GB 128GB",
+   "sku": "VT-DEMO-20261017-3756E423AFE8",
+   "source_url": "https://cellphones.com.vn/dien-thoai-samsung-galaxy-a37.html",
+   "base_color": "Xanh",
+   "colors": [
+    {
+     "color": "Xanh",
+     "price": 9990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/d/i/dien-thoai-samsung-galaxy-a37-1_2.jpg"
+    },
+    {
+     "color": "Trắng",
+     "price": 9990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/d/i/dien-thoai-samsung-galaxy-a37-3_2.jpg"
+    },
+    {
+     "color": "Đen",
+     "price": 9990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/d/i/dien-thoai-samsung-galaxy-a37_1.jpg"
+    },
+    {
+     "color": "Tím",
+     "price": 9990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/d/i/dien-thoai-samsung-galaxy-a37-2_3.jpg"
+    }
+   ]
+  },
+  {
+   "slug": "xiaomi-17t-5g-12gb-512gb-3ac70de8",
+   "name": "Xiaomi 17T 5G 12GB 512GB",
+   "sku": "VT-DEMO-20261017-3AC70DE81B8C",
+   "source_url": "https://cellphones.com.vn/dien-thoai-xiaomi-17t.html",
+   "base_color": "Tím",
+   "colors": [
+    {
+     "color": "Tím",
+     "price": 16490000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/x/i/xiaomi-17t_1.jpg"
+    },
+    {
+     "color": "Đen",
+     "price": 16490000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/x/i/xiaomi-17t-2_1.jpg"
+    }
+   ]
+  },
+  {
+   "slug": "iphone-16-128gb-555eff42",
+   "name": "iPhone 16 128GB",
+   "sku": "VT-DEMO-20261017-555EFF42AD5E",
+   "source_url": "https://cellphones.com.vn/iphone-16.html",
+   "base_color": "Hồng",
+   "colors": [
+    {
+     "color": "Hồng",
+     "price": 22990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/i/p/iphone-16-hong.png"
+    },
+    {
+     "color": "Xanh Mòng Két",
+     "price": 22990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/i/p/iphone-16-xanh-mong-ket.png"
+    },
+    {
+     "color": "Trắng",
+     "price": 22990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/i/p/iphone-16-trang.png"
+    },
+    {
+     "color": "Đen",
+     "price": 22990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/i/p/iphone-16-den.png"
+    },
+    {
+     "color": "Xanh Lưu Ly",
+     "price": 22990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/i/p/iphone-16-xanh-luu-ly.png"
+    }
+   ]
+  },
+  {
+   "slug": "dien-thoai-meizu-mblu-note-21-pro-nfc-8gb-256gb-78659404",
+   "name": "Điện thoại Meizu Mblu Note 21 Pro NFC 8GB 256GB",
+   "sku": "VT-DEMO-20261017-786594040DA1",
+   "source_url": "https://cellphones.com.vn/dien-thoai-meizu-mblu-note-21-pro.html",
+   "base_color": "Đen",
+   "colors": [
+    {
+     "color": "Đen",
+     "price": 4540000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/m/e/meizu-note21pro.jpg"
+    },
+    {
+     "color": "Xanh",
+     "price": 4540000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/m/e/meizu-note21pro-2.jpg"
+    },
+    {
+     "color": "Trắng",
+     "price": 4540000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/m/e/meizu-note21pro-1.jpg"
+    }
+   ]
+  },
+  {
+   "slug": "oppo-reno16-f-5g-8gb-256gb-33f132bf",
+   "name": "OPPO Reno16 F 5G 8GB 256GB",
+   "sku": "VT-DEMO-20261017-33F132BF8F61",
+   "source_url": "https://cellphones.com.vn/dien-thoai-oppo-reno16-f.html",
+   "base_color": "Tím nhạt",
+   "colors": [
+    {
+     "color": "Tím nhạt",
+     "price": 14990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/o/p/oppo-reno16-f-03_1.jpg"
+    },
+    {
+     "color": "Trắng",
+     "price": 14990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/o/p/oppo-reno16-f-02_4.jpg"
+    },
+    {
+     "color": "Tím đen",
+     "price": 14990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/o/p/oppo-reno16-f-01_1.jpg"
+    }
+   ]
+  },
+  {
+   "slug": "samsung-galaxy-a57-5g-8gb-128gb-85e92384",
+   "name": "Samsung Galaxy A57 5G 8GB 128GB",
+   "sku": "VT-DEMO-20261017-85E92384EA4D",
+   "source_url": "https://cellphones.com.vn/dien-thoai-samsung-galaxy-a57.html",
+   "base_color": "Đen",
+   "colors": [
+    {
+     "color": "Đen",
+     "price": 10490000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/d/i/dien-thoai-samsung-galaxy-a57-3.jpg"
+    },
+    {
+     "color": "Xám",
+     "price": 10490000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/d/i/dien-thoai-samsung-galaxy-a57_2.jpg"
+    },
+    {
+     "color": "Xanh dương",
+     "price": 10490000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/d/i/dien-thoai-samsung-galaxy-a57-1.jpg"
+    },
+    {
+     "color": "Tím",
+     "price": 10490000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/d/i/dien-thoai-samsung-galaxy-a57-2_1.jpg"
+    }
+   ]
+  },
+  {
+   "slug": "xiaomi-poco-f9-ultra-5g-16gb-512gb-5e1f2ac4",
+   "name": "Xiaomi POCO F9 Ultra 5G 16GB 512GB",
+   "sku": "VT-DEMO-20261017-5E1F2AC455D9",
+   "source_url": "https://cellphones.com.vn/dien-thoai-xiaomi-poco-f9-ultra-16gb-512gb.html",
+   "base_color": "Đen",
+   "colors": [
+    {
+     "color": "Đen",
+     "price": 24690000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/x/i/xiaomi-poco-f9-ultra-black_5.jpg"
+    },
+    {
+     "color": "Đỏ",
+     "price": 24690000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/x/i/xiaomi-poco-f9-ultra-red_5.jpg"
+    }
+   ]
+  },
+  {
+   "slug": "iphone-16e-128gb-a7b5be91",
+   "name": "iPhone 16e 128GB",
+   "sku": "VT-DEMO-20261017-A7B5BE91DE86",
+   "source_url": "https://cellphones.com.vn/iphone-16e.html",
+   "base_color": "Đen",
+   "colors": [
+    {
+     "color": "Đen",
+     "price": 14290000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/i/p/iphone-16e-128gb_1_1.png"
+    },
+    {
+     "color": "Trắng",
+     "price": 14290000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/i/p/iphone-16e-128gb_1__1.png"
+    }
+   ]
+  },
+  {
+   "slug": "oppo-find-n3-16gb-512gb-ccff1cac",
+   "name": "OPPO Find N3 16GB 512GB",
+   "sku": "VT-DEMO-20261017-CCFF1CAC2161",
+   "source_url": "https://cellphones.com.vn/oppo-find-n3.html",
+   "base_color": "Vàng",
+   "colors": [
+    {
+     "color": "Vàng",
+     "price": 25590000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/f/i/find_n3_-_combo_product_-_gold_1.png"
+    },
+    {
+     "color": "Đen",
+     "price": 25590000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/f/i/find_n3_-_combo_product_-_black_1.png"
+    }
+   ]
+  },
+  {
+   "slug": "samsung-galaxy-s25-plus-256gb-d2cb2a2f",
+   "name": "Samsung Galaxy S25 Plus 256GB",
+   "sku": "VT-DEMO-20261017-D2CB2A2FFD3C",
+   "source_url": "https://cellphones.com.vn/dien-thoai-samsung-galaxy-s25-plus.html",
+   "base_color": "Xanh lá",
+   "colors": [
+    {
+     "color": "Xanh lá",
+     "price": 19350000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/d/i/dien-thoai-samsung-galaxy-s25-plus_1__6.png"
+    },
+    {
+     "color": "Xanh da trời",
+     "price": 19350000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/d/i/dien-thoai-samsung-galaxy-s25-plus_2__2.png"
+    },
+    {
+     "color": "Xám bạc",
+     "price": 19350000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/d/i/dien-thoai-samsung-galaxy-s25-plus_3__2.png"
+    },
+    {
+     "color": "Xanh navy",
+     "price": 19350000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/d/i/dien-thoai-samsung-galaxy-s25-plus_6.png"
+    }
+   ]
+  },
+  {
+   "slug": "xiaomi-redmi-note-14-pro-plus-5g-8gb-256gb-213b7836",
+   "name": "Xiaomi Redmi Note 14 Pro Plus 5G 8GB 256GB",
+   "sku": "VT-DEMO-20261017-213B783688CE",
+   "source_url": "https://cellphones.com.vn/dien-thoai-xiaomi-redmi-note-14-pro-plus.html",
+   "base_color": "Vàng",
+   "colors": [
+    {
+     "color": "Vàng",
+     "price": 7650000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/r/e/redmi-note-14-pro-plus.jpg"
+    },
+    {
+     "color": "Tím",
+     "price": 7650000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/d/i/dien-thoai-xiaomi-redmi-note-14-pro-plus.1.png"
+    },
+    {
+     "color": "Đen",
+     "price": 7650000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/d/i/dien-thoai-xiaomi-redmi-note-14-pro-plus_1.png"
+    },
+    {
+     "color": "Xanh dương",
+     "price": 7650000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/d/i/dien-thoai-xiaomi-redmi-note-14-pro-plus.2.png"
+    }
+   ]
+  },
+  {
+   "slug": "iphone-17-256gb-bcb830f2",
+   "name": "iPhone 17 256GB",
+   "sku": "VT-DEMO-20261017-BCB830F22EE9",
+   "source_url": "https://cellphones.com.vn/iphone-17-256gb.html",
+   "base_color": "Xanh Lá Xô Thơm",
+   "colors": [
+    {
+     "color": "Xanh Lá Xô Thơm",
+     "price": 26990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/i/p/iphone_17_sage_pdp_image_position_1_sage_color__vn-vi_1.jpg"
+    },
+    {
+     "color": "Đen",
+     "price": 26990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/i/p/iphone_17_256gb_2.jpg"
+    },
+    {
+     "color": "Xanh Lam Khói",
+     "price": 26990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/i/p/iphone_17_256gb-2.jpg"
+    },
+    {
+     "color": "Tím Oải Hương",
+     "price": 26990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/i/p/iphone_17_256gb-3.jpg"
+    },
+    {
+     "color": "Trắng",
+     "price": 26990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/2/5/256gb_2.jpg"
+    }
+   ]
+  },
+  {
+   "slug": "oppo-find-x5-pro-5g-12gb-256gb-17e7a43f",
+   "name": "OPPO Find X5 Pro 5G 12GB 256GB",
+   "sku": "VT-DEMO-20261017-17E7A43FCE6E",
+   "source_url": "https://cellphones.com.vn/oppo-find-x5-pro.html",
+   "base_color": "Đen",
+   "colors": [
+    {
+     "color": "Đen",
+     "price": 12290000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/o/p/oppo-find-x5-pro-den_1.jpg"
+    },
+    {
+     "color": "Trắng",
+     "price": 12290000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/o/p/oppo-find-x5-pro-trang_1.jpg"
+    }
+   ]
+  },
+  {
+   "slug": "samsung-galaxy-s25-ultra-12gb-256gb-4d2acd49",
+   "name": "Samsung Galaxy S25 Ultra 12GB 256GB",
+   "sku": "VT-DEMO-20261017-4D2ACD499B67",
+   "source_url": "https://cellphones.com.vn/dien-thoai-samsung-galaxy-s25-ultra.html",
+   "base_color": "Trắng/bạc",
+   "colors": [
+    {
+     "color": "Trắng/bạc",
+     "price": 24190000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/d/i/dien-thoai-samsung-galaxy-s25-ultra_5.png"
+    },
+    {
+     "color": "Xám",
+     "price": 24190000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/d/i/dien-thoai-samsung-galaxy-s25-ultra_1__6.png"
+    },
+    {
+     "color": "Đen",
+     "price": 24190000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/d/i/dien-thoai-samsung-galaxy-s25-ultra_3__6.png"
+    },
+    {
+     "color": "Xanh dương",
+     "price": 24190000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/d/i/dien-thoai-samsung-galaxy-s25-ultra_2__6.png"
+    }
+   ]
+  },
+  {
+   "slug": "xiaomi-redmi-note-17-pro-max-5g-8gb-512gb-4bfbcc4d",
+   "name": "Xiaomi Redmi Note 17 Pro Max 5G 8GB 512GB",
+   "sku": "VT-DEMO-20261017-4BFBCC4D33D5",
+   "source_url": "https://cellphones.com.vn/dien-thoai-xiaomi-redmi-note-17-pro-max-5g.html",
+   "base_color": "Tím",
+   "colors": [
+    {
+     "color": "Tím",
+     "price": 13990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/x/i/xiaomi-redmi-note-17-pro-max-5g-purple_1.jpg"
+    },
+    {
+     "color": "Trắng",
+     "price": 13990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/x/i/xiaomi-redmi-note-17-pro-max-5g-white_1.jpg"
+    },
+    {
+     "color": "Đen",
+     "price": 13990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/x/i/xiaomi-redmi-note-17-pro-max-5g-black_1.jpg"
+    }
+   ]
+  },
+  {
+   "slug": "iphone-17-pro-max-512gb-219cdb29",
+   "name": "iPhone 17 Pro Max 512GB",
+   "sku": "VT-DEMO-20261017-219CDB292F72",
+   "source_url": "https://cellphones.com.vn/iphone-17-pro-max-512gb.html",
+   "base_color": "Xanh Đậm",
+   "colors": [
+    {
+     "color": "Cam Vũ Trụ",
+     "price": 41490000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/i/p/iphone-17-pro-max_1.jpg"
+    },
+    {
+     "color": "Xanh Đậm",
+     "price": 41390000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/i/p/iphone-17-pro-max-1_1.jpg"
+    },
+    {
+     "color": "Bạc",
+     "price": 44490000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/i/p/iphone-17-pro-max-2_1.jpg"
+    }
+   ]
+  },
+  {
+   "slug": "oppo-reno10-pro-5g-12gb-256gb-0e3cbf94",
+   "name": "OPPO Reno10 Pro+ 5G 12GB 256GB",
+   "sku": "VT-DEMO-20261017-0E3CBF9479A5",
+   "source_url": "https://cellphones.com.vn/oppo-reno10-pro-plus.html",
+   "base_color": "Xám",
+   "colors": [
+    {
+     "color": "Xám",
+     "price": 9890000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/o/p/oppo-reno10-pro-plus-xam_1.png"
+    },
+    {
+     "color": "Tím",
+     "price": 9890000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/o/p/oppo-reno10-pro-plus-tim_1.png"
+    }
+   ]
+  },
+  {
+   "slug": "samsung-galaxy-s26-ultra-5g-12gb-256gb-ead5e9d3",
+   "name": "Samsung Galaxy S26 Ultra 5G 12GB 256GB",
+   "sku": "VT-DEMO-20261017-EAD5E9D3B780",
+   "source_url": "https://cellphones.com.vn/dien-thoai-samsung-galaxy-s26-ultra.html",
+   "base_color": "Đen Classic",
+   "colors": [
+    {
+     "color": "Đen Classic",
+     "price": 29490000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/s/a/samsung-galaxy-s26-ultra-11_2.jpg"
+    },
+    {
+     "color": "Tím Cobalt",
+     "price": 29490000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/s/a/samsung-galaxy-s26-ultra_2.jpg"
+    },
+    {
+     "color": "Trắng Classic",
+     "price": 29490000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/s/a/samsung-galaxy-s26-ultra-33_2.jpg"
+    },
+    {
+     "color": "Xanh Sky Blue",
+     "price": 29490000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/s/a/samsung-galaxy-s26-ultra-22_2.jpg"
+    }
+   ]
+  },
+  {
+   "slug": "iphone-17-pro-256gb-e51dc657",
+   "name": "iPhone 17 Pro 256GB",
+   "sku": "VT-DEMO-20261017-E51DC6572200",
+   "source_url": "https://cellphones.com.vn/iphone-17-pro.html",
+   "base_color": "Cam Vũ Trụ",
+   "colors": [
+    {
+     "color": "Cam Vũ Trụ",
+     "price": 31990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/i/p/iphone-17-pro-cam.jpg"
+    },
+    {
+     "color": "Xanh Đậm",
+     "price": 31990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/i/p/iphone-17-pro-2.jpg"
+    },
+    {
+     "color": "Bạc",
+     "price": 31990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/i/p/iphone-17-pro-3.jpg"
+    }
+   ]
+  },
+  {
+   "slug": "samsung-galaxy-z-fold8-ultra-5g-12gb-256gb-9882a4a1",
+   "name": "Samsung Galaxy Z Fold8 Ultra 5G 12GB 256GB",
+   "sku": "VT-DEMO-20261017-9882A4A1CBD7",
+   "source_url": "https://cellphones.com.vn/dien-thoai-samsung-galaxy-z-fold-8-ultra.html",
+   "base_color": "Trắng",
+   "colors": [
+    {
+     "color": "Trắng",
+     "price": 48990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/s/a/samsung-galaxy-z-fold-8-ultra-cream.jpg"
+    },
+    {
+     "color": "Đen",
+     "price": 48990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/s/u/sung-galaxy-z-fold-8-ultra-violet.jpg"
+    },
+    {
+     "color": "Tím",
+     "price": 48990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/s/a/samsung-galaxy-z-fold-8-violet-01_1.jpg"
+    }
+   ]
+  },
+  {
+   "slug": "iphone-18-pro-1tb-22e452fd",
+   "name": "iPhone 18 Pro 1TB",
+   "sku": "VT-DEMO-20261017-22E452FDBCA5",
+   "source_url": "https://cellphones.com.vn/iphone-18-pro-1tb.html",
+   "base_color": "Đen",
+   "colors": [
+    {
+     "color": "Đỏ Burgundy",
+     "price": 58490000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/i/p/iphone-18-pro-01_3.jpg"
+    },
+    {
+     "color": "Băng Thanh",
+     "price": 58490000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/i/p/iphone-18-pro-02_1.png"
+    },
+    {
+     "color": "Đen",
+     "price": 57990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/i/p/iphone-18-pro-01_1.png"
+    },
+    {
+     "color": "Bạc",
+     "price": 58490000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/i/p/iphone-18-pro-02-1_1.png"
+    }
+   ]
+  },
+  {
+   "slug": "iphone-18-pro-max-1tb-4f4c3429",
+   "name": "iPhone 18 Pro Max 1TB",
+   "sku": "VT-DEMO-20261017-4F4C34294E95",
+   "source_url": "https://cellphones.com.vn/iphone-18-pro-max-1tb.html",
+   "base_color": "Bạc",
+   "colors": [
+    {
+     "color": "Bạc",
+     "price": 61490000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/i/p/iphone-18-pro-02_1__1.png"
+    },
+    {
+     "color": "Đen",
+     "price": 61490000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/i/p/iphone-18-pro-01_3.png"
+    },
+    {
+     "color": "Băng Thanh",
+     "price": 61490000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/i/p/iphone-18-pro-02_5.png"
+    },
+    {
+     "color": "Đỏ Burgundy",
+     "price": 61490000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/i/p/iphone-18-pro-01_8.jpg"
+    }
+   ]
+  },
+  {
+   "slug": "iphone-air-256gb-dbbdc393",
+   "name": "iPhone Air 256GB",
+   "sku": "VT-DEMO-20261017-DBBDC39304D0",
+   "source_url": "https://cellphones.com.vn/iphone-air-256gb.html",
+   "base_color": "Vàng Nhạt",
+   "colors": [
+    {
+     "color": "Đen Không Gian",
+     "price": 23890000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/i/p/iphone_air-2.jpg"
+    },
+    {
+     "color": "Trắng Mây",
+     "price": 23890000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/i/p/iphone_17_256gb-4.jpg"
+    },
+    {
+     "color": "Xanh Da Trời",
+     "price": 23890000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/i/p/iphone_air.jpg"
+    },
+    {
+     "color": "Vàng Nhạt",
+     "price": 23390000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/i/p/iphone_17_256gb-5.jpg"
+    }
+   ]
+  },
+  {
+   "slug": "laptop-asus-tuf-gaming-f16-fx607vj-rl034w-49aa7733",
+   "name": "Laptop ASUS TUF Gaming F16 FX607VJ-RL034W",
+   "sku": "VT-DEMO-20261017-49AA77337743",
+   "source_url": "https://cellphones.com.vn/laptop-asus-tuf-gaming-f16-fx607vj-rl034w.html",
+   "base_color": "Xám",
+   "colors": [
+    {
+     "color": "Xám",
+     "price": 22990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/t/e/text_ng_n_7__4_147.png"
+    }
+   ]
+  },
+  {
+   "slug": "laptop-acer-aspire-lite-14-al14-44p-r0sp-a585247c",
+   "name": "Laptop Acer Aspire Lite 14 AL14-44P-R0SP",
+   "sku": "VT-DEMO-20261017-A585247C829E",
+   "source_url": "https://cellphones.com.vn/laptop-acer-aspire-lite-14-al14-44p-r0sp.html",
+   "base_color": "Bạc",
+   "colors": [
+    {
+     "color": "Bạc",
+     "price": 19990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/x/_/x_m_2_84.png"
+    }
+   ]
+  },
+  {
+   "slug": "macbook-air-m4-13-inch-2025-10cpu-8gpu-16gb-256gb-ffc97b86",
+   "name": "MacBook Air M4 13 inch 2025 10CPU 8GPU 16GB 256GB",
+   "sku": "VT-DEMO-20261017-FFC97B86B29C",
+   "source_url": "https://cellphones.com.vn/apple-macbook-air-13-m4-10cpu-8gpu-16gb-256gb-2025.html",
+   "base_color": "Ánh sao",
+   "colors": [
+    {
+     "color": "Ánh sao",
+     "price": 24990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/t/e/text_ng_n_15__7_163.png"
+    },
+    {
+     "color": "Xanh da trời",
+     "price": 24990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/t/e/text_ng_n_13__7_16.png"
+    },
+    {
+     "color": "Bạc",
+     "price": 24990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/t/e/text_ng_n_14__8_17.png"
+    },
+    {
+     "color": "Đêm xanh thẳm",
+     "price": 24990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/t/e/text_ng_n_16__6_123.png"
+    }
+   ]
+  },
+  {
+   "slug": "laptop-dell-14-dc14250-dc4c5375w1-bao-hanh-2-nam-d8977598",
+   "name": "Laptop Dell 14 DC14250 DC4C5375W1 - Bảo hành 2 năm",
+   "sku": "VT-DEMO-20261017-D897759827A8",
+   "source_url": "https://cellphones.com.vn/laptop-dell-14-dc14250-dc4c5375w1.html",
+   "base_color": "Bạc",
+   "colors": [
+    {
+     "color": "Bạc",
+     "price": 29990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/x/_/x_m_7__49.png"
+    }
+   ]
+  },
+  {
+   "slug": "laptop-gaming-gigabyte-eagle-gl6j-9ljr2vnf93sh-aea9f415",
+   "name": "Laptop Gaming Gigabyte Eagle GL6J-9LJR2VNF93SH",
+   "sku": "VT-DEMO-20261017-AEA9F415568F",
+   "source_url": "https://cellphones.com.vn/laptop-gigabyte-eagle-gl6j-9ljr2vnf93sh.html",
+   "base_color": "Đen",
+   "colors": [
+    {
+     "color": "Đen",
+     "price": 28590000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/x/_/x_m_1__1_158.png"
+    }
+   ]
+  },
+  {
+   "slug": "laptop-hp-14em0023au-d0bg7pa-e14ba295",
+   "name": "Laptop HP 14‑EM0023AU D0BG7PA",
+   "sku": "VT-DEMO-20261017-E14BA295C585",
+   "source_url": "https://cellphones.com.vn/laptop-hp-14-em0023au-d0bg7pa.html",
+   "base_color": "Vàng",
+   "colors": [
+    {
+     "color": "Vàng",
+     "price": 21990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/s/s/ssss_2_137.png"
+    }
+   ]
+  },
+  {
+   "slug": "laptop-lenovo-ideapad-slim-3-14ahp10-83k9004rvn-47607ad3",
+   "name": "Laptop Lenovo IdeaPad Slim 3 14AHP10 83K9004RVN",
+   "sku": "VT-DEMO-20261017-47607AD3BACC",
+   "source_url": "https://cellphones.com.vn/laptop-lenovo-ideapad-slim-3-14ahp10-83k9004rvn.html",
+   "base_color": "Xám",
+   "colors": [
+    {
+     "color": "Xám",
+     "price": 25990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/x/_/x_m_2__171.png"
+    }
+   ]
+  },
+  {
+   "slug": "laptop-msi-cyborg-15-a13uc-2082vn-7b20ca96",
+   "name": "Laptop MSI Cyborg 15 A13UC-2082VN",
+   "sku": "VT-DEMO-20261017-7B20CA9639BE",
+   "source_url": "https://cellphones.com.vn/laptop-msi-cyborg-15-a13uc-2082vn.html",
+   "base_color": "Đen",
+   "colors": [
+    {
+     "color": "Đen",
+     "price": 30690000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/t/e/text_ng_n_3__9_27.png"
+    }
+   ]
+  },
+  {
+   "slug": "laptop-asus-vivobook-14-x1404va-eb355w-83608e25",
+   "name": "Laptop ASUS Vivobook 14 X1404VA-EB355W",
+   "sku": "VT-DEMO-20261017-83608E25BE32",
+   "source_url": "https://cellphones.com.vn/laptop-asus-vivobook-14-x1404va-eb355w.html",
+   "base_color": "Bạc",
+   "colors": [
+    {
+     "color": "Bạc",
+     "price": 22990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/s/s/ssss_8__33.png"
+    }
+   ]
+  },
+  {
+   "slug": "laptop-acer-gaming-aspire-7-a715-59g-59rd-554d761e",
+   "name": "Laptop Acer Gaming Aspire 7 A715-59G-59RD",
+   "sku": "VT-DEMO-20261017-554D761E55D4",
+   "source_url": "https://cellphones.com.vn/laptop-acer-gaming-aspire-7-a715-59g-59rd.html",
+   "base_color": "Đen",
+   "colors": [
+    {
+     "color": "Đen",
+     "price": 25990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/x/_/x_m_3__89.png"
+    }
+   ]
+  },
+  {
+   "slug": "macbook-air-m5-13-inch-2026-10cpu-10gpu-24gb-1tb-sac-70w-5f92afbb",
+   "name": "MacBook Air M5 13 inch 2026 10CPU 10GPU 24GB 1TB Sạc 70W",
+   "sku": "VT-DEMO-20261017-5F92AFBB4042",
+   "source_url": "https://cellphones.com.vn/macbook-air-13-inch-m5-10-cpu-10-gpu-24gb-1tb-2026-sac-70w.html",
+   "base_color": "Đêm xanh thẳm",
+   "colors": [
+    {
+     "color": "Đêm xanh thẳm",
+     "price": 46990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/_/e/_en_1__1_4.png"
+    },
+    {
+     "color": "Ánh sao",
+     "price": 46990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/_/n/_nh_sao_1__1.png"
+    },
+    {
+     "color": "Bạc",
+     "price": 46990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/b/_/b_c_3_22.png"
+    },
+    {
+     "color": "Xanh da trời",
+     "price": 46990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/x/a/xanh_d_ng_2_9.png"
+    }
+   ]
+  },
+  {
+   "slug": "laptop-dell-14-dc14250-dc4c5386w-5faae444",
+   "name": "Laptop Dell 14 DC14250 DC4C5386W",
+   "sku": "VT-DEMO-20261017-5FAAE4443595",
+   "source_url": "https://cellphones.com.vn/laptop-dell-14-dc14250-dc4c5386w.html",
+   "base_color": "Bạc",
+   "colors": [
+    {
+     "color": "Bạc",
+     "price": 26990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/s/s/ssss_1_126.png"
+    }
+   ]
+  },
+  {
+   "slug": "laptop-hp-omnibook-5-16-ag1068au-bz7t0pa-0a79bb30",
+   "name": "Laptop HP Omnibook 5 16-AG1068AU BZ7T0PA",
+   "sku": "VT-DEMO-20261017-0A79BB300D40",
+   "source_url": "https://cellphones.com.vn/laptop-hp-omnibook-5-16-ag1068au-bz7t0pa-ryzen-ai-5.html",
+   "base_color": "Bạc",
+   "colors": [
+    {
+     "color": "Bạc",
+     "price": 26990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/s/s/ssss_1_63_2.png"
+    }
+   ]
+  },
+  {
+   "slug": "laptop-lenovo-ideapad-slim-3-14iwc11-83rq002pvn-ae6822f7",
+   "name": "Laptop Lenovo IdeaPad Slim 3 14IWC11 83RQ002PVN",
+   "sku": "VT-DEMO-20261017-AE6822F73900",
+   "source_url": "https://cellphones.com.vn/laptop-lenovo-ideapad-slim-3-14iwc11-83rq002pvn.html",
+   "base_color": "Xám",
+   "colors": [
+    {
+     "color": "Xám",
+     "price": 18990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/x/_/x_m_1__1_95.png"
+    }
+   ]
+  },
+  {
+   "slug": "laptop-msi-katana-15-b13vek-2440vn-e8bd3031",
+   "name": "Laptop MSI Katana 15 B13VEK-2440VN",
+   "sku": "VT-DEMO-20261017-E8BD3031D92E",
+   "source_url": "https://cellphones.com.vn/laptop-msi-katana-15-b13vek-2440vn.html",
+   "base_color": "Đen",
+   "colors": [
+    {
+     "color": "Đen",
+     "price": 34990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/s/s/sssxs_2.png"
+    }
+   ]
+  },
+  {
+   "slug": "laptop-asus-vivobook-14-x1407ca-ly008w-e8f1f476",
+   "name": "Laptop ASUS VivoBook 14 X1407CA-LY008W",
+   "sku": "VT-DEMO-20261017-E8F1F4760BFC",
+   "source_url": "https://cellphones.com.vn/laptop-asus-vivobook-14-x1407ca-ly008w.html",
+   "base_color": "Bạc",
+   "colors": [
+    {
+     "color": "Bạc",
+     "price": 23590000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/s/s/ssss_2_26.png"
+    }
+   ]
+  },
+  {
+   "slug": "laptop-acer-gaming-nitro-propanel-anv15-52-50va-d6a84048",
+   "name": "Laptop Acer Gaming Nitro ProPanel ANV15-52-50VA",
+   "sku": "VT-DEMO-20261017-D6A84048580F",
+   "source_url": "https://cellphones.com.vn/laptop-acer-gaming-nitro-v-15-propanel-anv15-52-50va.html",
+   "base_color": "Đen",
+   "colors": [
+    {
+     "color": "Đen",
+     "price": 29990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/x/_/x_m_2_31.png"
+    }
+   ]
+  },
+  {
+   "slug": "macbook-air-m5-13-inch-2026-10cpu-8gpu-16gb-512gb-sac-70w-7e0a12ce",
+   "name": "MacBook Air M5 13 inch 2026 10CPU 8GPU 16GB 512GB Sạc 70W",
+   "sku": "VT-DEMO-20261017-7E0A12CE05FD",
+   "source_url": "https://cellphones.com.vn/macbook-air-13-inch-m5-10-cpu-8-gpu-16gb-512gb-2026-sac-70w.html",
+   "base_color": "Đêm xanh thẳm",
+   "colors": [
+    {
+     "color": "Ánh sao",
+     "price": 34190000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/_/n/_nh_sao_1__3.png"
+    },
+    {
+     "color": "Xanh da trời",
+     "price": 34190000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/x/a/xanh_d_ng_2_11.png"
+    },
+    {
+     "color": "Đêm xanh thẳm",
+     "price": 32990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/_/e/_en_1__1_6.png"
+    },
+    {
+     "color": "Bạc",
+     "price": 34190000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/b/_/b_c_3_24.png"
+    }
+   ]
+  },
+  {
+   "slug": "laptop-hp-omnibook-5-ai-16-af1048tu-bz7q9pa-14020422",
+   "name": "Laptop HP Omnibook 5 AI 16-AF1048TU BZ7Q9PA",
+   "sku": "VT-DEMO-20261017-14020422BE82",
+   "source_url": "https://cellphones.com.vn/laptop-hp-omnibook-5-ai-16-af1048tu-bz7q9pa.html",
+   "base_color": "Bạc",
+   "colors": [
+    {
+     "color": "Bạc",
+     "price": 26990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/t/e/text_ng_n_2__10_21.png"
+    }
+   ]
+  },
+  {
+   "slug": "laptop-lenovo-legion-5-15irx10-83ly00hrvn-dad55ae3",
+   "name": "Laptop Lenovo Legion 5 15IRX10 83LY00HRVN",
+   "sku": "VT-DEMO-20261017-DAD55AE3DF9B",
+   "source_url": "https://cellphones.com.vn/laptop-lenovo-legion-5-15irx10-83ly00hrvn.html",
+   "base_color": "Đen",
+   "colors": [
+    {
+     "color": "Đen",
+     "price": 48990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/t/e/text_ng_n_3__9_38.png"
+    }
+   ]
+  },
+  {
+   "slug": "laptop-msi-modern-15-f1mg-1225vn-b4e89ad3",
+   "name": "Laptop MSI Modern 15 F1MG-1225VN",
+   "sku": "VT-DEMO-20261017-B4E89AD397E2",
+   "source_url": "https://cellphones.com.vn/laptop-msi-modern-15-f1mg-1225vn.html",
+   "base_color": "Xám",
+   "colors": [
+    {
+     "color": "Xám",
+     "price": 20290000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/x/_/x_m_2_20.png"
+    }
+   ]
+  },
+  {
+   "slug": "laptop-asus-vivobook-14-x1407ca-ly203w-b3095db7",
+   "name": "Laptop ASUS Vivobook 14 X1407CA-LY203W",
+   "sku": "VT-DEMO-20261017-B3095DB78427",
+   "source_url": "https://cellphones.com.vn/laptop-asus-vivobook-14-x1407ca-ly203w.html",
+   "base_color": "Bạc",
+   "colors": [
+    {
+     "color": "Bạc",
+     "price": 24390000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/x/_/x_m_2_225.png"
+    }
+   ]
+  },
+  {
+   "slug": "laptop-acer-swift-air-14-sfa14-i31-55nr-7279fa29",
+   "name": "Laptop Acer Swift Air 14 SFA14-I31-55NR",
+   "sku": "VT-DEMO-20261017-7279FA29BD41",
+   "source_url": "https://cellphones.com.vn/laptop-acer-swift-air-14-sfa14-i31-55nr.html",
+   "base_color": "Hồng",
+   "colors": [
+    {
+     "color": "Hồng",
+     "price": 24990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/x/_/x_m_1__1_152.png"
+    }
+   ]
+  },
+  {
+   "slug": "macbook-air-m5-13-inch-2026-10cpu-10gpu-16gb-1tb-ceacc687",
+   "name": "MacBook Air M5 13 inch 2026 10CPU 10GPU 16GB 1TB",
+   "sku": "VT-DEMO-20261017-CEACC6870E8C",
+   "source_url": "https://cellphones.com.vn/macbook-air-13-m5-10-cpu-10-gpu-16gb-1tb.html",
+   "base_color": "Đêm xanh thẳm",
+   "colors": [
+    {
+     "color": "Đêm xanh thẳm",
+     "price": 40890000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/_/e/_en_5_9.png"
+    },
+    {
+     "color": "Xanh da trời",
+     "price": 40890000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/x/a/xanh_5_11.png"
+    },
+    {
+     "color": "Ánh sao",
+     "price": 40890000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/v/_/v_ng_2_10.png"
+    },
+    {
+     "color": "Bạc",
+     "price": 40890000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/b/_/b_c_3_2.png"
+    }
+   ]
+  },
+  {
+   "slug": "laptop-hp-omnibook-x-flip-14-fm0088tu-bz7q2pa-412d7fde",
+   "name": "Laptop HP Omnibook X Flip 14-FM0088TU BZ7Q2PA",
+   "sku": "VT-DEMO-20261017-412D7FDED1F8",
+   "source_url": "https://cellphones.com.vn/laptop-hp-omnibook-x-flip-14-fm0088tu-bz7q2pa.html",
+   "base_color": "Xanh",
+   "colors": [
+    {
+     "color": "Xanh",
+     "price": 31390000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/s/s/ssss_1_69.png"
+    }
+   ]
+  },
+  {
+   "slug": "laptop-lenovo-loq-15irh11e-83y9003vvn-6919784d",
+   "name": "Laptop Lenovo LOQ 15IRH11E 83Y9003VVN",
+   "sku": "VT-DEMO-20261017-6919784DD052",
+   "source_url": "https://cellphones.com.vn/laptop-lenovo-loq-15irh11e-83y9003vvn.html",
+   "base_color": "Xám",
+   "colors": [
+    {
+     "color": "Xám",
+     "price": 26990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/p/r/product-09_30.png"
+    }
+   ]
+  },
+  {
+   "slug": "laptop-asus-zenbook-s-14-ux5406aa-su348w-a253bfac",
+   "name": "Laptop ASUS Zenbook S 14 UX5406AA-SU348W",
+   "sku": "VT-DEMO-20261017-A253BFAC7640",
+   "source_url": "https://cellphones.com.vn/laptop-asus-zenbook-s-14-ux5406aa-su348w.html",
+   "base_color": "Trắng",
+   "colors": [
+    {
+     "color": "Trắng",
+     "price": 46990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/x/_/x_m_2_131.png"
+    }
+   ]
+  },
+  {
+   "slug": "macbook-air-m5-13-inch-2026-10cpu-8gpu-16gb-512gb-ce38adfc",
+   "name": "MacBook Air M5 13 inch 2026 10CPU 8GPU 16GB 512GB",
+   "sku": "VT-DEMO-20261017-CE38ADFCAFF0",
+   "source_url": "https://cellphones.com.vn/macbook-air-13-m5-10-cpu-8-gpu-16gb-512gb.html",
+   "base_color": "Đêm xanh thẳm",
+   "colors": [
+    {
+     "color": "Xanh da trời",
+     "price": 33890000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/x/a/xanh_5_10.png"
+    },
+    {
+     "color": "Ánh sao",
+     "price": 32990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/v/_/v_ng_2_9.png"
+    },
+    {
+     "color": "Đêm xanh thẳm",
+     "price": 33590000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/_/e/_en_5_8.png"
+    },
+    {
+     "color": "Bạc",
+     "price": 33890000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/b/_/b_c_3_1.png"
+    }
+   ]
+  },
+  {
+   "slug": "laptop-hp-probook-4-g1i-16-bq5d8pt-bdcd18eb",
+   "name": "Laptop HP ProBook 4 G1I 16 BQ5D8PT",
+   "sku": "VT-DEMO-20261017-BDCD18EB45FD",
+   "source_url": "https://cellphones.com.vn/laptop-hp-probook-4-g1i-16-bq5d8pt.html",
+   "base_color": "Bạc",
+   "colors": [
+    {
+     "color": "Bạc",
+     "price": 34190000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/x/_/x_m_2_108.png"
+    }
+   ]
+  },
+  {
+   "slug": "macbook-air-m5-15-inch-2026-10cpu-10gpu-16gb-512gb-d858432d",
+   "name": "MacBook Air M5 15 inch 2026 10CPU 10GPU 16GB 512GB",
+   "sku": "VT-DEMO-20261017-D858432D4A79",
+   "source_url": "https://cellphones.com.vn/macbook-air-15-m5-10-cpu-10-gpu-16gb-512gb.html",
+   "base_color": "Ánh sao",
+   "colors": [
+    {
+     "color": "Ánh sao",
+     "price": 38290000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/v/_/v_ng_2_12.png"
+    },
+    {
+     "color": "Xanh da trời",
+     "price": 39190000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/x/a/xanh_5_13.png"
+    },
+    {
+     "color": "Đêm xanh thẳm",
+     "price": 38290000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/_/e/_en_5_11.png"
+    },
+    {
+     "color": "Bạc",
+     "price": 39190000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/b/_/b_c_3_4.png"
+    }
+   ]
+  },
+  {
+   "slug": "laptop-hp-victus-15-fa2451tx-d17wppa-3c8437cd",
+   "name": "Laptop HP Victus 15-FA2451TX D17WPPA",
+   "sku": "VT-DEMO-20261017-3C8437CD7E1E",
+   "source_url": "https://cellphones.com.vn/laptop-hp-victus-15-fa2451tx-d17wppa.html",
+   "base_color": "Đen",
+   "colors": [
+    {
+     "color": "Đen",
+     "price": 30490000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/s/s/ssss_2_117.png"
+    }
+   ]
+  },
+  {
+   "slug": "apple-macbook-air-m2-2024-8cpu-8gpu-16gb-256gb-i-chinh-hang-apple-viet-nam-c5494ef1",
+   "name": "Apple MacBook Air M2 2024 8CPU 8GPU 16GB 256GB I Chính hãng Apple Việt Nam",
+   "sku": "VT-DEMO-20261017-C5494EF11F30",
+   "source_url": "https://cellphones.com.vn/macbook-air-m2-2022-16gb.html",
+   "base_color": "Trắng vàng",
+   "colors": [
+    {
+     "color": "Bạc",
+     "price": 19490000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/m/a/macbook_air_m2_2_1_1_7.png"
+    },
+    {
+     "color": "Trắng vàng",
+     "price": 18590000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/m/a/macbook_air_m2_3_1_1_6.png"
+    },
+    {
+     "color": "Đen",
+     "price": 18590000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/m/a/macbook_air_m2_1_1_1_8.png"
+    },
+    {
+     "color": "Xám",
+     "price": 19490000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/m/a/macbook_air_m2_4_1_1_6.png"
+    }
+   ]
+  },
+  {
+   "slug": "laptop-hp-victus-15-fa2731tx-b85lnpa-bfa863b8",
+   "name": "Laptop HP Victus 15-FA2731TX B85LNPA",
+   "sku": "VT-DEMO-20261017-BFA863B890EA",
+   "source_url": "https://cellphones.com.vn/laptop-hp-victus-15-fa2731tx-b85lnpa.html",
+   "base_color": "Đen",
+   "colors": [
+    {
+     "color": "Đen",
+     "price": 27990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/t/e/text_ng_n_6__5_19.png"
+    }
+   ]
+  },
+  {
+   "slug": "macbook-neo-13-inch-a18-pro-2026-6cpu-5gpu-8gb-256gb-ea6800c2",
+   "name": "MacBook Neo 13 inch A18 Pro 2026 6CPU 5GPU 8GB 256GB",
+   "sku": "VT-DEMO-20261017-EA6800C2C230",
+   "source_url": "https://cellphones.com.vn/macbook-neo-13-a18-pro-6-cpu-5-gpu-8gb-256gb.html",
+   "base_color": "Vàng Citrus",
+   "colors": [
+    {
+     "color": "Vàng Citrus",
+     "price": 18790000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/v/a/va.png"
+    },
+    {
+     "color": "Xanh Indigo",
+     "price": 18990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/x/a/xa_1.png"
+    },
+    {
+     "color": "Bạc",
+     "price": 19290000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/b/_/b_c_3_15.png"
+    },
+    {
+     "color": "Hồng Phớt",
+     "price": 19390000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/h/o/ho_1_1.png"
+    }
+   ]
+  },
+  {
+   "slug": "macbook-neo-13-inch-a18-pro-2026-6cpu-5gpu-8gb-512gb-touch-id-5fa4e4c6",
+   "name": "MacBook Neo 13 inch A18 Pro 2026 6CPU 5GPU 8GB 512GB Touch ID",
+   "sku": "VT-DEMO-20261017-5FA4E4C61B2F",
+   "source_url": "https://cellphones.com.vn/macbook-neo-13-a18-pro-6-cpu-5-gpu-8gb-512gb.html",
+   "base_color": "Vàng Citrus",
+   "colors": [
+    {
+     "color": "Vàng Citrus",
+     "price": 21290000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/v/a/va_1.png"
+    },
+    {
+     "color": "Bạc",
+     "price": 21990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/b/_/b_c_3_16.png"
+    },
+    {
+     "color": "Xanh Indigo",
+     "price": 21490000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/x/a/xa_1_1.png"
+    },
+    {
+     "color": "Hồng Phớt",
+     "price": 21990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/h/o/ho_1_4.png"
+    }
+   ]
+  },
+  {
+   "slug": "ipad-air-11-inch-m3-wifi-128gb-2025-7f146f59",
+   "name": "iPad Air 11 inch M3 Wifi 128GB 2025",
+   "sku": "VT-DEMO-20261017-7F146F595708",
+   "source_url": "https://cellphones.com.vn/apple-ipad-air-m3.html",
+   "base_color": "Xám",
+   "colors": [
+    {
+     "color": "Xám",
+     "price": 16990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/t/e/text_ng_n_53_.jpg"
+    },
+    {
+     "color": "Tím",
+     "price": 16990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/t/e/text_ng_n_51_.jpg"
+    },
+    {
+     "color": "Xanh dương",
+     "price": 16990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/t/e/text_ng_n_54_.jpg"
+    },
+    {
+     "color": "Trắng vàng",
+     "price": 16990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/t/e/text_ng_n_52_.jpg"
+    }
+   ]
+  },
+  {
+   "slug": "honor-pad-v9-wifi-8gb-256gb-36bf8b48",
+   "name": "HONOR Pad V9 Wifi 8GB 256GB",
+   "sku": "VT-DEMO-20261017-36BF8B48A7DA",
+   "source_url": "https://cellphones.com.vn/may-tinh-bang-honor-pad-v9-wifi.html",
+   "base_color": "Xám",
+   "colors": [
+    {
+     "color": "Xám",
+     "price": 12990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/h/o/honor-pad-v9-wifi.png"
+    }
+   ]
+  },
+  {
+   "slug": "huawei-matepad-11-5-s-2026-12gb-256gb-kem-ban-phim-a5a17ae9",
+   "name": "Huawei MatePad 11.5 S 2026 12GB 256GB - Kèm bàn phím",
+   "sku": "VT-DEMO-20261017-A5A17AE9642C",
+   "source_url": "https://cellphones.com.vn/may-tinh-bang-huawei-matepad-11-5-s-2026.html",
+   "base_color": "Xám",
+   "colors": [
+    {
+     "color": "Xám",
+     "price": 13990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/h/u/huawei-matepad-11-5-s-2026.jpg"
+    }
+   ]
+  },
+  {
+   "slug": "lenovo-idea-tab-plus-matte-edition-wifi-8gb-128gb-zag70981vn-kem-but-ban-phim-a39982ca",
+   "name": "Lenovo Idea Tab Plus Matte Edition Wifi 8GB 128GB ZAG70981VN - Kèm bút, bàn phím",
+   "sku": "VT-DEMO-20261017-A39982CA2263",
+   "source_url": "https://cellphones.com.vn/may-tinh-bang-lenovo-idea-tab-plus-wifi-8gb-128gb-zag70981vn-kem-but-ban-phim.html",
+   "base_color": "Xám",
+   "colors": [
+    {
+     "color": "Xám",
+     "price": 8990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/m/a/may-tinh-bang-lenovo-idea-tab-plus-wifi-8gb-128gb-zag70981vn_1.jpg"
+    }
+   ]
+  },
+  {
+   "slug": "nubia-pad-pro-8gb-256gb-bd06f935",
+   "name": "Nubia Pad Pro 8GB 256GB",
+   "sku": "VT-DEMO-20261017-BD06F9357AEF",
+   "source_url": "https://cellphones.com.vn/may-tinh-bang-nubia-pad-pro-8gb-256gb.html",
+   "base_color": "Đen",
+   "colors": [
+    {
+     "color": "Đen",
+     "price": 10440000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/n/u/nubia-pad-pro_6.jpg"
+    }
+   ]
+  },
+  {
+   "slug": "samsung-galaxy-tab-a11-wifi-4gb-64gb-c5d4613f",
+   "name": "Samsung Galaxy Tab A11 Wifi 4GB 64GB",
+   "sku": "VT-DEMO-20261017-C5D4613FFC3A",
+   "source_url": "https://cellphones.com.vn/may-tinh-bang-samsung-galaxy-tab-a11-wifi.html",
+   "base_color": "Bạc",
+   "colors": [
+    {
+     "color": "Bạc",
+     "price": 3690000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/m/a/may-tinh-bang-samsung-galaxy-tab-a11-wifi_1.jpg"
+    },
+    {
+     "color": "Xám",
+     "price": 3690000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/m/a/may-tinh-bang-samsung-galaxy-tab-a11-wifi_1_1.jpg"
+    }
+   ]
+  },
+  {
+   "slug": "may-tinh-bang-teclast-wifi-p30-4gb-128gb-fd4568f7",
+   "name": "Máy tính bảng Teclast Wifi P30 4GB 128GB",
+   "sku": "VT-DEMO-20261017-FD4568F76C49",
+   "source_url": "https://cellphones.com.vn/may-tinh-bang-teclast-p30-wifi.html",
+   "base_color": "Xanh",
+   "colors": [
+    {
+     "color": "Xanh",
+     "price": 2840000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/t/e/teclast-p30-wifi.jpg"
+    }
+   ]
+  },
+  {
+   "slug": "xiaomi-pad-8-pro-8gb-128gb-16f0c981",
+   "name": "Xiaomi Pad 8 Pro 8GB 128GB",
+   "sku": "VT-DEMO-20261017-16F0C981B8CC",
+   "source_url": "https://cellphones.com.vn/may-tinh-bang-xiaomi-pad-8-pro-8gb-128gb.html",
+   "base_color": "Xanh lá",
+   "colors": [
+    {
+     "color": "Xanh lá",
+     "price": 13990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/m/a/may-tinh-bang-xiaomi-pad-8-8gb-256gb_3.jpg"
+    },
+    {
+     "color": "Xám",
+     "price": 13990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/m/a/may-tinh-bang-xiaomi-pad-8-8gb-256gb-3.jpg"
+    }
+   ]
+  },
+  {
+   "slug": "ipad-air-11-inch-m4-wifi-128gb-2026-d63b2835",
+   "name": "iPad Air 11 inch M4 Wifi 128GB 2026",
+   "sku": "VT-DEMO-20261017-D63B28350AF8",
+   "source_url": "https://cellphones.com.vn/apple-ipad-air-m4-11-inch-128gb-wifi.html",
+   "base_color": "Tím",
+   "colors": [
+    {
+     "color": "Xanh dương",
+     "price": 19290000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/a/p/apple-ipad-air-m4-11-inch-128gb-wifi-2_1.jpg"
+    },
+    {
+     "color": "Trắng vàng",
+     "price": 19290000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/a/p/apple-ipad-air-m4-11-inch-128gb-wifi_1.jpg"
+    },
+    {
+     "color": "Tím",
+     "price": 18990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/a/p/apple-ipad-air-m4-11-inch-128gb-wifi-1_1.jpg"
+    },
+    {
+     "color": "Xám",
+     "price": 19290000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/a/p/apple-ipad-air-m4-11-inch-128gb-wifi-3_1.jpg"
+    }
+   ]
+  },
+  {
+   "slug": "honor-pad-x8b-wifi-6gb-128gb-7d20a14c",
+   "name": "Honor Pad X8b Wifi 6GB 128GB",
+   "sku": "VT-DEMO-20261017-7D20A14C7B89",
+   "source_url": "https://cellphones.com.vn/may-tinh-bang-honor-pad-x8b.html",
+   "base_color": "Xám",
+   "colors": [
+    {
+     "color": "Xám",
+     "price": 6690000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/h/o/honor-pad-x8b.jpg"
+    }
+   ]
+  },
+  {
+   "slug": "huawei-matepad-papermatte-11-5-inch-2025-8gb-256gb-kem-ban-phim-625bdc4d",
+   "name": "Huawei MatePad Papermatte 11.5 inch 2025 8GB 256GB - Kèm bàn phím",
+   "sku": "VT-DEMO-20261017-625BDC4D029B",
+   "source_url": "https://cellphones.com.vn/may-tinh-bang-huawei-matepad-papermate-11-5-inch.html",
+   "base_color": "Xám",
+   "colors": [
+    {
+     "color": "Xám",
+     "price": 9690000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/h/u/huawei-matepad-papermate-11-5-inch-1.jpg"
+    },
+    {
+     "color": "Tím",
+     "price": 9690000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/h/u/huawei-matepad-papermate-11-5-inch.jpg"
+    }
+   ]
+  },
+  {
+   "slug": "lenovo-idea-tab-pro-gen-2-matte-edition-8gb-256gb-zahd0452vn-kem-but-ban-phim-5aa7b63d",
+   "name": "Lenovo Idea Tab Pro Gen 2 Matte Edition 8GB 256GB ZAHD0452VN - Kèm bút, bàn phím",
+   "sku": "VT-DEMO-20261017-5AA7B63DA6D8",
+   "source_url": "https://cellphones.com.vn/may-tinh-bang-lenovo-idea-tab-pro-gen-2-zahd0452vn-kem-but-ban-phim.html",
+   "base_color": "Xám",
+   "colors": [
+    {
+     "color": "Xám",
+     "price": 16190000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/m/a/may-tinh-bang-lenovo-legion-tab-pro-gen-2-zahd0452vn-kem-but-ban-phim_1.jpg"
+    }
+   ]
+  },
+  {
+   "slug": "samsung-galaxy-tab-s10-fe-wifi-12gb-256gb-43ec1c3c",
+   "name": "Samsung Galaxy Tab S10 FE Wifi 12GB 256GB",
+   "sku": "VT-DEMO-20261017-43EC1C3C6D93",
+   "source_url": "https://cellphones.com.vn/may-tinh-bang-samsung-galaxy-tab-s10-fe-wifi-12gb-256gb.html",
+   "base_color": "Xanh",
+   "colors": [
+    {
+     "color": "Xanh",
+     "price": 12820000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/m/a/may-tinh-bang-samsung-galaxy-tab-s10-fe-wifi-12gb-256gb_2_.png"
+    },
+    {
+     "color": "Xám",
+     "price": 12820000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/m/a/may-tinh-bang-samsung-galaxy-tab-s10-fe-wifi-12gb-256gb_1_.png"
+    },
+    {
+     "color": "Bạc",
+     "price": 12820000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/m/a/may-tinh-bang-samsung-galaxy-tab-s10-fe-wifi-12gb-256gb.png"
+    }
+   ]
+  },
+  {
+   "slug": "may-tinh-bang-teclast-t50-plus-6gb-256gb-a69590d8",
+   "name": "Máy tính bảng Teclast T50 Plus 6GB 256GB",
+   "sku": "VT-DEMO-20261017-A69590D80210",
+   "source_url": "https://cellphones.com.vn/may-tinh-bang-teclast-t50-plus.html",
+   "base_color": "Đen",
+   "colors": [
+    {
+     "color": "Đen",
+     "price": 4360000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/t/e/teclat-m50-plus-den.jpg"
+    }
+   ]
+  },
+  {
+   "slug": "xiaomi-poco-pad-x1-8gb-512gb-9b19c23a",
+   "name": "Xiaomi Poco Pad X1 8GB 512GB",
+   "sku": "VT-DEMO-20261017-9B19C23ACA5F",
+   "source_url": "https://cellphones.com.vn/may-tinh-bang-xiaomi-poco-pad-x1.html",
+   "base_color": "Xanh",
+   "colors": [
+    {
+     "color": "Xanh",
+     "price": 9990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/m/a/may-tinh-bang-xiaomi-poco-pad-x1_3.jpg"
+    },
+    {
+     "color": "Xám",
+     "price": 9990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/m/a/may-tinh-bang-xiaomi-poco-pad-x1-4_1.jpg"
+    }
+   ]
+  },
+  {
+   "slug": "ipad-air-13-inch-m4-wifi-128gb-2026-13b1b36c",
+   "name": "iPad Air 13 inch M4 Wifi 128GB 2026",
+   "sku": "VT-DEMO-20261017-13B1B36C79A3",
+   "source_url": "https://cellphones.com.vn/apple-ipad-air-m4-13-inch-128gb-wifi.html",
+   "base_color": "Xanh dương",
+   "colors": [
+    {
+     "color": "Tím",
+     "price": 24790000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/t/_/t_m_2_4.png"
+    },
+    {
+     "color": "Xanh dương",
+     "price": 24590000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/x/a/xanh_5_6.png"
+    },
+    {
+     "color": "Xám",
+     "price": 24790000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/x/_/x_m_2_6.png"
+    },
+    {
+     "color": "Trắng vàng",
+     "price": 24590000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/v/_/v_ng_2_5.png"
+    }
+   ]
+  },
+  {
+   "slug": "lenovo-legion-tab-gen-5-12gb-256gb-de6bc12f",
+   "name": "Lenovo Legion Tab Gen 5 12GB 256GB",
+   "sku": "VT-DEMO-20261017-DE6BC12F3D56",
+   "source_url": "https://cellphones.com.vn/may-tinh-bang-lenovo-legion-tab-gen-5-12gb-256gb-zah20030vn.html",
+   "base_color": "Trắng",
+   "colors": [
+    {
+     "color": "Trắng",
+     "price": 23490000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/l/e/lenovo-legion-tab-gen-5-1.jpg"
+    },
+    {
+     "color": "Đen",
+     "price": 23490000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/l/e/lenovo-legion-tab-gen-5.jpg"
+    }
+   ]
+  },
+  {
+   "slug": "xiaomi-redmi-pad-2-9-7-inch-wifi-4gb-64gb-0e9725eb",
+   "name": "Xiaomi Redmi Pad 2 9.7 inch Wifi 4GB 64GB",
+   "sku": "VT-DEMO-20261017-0E9725EBE3BD",
+   "source_url": "https://cellphones.com.vn/may-tinh-bang-xiaomi-redmi-pad-2-9-7-inch.html",
+   "base_color": "Xám",
+   "colors": [
+    {
+     "color": "Xám",
+     "price": 4390000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/r/e/redmi-pad-2-9-7-inch_2.jpg"
+    },
+    {
+     "color": "Bạc",
+     "price": 4390000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/r/e/redmi-pad-2-9-7-inch-8_2.jpg"
+    }
+   ]
+  },
+  {
+   "slug": "ipad-a16-wifi-256gb-2025-470b8159",
+   "name": "iPad A16 Wifi 256GB 2025",
+   "sku": "VT-DEMO-20261017-470B81592763",
+   "source_url": "https://cellphones.com.vn/ipad-a16-11-inch-256gb.html",
+   "base_color": "Vàng",
+   "colors": [
+    {
+     "color": "Vàng",
+     "price": 14890000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/t/e/text_ng_n_36__1.jpg"
+    },
+    {
+     "color": "Bạc",
+     "price": 14990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/t/e/text_ng_n_37__1.jpg"
+    },
+    {
+     "color": "Hồng",
+     "price": 14990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/t/e/text_ng_n_35__1.jpg"
+    },
+    {
+     "color": "Xanh",
+     "price": 14990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/t/e/text_ng_n_26__1.jpg"
+    }
+   ]
+  },
+  {
+   "slug": "lenovo-yoga-tab-wifi-12gb-256gb-tb710-zag60105vn-kem-but-ban-phim-7de5eeec",
+   "name": "Lenovo Yoga Tab Wifi 12GB 256GB TB710 ZAG60105VN - Kèm bút, bàn phím",
+   "sku": "VT-DEMO-20261017-7DE5EEEC02D4",
+   "source_url": "https://cellphones.com.vn/may-tinh-bang-lenovo-yoga-tab-tb710.html",
+   "base_color": "Xám",
+   "colors": [
+    {
+     "color": "Xám",
+     "price": 17490000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/l/e/lenovo-yoga-tab-tb710-4_2.jpg"
+    }
+   ]
+  },
+  {
+   "slug": "tai-nghe-bluetooth-chup-tai-alpha-works-lite-500-456c883b",
+   "name": "Tai nghe Bluetooth chụp tai Alpha Works Lite 500",
+   "sku": "VT-DEMO-20261017-456C883B6F3F",
+   "source_url": "https://cellphones.com.vn/tai-nghe-chup-tai-alpha-works-lite-500.html",
+   "base_color": "Xanh dương",
+   "colors": [
+    {
+     "color": "Xanh dương",
+     "price": 240000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/a/l/alpha_works_lite_500_14__2.png"
+    },
+    {
+     "color": "Xanh sáng",
+     "price": 240000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/a/l/alpha_works_lite_500_12_.png"
+    },
+    {
+     "color": "Xanh biển",
+     "price": 240000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/a/l/alpha_works_lite_500_13__2.png"
+    },
+    {
+     "color": "Trắng",
+     "price": 240000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/a/l/alpha_works_lite_500_9_.png"
+    },
+    {
+     "color": "Đen",
+     "price": 240000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/a/l/alpha_works_lite_500_3__1.png"
+    }
+   ]
+  },
+  {
+   "slug": "tai-nghe-bluetooth-the-thao-anker-soundcore-c50i-d1aca560",
+   "name": "Tai nghe Bluetooth thể thao Anker Soundcore C50i",
+   "sku": "VT-DEMO-20261017-D1ACA5603B4B",
+   "source_url": "https://cellphones.com.vn/tai-nghe-bluetooth-anker-soundcore-c50i.html",
+   "base_color": "Tím",
+   "colors": [
+    {
+     "color": "Tím",
+     "price": 1090000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/t/a/tai-nghe-bluetooth-anker-soundcore-c50i-tim_1.png"
+    },
+    {
+     "color": "Trắng",
+     "price": 1090000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/a/n/anker_soundcore_c50i_comfortable.jpg"
+    },
+    {
+     "color": "Đen",
+     "price": 1090000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/t/a/tai-nghe-bluetooth-anker-soundcore-c50i_1.png"
+    }
+   ]
+  },
+  {
+   "slug": "tai-nghe-bluetooth-apple-airpods-4-ebd02588",
+   "name": "Tai nghe Bluetooth Apple AirPods 4",
+   "sku": "VT-DEMO-20261017-EBD0258823B4",
+   "source_url": "https://cellphones.com.vn/apple-airpods-4.html",
+   "base_color": "Trắng",
+   "colors": [
+    {
+     "color": "Trắng",
+     "price": 3290000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/t/e/text_ng_n_-_2024-09-10t082905.078_2.png"
+    }
+   ]
+  },
+  {
+   "slug": "tai-nghe-bluetooth-true-wireless-baseus-bass-bs2-lite-8b5e93d6",
+   "name": "Tai nghe Bluetooth True Wireless Baseus Bass BS2 Lite",
+   "sku": "VT-DEMO-20261017-8B5E93D69F9C",
+   "source_url": "https://cellphones.com.vn/tai-nghe-bluetooth-true-wireless-baseus-bass-bs-2-lite.html",
+   "base_color": "Hồng be",
+   "colors": [
+    {
+     "color": "Hồng be",
+     "price": 290000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/b/a/baseus_bass_bs2_lite_1__1.png"
+    },
+    {
+     "color": "Xanh dương",
+     "price": 290000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/b/s/bs-2-lite-blue.png"
+    },
+    {
+     "color": "Trắng",
+     "price": 290000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/b/s/bs-2-lite-white.png"
+    },
+    {
+     "color": "Đen",
+     "price": 290000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/b/s/bs-2-lite-black.png"
+    }
+   ]
+  },
+  {
+   "slug": "tai-nghe-bluetooth-true-wireless-bose-quietcomfort-ultra-earbuds-2-ac9804c3",
+   "name": "Tai nghe Bluetooth True Wireless Bose Quietcomfort Ultra Earbuds 2",
+   "sku": "VT-DEMO-20261017-AC9804C39645",
+   "source_url": "https://cellphones.com.vn/tai-nghe-bluetooth-bose-quietcomfort-ultra-earbuds-2.html",
+   "base_color": "Tím Bóng Đêm",
+   "colors": [
+    {
+     "color": "Tím Bóng Đêm",
+     "price": 6790000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/u/l/ultra2pp.png"
+    },
+    {
+     "color": "Vàng sa mạc",
+     "price": 6790000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/e/a/earbuds-v_ng.png"
+    },
+    {
+     "color": "Trắng",
+     "price": 6790000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/t/a/tai-nghe-bluetooth-bose-quietcomfort-ultra-earbuds-2_3__1.png"
+    },
+    {
+     "color": "Đỏ",
+     "price": 6790000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/t/a/tai-nghe-bluetooth-bose-quietcomfort-ultra-earbuds-2_19__1.png"
+    },
+    {
+     "color": "Đen",
+     "price": 6790000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/t/a/tai-nghe-bluetooth-bose-quietcomfort-ultra-earbuds-2_9__1.png"
+    }
+   ]
+  },
+  {
+   "slug": "tai-nghe-tws-huawei-freebuds-neo-1f62cfd8",
+   "name": "Tai nghe TWS Huawei Freebuds Neo",
+   "sku": "VT-DEMO-20261017-1F62CFD8A0DA",
+   "source_url": "https://cellphones.com.vn/tai-nghe-huawei-freebuds-neo.html",
+   "base_color": "Hồng",
+   "colors": [
+    {
+     "color": "Hồng",
+     "price": 2490000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/i/m/image_1262705341_1.png"
+    },
+    {
+     "color": "Xám bạc",
+     "price": 2490000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/g/r/group_2027_1.png"
+    },
+    {
+     "color": "Trắng",
+     "price": 2490000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/g/r/group_2040.png"
+    },
+    {
+     "color": "Đen",
+     "price": 2490000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/g/r/group_2025_1.png"
+    }
+   ]
+  },
+  {
+   "slug": "tai-nghe-bluetooth-true-wireless-jbl-wave-buds-a6ad69f6",
+   "name": "Tai nghe Bluetooth True Wireless JBL Wave Buds",
+   "sku": "VT-DEMO-20261017-A6AD69F60F14",
+   "source_url": "https://cellphones.com.vn/tai-nghe-bluetooth-jbl-wave-buds.html",
+   "base_color": "Vàng Beige",
+   "colors": [
+    {
+     "color": "Vàng Beige",
+     "price": 1150000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/t/a/tai-nghe-bluetooth-jbl-wave-buds-vang-kem_1__1.png"
+    },
+    {
+     "color": "Đen",
+     "price": 1150000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/t/a/tai-nghe-bluetooth-jbl-wave-buds_1.png"
+    },
+    {
+     "color": "Xanh mint",
+     "price": 1150000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/t/a/tai-nghe-bluetooth-jbl-wave-buds-xanh-2_1.png"
+    },
+    {
+     "color": "Trắng",
+     "price": 1150000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/t/a/tai-nghe-bluetooth-jbl-wave-buds_11__1.png"
+    }
+   ]
+  },
+  {
+   "slug": "tai-nghe-bluetooth-chup-tai-marshall-major-5-b0d777f8",
+   "name": "Tai nghe Bluetooth chụp tai Marshall Major 5",
+   "sku": "VT-DEMO-20261017-B0D777F8568C",
+   "source_url": "https://cellphones.com.vn/tai-nghe-chup-tai-marshall-major-5.html",
+   "base_color": "Xanh bóng đêm",
+   "colors": [
+    {
+     "color": "Xanh bóng đêm",
+     "price": 3590000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/m/a/major-5.png"
+    },
+    {
+     "color": "Kem",
+     "price": 3590000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/g/r/group_297_2_4.png"
+    },
+    {
+     "color": "Nâu",
+     "price": 3590000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/m/a/major_v_1_.png"
+    },
+    {
+     "color": "Đen",
+     "price": 3590000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/p/h/photo_2024-06-17_14-31-24.jpg"
+    }
+   ]
+  },
+  {
+   "slug": "tai-nghe-bluetooth-true-wireless-samsung-galaxy-buds-3-a71255a1",
+   "name": "Tai nghe Bluetooth True Wireless Samsung Galaxy Buds 3",
+   "sku": "VT-DEMO-20261017-A71255A1DDAA",
+   "source_url": "https://cellphones.com.vn/samsung-galaxy-buds-3.html",
+   "base_color": "Trắng",
+   "colors": [
+    {
+     "color": "Trắng",
+     "price": 3115000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/s/a/samsung-galaxy-buds-3-12.png"
+    },
+    {
+     "color": "Xám",
+     "price": 3115000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/s/a/samsung-galaxy-buds-3-6_1.png"
+    }
+   ]
+  },
+  {
+   "slug": "tai-nghe-sony-mdr-e9lp-66ca70cc",
+   "name": "Tai nghe Sony MDR E9LP",
+   "sku": "VT-DEMO-20261017-66CA70CCF142",
+   "source_url": "https://cellphones.com.vn/sony-mdr-e9lp.html",
+   "base_color": "Xanh",
+   "colors": [
+    {
+     "color": "Xanh",
+     "price": 149000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/t/_/t_i_xu_ng_-_2023-01-28t143414.129.png"
+    },
+    {
+     "color": "Hồng",
+     "price": 149000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/t/_/t_i_xu_ng_-_2023-01-28t143422.131.png"
+    },
+    {
+     "color": "Trắng",
+     "price": 149000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/t/_/t_i_xu_ng_-_2023-01-28t143429.993.png"
+    },
+    {
+     "color": "Đen",
+     "price": 149000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/t/_/t_i_xu_ng_-_2023-01-28t143406.033_1.png"
+    }
+   ]
+  },
+  {
+   "slug": "tai-nghe-bluetooth-xiaomi-redmi-buds-8-pro-23ab09fa",
+   "name": "Tai nghe Bluetooth Xiaomi Redmi Buds 8 Pro",
+   "sku": "VT-DEMO-20261017-23AB09FA2B97",
+   "source_url": "https://cellphones.com.vn/tai-nghe-bluetooth-xiaomi-redmi-buds-8-pro.html",
+   "base_color": "Trắng",
+   "colors": [
+    {
+     "color": "Trắng",
+     "price": 1795000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/t/a/tai_nghe_bluetooth_xiaomi_redmi_buds_8_pro_2_.png"
+    },
+    {
+     "color": "Xanh dương",
+     "price": 1795000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/t/a/tai_nghe_bluetooth_xiaomi_redmi_buds_8_pro_1_.png"
+    },
+    {
+     "color": "Đen",
+     "price": 1795000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/t/a/tai_nghe_bluetooth_xiaomi_redmi_buds_8_pro.png"
+    }
+   ]
+  },
+  {
+   "slug": "tai-nghe-bluetooth-true-wireless-anker-soundcore-k20i-a3994-bfd4e128",
+   "name": "Tai nghe Bluetooth True Wireless Anker Soundcore K20i - A3994",
+   "sku": "VT-DEMO-20261017-BFD4E128DF53",
+   "source_url": "https://cellphones.com.vn/tai-nghe-khong-day-anker-soundcore-k20i-a3994.html",
+   "base_color": "Trắng",
+   "colors": [
+    {
+     "color": "Trắng",
+     "price": 285000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/t/a/tai-nghe-khong-day-anker-soundcore-k20i-a3994_5__1.png"
+    },
+    {
+     "color": "Xanh dương",
+     "price": 285000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/b/l/bl_1_2.png"
+    },
+    {
+     "color": "Tím",
+     "price": 285000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/p/i/pink_3_2.png"
+    },
+    {
+     "color": "Đen",
+     "price": 285000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/t/a/tai-nghe-khong-day-anker-soundcore-k20i-a3994_1__1.png"
+    }
+   ]
+  },
+  {
+   "slug": "tai-nghe-bluetooth-apple-airpods-5-2026-sac-khong-day-mkft4-54658418",
+   "name": "Tai nghe Bluetooth Apple AirPods 5 2026 Sạc Không Dây (MKFT4)",
+   "sku": "VT-DEMO-20261017-54658418032E",
+   "source_url": "https://cellphones.com.vn/apple-airpods-5-sac-khong-day.html",
+   "base_color": "Trắng",
+   "colors": [
+    {
+     "color": "Trắng",
+     "price": 4290000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/a/p/apple-airpods-5-1_2.jpg"
+    }
+   ]
+  },
+  {
+   "slug": "tai-nghe-bluetooth-bose-quietcomfort-earbuds-db0ab4b6",
+   "name": "Tai nghe bluetooth Bose Quietcomfort Earbuds",
+   "sku": "VT-DEMO-20261017-DB0AB4B69111",
+   "source_url": "https://cellphones.com.vn/tai-nghe-bose-quietcomfort-earbuds.html",
+   "base_color": "Hồng",
+   "colors": [
+    {
+     "color": "Hồng",
+     "price": 3990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/t/a/tai-nghe-bose-quietcomfort-earbuds-_4__1.png"
+    },
+    {
+     "color": "Xanh chạng vạng",
+     "price": 3990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/t/a/tai-nghe-bose-quietcomfort-earbuds-_2__1.png"
+    },
+    {
+     "color": "Xanh băng",
+     "price": 3990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/t/a/tai-nghe-bose-quietcomfort-earbuds-_6__1.png"
+    },
+    {
+     "color": "Đen",
+     "price": 3990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/t/a/tai-nghe-bose-quietcomfort-earbuds-_5_.png"
+    },
+    {
+     "color": "Tím",
+     "price": 3990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/t/a/tai-nghe-bose-quietcomfort-earbuds-_3_.png"
+    },
+    {
+     "color": "Trắng",
+     "price": 3990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/t/a/tai-nghe-bose-quietcomfort-earbuds-_1_.png"
+    }
+   ]
+  },
+  {
+   "slug": "tai-nghe-bluetooth-true-wireless-jbl-tune-buds-2-08ef813c",
+   "name": "Tai nghe Bluetooth True Wireless JBL Tune Buds 2",
+   "sku": "VT-DEMO-20261017-08EF813C7EBC",
+   "source_url": "https://cellphones.com.vn/tai-nghe-khong-day-jbl-tune-buds-2.html",
+   "base_color": "Trắng",
+   "colors": [
+    {
+     "color": "Trắng",
+     "price": 1990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/t/u/tune-w.png"
+    },
+    {
+     "color": "Xanh dương",
+     "price": 1990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/t/u/tune-bl.png"
+    },
+    {
+     "color": "Đen",
+     "price": 1990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/t/u/tune-b.png"
+    }
+   ]
+  },
+  {
+   "slug": "tai-nghe-bluetooth-samsung-galaxy-buds-core-anc-6b1310ae",
+   "name": "Tai nghe Bluetooth Samsung Galaxy Buds Core (ANC)",
+   "sku": "VT-DEMO-20261017-6B1310AE934E",
+   "source_url": "https://cellphones.com.vn/tai-nghe-bluetooth-samsung-galaxy-buds-core.html",
+   "base_color": "Trắng",
+   "colors": [
+    {
+     "color": "Trắng",
+     "price": 990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/c/_/c_4_1.png"
+    },
+    {
+     "color": "Đen",
+     "price": 990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/c/1/c1_1_1.png"
+    }
+   ]
+  },
+  {
+   "slug": "tai-nghe-chup-tai-sony-mdr-zx110ap-af515387",
+   "name": "Tai nghe chụp tai Sony MDR-ZX110AP",
+   "sku": "VT-DEMO-20261017-AF5153873550",
+   "source_url": "https://cellphones.com.vn/sony-mdr-zx110ap.html",
+   "base_color": "Trắng",
+   "colors": [
+    {
+     "color": "Trắng",
+     "price": 380000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/s/o/sonymdrzx110ap03.jpg"
+    },
+    {
+     "color": "Đen",
+     "price": 380000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/s/o/sonymdrzx110ap02.jpg"
+    }
+   ]
+  },
+  {
+   "slug": "tai-nghe-bluetooth-true-wireless-anker-soundcore-r50i-a3949-7940022b",
+   "name": "Tai nghe Bluetooth True Wireless Anker Soundcore R50i A3949",
+   "sku": "VT-DEMO-20261017-7940022BFF2B",
+   "source_url": "https://cellphones.com.vn/tai-nghe-khong-day-anker-soundcore-r50i-a3949.html",
+   "base_color": "Hồng",
+   "colors": [
+    {
+     "color": "Hồng",
+     "price": 295000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/i/m/image_1024.png"
+    },
+    {
+     "color": "Xanh nhạt",
+     "price": 295000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/r/5/r50i-bl.png"
+    },
+    {
+     "color": "Xanh dương",
+     "price": 295000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/t/a/tai-nghe-bluetooth-true-wireless-anker-soundcore-r50i-a3949-xanh-duong.png"
+    },
+    {
+     "color": "Trắng",
+     "price": 295000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/t/a/tai-nghe-khong-day-anker-soundcore-r50i-a3949_3__1.png"
+    },
+    {
+     "color": "Đen",
+     "price": 295000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/t/a/tai-nghe-khong-day-anker-soundcore-r50i-a3949_4__1.png"
+    }
+   ]
+  },
+  {
+   "slug": "tai-nghe-bluetooth-apple-airpods-5-2026-sac-co-day-mkfw4-b352914e",
+   "name": "Tai nghe Bluetooth Apple AirPods 5 2026 Sạc Có Dây (MKFW4)",
+   "sku": "VT-DEMO-20261017-B352914E7384",
+   "source_url": "https://cellphones.com.vn/apple-airpods-5.html",
+   "base_color": "Trắng",
+   "colors": [
+    {
+     "color": "Trắng",
+     "price": 3790000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/a/p/apple-airpods-5-1_3.jpg"
+    }
+   ]
+  },
+  {
+   "slug": "tai-nghe-chup-tai-bose-quietcomfort-ultra-gen-2-de912b5d",
+   "name": "Tai nghe chụp tai Bose Quietcomfort Ultra Gen 2",
+   "sku": "VT-DEMO-20261017-DE912B5DF7F8",
+   "source_url": "https://cellphones.com.vn/tai-nghe-chup-tai-bose-quietcomfort-ultra-gen-2.html",
+   "base_color": "Nâu Cát Trắng",
+   "colors": [
+    {
+     "color": "Nâu Cát Trắng",
+     "price": 10790000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/t/a/tai-nghe-bose-quietcomfort-ultra.jpg"
+    },
+    {
+     "color": "Tím Bóng Đêm",
+     "price": 10790000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/t/_/t_m-bose.png"
+    },
+    {
+     "color": "Vàng sa mạc",
+     "price": 10790000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/d/e/dessert-gold.png"
+    },
+    {
+     "color": "Đen",
+     "price": 10790000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/u/l/ultra2-b_1.png"
+    },
+    {
+     "color": "Trắng",
+     "price": 10790000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/u/l/ultra2-w_1.png"
+    }
+   ]
+  },
+  {
+   "slug": "tai-nghe-bluetooth-true-wireless-jbl-wave-beam-0436a9ba",
+   "name": "Tai nghe Bluetooth True Wireless JBL Wave Beam",
+   "sku": "VT-DEMO-20261017-0436A9BA2C05",
+   "source_url": "https://cellphones.com.vn/tai-nghe-khong-day-jbl-wave-beam.html",
+   "base_color": "Vàng kem",
+   "colors": [
+    {
+     "color": "Vàng kem",
+     "price": 1490000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/t/a/tai-nghe-khong-day-jbl-wave-beam_5__1.png"
+    },
+    {
+     "color": "Đen",
+     "price": 1490000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/t/a/tai-nghe-khong-day-jbl-wave-beam-den.png"
+    },
+    {
+     "color": "Trắng",
+     "price": 1490000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/t/a/tai-nghe-khong-day-jbl-wave-beam_8__1.png"
+    },
+    {
+     "color": "Xanh",
+     "price": 1490000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/t/a/tai-nghe-khong-day-jbl-wave-beam_3__1.png"
+    }
+   ]
+  },
+  {
+   "slug": "tai-nghe-bluetooth-true-wireless-samsung-galaxy-buds-3-pro-bef412d8",
+   "name": "Tai nghe Bluetooth True Wireless Samsung Galaxy Buds 3 Pro",
+   "sku": "VT-DEMO-20261017-BEF412D8182E",
+   "source_url": "https://cellphones.com.vn/tai-nghe-samsung-galaxy-buds-3-pro.html",
+   "base_color": "Xám",
+   "colors": [
+    {
+     "color": "Xám",
+     "price": 3150000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/t/a/tai-nghe-samsung-galaxy-buds-3-pro_9__1.png"
+    },
+    {
+     "color": "Trắng",
+     "price": 3150000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/t/a/tai-nghe-samsung-galaxy-buds-3-pro_20__1.png"
+    }
+   ]
+  },
+  {
+   "slug": "tai-nghe-bluetooth-true-wireless-sony-wf-c510-9a2c6207",
+   "name": "Tai nghe Bluetooth True Wireless Sony WF-C510",
+   "sku": "VT-DEMO-20261017-9A2C62077224",
+   "source_url": "https://cellphones.com.vn/tai-nghe-bluetooth-sony-wf-c510.html",
+   "base_color": "Trắng",
+   "colors": [
+    {
+     "color": "Trắng",
+     "price": 790000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/t/a/tai-nghe-bluetooth-sony-wf-c510_22__1.png"
+    },
+    {
+     "color": "Vàng",
+     "price": 790000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/t/a/tai-nghe-bluetooth-sony-wf-c510_25__1.png"
+    },
+    {
+     "color": "Xanh dương",
+     "price": 790000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/t/a/tai-nghe-bluetooth-sony-wf-c510_19__1.png"
+    },
+    {
+     "color": "Đen",
+     "price": 790000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/t/a/tai-nghe-bluetooth-sony-wf-c510_12__1.png"
+    }
+   ]
+  },
+  {
+   "slug": "tai-nghe-bluetooth-true-wireless-anker-soundcore-r50i-nc-82de67d9",
+   "name": "Tai nghe Bluetooth True Wireless Anker Soundcore R50I NC",
+   "sku": "VT-DEMO-20261017-82DE67D951DD",
+   "source_url": "https://cellphones.com.vn/tai-nghe-khong-day-anker-soundcore-r50i-nc.html",
+   "base_color": "Hồng",
+   "colors": [
+    {
+     "color": "Hồng",
+     "price": 390000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/a/n/anker-soundcore-r50i-nc-hong.jpg"
+    },
+    {
+     "color": "Xanh lá",
+     "price": 390000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/a/n/anker-soundcore-r50i-nc-xanh.jpg"
+    },
+    {
+     "color": "Xanh dương",
+     "price": 390000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/t/a/tai-nghe-khong-day-anker-soundcore-r50i-nc-4_1.png"
+    },
+    {
+     "color": "Trắng",
+     "price": 390000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/t/a/tai-nghe-khong-day-anker-soundcore-r50i-nc-1_1.png"
+    },
+    {
+     "color": "Đen",
+     "price": 390000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/t/a/tai-nghe-khong-day-anker-soundcore-r50i-nc-9_1.png"
+    }
+   ]
+  },
+  {
+   "slug": "tai-nghe-bluetooth-apple-airpods-pro-2-2023-usb-c-be3ba52b",
+   "name": "Tai nghe Bluetooth Apple AirPods Pro 2 2023 USB-C",
+   "sku": "VT-DEMO-20261017-BE3BA52BB0D1",
+   "source_url": "https://cellphones.com.vn/apple-airpods-pro-2-usb-c.html",
+   "base_color": "Trắng",
+   "colors": [
+    {
+     "color": "Trắng",
+     "price": 4990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/a/p/apple-airpods-pro-2-usb-c_8__1.png"
+    }
+   ]
+  },
+  {
+   "slug": "tai-nghe-khong-day-jbl-wave-buds-2-3a89dd4f",
+   "name": "Tai nghe không dây JBL Wave Buds 2",
+   "sku": "VT-DEMO-20261017-3A89DD4FB87D",
+   "source_url": "https://cellphones.com.vn/tai-nghe-khong-day-jbl-wave-buds-2.html",
+   "base_color": "Hồng",
+   "colors": [
+    {
+     "color": "Hồng",
+     "price": 1390000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/w/a/wave.png"
+    },
+    {
+     "color": "Trắng",
+     "price": 1390000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/b/u/buds2-white.png"
+    },
+    {
+     "color": "Xanh dương",
+     "price": 1390000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/b/u/buds2-blue.png"
+    },
+    {
+     "color": "Đen",
+     "price": 1390000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/b/u/buds2-black.png"
+    }
+   ]
+  },
+  {
+   "slug": "tai-nghe-samsung-galaxy-buds-4-pro-aa31335c",
+   "name": "Tai nghe Samsung Galaxy Buds 4 Pro",
+   "sku": "VT-DEMO-20261017-AA31335CDD51",
+   "source_url": "https://cellphones.com.vn/tai-nghe-samsung-galaxy-buds-4-pro.html",
+   "base_color": "Đen",
+   "colors": [
+    {
+     "color": "Đen",
+     "price": 5490000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/s/a/samsung_buds4_pro_15__1.png"
+    },
+    {
+     "color": "Trắng",
+     "price": 5490000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/s/a/samsung_buds4_pro_1__1.png"
+    }
+   ]
+  },
+  {
+   "slug": "tai-nghe-bluetooth-sony-wi-c100-698d2726",
+   "name": "Tai nghe Bluetooth Sony WI-C100",
+   "sku": "VT-DEMO-20261017-698D27266BC8",
+   "source_url": "https://cellphones.com.vn/tai-nghe-bluetooth-sony-wi-c100.html",
+   "base_color": "Trắng",
+   "colors": [
+    {
+     "color": "Trắng",
+     "price": 490000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/s/o/sony_wi-c100.png"
+    },
+    {
+     "color": "Kem",
+     "price": 490000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/c/1/c100-g-removebg-preview_1.png"
+    },
+    {
+     "color": "Đen",
+     "price": 490000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/4/5/45_1_40.jpg"
+    },
+    {
+     "color": "Xanh dương",
+     "price": 490000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/w/i/wi-_c100-removebg-preview_1.png"
+    }
+   ]
+  },
+  {
+   "slug": "tai-nghe-bluetooth-true-wireless-anker-soundcore-r60i-nc-2476c276",
+   "name": "Tai nghe Bluetooth True Wireless Anker Soundcore R60i NC",
+   "sku": "VT-DEMO-20261017-2476C276CF23",
+   "source_url": "https://cellphones.com.vn/tai-nghe-khong-day-anker-soundcore-r60i-nc-a3959.html",
+   "base_color": "Hồng",
+   "colors": [
+    {
+     "color": "Hồng",
+     "price": 680000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/s/o/soundcore_r60i_nc_4_.png"
+    },
+    {
+     "color": "Trắng",
+     "price": 680000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/s/o/soundcore_r60i_nc_1__1.png"
+    },
+    {
+     "color": "Xanh dương",
+     "price": 680000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/s/o/soundcore_r60i_nc_2__1.png"
+    },
+    {
+     "color": "Đen",
+     "price": 680000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/s/o/soundcore_r60i_nc_1.png"
+    }
+   ]
+  },
+  {
+   "slug": "tai-nghe-samsung-galaxy-buds-4-c04d207f",
+   "name": "Tai nghe Samsung Galaxy Buds 4",
+   "sku": "VT-DEMO-20261017-C04D207F6895",
+   "source_url": "https://cellphones.com.vn/tai-nghe-samsung-galaxy-buds-4.html",
+   "base_color": "Đen",
+   "colors": [
+    {
+     "color": "Đen",
+     "price": 3890000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/s/a/samsung_buds4_2__1.png"
+    },
+    {
+     "color": "Trắng",
+     "price": 3890000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/s/a/samsung_buds4_7__1.png"
+    }
+   ]
+  },
+  {
+   "slug": "man-hinh-van-phong-dell-u2424h-24-inch-61c7c738",
+   "name": "Màn hình văn phòng Dell U2424H 24 inch",
+   "sku": "VT-DEMO-20261017-61C7C7382C7E",
+   "source_url": "https://cellphones.com.vn/man-hinh-dell-u2424h-24-inch.html",
+   "base_color": "Xám",
+   "colors": [
+    {
+     "color": "Xám",
+     "price": 5250000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/m/a/man-hinh-dell-u2424h-24-inch_7__1.png"
+    }
+   ]
+  },
+  {
+   "slug": "gia-treo-man-hinh-e-dra-ema7304-17-34-inch-585ae407",
+   "name": "Giá treo màn hình E-DRA EMA7304 17-34 inch",
+   "sku": "VT-DEMO-20261017-585AE407A2DD",
+   "source_url": "https://cellphones.com.vn/gia-treo-man-hinh-e-dra-ema7304-17-34-inch.html",
+   "base_color": "Đen",
+   "colors": [
+    {
+     "color": "Đen",
+     "price": 299000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/t/e/text_ng_n_15_36.png"
+    },
+    {
+     "color": "Trắng",
+     "price": 299000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/t/e/text_ng_n_1__9_87.png"
+    }
+   ]
+  },
+  {
+   "slug": "man-hinh-asus-vu249cfe-p-24-inch-bce5e3aa",
+   "name": "Màn hình ASUS VU249CFE-P 24 inch",
+   "sku": "VT-DEMO-20261017-BCE5E3AADD5D",
+   "source_url": "https://cellphones.com.vn/man-hinh-asus-vu249cfe-p-24-inch.html",
+   "base_color": "Hồng",
+   "colors": [
+    {
+     "color": "Hồng",
+     "price": 2390000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/t/e/text_ng_n_11__7_18.png"
+    }
+   ]
+  },
+  {
+   "slug": "gia-treo-man-hinh-may-tinh-e-dra-ema7310-13-32-ef3488ae",
+   "name": "Giá treo màn hình máy tính E-DRA EMA7310 13-32\"",
+   "sku": "VT-DEMO-20261017-EF3488AEF664",
+   "source_url": "https://cellphones.com.vn/gia-treo-man-hinh-may-tinh-e-dra-ema7310.html",
+   "base_color": "Đen",
+   "colors": [
+    {
+     "color": "Đen",
+     "price": 299000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/m/h/mhv_16.png"
+    }
+   ]
+  },
+  {
+   "slug": "ban-phim-apple-magic-keyboard-touch-id-2024-mxck3-88b894fe",
+   "name": "Bàn phím Apple Magic Keyboard + Touch ID 2024 (MXCK3)",
+   "sku": "VT-DEMO-20261017-88B894FE754F",
+   "source_url": "https://cellphones.com.vn/ban-phim-apple-magic-keyboard-touch-id-2024-mxck3.html",
+   "base_color": "Trắng",
+   "colors": [
+    {
+     "color": "Trắng",
+     "price": 3490000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/t/e/text_ng_n_-_2024-11-19t094726.741_1.png"
+    }
+   ]
+  },
+  {
+   "slug": "ban-phim-bluetooth-logitech-pebble-key-2-k380s-f9f7b529",
+   "name": "Bàn phím Bluetooth Logitech Pebble Key 2 K380S",
+   "sku": "VT-DEMO-20261017-F9F7B5297BB2",
+   "source_url": "https://cellphones.com.vn/ban-phim-bluetooth-logitech-pebble-k380s.html",
+   "base_color": "Hồng",
+   "colors": [
+    {
+     "color": "Hồng",
+     "price": 730000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/b/a/ban-phim-bluetooth-logitech-pebble-k380s-2_1.png"
+    },
+    {
+     "color": "Trắng",
+     "price": 730000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/b/a/ban-phim-bluetooth-logitech-pebble-k380s-6_1.png"
+    },
+    {
+     "color": "Đen",
+     "price": 730000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/b/a/ban-phim-bluetooth-logitech-pebble-k380s-8_1.png"
+    }
+   ]
+  },
+  {
+   "slug": "ban-phim-bluetooth-targus-ecosmart-akb868ap-ec04ffd5",
+   "name": "Bàn phím Bluetooth Targus EcoSmart AKB868AP",
+   "sku": "VT-DEMO-20261017-EC04FFD54645",
+   "source_url": "https://cellphones.com.vn/ban-phim-bluetooth-targus-ecosmart-akb868ap.html",
+   "base_color": "Đen",
+   "colors": [
+    {
+     "color": "Đen",
+     "price": 590000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/b/a/ban-phim-bluetooth-targus-ecosmart-akb868ap_2_.png"
+    }
+   ]
+  },
+  {
+   "slug": "ban-phim-gaming-co-day-logitech-g515-tkl-a6266c97",
+   "name": "Bàn phím gaming có dây Logitech G515 TKL",
+   "sku": "VT-DEMO-20261017-A6266C97BADB",
+   "source_url": "https://cellphones.com.vn/ban-phim-gaming-co-day-logitech-g515-tkl.html",
+   "base_color": "Đen",
+   "colors": [
+    {
+     "color": "Đen",
+     "price": 2150000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/b/a/ban-phim-gaming-co-day-logitech-g515-tkl_2__1.png"
+    }
+   ]
+  },
+  {
+   "slug": "chuot-akko-ag-one-8k-joy-of-life-929af7b4",
+   "name": "Chuột AKKO AG ONE 8K Joy of Life",
+   "sku": "VT-DEMO-20261017-929AF7B45501",
+   "source_url": "https://gearvn.com/products/chuot-akko-ag-one-8k-joy-of-life",
+   "base_color": "Đặc biệt",
+   "colors": [
+    {
+     "color": "Đặc biệt",
+     "price": 790000,
+     "image_url": null
+    }
+   ]
+  },
+  {
+   "slug": "chuot-gaming-co-day-asus-tuf-m3-gen-2-a6a0c9c3",
+   "name": "Chuột Gaming có dây Asus TUF M3 Gen 2",
+   "sku": "VT-DEMO-20261017-A6A0C9C3BDD7",
+   "source_url": "https://cellphones.com.vn/chuot-gaming-co-day-asus-tuf-m3-gen-2.html",
+   "base_color": "Đen",
+   "colors": [
+    {
+     "color": "Đen",
+     "price": 345000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/t/u/tuf-m3-gen-2-7_1.png"
+    }
+   ]
+  },
+  {
+   "slug": "chuot-khong-day-dareu-lm135g-silent-396b50e5",
+   "name": "Chuột không dây Dareu LM135G Silent",
+   "sku": "VT-DEMO-20261017-396B50E55140",
+   "source_url": "https://cellphones.com.vn/chuot-khong-day-dareu-lm135g-silent.html",
+   "base_color": "Đỏ",
+   "colors": [
+    {
+     "color": "Đỏ",
+     "price": 119000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/c/h/chuot-khong-day-dareu-lm135g-silent_5__1.png"
+    },
+    {
+     "color": "Xanh dương",
+     "price": 119000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/c/h/chuot-khong-day-dareu-lm135g-silent_4__1.png"
+    },
+    {
+     "color": "Trắng",
+     "price": 119000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/c/h/chuot-khong-day-dareu-lm135g-silent_3__1.png"
+    },
+    {
+     "color": "Đen",
+     "price": 119000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/c/h/chuot-khong-day-dareu-lm135g-silent_2__1.png"
+    }
+   ]
+  },
+  {
+   "slug": "chuot-gaming-khong-day-e-dra-thunderbird-tm620w-triple-mode-fa19c69f",
+   "name": "Chuột gaming không dây E-Dra Thunderbird TM620W Triple Mode",
+   "sku": "VT-DEMO-20261017-FA19C69F4464",
+   "source_url": "https://cellphones.com.vn/chuot-gaming-khong-day-e-dra-thunderbird-tm620w-triple-mode.html",
+   "base_color": "Trắng",
+   "colors": [
+    {
+     "color": "Trắng",
+     "price": 590000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/c/h/chuot-gaming-khong-day-e-dra-thunderbird-tm620w-triple-mode_1__1.png"
+    },
+    {
+     "color": "Đen",
+     "price": 590000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/c/h/chuot-gaming-khong-day-e-dra-thunderbird-tm620w-triple-mode_2__1.png"
+    }
+   ]
+  },
+  {
+   "slug": "chuot-khong-day-hyperwork-macro-ms02-den-ee179c5d",
+   "name": "Chuột không dây HyperWork Macro MS02 Đen",
+   "sku": "VT-DEMO-20261017-EE179C5D11F2",
+   "source_url": "https://gearvn.com/products/chuot-khong-day-hyperwork-macro-ms02-den",
+   "base_color": "Đen",
+   "colors": [
+    {
+     "color": "Đen",
+     "price": 650000,
+     "image_url": null
+    }
+   ]
+  },
+  {
+   "slug": "chuot-khong-day-lenovo-thinkpad-essential-7ad28b23",
+   "name": "Chuột không dây Lenovo ThinkPad Essential",
+   "sku": "VT-DEMO-20261017-7AD28B23CF98",
+   "source_url": "https://cellphones.com.vn/chuot-khong-day-lenovo-thinkpad-essential.html",
+   "base_color": "Đen",
+   "colors": [
+    {
+     "color": "Đen",
+     "price": 99000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/c/h/chuot-khong-day-lenovo-thinkpad-essential_2__1.png"
+    }
+   ]
+  },
+  {
+   "slug": "chuot-gaming-khong-day-logitech-g304-x-superlight-black-d1cddceb",
+   "name": "Chuột gaming không dây Logitech G304 X Superlight Black",
+   "sku": "VT-DEMO-20261017-D1CDDCEBA1C6",
+   "source_url": "https://gearvn.com/products/chuot-gaming-khong-day-logitech-g304-x-superlight-black",
+   "base_color": "Đen",
+   "colors": [
+    {
+     "color": "Đen",
+     "price": 1790000,
+     "image_url": null
+    }
+   ]
+  },
+  {
+   "slug": "chuot-khong-day-rapoo-m310-silent-81a73070",
+   "name": "Chuột không dây Rapoo M310 Silent",
+   "sku": "VT-DEMO-20261017-81A730703401",
+   "source_url": "https://cellphones.com.vn/chuot-khong-day-rapoo-m310-silent.html",
+   "base_color": "Xám đen",
+   "colors": [
+    {
+     "color": "Xám đen",
+     "price": 189000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/c/h/chuot-khong-day-rapoo-m310-silent-_2__1.png"
+    },
+    {
+     "color": "Hồng",
+     "price": 189000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/c/h/chuot-khong-day-rapoo-m310-silent-_4__1.png"
+    },
+    {
+     "color": "Xám/trắng",
+     "price": 189000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/c/h/chuot-khong-day-rapoo-m310-silent-_3__2.png"
+    },
+    {
+     "color": "Trắng",
+     "price": 349000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/c/h/chuot-khong-day-rapoo-m310-silent-_3__1.png"
+    }
+   ]
+  },
+  {
+   "slug": "chuot-khong-day-ugreen-silent-mu006-14313e4e",
+   "name": "Chuột không dây Ugreen Silent MU006",
+   "sku": "VT-DEMO-20261017-14313E4E87CD",
+   "source_url": "https://cellphones.com.vn/chuot-khong-day-ugreen-silent-mu006.html",
+   "base_color": "Đen",
+   "colors": [
+    {
+     "color": "Đen",
+     "price": 180000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/c/h/chuot-khong-day-ugreen-silent-mu006_5_1.png"
+    }
+   ]
+  },
+  {
+   "slug": "chuot-khong-day-akko-nest-black-fd02ffcd",
+   "name": "Chuột không dây AKKO Nest Black",
+   "sku": "VT-DEMO-20261017-FD02FFCD58F3",
+   "source_url": "https://gearvn.com/products/chuot-khong-day-akko-nest-black",
+   "base_color": "Đen",
+   "colors": [
+    {
+     "color": "Đen",
+     "price": 1590000,
+     "image_url": null
+    }
+   ]
+  },
+  {
+   "slug": "chuot-khong-day-asus-marshmallow-md100-lite-97fcf66d",
+   "name": "Chuột không dây Asus Marshmallow MD100 Lite",
+   "sku": "VT-DEMO-20261017-97FCF66DF5C1",
+   "source_url": "https://cellphones.com.vn/chuot-khong-day-asus-marshmallow-md100-lite.html",
+   "base_color": "Xanh dương",
+   "colors": [
+    {
+     "color": "Xanh dương",
+     "price": 329000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/8/-/8-chinh-hang-silicone-kem-von-kem_28_.png"
+    },
+    {
+     "color": "Xám",
+     "price": 329000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/c/h/chuot-khong-day-asus-marshmallow-md100-lite_2__1.png"
+    }
+   ]
+  },
+  {
+   "slug": "chuot-khong-day-hyperwork-silentium-gen-2-ms01-den-08f4082d",
+   "name": "Chuột không dây HyperWork Silentium Gen 2 MS01 Đen",
+   "sku": "VT-DEMO-20261017-08F4082D52B0",
+   "source_url": "https://gearvn.com/products/chuot-khong-day-hyperwork-silentium-gen-2-ms01-den",
+   "base_color": "Đen",
+   "colors": [
+    {
+     "color": "Đen",
+     "price": 650000,
+     "image_url": null
+    }
+   ]
+  },
+  {
+   "slug": "chuot-gaming-khong-day-logitech-pro-x3-superstrike-lightspeed-black-37d33b0d",
+   "name": "Chuột gaming không dây Logitech Pro X3 Superstrike Lightspeed Black",
+   "sku": "VT-DEMO-20261017-37D33B0D0A0B",
+   "source_url": "https://gearvn.com/products/chuot-gaming-khong-day-logitech-pro-x3-superstrike-lightspeed-black",
+   "base_color": "Đen",
+   "colors": [
+    {
+     "color": "Đen",
+     "price": 4790000,
+     "image_url": null
+    }
+   ]
+  },
+  {
+   "slug": "chuot-khong-day-rapoo-m330-385f2942",
+   "name": "Chuột không dây Rapoo M330",
+   "sku": "VT-DEMO-20261017-385F2942E611",
+   "source_url": "https://cellphones.com.vn/chuot-khong-day-rapoo-m330.html",
+   "base_color": "Trắng",
+   "colors": [
+    {
+     "color": "Trắng",
+     "price": 239000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/c/h/chuot-khong-day-rapoo-m330_13__1.png"
+    },
+    {
+     "color": "Hồng",
+     "price": 239000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/c/h/chuot-khong-day-rapoo-m330_9__1.png"
+    },
+    {
+     "color": "Đen",
+     "price": 239000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/c/h/chuot-khong-day-rapoo-m330_5__1.png"
+    }
+   ]
+  },
+  {
+   "slug": "chuot-khong-day-bluetooth-asus-md102-25315996",
+   "name": "Chuột không dây Bluetooth Asus MD102",
+   "sku": "VT-DEMO-20261017-25315996D200",
+   "source_url": "https://cellphones.com.vn/chuot-khong-day-bluetooth-asus-md102.html",
+   "base_color": "Trắng",
+   "colors": [
+    {
+     "color": "Trắng",
+     "price": 389000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/c/h/chuot-khong-day-bluetooth-asus-md102_8__1.png"
+    },
+    {
+     "color": "Đen",
+     "price": 389000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/c/h/chuot-khong-day-bluetooth-asus-md102_1__1.png"
+    }
+   ]
+  },
+  {
+   "slug": "loa-bluetooth-bose-soundlink-max-90673733",
+   "name": "Loa Bluetooth Bose SoundLink Max",
+   "sku": "VT-DEMO-20261017-906737332A98",
+   "source_url": "https://cellphones.com.vn/loa-bluetooth-bose-soundlink-max.html",
+   "base_color": "Vàng",
+   "colors": [
+    {
+     "color": "Vàng",
+     "price": 8470000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/s/o/soundlink-lemon.png"
+    },
+    {
+     "color": "Xanh dương",
+     "price": 8470000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/l/o/loa-bluetooth-bose-soundlink-max_3__1.png"
+    },
+    {
+     "color": "Đen",
+     "price": 8470000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/l/o/loa-bluetooth-bose-soundlink-max-9.png"
+    }
+   ]
+  },
+  {
+   "slug": "loa-kiem-am-bluetooth-edifier-mr3-407cfce0",
+   "name": "Loa kiểm âm Bluetooth Edifier MR3",
+   "sku": "VT-DEMO-20261017-407CFCE03372",
+   "source_url": "https://cellphones.com.vn/loa-kiem-am-edifier-mr3.html",
+   "base_color": "Đen",
+   "colors": [
+    {
+     "color": "Đen",
+     "price": 1750000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/l/o/loa-kiem-am-edifier-mr3-_1.png"
+    },
+    {
+     "color": "Trắng",
+     "price": 1750000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/l/o/loa-kiem-am-edifier-mr3-_6__1.png"
+    }
+   ]
+  },
+  {
+   "slug": "loa-bluetooth-harman-kardon-aura-studio-5-7c3cb2ef",
+   "name": "Loa Bluetooth Harman Kardon Aura Studio 5",
+   "sku": "VT-DEMO-20261017-7C3CB2EFFE92",
+   "source_url": "https://cellphones.com.vn/loa-bluetooth-harman-kardon-aura-studio-5.html",
+   "base_color": "Đen",
+   "colors": [
+    {
+     "color": "Đen",
+     "price": 8490000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/s/t/studio5.png"
+    }
+   ]
+  },
+  {
+   "slug": "loa-bluetooth-jbl-boombox-3-d5e1aa96",
+   "name": "Loa Bluetooth JBL Boombox 3",
+   "sku": "VT-DEMO-20261017-D5E1AA96EEF8",
+   "source_url": "https://cellphones.com.vn/loa-bluetooth-jbl-boombox-3.html",
+   "base_color": "Đen",
+   "colors": [
+    {
+     "color": "Xanh quân đội",
+     "price": 9990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/j/b/jbl_boombox3_front_camo.png"
+    },
+    {
+     "color": "Đen",
+     "price": 8990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/u/n/untitled-1_copy_17_2.jpg"
+    }
+   ]
+  },
+  {
+   "slug": "loa-bluetooth-marshall-acton-iii-9235e052",
+   "name": "Loa Bluetooth Marshall Acton III",
+   "sku": "VT-DEMO-20261017-9235E052ACE6",
+   "source_url": "https://cellphones.com.vn/loa-bluetooth-marshall-acton-iii.html",
+   "base_color": "Xanh bóng đêm",
+   "colors": [
+    {
+     "color": "Xanh bóng đêm",
+     "price": 6700000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/a/c/act-iii.png"
+    },
+    {
+     "color": "Nâu",
+     "price": 6700000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/m/a/marshall_acton_iii_nau.png"
+    },
+    {
+     "color": "Kem",
+     "price": 6700000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/m/a/marshall_acton_iii_6_2.png"
+    },
+    {
+     "color": "Đen",
+     "price": 6700000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/m/a/marshall_acton_iii_7_1.png"
+    }
+   ]
+  },
+  {
+   "slug": "loa-bluetooth-sony-srs-xb100-extra-bass-94fe6fd0",
+   "name": "Loa Bluetooth Sony SRS-XB100 Extra Bass",
+   "sku": "VT-DEMO-20261017-94FE6FD0685A",
+   "source_url": "https://cellphones.com.vn/loa-bluetooth-sony-srs-xb100.html",
+   "base_color": "Đen",
+   "colors": [
+    {
+     "color": "Đen",
+     "price": 1090000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/l/o/loa-bluetooth-sony-srs-xb100-1_1.png"
+    },
+    {
+     "color": "Cam",
+     "price": 1090000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/l/o/loa-bluetooth-sony-srs-xb100-7_1.png"
+    },
+    {
+     "color": "Xám",
+     "price": 1090000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/l/o/loa-bluetooth-sony-srs-xb100-5_1.png"
+    },
+    {
+     "color": "Xanh dương",
+     "price": 1090000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/l/o/loa-bluetooth-sony-srs-xb100-6_1.png"
+    }
+   ]
+  },
+  {
+   "slug": "loa-bluetooth-bose-soundlink-flex-2-f073f4b6",
+   "name": "Loa Bluetooth Bose Soundlink Flex 2",
+   "sku": "VT-DEMO-20261017-F073F4B6B3C1",
+   "source_url": "https://cellphones.com.vn/loa-bose-soundlink-flex-2.html",
+   "base_color": "Xanh bạc hà",
+   "colors": [
+    {
+     "color": "Xanh bạc hà",
+     "price": 3370000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/l/o/loa-bose-soundlink-flex-2-mint03.jpg"
+    },
+    {
+     "color": "Tím",
+     "price": 3370000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/l/o/loa-bose-soundlink-flex-2-pink04.jpg"
+    },
+    {
+     "color": "Cam đào hoàng hôn",
+     "price": 3370000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/l/o/loa_bluetooth_bose_soundlink_flex_2.png"
+    },
+    {
+     "color": "Hồng",
+     "price": 3370000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/b/o/bose-soundlink-flex-2.jpg"
+    },
+    {
+     "color": "Vàng chanh",
+     "price": 3370000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/l/e/lem.png"
+    },
+    {
+     "color": "Xanh chạng vạng",
+     "price": 3370000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/t/w/twi_1.png"
+    },
+    {
+     "color": "Xám sương mù",
+     "price": 3370000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/b/o/bose-fog-grey.png"
+    },
+    {
+     "color": "Đen",
+     "price": 3370000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/l/o/loa-bose-soundlink-flex-2_3__1.png"
+    },
+    {
+     "color": "Xanh xô thơm",
+     "price": 3370000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/l/o/loa-bose-soundlink-flex-2_4__1.png"
+    },
+    {
+     "color": "Sa thạch",
+     "price": 3370000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/l/o/loa-bose-soundlink-flex-2_1__1.png"
+    },
+    {
+     "color": "Xanh dương",
+     "price": 3370000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/l/o/loa-bose-soundlink-flex-2_2__1.png"
+    }
+   ]
+  },
+  {
+   "slug": "loa-bluetooth-harman-kardon-go-play-3-b6cc0cf5",
+   "name": "Loa Bluetooth Harman Kardon Go + Play 3",
+   "sku": "VT-DEMO-20261017-B6CC0CF549D8",
+   "source_url": "https://cellphones.com.vn/loa-bluetooth-harman-kardon-go-and-play-3.html",
+   "base_color": "Xám",
+   "colors": [
+    {
+     "color": "Xám",
+     "price": 8590000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/l/o/loa-bluetooth-harman-kardon-go-and-play-3-xam.png"
+    },
+    {
+     "color": "Đen",
+     "price": 8590000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/l/o/loa-bluetooth-harman-kardon-go-and-play-3-den_2.png"
+    }
+   ]
+  },
+  {
+   "slug": "loa-bluetooth-jbl-boombox-4-6acd5ece",
+   "name": "Loa Bluetooth JBL Boombox 4",
+   "sku": "VT-DEMO-20261017-6ACD5ECE7E87",
+   "source_url": "https://cellphones.com.vn/loa-bluetooth-jbl-boombox-4.html",
+   "base_color": "Đen",
+   "colors": [
+    {
+     "color": "Xanh dương",
+     "price": 13900000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/j/b/jbl_boombox_4.png"
+    },
+    {
+     "color": "Đen",
+     "price": 13890000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/l/o/loa-bluetooth-jbl-boombox-4_14__1.png"
+    },
+    {
+     "color": "Trắng",
+     "price": 13890000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/b/b/bb6_1.png"
+    },
+    {
+     "color": "Squad Xanh Quân Đội",
+     "price": 13890000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/l/o/loa-bluetooth-jbl-boombox-4_21__1.png"
+    }
+   ]
+  },
+  {
+   "slug": "loa-bluetooth-marshall-emberton-iii-6b6c028d",
+   "name": "Loa Bluetooth Marshall Emberton III",
+   "sku": "VT-DEMO-20261017-6B6C028D683E",
+   "source_url": "https://cellphones.com.vn/loa-bluetooth-marshall-emberton-iii.html",
+   "base_color": "Xanh xô thơm",
+   "colors": [
+    {
+     "color": "Xanh xô thơm",
+     "price": 4400000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/m/a/marshall_emberton-iii_sage_produ.jpg"
+    },
+    {
+     "color": "Nâu",
+     "price": 4400000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/l/o/loa-bluetooth-marshall-emberton-iii-br01.jpg"
+    },
+    {
+     "color": "Xanh bóng đêm",
+     "price": 4400000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/e/m/emiii.png"
+    },
+    {
+     "color": "Đen/Bạc",
+     "price": 4400000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/l/o/loa-bluetooth-marshall-emberton-iii-08_1.jpg"
+    },
+    {
+     "color": "Vàng kem",
+     "price": 4400000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/m/a/marshall_emberton-iii_cream_prod.jpg"
+    },
+    {
+     "color": "Đen/Vàng",
+     "price": 4400000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/m/a/marshall_emberton-iii_black_prod.jpg"
+    }
+   ]
+  },
+  {
+   "slug": "loa-bluetooth-sony-ult-field-3-3970b34c",
+   "name": "Loa Bluetooth Sony ULT Field 3",
+   "sku": "VT-DEMO-20261017-3970B34C9B30",
+   "source_url": "https://cellphones.com.vn/loa-bluetooth-sony-ult-field-3.html",
+   "base_color": "Xám Lục",
+   "colors": [
+    {
+     "color": "Xám Lục",
+     "price": 3290000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/l/o/loa-bluetooth-sony-ult-field-3_4__1.png"
+    },
+    {
+     "color": "Trắng ngà",
+     "price": 3290000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/l/o/loa-bluetooth-sony-ult-field-3_3__1.png"
+    },
+    {
+     "color": "Đen",
+     "price": 3290000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/l/o/loa-bluetooth-sony-ult-field-3_2__1.png"
+    }
+   ]
+  },
+  {
+   "slug": "loa-bluetooth-harman-kardon-onyx-studio-8-931f6e3a",
+   "name": "Loa Bluetooth Harman Kardon Onyx Studio 8",
+   "sku": "VT-DEMO-20261017-931F6E3AC5E9",
+   "source_url": "https://cellphones.com.vn/loa-bluetooth-harman-kardon-onyx-studio-8.html",
+   "base_color": "Vàng",
+   "colors": [
+    {
+     "color": "Vàng",
+     "price": 4210000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/d/o/download_30__1_1.png"
+    },
+    {
+     "color": "Đen",
+     "price": 4210000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/d/o/download_35__1_2_1.png"
+    },
+    {
+     "color": "Xanh dương",
+     "price": 4210000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/d/o/download_25__1.png"
+    }
+   ]
+  },
+  {
+   "slug": "loa-bluetooth-jbl-charge-5-c0daadfd",
+   "name": "Loa Bluetooth JBL Charge 5",
+   "sku": "VT-DEMO-20261017-C0DAADFD8F43",
+   "source_url": "https://cellphones.com.vn/loa-bluetooth-jbl-charge-5.html",
+   "base_color": "Đỏ",
+   "colors": [
+    {
+     "color": "Đỏ",
+     "price": 3190000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/l/o/loa-jbl-charge-5-do-red-4_2_1.jpg"
+    },
+    {
+     "color": "Camo",
+     "price": 3990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/l/o/loa-jbl-charge-5-camo-squad-4_2.jpg"
+    },
+    {
+     "color": "Đen",
+     "price": 3190000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/l/o/loa-jbl-charge-5-den-black-4_1.jpg"
+    },
+    {
+     "color": "Xanh lá",
+     "price": 3190000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/l/o/loa-jbl-charge-5-xanh-reu-forest-green-4_1_1.jpg"
+    },
+    {
+     "color": "Xám",
+     "price": 3190000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/l/o/loa-jbl-charge-5-xam-grey-4_1_1.jpg"
+    },
+    {
+     "color": "Hồng",
+     "price": 3190000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/l/o/loa-jbl-charge-5-hong-pink-4_1.jpg"
+    },
+    {
+     "color": "Xanh dương",
+     "price": 3190000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/l/o/loa-jbl-charge-5-xanh-duong-blue-4_3.jpg"
+    },
+    {
+     "color": "Xanh ngọc",
+     "price": 3190000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/l/o/loa-jbl-charge-5-xanh-nhat-teal-4_1_1.jpg"
+    }
+   ]
+  },
+  {
+   "slug": "loa-bluetooth-marshall-middleton-6439051a",
+   "name": "Loa Bluetooth Marshall Middleton",
+   "sku": "VT-DEMO-20261017-6439051A275C",
+   "source_url": "https://cellphones.com.vn/loa-bluetooth-marshall-middleton.html",
+   "base_color": "Kem",
+   "colors": [
+    {
+     "color": "Kem",
+     "price": 5490000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/m/i/middleton-cream-01.png"
+    },
+    {
+     "color": "Đen/Vàng",
+     "price": 5490000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/m/i/middleton-black-brass-01.png"
+    }
+   ]
+  },
+  {
+   "slug": "loa-bluetooth-sony-ult-field-5-ba543aae",
+   "name": "Loa Bluetooth Sony ULT Field 5",
+   "sku": "VT-DEMO-20261017-BA543AAE882B",
+   "source_url": "https://cellphones.com.vn/loa-bluetooth-sony-ult-field-5.html",
+   "base_color": "Trắng ngà",
+   "colors": [
+    {
+     "color": "Trắng ngà",
+     "price": 6290000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/l/o/loa-bluetooth-sony-ult-field-5_3__1.png"
+    },
+    {
+     "color": "Đen",
+     "price": 6290000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/l/o/loa-bluetooth-sony-ult-field-5_2__1.png"
+    }
+   ]
+  },
+  {
+   "slug": "pin-sac-du-phong-anker-a1695-25-000mah-165w-tich-hop-cap-rut-gon-56a7bbb1",
+   "name": "Pin sạc dự phòng Anker A1695 25.000mAh 165W tích hợp cáp rút gọn",
+   "sku": "VT-DEMO-20261017-56A7BBB1D13A",
+   "source_url": "https://cellphones.com.vn/pin-sac-du-phong-anker-a1695-25000mah-165w-kem-cap-rut-gon.html",
+   "base_color": "Bạc",
+   "colors": [
+    {
+     "color": "Bạc",
+     "price": 1450000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/g/r/group_563_44__4.png"
+    },
+    {
+     "color": "Đen",
+     "price": 1450000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/g/r/group_563_45__4.png"
+    }
+   ]
+  },
+  {
+   "slug": "pin-sac-du-phong-apple-iphone-air-magsafe-mgpg4vn-a-chinh-hang-4df2631e",
+   "name": "Pin sạc dự phòng Apple iPhone Air Magsafe MGPG4VN/A chính hãng",
+   "sku": "VT-DEMO-20261017-4DF2631EA6FC",
+   "source_url": "https://cellphones.com.vn/pin-sac-du-phong-apple-iphone-air-magsafe.html",
+   "base_color": "Trắng",
+   "colors": [
+    {
+     "color": "Trắng",
+     "price": 2750000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/t/e/text_ng_n_-_2025-09-19t113538.593_1.png"
+    }
+   ]
+  },
+  {
+   "slug": "pin-sac-du-phong-aukey-pb-n83s-10000mah-pd-20w-qc-3-0-ed2d483c",
+   "name": "Pin sạc dự phòng Aukey PB-N83S 10000mAh PD 20W & QC 3.0",
+   "sku": "VT-DEMO-20261017-ED2D483C31BA",
+   "source_url": "https://cellphones.com.vn/pin-sac-du-phong-aukey-10000mah-pd-20w-pb-n83s.html",
+   "base_color": "Hồng Đen",
+   "colors": [
+    {
+     "color": "Hồng Đen",
+     "price": 290000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/h/_/h_ng_en_1.png"
+    },
+    {
+     "color": "Trắng",
+     "price": 390000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/n/8/n830.png"
+    },
+    {
+     "color": "BlackPink",
+     "price": 290000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/_/e/_en_h_ng_1.png"
+    },
+    {
+     "color": "Xanh dương",
+     "price": 290000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/f/r/frame_469_3__3_1.png"
+    },
+    {
+     "color": "Đen",
+     "price": 290000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/p/i/pin-sac-du-phong-aukey-pb-n83s-18w-pd-10000mah-1_5.jpg"
+    },
+    {
+     "color": "Hồng",
+     "price": 390000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/h/_/h_ng_1_4.png"
+    }
+   ]
+  },
+  {
+   "slug": "pin-sac-du-phong-baseus-enercore-cr11-kem-cap-rut-gon-20000mah-67w-bb610c43",
+   "name": "Pin sạc dự phòng Baseus Enercore CR11 kèm cáp rút gọn 20000mAh 67W",
+   "sku": "VT-DEMO-20261017-BB610C434105",
+   "source_url": "https://cellphones.com.vn/pin-du-phong-baseus-enercore-cr11-kem-cap-rut-gon-20000mah-67w.html",
+   "base_color": "Xanh dương",
+   "colors": [
+    {
+     "color": "Xanh dương",
+     "price": 590000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/p/i/pin-du-phong-baseus-enercore-cr11-kem-cap-rut-gon-20000mah-67w_1__1.png"
+    }
+   ]
+  },
+  {
+   "slug": "pin-sac-du-phong-cuktech-10-mini-pb1055-10000mah-55w-eb266180",
+   "name": "Pin sạc dự phòng Cuktech 10 Mini PB1055 10000mAh 55W",
+   "sku": "VT-DEMO-20261017-EB2661804B06",
+   "source_url": "https://cellphones.com.vn/pin-sac-du-phong-cuktech-10-mini-10000mah-55w-pb1055.html",
+   "base_color": "Xám",
+   "colors": [
+    {
+     "color": "Trắng",
+     "price": 790000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/8/-/8-chinh-hang-silicone-kem-von-den_-_2026-08-26t162919.931_1.png"
+    },
+    {
+     "color": "Xám",
+     "price": 650000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/g/r/group_10_3_1.png"
+    }
+   ]
+  },
+  {
+   "slug": "pin-sac-du-phong-energizer-qm5000bk-5000mah-3-7v-li-polymer-164c9a52",
+   "name": "Pin sạc dự phòng Energizer QM5000BK 5000mAh /3.7V Li-Polymer",
+   "sku": "VT-DEMO-20261017-164C9A52F4AC",
+   "source_url": "https://cellphones.com.vn/pin-sac-du-phong-energizer-5000mah-3-7v-li-polymer-qm5000bk.html",
+   "base_color": "Đen",
+   "colors": [
+    {
+     "color": "Đen",
+     "price": 350000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/p/i/pin-sac-du-phong-energizer-5000mah-3-7v-li-polymer-qm5000bk_2__1.png"
+    }
+   ]
+  },
+  {
+   "slug": "pin-sac-du-phong-mophie-essentials-snap-10000mah-co-chan-dung-92019e6c",
+   "name": "Pin sạc dự phòng Mophie Essentials Snap+ 10000mAh có chân đứng",
+   "sku": "VT-DEMO-20261017-92019E6CEBCB",
+   "source_url": "https://cellphones.com.vn/pin-sac-du-phong-mophie-essentials-snap-10000mah-co-chan-dung.html",
+   "base_color": "Đen",
+   "colors": [
+    {
+     "color": "Đen",
+     "price": 1290000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/f/r/frame_3_22__3.png"
+    },
+    {
+     "color": "Trắng",
+     "price": 1290000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/f/r/frame_3_26__3.png"
+    }
+   ]
+  },
+  {
+   "slug": "pin-sac-du-phong-robot-rt180s-10000mah-12w-4d937766",
+   "name": "Pin sạc dự phòng Robot RT180S 10000mAh 12W",
+   "sku": "VT-DEMO-20261017-4D93776657C3",
+   "source_url": "https://cellphones.com.vn/pin-sac-du-phong-robot-10000mah-12w-rt180s.html",
+   "base_color": "Xanh lá",
+   "colors": [
+    {
+     "color": "Xanh lá",
+     "price": 185000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/f/r/frame_3_7__1_3.png"
+    },
+    {
+     "color": "Đen",
+     "price": 185000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/f/r/frame_3_6__6.png"
+    }
+   ]
+  },
+  {
+   "slug": "pin-sac-du-phong-samsung-eb-p4520x-20000-mah-45w-27d95962",
+   "name": "Pin sạc dự phòng Samsung EB-P4520X 20000 mAh 45W",
+   "sku": "VT-DEMO-20261017-27D9596297DB",
+   "source_url": "https://cellphones.com.vn/pin-sac-du-phong-samsung-eb-p4520x-20-000-mah-45w.html",
+   "base_color": "Be",
+   "colors": [
+    {
+     "color": "Be",
+     "price": 990000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/p/i/pin-sac-du-phong-samsung-eb-p4520x-20-000-mah-45w-1_1.png"
+    }
+   ]
+  },
+  {
+   "slug": "pin-sac-du-phong-stargo-power-60000mah-22-5w-nhieu-cong-ket-noi-co-den-pin-59608712",
+   "name": "Pin sạc dự phòng StarGO Power 60000mAh 22.5W nhiều cổng kết nối có đèn pin",
+   "sku": "VT-DEMO-20261017-596087120726",
+   "source_url": "https://cellphones.com.vn/pin-du-phong-stargo-power-60000mah-22-5w-nhieu-cong-co-den.html",
+   "base_color": "Đen",
+   "colors": [
+    {
+     "color": "Đen",
+     "price": 890000,
+     "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/p/i/pin-du-phong-stargo-power-60000mah-22-5w-nhieu-cong-co-den_7__1.png"
+    }
+   ]
+  }
+ ],
+ "skipped": [
+  {
+   "slug": "man-hinh-gaming-asus-tuf-vg27aq5f-27-inch-3467af17",
+   "reason": "Nguồn không có lựa chọn màu"
+  },
+  {
+   "slug": "man-hinh-gaming-lg-ultragear-25g523-b-25-inch-cca75d5f",
+   "reason": "Nguồn không có lựa chọn màu"
+  },
+  {
+   "slug": "man-hinh-di-dong-asus-zenscreen-mb169ck-16-inch-a16830c2",
+   "reason": "Nguồn không có lựa chọn màu"
+  },
+  {
+   "slug": "man-hinh-di-dong-msi-pro-mp165-e6-16-inch-88362e6b",
+   "reason": "Nguồn không có lựa chọn màu"
+  },
+  {
+   "slug": "man-hinh-gaming-philips-27m2n3500pf-27-inch-9f210818",
+   "reason": "Nguồn không có lựa chọn màu"
+  },
+  {
+   "slug": "man-hinh-samsung-odyssey-g5-ls32cg552-32-inch-88f85cc4",
+   "reason": "Nguồn không có lựa chọn màu"
+  },
+  {
+   "slug": "man-hinh-di-dong-vsp-vp1560fs1-15-6-inch-4b3e0306",
+   "reason": "Nguồn không có lựa chọn màu"
+  },
+  {
+   "slug": "man-hinh-viewsonic-va2708-2k-mhd-27-inch-56d30a76",
+   "reason": "Nguồn không có lựa chọn màu"
+  },
+  {
+   "slug": "man-hinh-xiaomi-a27i-2026-27-inch-ae6cd46b",
+   "reason": "Nguồn không có lựa chọn màu"
+  },
+  {
+   "slug": "man-hinh-gaming-lg-ultragear-27g610a-b-27-inch-6ca07184",
+   "reason": "Nguồn không có lựa chọn màu"
+  },
+  {
+   "slug": "man-hinh-gaming-lenovo-legion-r27s-68ccgac1vn-27-inch-b6a5ac2c",
+   "reason": "Nguồn không có lựa chọn màu"
+  },
+  {
+   "slug": "man-hinh-msi-pro-mp242l-24-inch-2816f1bb",
+   "reason": "Nguồn không có lựa chọn màu"
+  },
+  {
+   "slug": "man-hinh-vsp-ip2409s-24-inch-a66cc600",
+   "reason": "Nguồn không có lựa chọn màu"
+  },
+  {
+   "slug": "man-hinh-xiaomi-a27qi-2026-27-inch-1b3326f7",
+   "reason": "Nguồn không có lựa chọn màu"
+  },
+  {
+   "slug": "man-hinh-edra-egm22f100v-22-inch-14a3ebe8",
+   "reason": "Nguồn không có lựa chọn màu"
+  },
+  {
+   "slug": "man-hinh-gaming-lg-ultragear-27g850a-b-f56e4a64",
+   "reason": "Nguồn không có lựa chọn màu"
+  },
+  {
+   "slug": "man-hinh-msi-pro-mp275-e2-27-inch-a80b630c",
+   "reason": "Nguồn không có lựa chọn màu"
+  },
+  {
+   "slug": "man-hinh-e-dra-egm24f120pv-24-inch-58427c00",
+   "reason": "Nguồn không có lựa chọn màu"
+  },
+  {
+   "slug": "man-hinh-lg-24u411a-b-24-inch-d2fb7949",
+   "reason": "Nguồn không có lựa chọn màu"
+  },
+  {
+   "slug": "man-hinh-edra-egm27f120h-27-inch-c3a25174",
+   "reason": "Nguồn không có lựa chọn màu"
+  },
+  {
+   "slug": "man-hinh-lg-24u631a-b-24-inch-919dd537",
+   "reason": "Nguồn không có lựa chọn màu"
+  },
+  {
+   "slug": "ban-phim-co-asus-rog-falchion-ace-75-he-v2-black-165d6df7",
+   "reason": "Nguồn không có lựa chọn màu"
+  },
+  {
+   "slug": "ban-phim-co-co-day-aula-ag60-xam-6aadf72d",
+   "reason": "Nguồn liệt kê loại switch, không phải màu"
+  },
+  {
+   "slug": "ban-phim-co-gaming-khong-day-dareu-flex-75-black-grey-3-mode-pegasus-switch-a7344cc2",
+   "reason": "Nguồn không có lựa chọn màu"
+  },
+  {
+   "slug": "ban-phim-co-gaming-e-dra-ek398x-beta-den-xam-2a30a177",
+   "reason": "Nguồn liệt kê loại switch, không phải màu"
+  },
+  {
+   "slug": "ban-phim-co-khong-day-mchose-g75-pro-tri-mode-blue-7429dd2b",
+   "reason": "Nguồn liệt kê loại switch, không phải màu"
+  },
+  {
+   "slug": "ban-phim-gaming-asus-rog-azoth-96-he-black-28802214",
+   "reason": "Nguồn không có lựa chọn màu"
+  },
+  {
+   "slug": "ban-phim-co-co-day-aula-f75-trang-40aa8c26",
+   "reason": "Nguồn liệt kê loại switch, không phải màu"
+  },
+  {
+   "slug": "ban-phim-co-dareu-ek75-pro-cloudy-aqua-dream-switch-643269df",
+   "reason": "Nguồn liệt kê loại switch, không phải màu"
+  },
+  {
+   "slug": "ban-phim-co-khong-day-logitech-alto-keys-k98m-xam-den-2aff4dac",
+   "reason": "Nguồn liệt kê loại switch, không phải màu"
+  },
+  {
+   "slug": "ban-phim-gaming-co-day-he-magnetic-mchose-ace68-air-rapid-trigger-snow-white-f6f896d5",
+   "reason": "Nguồn liệt kê loại switch, không phải màu"
+  },
+  {
+   "slug": "ban-phim-co-khong-day-aula-f75-den-ed6bc5b5",
+   "reason": "Nguồn liệt kê loại switch, không phải màu"
+  }
+ ]
+}

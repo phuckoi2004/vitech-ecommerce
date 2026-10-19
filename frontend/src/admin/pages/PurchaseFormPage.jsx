@@ -28,18 +28,18 @@ export default function PurchaseFormPage() {
   }, [missing])
   const historic = useAdminLoad(loadHistoric, allowed && auth.permissions.includes('products:view') && Boolean(detail.data && catalog.data) && missing !== '[]')
   const variants = { data: [...(catalog.data ?? []), ...(historic.data ?? [])], loading: catalog.loading || historic.loading, error: catalog.error || historic.error, refresh: () => { catalog.refresh(); historic.refresh() } }
-  const [busy, setBusy] = useState(false), [error, setError] = useState(''), [progress, setProgress] = useState('')
+  const [busy, setBusy] = useState(false), [error, setError] = useState('')
   const writing = useRef(false), mounted = useRef(true)
   useEffect(() => { mounted.current = true; return () => { mounted.current = false } }, [])
   const listPath = '/admin/purchases' + purchaseListSearch(params)
   const detailPath = edit ? '/admin/purchases/' + encodeURIComponent(purchaseId) + purchaseListSearch(params) : listPath
   async function save(body) {
     if (!allowed || writing.current) return
-    writing.current = true; setBusy(true); setError(''); setProgress('')
+    writing.current = true; setBusy(true); setError('')
     try {
-      const result = await auth.withAccessToken((token) => edit ? savePurchaseDraft(token, purchaseId, body, () => { if (mounted.current) setProgress('Đang lưu các thay đổi của phiếu…') }) : createPurchase(token, body))
+      const result = await auth.withAccessToken((token) => edit ? savePurchaseDraft(token, purchaseId, body) : createPurchase(token, body))
       if (mounted.current) navigate('/admin/purchases/' + encodeURIComponent(result.PurchaseOrderId) + purchaseListSearch(params), { replace: true, state: { purchaseNotice: edit ? 'Đã cập nhật phiếu nhập.' : 'Đã tạo phiếu nhập.' } })
-    } catch (failure) { if (mounted.current) { setError(failure.message); setProgress('') } }
+    } catch (failure) { if (mounted.current) setError(failure.message) }
     finally { writing.current = false; if (mounted.current) setBusy(false) }
   }
   return <section aria-label={edit ? 'Sửa phiếu nhập' : 'Tạo phiếu nhập'} className="-mt-1 flex min-w-0 flex-col gap-3.5">
@@ -47,7 +47,7 @@ export default function PurchaseFormPage() {
     {edit && detail.loading ? <LoadingState label="Đang tải phiếu nhập…" /> : edit && detail.error ? <ErrorState title="Không tải được phiếu nhập" message={detail.error} onRetry={detail.refresh} /> : edit && detail.data && !purchaseEditable(detail.data) ? <p role="status" className="m-0 rounded-xl border border-admin-border p-4 text-xs text-admin-muted">Phiếu hiện tại không còn được phép sửa. Chỉ sửa phiếu chờ xác nhận hoặc bị từ chối.</p> : <>
       {(!auth.permissions.includes('suppliers:view') || !auth.permissions.includes('products:view')) && <p role="alert" className="m-0 text-xs text-admin-red">Bạn cần quyền xem nhà cung cấp và sản phẩm để lập hoặc sửa phiếu nhập.</p>}
       {suppliers.error && <ErrorState title="Chưa tải được nhà cung cấp" message={suppliers.error} onRetry={suppliers.refresh} className="py-2" />}{variants.error && <ErrorState title="Chưa tải được sản phẩm" message={variants.error} onRetry={variants.refresh} className="py-2" />}
-      {allowed && <PurchaseForm po={edit ? detail.data : null} role={auth.user.Role} suppliers={suppliers} variants={variants} busy={busy} error={error} progress={progress} blocked={!auth.permissions.includes('suppliers:view') || !auth.permissions.includes('products:view')} onError={setError} onSave={save} onCancel={() => navigate(detailPath)} />}
+      {allowed && <PurchaseForm po={edit ? detail.data : null} role={auth.user.Role} suppliers={suppliers} variants={variants} busy={busy} error={error} blocked={!auth.permissions.includes('suppliers:view') || !auth.permissions.includes('products:view')} onError={setError} onSave={save} onCancel={() => navigate(detailPath)} />}
     </>}
   </section>
 }

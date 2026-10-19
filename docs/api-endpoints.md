@@ -27,6 +27,8 @@ Tài liệu sinh từ code router (`backend/app/routers`). Chạy backend rồi 
 | POST | `/users/me/notifications/read-all` | Đăng nhập |  |  | `NotificationCountResponse` | `mark_all_read` |
 | POST | `/users/me/notifications/{notification_id}/read` | Đăng nhập |  |  | `NotificationResponse` | `mark_read` |
 
+Thông báo Admin/Staff mở chi tiết phiếu nhập, bảo hành và đổi trả bằng `ReferenceType` + `ReferenceId`, kiểm tra quyền xem tương ứng. Thông báo hàng đợi chat được chuyển thành đã xử lý trong cùng transaction khi hội thoại đã được nhận hoặc đóng; giữ lịch sử và dẫn về `/admin/support`. Khi mở thông báo chat, client dùng `ActionUrl` hiện tại từ kết quả đánh dấu đã đọc để tránh đi theo liên kết cũ đã hết quyền truy cập. Từng thông báo được đánh dấu độc lập, chống gửi lặp cùng ID; lỗi có nút thử lại và được giữ khi chuyển trang.
+
 ## Sản phẩm, danh mục, thương hiệu
 
 | Method | Đường dẫn | Quyền | Body | Query | Trả về | Service |
@@ -37,7 +39,7 @@ Tài liệu sinh từ code router (`backend/app/routers`). Chạy backend rồi 
 | GET | `/brands` | Công khai* |  | active_only | `list[BrandResponse]` | `list_brands` |
 | GET | `/brands/slug/{slug}` | Công khai* |  | active_only | `BrandResponse` | `get_brand_by_slug` |
 | GET | `/brands/{brand_id}` | Công khai* |  | active_only | `BrandResponse` | `get_brand` |
-| GET | `/products` | Công khai |  | keyword, category_id, brand_id, include_descendants, page, page_size | `PageResponse[ProductSummary]` | `search_products` |
+| GET | `/products` | Công khai |  | keyword, category_id, brand_id, include_descendants, min_price, max_price, page, page_size | `PageResponse[ProductSummary]` | `search_products` |
 | GET | `/products/slug/{slug}` | Công khai |  |  | `ProductDetailResponse` | `get_product_detail_by_slug` |
 | GET | `/products/{product_id}` | Công khai |  |  | `ProductDetailResponse` | `get_product_detail` |
 | GET | `/products/{product_id}/images` | Công khai |  |  | `list[ProductImageResponse]` | `list_images` |
@@ -199,14 +201,23 @@ Tài liệu sinh từ code router (`backend/app/routers`). Chạy backend rồi 
 | GET | `/conversations/{conversation_id}/messages` | Đăng nhập |  | page, page_size | `PageResponse[MessageResponse]` | `list_messages` |
 | POST | `/conversations/{conversation_id}/messages` | Đăng nhập | `MessageCreate` |  | `MessageResponse` | `send_message` |
 | POST | `/conversations/{conversation_id}/close` | Đăng nhập |  |  | `ConversationResponse` | `close_conversation` |
-| GET | `/admin/conversations` | Staff/Admin |  | status, mode, page, page_size | `PageResponse[AdminConversationResponse]` | `admin_list_conversations` |
+| GET | `/admin/conversations` | Admin |  | status, mode, page, page_size | `PageResponse[AdminConversationResponse]` | `admin_list_conversations` |
 | GET | `/admin/conversations/unassigned` | Staff/Admin |  | page, page_size | `PageResponse[AdminConversationResponse]` | `list_unassigned_conversations` |
 | GET | `/admin/conversations/assigned` | Staff/Admin |  | status, page, page_size | `PageResponse[AdminConversationResponse]` | `list_assigned_conversations` |
 | POST | `/admin/conversations/{conversation_id}/claim` | Staff/Admin |  |  | `AdminConversationResponse` | `claim_conversation` |
 | GET | `/admin/conversations/{conversation_id}` | Staff/Admin |  |  | `AdminConversationDetailResponse` | `get_conversation` |
+| GET | `/admin/conversations/{conversation_id}/summary` | Staff/Admin, theo quyền hội thoại | | | `AdminConversationResponse` (không tải lịch sử, có `UnreadCount`) | `get_summary` |
+| GET | `/admin/conversations/{conversation_id}/message-window` | Staff/Admin, theo quyền hội thoại | | limit (1–100), latest, after_sent_at + after_message_id, before_sent_at + before_message_id | `PageResponse[AdminMessageResponse]`, thứ tự tăng dần theo SentAt và MessageId | `message_window` |
+| POST | `/admin/conversations/{conversation_id}/read` | Nhân viên/Admin đang phụ trách | `MessageReadRequest` (MessageIds, 1–100 UUID) | | `{Updated: int}`; chỉ đánh dấu tin Customer trong chính hội thoại này | `mark_messages_read` |
 | GET | `/admin/conversations/{conversation_id}/messages` | Staff/Admin |  | page, page_size | `PageResponse[AdminMessageResponse]` | `list_messages` |
 | POST | `/admin/conversations/{conversation_id}/messages` | Staff/Admin | `MessageCreate` |  | `AdminMessageResponse` | `send_message` |
 | POST | `/admin/conversations/{conversation_id}/close` | Staff/Admin |  |  | `AdminConversationResponse` | `close_conversation` |
+
+Trang hỗ trợ có Đang chờ, Đang hỗ trợ, Đã kết thúc; Admin có thêm Tất cả hội thoại. Staff chỉ xem lịch sử được gán cho mình; Admin xem mọi lịch sử nhưng không trả lời/đóng/đánh dấu đã đọc thay nhân viên khác. Khi mở hội thoại, tải 50 tin mới nhất; polling chỉ lấy tin sau cursor, lịch sử cũ tải theo yêu cầu. Cursor cần cả timestamp có múi giờ và UUID, không kết hợp hai hướng. Các API cũ giữ nguyên hành vi.
+
+Hội thoại Staff mới tạo thông báo chờ hỗ trợ cho Staff/Admin đang hoạt động; mở lại hội thoại đang tồn tại không tạo thông báo trùng. Tin Customer gửi vào hội thoại đã gán tạo thông báo cho người phụ trách. Thông báo dùng bảng Notifications hiện có và cùng transaction với hội thoại/tin nhắn; không gửi email hoặc gọi dịch vụ ngoài. `UnreadCount` là số tin Customer chưa được người phụ trách đánh dấu đã đọc, không phải số hội thoại.
+
+Khi nhân viên/Admin phụ trách gửi tin trả lời, Customer nhận thông báo `Chat`, tham chiếu `Conversation` và liên kết `/tu-van?conversation=<id>` trong cùng transaction. Liên kết mở chính hội thoại được tham chiếu, kể cả hội thoại đã đóng; không tự tạo hội thoại khác. Customer chỉ đọc được hội thoại và thông báo của chính mình.
 
 ## Bảo hành và đổi trả
 
@@ -290,6 +301,7 @@ Tài liệu sinh từ code router (`backend/app/routers`). Chạy backend rồi 
 |---|---|---|---|---|---|---|
 | GET | `/news` | Công khai |  | page, page_size | `PageResponse[NewsArticleSummary]` | `list_published_articles` |
 | GET | `/news/{slug}` | Công khai |  |  | `NewsArticleResponse` | `get_published_article` |
+| POST | `/news/{slug}/views` | Công khai |  |  | `NewsArticleViewResponse` (`ViewCount`) | `record_article_view` |
 | GET | `/banners` | Công khai |  |  | `list[BannerResponse]` | `list_display_banners` |
 | GET | `/admin/news` | Staff/Admin |  | status, page, page_size | `PageResponse[AdminNewsArticleSummary]` | `admin_list_articles` |
 | GET | `/admin/news/{article_id}` | Staff/Admin |  |  | `AdminNewsArticleResponse` | `admin_get_article` |

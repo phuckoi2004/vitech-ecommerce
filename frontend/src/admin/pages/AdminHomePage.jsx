@@ -8,8 +8,12 @@ import { NEWS_PAGE_TITLES } from '../lib/news.js'
 import { BANNER_PAGE_TITLES } from '../lib/banners.js'
 import { PAYMENT_PAGE_TITLES } from '../lib/payment-methods.js'
 import { SHIPPING_PAGE_TITLES } from '../lib/shipping-methods.js'
+import promotionBell from '../assets/promotion-bell-source.svg'
+import couponBell from '../assets/coupon-bell-source.svg'
 
 const CATALOG_HEADERS = {
+  promotions: { title: 'Quản lý khuyến mãi', breadcrumb: 'Khuyến mãi / Chương trình khuyến mãi' },
+  coupons: { title: 'Quản lý mã giảm giá', breadcrumb: 'Khuyến mãi / Mã giảm giá' },
   categories: { title: 'Quản lý danh mục', breadcrumb: 'Sản phẩm / Quản lý danh mục' },
   brands: { title: 'Quản lý Thương hiệu', breadcrumb: 'Sản phẩm / Thương hiệu' },
   payments: { title: 'Quản lý thanh toán', breadcrumb: 'Trang chủ / Thanh toán' },
@@ -67,7 +71,8 @@ export default function AdminHomePage() {
   }
 
   return <AdminLayout auth={auth} sidebarLogo={orderDetail ? orderLogo : undefined} title={orderDetail ? 'Chi tiết đơn hàng' : contentHeader?.title || purchaseTitle || (current.id === 'overview' ? 'Dashboard' : current.id === 'orders' ? 'Quản lý đơn hàng' : current.id === 'suppliers' ? 'Quản lý nhà cung cấp' : current.id === 'purchases' ? 'Quản lý nhập hàng' : current.id === 'reviews' ? 'Quản lý đánh giá' : catalogHeader?.title ?? current.label)} breadcrumb={contentHeader?.breadcrumb || (current.id === 'purchases' ? 'Nhập hàng / ' + (purchaseTitle || 'Danh sách phiếu nhập') : catalogHeader?.breadcrumb ?? `Trang chủ / ${current.label}${subPageLabel ? ` / ${subPageLabel}` : ''}`)}
-    onBreadcrumbHome={returnDetail || warrantyDetail || shippingPage ? () => open(current) : current.id === 'purchases' ? () => open(current) : catalogHeader && !['payments', 'returns', 'warranties', 'shipping'].includes(current.id) ? () => open(ADMIN_SECTIONS.find((item) => item.id === 'products')) : undefined}
+    onBreadcrumbHome={['promotions', 'coupons'].includes(current.id) ? () => open(ADMIN_SECTIONS.find((item) => item.id === 'promotions')) : returnDetail || warrantyDetail || shippingPage ? () => open(current) : current.id === 'purchases' ? () => open(current) : catalogHeader && !['payments', 'returns', 'warranties', 'shipping'].includes(current.id) ? () => open(ADMIN_SECTIONS.find((item) => item.id === 'products')) : undefined}
+    notificationIcon={current.id === 'promotions' ? promotionBell : current.id === 'coupons' ? couponBell : undefined}
     menu={menu} active={current.id} onSelect={(id) => open(menu.flatMap((item) => item.children ?? item).find((item) => item.id === id))} onHome={() => open(ADMIN_MENU[0])}
     onAccount={() => open(ADMIN_PROFILE_ITEM)} accountActive={current.id === ADMIN_PROFILE_ITEM.id}>
     <Outlet context={{ onSubPage, visit }} />

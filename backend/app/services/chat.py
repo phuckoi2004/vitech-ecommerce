@@ -48,6 +48,7 @@ from .actor import ANY_ROLE, CUSTOMER_ONLY, STAFF_OR_ADMIN, Actor, has_role, req
 from .base import BaseService, utc_now
 from .catalog import is_product_sellable
 from .exceptions import BusinessRuleError, ConflictError, NotFoundError
+from .user import NotificationService
 
 STATUS_OPEN = "Open"
 STATUS_CLOSED = "Closed"
@@ -70,6 +71,7 @@ class ChatService(BaseService):
         self.messages = MessageRepository(session)
         self.users = UserRepository(session)
         self.products = ProductRepository(session)
+        self.notifications = NotificationService(session, clock=clock)
 
     # ------------------------------------------------------------------ Customer
 
@@ -97,6 +99,15 @@ class ChatService(BaseService):
                     {"CustomerId": actor.user_id, "Mode": mode, "Status": STATUS_OPEN, "CreatedAt": self.now()}
                 )
                 self.conversations.flush()
+                if mode == MODE_STAFF:
+                    for role in STAFF_OR_ADMIN:
+                        for operator in self.users.list_users(role=role, account_status='Active'):
+                            self.notifications.notify(
+                                operator.UserId, title='Khách hàng đang chờ hỗ trợ',
+                                content='Có cuộc trò chuyện mới cần tiếp nhận.', notification_type='Chat',
+                                action_url=f'/admin/support?conversation={conversation.ConversationId}',
+                                reference_type='Conversation', reference_id=conversation.ConversationId,
+                            )
                 return ConversationResponse.model_validate(conversation)
         except ConflictError as exc:
             if exc.code != "open_conversation_exists":
@@ -159,6 +170,7 @@ class ChatService(BaseService):
                 raise BusinessRuleError("Chỉ nhận hội thoại ở chế độ nhân viên", code="conversation_not_claimable")
             conversation.AssignedStaffId = actor.user_id
             self.conversations.flush()
+            self.notifications.resolve_chat_queue(conversation_id)
             return self._admin_responses([conversation], AdminConversationResponse)[0]
 
     def close_conversation(
@@ -183,11 +195,47 @@ class ChatService(BaseService):
             conversation.Status = STATUS_CLOSED
             conversation.ClosedAt = self.now()
             self.conversations.flush()
+            self.notifications.resolve_chat_queue(conversation_id)
             if has_role(actor, "Customer"):
                 return ConversationResponse.model_validate(conversation)
             return self._admin_responses([conversation], AdminConversationResponse)[0]
 
     # ------------------------------------------------------------------ Xem
+
+    def get_summary(self, actor: Actor, conversation_id: uuid.UUID) -> AdminConversationResponse:
+        require_role(actor, *STAFF_OR_ADMIN)
+        conversation = self.conversations.get_by_id(conversation_id)
+        if conversation is None or not self._can_view(actor, conversation):
+            raise NotFoundError('Không tìm thấy hội thoại', code='conversation_not_found')
+        return self._admin_responses([conversation], AdminConversationResponse)[0]
+
+    def message_window(self, actor: Actor, conversation_id: uuid.UUID, *, limit: int = 50,
+                       latest: bool = False, after: tuple[datetime, uuid.UUID] | None = None,
+                       before: tuple[datetime, uuid.UUID] | None = None) -> PageResponse[AdminMessageResponse]:
+        require_role(actor, *STAFF_OR_ADMIN)
+        conversation = self.conversations.get_by_id(conversation_id)
+        if conversation is None or not self._can_view(actor, conversation):
+            raise NotFoundError('Không tìm thấy hội thoại', code='conversation_not_found')
+        self._page_args(1, limit)
+        if (after and before) or (after and latest):
+            raise BusinessRuleError('Chỉ dùng một hướng phân trang tin nhắn', code='invalid_message_cursor')
+        if any(cursor and cursor[0].tzinfo is None for cursor in (after, before)):
+            raise BusinessRuleError('Mốc thời gian phải có múi giờ', code='invalid_message_cursor')
+        rows = self.messages.list_window(conversation_id, limit=limit, latest=latest, after=after, before=before)
+        return PageResponse[AdminMessageResponse](
+            Items=[AdminMessageResponse.model_validate(row) for row in rows],
+            Total=self.messages.count_by_conversation(conversation_id), Page=1, PageSize=limit,
+        )
+
+    def mark_messages_read(self, actor: Actor, conversation_id: uuid.UUID, ids: list[uuid.UUID]) -> dict[str, int]:
+        require_role(actor, *STAFF_OR_ADMIN)
+        with self.transaction():
+            conversation = self._lock(conversation_id)
+            if not self._can_view(actor, conversation):
+                raise NotFoundError('Không tìm thấy hội thoại', code='conversation_not_found')
+            if conversation.AssignedStaffId != actor.user_id:
+                raise BusinessRuleError('Chỉ nhân viên phụ trách được đánh dấu đã đọc', code='conversation_not_assigned_to_you')
+            return {'Updated': self.messages.mark_read(conversation_id, ids, (SENDER_CUSTOMER,))}
 
     def get_conversation(
         self, actor: Actor, conversation_id: uuid.UUID
@@ -250,6 +298,20 @@ class ChatService(BaseService):
                 }
             )
             self.messages.flush()
+            if sender_type == SENDER_CUSTOMER and conversation.AssignedStaffId is not None:
+                self.notifications.notify(
+                    conversation.AssignedStaffId, title='Tin nhắn mới từ khách hàng',
+                    content='Khách hàng vừa gửi tin nhắn trong cuộc trò chuyện bạn phụ trách.',
+                    notification_type='Chat', action_url=f'/admin/support?tab=active&conversation={conversation_id}',
+                    reference_type='Conversation', reference_id=conversation_id,
+                )
+            elif sender_type == SENDER_STAFF:
+                self.notifications.notify(
+                    conversation.CustomerId, title='Nhân viên đã trả lời bạn',
+                    content='Bạn có tin nhắn mới trong cuộc trò chuyện với nhân viên VieTech.',
+                    notification_type='Chat', action_url=f'/tu-van?conversation={conversation_id}',
+                    reference_type='Conversation', reference_id=conversation_id,
+                )
             return _message_schema(actor).model_validate(message)
 
     def record_ai_reply(self, conversation_id: uuid.UUID, content: str) -> AdminMessageResponse:
@@ -330,11 +392,12 @@ class ChatService(BaseService):
         context = self.conversations.get_support_context([c.ConversationId for c in conversations])
         responses = []
         for conversation in conversations:
-            name, email, last_message = context.get(conversation.ConversationId, (None, None, None))
+            name, email, last_message, unread_count = context.get(conversation.ConversationId, (None, None, None, 0))
             responses.append(schema.model_validate(conversation).model_copy(update={
                 "CustomerName": name,
                 "CustomerEmail": email,
                 "LastMessage": AdminMessageResponse.model_validate(last_message) if last_message is not None else None,
+                "UnreadCount": unread_count,
             }))
         return responses
 

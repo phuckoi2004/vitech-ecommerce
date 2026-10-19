@@ -6,9 +6,10 @@ import { AuthContext } from '../../auth/context.js'
 import { makeAuth } from '../../test/auth.js'
 import CategoriesPage from './CategoriesPage.jsx'
 
-const api = vi.hoisted(() => ({ getAdminData: vi.fn(), createCategory: vi.fn(), updateCategory: vi.fn(), deleteCategory: vi.fn() }))
+const api = vi.hoisted(() => ({ getAdminData: vi.fn(), uploadProductImage: vi.fn(), createCategory: vi.fn(), updateCategory: vi.fn(), deleteCategory: vi.fn() }))
 vi.mock('../../services/api/admin.js', () => ({ getAdminData: api.getAdminData }))
 vi.mock('../services/categories.js', () => api)
+vi.mock('../services/product-media.js', () => ({ uploadProductImage: api.uploadProductImage }))
 
 const category = { CategoryId: 'c1', Name: 'Nhóm thiết bị', Slug: 'nhom-thiet-bi', Description: 'Mô tả từ API', ParentCategoryId: null, DisplayOrder: 0, IsActive: true }
 const hidden = { ...category, CategoryId: 'c2', Name: 'Nhóm đã ẩn', Slug: 'nhom-da-an', IsActive: false }
@@ -121,11 +122,51 @@ test('create suggests a slug, preserves a manually edited slug and sends only su
   fireEvent.change(within(dialog).getByRole('combobox', { name: 'Trạng thái' }), { target: { value: 'hidden' } })
   fireEvent.click(within(dialog).getByRole('button', { name: 'Thêm danh mục' }))
   await waitFor(() => expect(api.createCategory).toHaveBeenCalledWith('access-for-test', {
-    Name: 'Thiết bị mới hơn', Slug: 'duong-dan-rieng', ParentCategoryId: category.CategoryId, Description: 'Mô tả mới', DisplayOrder: 2, IsActive: false,
+    Name: 'Thiết bị mới hơn', Slug: 'duong-dan-rieng', ParentCategoryId: category.CategoryId, Description: 'Mô tả mới', ImageUrl: null, DisplayOrder: 2, IsActive: false,
   }))
   await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
   expect(router.state.location.search).toBe('')
   expect(await screen.findByRole('button', { name: 'Chi tiết Thiết bị mới hơn' })).toBeInTheDocument()
+})
+
+test('optional category images can be pasted and removed when editing', async () => {
+  categories = [category]
+  renderPage('/admin/categories?dialog=edit&category=c1')
+  let dialog = await screen.findByRole('dialog', { name: 'Sửa danh mục' })
+  const address = await within(dialog).findByRole('textbox', { name: 'Đường dẫn ảnh danh mục' })
+  fireEvent.change(address, { target: { value: 'https://cdn.example.test/category phone.png' } })
+  fireEvent.keyDown(address, { key: 'Enter' })
+  expect(within(dialog).getByRole('img', { name: 'Ảnh danh mục 1' })).toHaveAttribute('src', 'https://cdn.example.test/category%20phone.png')
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Lưu thay đổi' }))
+  await waitFor(() => expect(api.updateCategory).toHaveBeenCalledWith('access-for-test', category.CategoryId, expect.objectContaining({ ImageUrl: 'https://cdn.example.test/category%20phone.png' })))
+  await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+  fireEvent.click(screen.getByRole('button', { name: 'Chi tiết Nhóm thiết bị' }))
+  dialog = await screen.findByRole('dialog', { name: 'Chi tiết danh mục' })
+  expect(await within(dialog).findByRole('img', { name: 'Ảnh danh mục 1' })).toHaveAttribute('src', 'https://cdn.example.test/category%20phone.png')
+  expect(within(dialog).queryByRole('button', { name: 'Bỏ ảnh 1' })).not.toBeInTheDocument()
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Sửa danh mục' }))
+  dialog = await screen.findByRole('dialog', { name: 'Sửa danh mục' })
+  fireEvent.click(await within(dialog).findByRole('button', { name: 'Bỏ ảnh 1' }))
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Lưu thay đổi' }))
+  await waitFor(() => expect(api.updateCategory).toHaveBeenLastCalledWith('access-for-test', category.CategoryId, expect.objectContaining({ ImageUrl: null })))
+})
+
+test('upload uses the existing image service and blocks saving until the image is ready', async () => {
+  let finish
+  api.uploadProductImage.mockImplementationOnce(() => new Promise((resolve) => { finish = resolve }))
+  renderPage('/admin/categories?dialog=new')
+  const dialog = await screen.findByRole('dialog', { name: 'Thêm danh mục' })
+  fireEvent.change(within(dialog).getByRole('textbox', { name: 'Tên danh mục' }), { target: { value: 'Nhóm có ảnh' } })
+  const file = new File(['image'], 'category.png', { type: 'image/png' })
+  fireEvent.change(within(dialog).getByLabelText('Tải ảnh danh mục'), { target: { files: [file] } })
+  await waitFor(() => expect(api.uploadProductImage).toHaveBeenCalledWith('access-for-test', file))
+  expect(within(dialog).getByRole('button', { name: 'Thêm danh mục' })).toBeDisabled()
+  expect(api.createCategory).not.toHaveBeenCalled()
+  finish({ ImageUrl: 'https://cdn.example.test/uploaded.png' })
+  await within(dialog).findByRole('img', { name: 'Ảnh danh mục 1' })
+  await waitFor(() => expect(within(dialog).getByRole('button', { name: 'Thêm danh mục' })).toBeEnabled())
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Thêm danh mục' }))
+  await waitFor(() => expect(api.createCategory).toHaveBeenCalledWith('access-for-test', expect.objectContaining({ ImageUrl: 'https://cdn.example.test/uploaded.png' })))
 })
 
 test('view shows API details and edit excludes itself and descendants as parent choices', async () => {

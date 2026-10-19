@@ -1,4 +1,5 @@
 import { request } from '../services/api/client.js'
+import { variantImages } from './product-detail.js'
 
 // Public catalog and content endpoints (docs/api-endpoints.md). Called without a token, so the backend returns
 // only what customers may see: active categories/brands, products on sale, published news, banners in their window.
@@ -12,9 +13,9 @@ export function listBrands({ signal } = {}) {
 }
 
 // PageResponse[ProductSummary], newest first.
-export function searchProducts({ keyword, categoryId, brandId, includeDescendants = false, page = 1, pageSize = 20, signal } = {}) {
+export function searchProducts({ keyword, categoryId, brandId, includeDescendants = false, minPrice, maxPrice, page = 1, pageSize = 20, signal } = {}) {
   return request('/products', {
-    query: { keyword, category_id: categoryId, brand_id: brandId, include_descendants: includeDescendants || undefined, page, page_size: pageSize },
+    query: { keyword, category_id: categoryId, brand_id: brandId, include_descendants: includeDescendants || undefined, min_price: minPrice, max_price: maxPrice, page, page_size: pageSize },
     signal,
   })
 }
@@ -56,18 +57,16 @@ export function listShippingMethods({ signal } = {}) {
 }
 
 // What a product card shows, from a ProductDetailResponse (its variants are the ones on sale). `price` is the
-// lowest variant price (null without a sellable variant); `priceFrom` is set when variants have different prices.
+// lowest variant price (null without a sellable variant).
 export function toProductCard(product) {
   const prices = (product.Variants ?? []).map((variant) => Number(variant.Price)).filter(Number.isFinite)
-  const images = [...(product.Images ?? [])]
-    .sort((a, b) => Number(b.IsDefault) - Number(a.IsDefault) || a.DisplayOrder - b.DisplayOrder)
+  const images = variantImages(product, product.DefaultVariantId)
   return {
     id: product.ProductId,
     name: product.Name,
     slug: product.Slug,
     brandId: product.BrandId,
     price: prices.length ? Math.min(...prices) : null,
-    priceFrom: new Set(prices).size > 1,
     imageUrl: images[0]?.ImageUrl ?? null,
     rating: Number(product.AverageRating) || 0,
     reviewCount: product.ReviewCount ?? 0,
@@ -91,3 +90,4 @@ export const getCategoryBySlug = (slug, { signal } = {}) => request(`/categories
 export const getBrandBySlug = (slug, { signal } = {}) => request(`/brands/slug/${encodeURIComponent(slug)}`, { signal })
 export const getProductBySlug = (slug, { signal } = {}) => request(`/products/slug/${encodeURIComponent(slug)}`, { signal })
 export const getNews = (slug, { signal } = {}) => request(`/news/${encodeURIComponent(slug)}`, { signal })
+export const recordNewsView = (slug) => request(`/news/${encodeURIComponent(slug)}/views`, { method: 'POST' })

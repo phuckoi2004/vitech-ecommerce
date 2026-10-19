@@ -197,9 +197,12 @@ def delete_brand(brand_id: uuid.UUID, service: Brands, actor: CurrentActor):
 @router.get("/products", response_model=PageResponse[ProductSummary])
 def search_products(service: Products, keyword: str | None = None, category_id: uuid.UUID | None = None,
                     brand_id: uuid.UUID | None = None, include_descendants: bool = False,
+                    min_price: Annotated[Decimal | None, Query(ge=0, max_digits=15, decimal_places=2)] = None,
+                    max_price: Annotated[Decimal | None, Query(ge=0, max_digits=15, decimal_places=2)] = None,
                     page: Page = 1, page_size: PageSize = 20):
     return service.search_products(keyword=keyword, category_id=category_id, brand_id=brand_id,
                                    include_descendants=include_descendants,
+                                   min_price=min_price, max_price=max_price,
                                    page=page, page_size=page_size)
 
 

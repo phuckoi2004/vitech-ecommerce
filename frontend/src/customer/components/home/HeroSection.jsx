@@ -3,38 +3,11 @@ import { Link } from 'react-router-dom'
 import ErrorState from '../../../components/shared/ErrorState.jsx'
 import useApiData from '../../../hooks/useApiData.js'
 import { listBanners } from '../../../lib/catalog-api.js'
-import { categoryPath } from '../../routes/paths.js'
-import { CategoryIcon, ChevronLeftIcon, ChevronRightIcon } from '../icons.jsx'
+import { ChevronLeftIcon, ChevronRightIcon } from '../icons.jsx'
 import StoreImage from '../StoreImage.jsx'
+import CategoryMenu from './CategoryMenu.jsx'
 
 const SLIDE_MS = 5000
-
-// Left column of the hero: root categories (Figma "Category Sidebar").
-function CategoryMenu({ categories }) {
-  let content
-  if (categories.loading) {
-    content = <ul className="home-catmenu-list" aria-hidden="true">
-      {Array.from({ length: 6 }, (_, index) => <li key={index}><span className="home-catmenu-item is-skeleton" /></li>)}
-    </ul>
-  } else if (categories.error) {
-    content = <div className="home-catmenu-note" role="alert">
-      <p>Không tải được danh mục.</p>
-      <button type="button" onClick={categories.reload}>Thử lại</button>
-    </div>
-  } else if (!categories.data.length) {
-    content = <p className="home-catmenu-note">Chưa có danh mục sản phẩm.</p>
-  } else {
-    content = <ul className="home-catmenu-list">
-      {categories.data.map((category) => <li key={category.CategoryId}>
-        <Link className="home-catmenu-item" to={categoryPath(category.Slug)}>
-          <span className="home-catmenu-icon"><CategoryIcon name={category.Name} /></span>
-          <span>{category.Name}</span>
-        </Link>
-      </li>)}
-    </ul>
-  }
-  return <nav className="home-catmenu" aria-label="Danh mục sản phẩm">{content}</nav>
-}
 
 // LinkUrl is https or an internal path starting with "/" (ContentService); anything else is not a link.
 function BannerLink({ banner, className, children }) {
@@ -102,7 +75,7 @@ function BannerPlaceholder({ children, error = false }) {
 }
 
 // Figma "Danh mục": category menu and the banner area.
-export default function HeroSection({ categories }) {
+export default function HeroSection({ categories, brandPool }) {
   const banners = useApiData('banners', (signal) => listBanners({ signal }))
 
   let banner
@@ -114,7 +87,7 @@ export default function HeroSection({ categories }) {
   else banner = <BannerPlaceholder><p role="status">Chưa có chương trình nổi bật.</p></BannerPlaceholder>
 
   return <section className="home-hero home-card is-raised" aria-label="Danh mục và chương trình nổi bật">
-    <CategoryMenu categories={categories} />
+    <CategoryMenu categories={categories} brandPool={brandPool} />
     <div className="home-hero-content">{banner}</div>
   </section>
 }

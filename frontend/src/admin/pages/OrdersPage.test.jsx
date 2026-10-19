@@ -82,13 +82,13 @@ test('empty data retains the seven Figma headers, zero count and no example orde
   expect(api.getAdminData).toHaveBeenCalledWith('access-for-test', '/admin/orders', { page: 1, page_size: 5, order_code: '', order_status: '' }, expect.any(AbortSignal))
 })
 
-test('search submits a code, status filters reach the server and browser history restores the controls', async () => {
+test('typing searches a code, status filters reach the server and browser history restores controls', async () => {
   orders = [{ ...base }, { ...base, OrderId: 'o2', OrderCode: 'DH-THAT-02', OrderStatus: 'Confirmed' }]
   const router = renderPage('/admin/orders?page=2')
   await screen.findByText('2 đơn hàng')
   const search = screen.getByRole('searchbox', { name: 'Tìm kiếm đơn hàng theo mã' })
   fireEvent.change(search, { target: { value: 'THAT-02' } })
-  fireEvent.submit(screen.getByRole('search'))
+  expect(screen.queryByRole('button', { name: 'Tìm kiếm', exact: true })).not.toBeInTheDocument()
   await screen.findByText('1 đơn hàng')
   expect(router.state.location.search).toBe('?keyword=THAT-02')
   fireEvent.click(screen.getByRole('button', { name: 'Đã xác nhận', exact: true }))
@@ -100,6 +100,34 @@ test('search submits a code, status filters reach the server and browser history
   await screen.findByText('DH-THAT-02')
   expect(search).toHaveValue('THAT-02')
   expect(screen.getByRole('button', { name: 'Đã xác nhận', exact: true })).toHaveAttribute('aria-pressed', 'true')
+})
+
+test('Vietnamese composition waits until finished and rapid typing sends only the final search', async () => {
+  orders = [{ ...base }]
+  const router = renderPage()
+  await screen.findByText('1 đơn hàng')
+  const search = screen.getByRole('searchbox')
+  fireEvent.compositionStart(search)
+  fireEvent.change(search, { target: { value: 'TH' } })
+  fireEvent.change(search, { target: { value: 'THAT' } })
+  await act(async () => { await new Promise((resolve) => setTimeout(resolve, 450)) })
+  expect(router.state.location.search).toBe('')
+  fireEvent.compositionEnd(search)
+  await waitFor(() => expect(router.state.location.search).toBe('?keyword=THAT'))
+  expect(api.getAdminData.mock.calls.filter((call) => call[1] === '/admin/orders' && call[2].order_code === 'THAT')).toHaveLength(1)
+})
+
+test('navigation cancels an unfinished search and restores URL-backed input', async () => {
+  orders = [{ ...base }]
+  const router = renderPage()
+  await screen.findByText('1 đơn hàng')
+  const search = screen.getByRole('searchbox')
+  fireEvent.change(search, { target: { value: 'unfinished' } })
+  await act(async () => router.navigate('/admin/orders?status=Confirmed'))
+  await act(async () => { await new Promise((resolve) => setTimeout(resolve, 450)) })
+  expect(router.state.location.search).toBe('?status=Confirmed')
+  expect(search).toHaveValue('')
+  expect(api.getAdminData.mock.calls.some((call) => call[1] === '/admin/orders' && call[2].order_code === 'unfinished')).toBe(false)
 })
 
 test('server pagination uses five records and clamps a now-empty deep page', async () => {

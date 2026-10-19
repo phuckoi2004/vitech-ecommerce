@@ -10,8 +10,14 @@ export async function getSupportInbox(token, signal) {
   ])
   return { waiting, active }
 }
-export const getSupportPage = (token, tab, page, signal) => getAdminData(token, PATH + (tab === 'active' ? '/assigned' : '/unassigned'), { ...(tab === 'active' ? { status: 'Open' } : {}), page, page_size: 100 }, signal)
-export const getSupportConversation = (token, id, signal) => getAdminData(token, conversationPath(id), {}, signal)
+export function getSupportPage(token, tab, page, signal, role = 'Staff') {
+  const all = tab === 'all' || (tab === 'closed' && role === 'Admin')
+  const path = all ? PATH : PATH + (tab === 'waiting' ? '/unassigned' : '/assigned')
+  return getAdminData(token, path, { ...(tab === 'active' ? { status: 'Open' } : tab === 'closed' ? { status: 'Closed' } : {}), page, page_size: 100 }, signal)
+}
+export const getSupportConversation = (token, id, signal) => getAdminData(token, conversationPath(id) + '/summary', {}, signal)
+export const getSupportMessages = (token, id, query, signal) => getAdminData(token, conversationPath(id) + '/message-window', { limit: 50, ...query }, signal)
+export const markSupportRead = (accessToken, id, ids) => request(conversationPath(id) + '/read', { method: 'POST', accessToken, body: { MessageIds: ids } })
 export const claimSupportConversation = (accessToken, id) => request(conversationPath(id) + '/claim', { method: 'POST', accessToken })
 export const sendSupportMessage = (accessToken, id, content) => request(conversationPath(id) + '/messages', { method: 'POST', accessToken, body: { MessageType: 'Text', Content: content } })
 export const closeSupportConversation = (accessToken, id) => request(conversationPath(id) + '/close', { method: 'POST', accessToken })

@@ -285,10 +285,14 @@ class ProductService(BaseService):
         category_id: uuid.UUID | None = None,
         brand_id: uuid.UUID | None = None,
         include_descendants: bool = False,
+        min_price: Decimal | None = None,
+        max_price: Decimal | None = None,
         page: int = 1,
         page_size: int = 20,
     ) -> PageResponse[ProductSummary]:
         """Tìm kiếm/xem danh sách sản phẩm đang bán (Status Active, chưa xóa)."""
+        if min_price is not None and max_price is not None and min_price > max_price:
+            raise BusinessRuleError("Giá tối thiểu phải nhỏ hơn hoặc bằng giá tối đa", code="invalid_price_range")
         offset, limit = self._page_args(page, page_size)
         category_ids = [category_id] if category_id else None
         if category_id and include_descendants:
@@ -300,6 +304,8 @@ class ProductService(BaseService):
             "brand_id": brand_id,
             "status": SELLABLE_PRODUCT_STATUS,
             "name_contains": keyword.strip() if keyword and keyword.strip() else None,
+            "min_price": min_price,
+            "max_price": max_price,
         }
         items = self.products.list_products(**filters, offset=offset, limit=limit)
         return PageResponse[ProductSummary](
@@ -328,8 +334,7 @@ class ProductService(BaseService):
     @staticmethod
     def _detail_media(response, product):
         visible = {variant.ProductVariantId for variant in response.Variants if not getattr(variant, "IsDeleted", False)}
-        default = default_variant_id(product)
-        response.DefaultVariantId = default if default in visible else min(visible, key=str, default=None)
+        response.DefaultVariantId = default_variant_id(product, [v for v in product.variants if v.ProductVariantId in visible])
         for variant_id in visible:
             images, thumbnail = variant_images(product, variant_id)
             response.VariantImages[variant_id] = [ProductImageResponse.model_validate(image).model_copy(

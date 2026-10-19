@@ -41,6 +41,12 @@ export default function PurchaseDetailPage() {
   }
   const byId = new Map(variants.data.map((variant) => [variant.ProductVariantId, variant]))
   const account = (id) => id ? names[id] ?? 'ID: ' + id : '—'
+  // Admin-created purchases are approved immediately without a separate decision record.
+  // Never infer approval for a pending/rejected/cancelled draft that has no decision.
+  const automaticApproval = !po?.DecidedByUserId && ['Approved', 'Receiving', 'Completed', 'Closed'].includes(po?.Status)
+  const approver = po?.Status === 'Rejected' || po?.Status === 'Pending' || po?.RejectReason ? ''
+    : po?.DecidedByUserId ? po.DecidedByName ?? account(po.DecidedByUserId)
+      : automaticApproval ? po.CreatedByName ?? account(po.CreatedByUserId) : ''
   const columns = [
     { key: 'ProductVariantId', label: 'Sản phẩm / biến thể', className: 'w-[26.60%]', render: (id) => <span className="break-words">{byId.has(id) ? [byId.get(id).Name, byId.get(id).VariantName].filter(Boolean).join(' - ') || byId.get(id).Sku : variants.loading ? 'Đang tải sản phẩm…' : 'ID biến thể: ' + id}</span> },
     { key: 'OrderedQuantity', label: 'SL đặt', className: 'w-[9.75%]' },
@@ -63,7 +69,7 @@ export default function PurchaseDetailPage() {
           <Info label="Mã phiếu">{po.PurchaseOrderCode}</Info><Info label="Nhà cung cấp">{suppliers.data?.find((supplier) => supplier.SupplierId === po.SupplierId)?.Name ?? (suppliers.loading ? 'Đang tải…' : '—')}</Info><Info label="Người tạo">{po.CreatedByName ?? account(po.CreatedByUserId)}</Info><Info label="Ngày lập phiếu">{formatDateTime(po.CreatedAt)}</Info><Info label="Ghi chú">{po.Note || '—'}</Info>
         </dl></section>
         <section aria-label="Xử lý của quản trị viên" className={CARD}><h3 className={TITLE}>Xử lý của quản trị viên</h3><dl className="mt-[9px] mb-0 flex flex-col gap-[9px]">
-          <Info label="Trạng thái">{PURCHASE_STATUSES[po.Status] ?? po.Status}</Info><Info label="Người duyệt / từ chối">{account(po.DecidedByUserId)}</Info><Info label="Thời điểm xử lý">{formatDateTime(po.DecidedAt)}</Info><Info label="Lý do từ chối">{po.RejectReason || '—'}</Info><Info label="Tổng tiền">{formatMoney(po.TotalAmount)}</Info>
+          <Info label="Trạng thái">{PURCHASE_STATUSES[po.Status] ?? po.Status}</Info><Info label="Người duyệt">{approver}</Info>{po.RejectReason && <Info label="Người từ chối">{po.DecidedByName ?? account(po.DecidedByUserId)}</Info>}<Info label="Thời điểm xử lý">{formatDateTime(po.DecidedAt ?? (automaticApproval ? po.CreatedAt : null))}</Info><Info label="Lý do từ chối">{po.RejectReason || '—'}</Info><Info label="Tổng tiền">{formatMoney(po.TotalAmount)}</Info>
           {po.Status === 'Closed' && <><Info label="Người đóng phiếu">{account(po.ClosedByUserId)}</Info><Info label="Thời điểm đóng">{formatDateTime(po.ClosedAt)}</Info><Info label="Lý do đóng phiếu">{po.CloseReason || '—'}</Info></>}
         </dl></section>
       </div>

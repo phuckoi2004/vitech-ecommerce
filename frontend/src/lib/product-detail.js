@@ -4,7 +4,12 @@ export function productVariants(product) {
     .filter((variant) => variant?.ProductVariantId && variant.IsActive !== false)
 }
 
-export const versionLabel = (variant) => variant.Storage?.trim() || variant.VariantName || 'Tiêu chuẩn'
+// Without a storage option the name is the version, minus the colour it repeats ("Đen", "Bản Pro · Đen"), so the
+// colours of one model are one version rather than one version each.
+export const versionLabel = (variant) => variant.Storage?.trim()
+  || String(variant.VariantName ?? '').split(' · ').filter((part) => part.trim().toLocaleLowerCase('vi-VN')
+    !== String(variant.Color ?? '').trim().toLocaleLowerCase('vi-VN')).join(' · ').trim()
+  || 'Tiêu chuẩn'
 export const colorLabel = (variant) => variant.Color?.trim() || 'Tiêu chuẩn'
 
 export function variantPrice(variant) {
@@ -18,8 +23,10 @@ export function canPurchase(variant) {
     && Number(variant.StockQuantity) > 0
 }
 
-export function initialVariant(variants) {
-  return variants.find(canPurchase) ?? variants[0] ?? null
+// The product's default variant (chosen in admin) opens first when it can be bought.
+export function initialVariant(variants, defaultVariantId) {
+  const preferred = variants.find((variant) => variant.ProductVariantId === defaultVariantId)
+  return (canPurchase(preferred) ? preferred : null) ?? variants.find(canPurchase) ?? preferred ?? variants[0] ?? null
 }
 
 export function productImages(product) {
@@ -28,6 +35,15 @@ export function productImages(product) {
     .sort((a, b) => Number(!!b.IsDefault) - Number(!!a.IsDefault)
       || Number(a.DisplayOrder || 0) - Number(b.DisplayOrder || 0))
   return [...new Map(images.map((image) => [image.ImageUrl, image])).values()]
+}
+
+// Respect an explicitly empty selection: it must not borrow a different colour's photos.
+// Older responses without a selection retain the shared product gallery.
+export function variantImages(product, variantId) {
+  if (Object.hasOwn(product?.VariantImages ?? {}, variantId)) {
+    return productImages({ Images: product.VariantImages[variantId] })
+  }
+  return productImages(product)
 }
 
 export function specificationText(value, depth = 0) {

@@ -51,6 +51,8 @@ class CatalogProductWrite(RequestSchema):
     def one_default_image(self):
         if sum(image.IsDefault for image in self.Images) > 1:
             raise ValueError("Chỉ chọn một ảnh mặc định")
+        if len({image.ImageUrl for image in self.Images}) != len(self.Images):
+            raise ValueError("Bộ ảnh sản phẩm có ảnh bị trùng")
         return self
 
 

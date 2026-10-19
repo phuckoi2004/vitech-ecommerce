@@ -165,7 +165,6 @@ class CouponUsageTest(unittest.TestCase):
 
     def test_invalid_coupons_are_rejected(self):
         cases = {
-            "coupon_invalid": dict(active=False),
             "coupon_expired": dict(end=datetime(2026, 1, 31, tzinfo=timezone.utc)),
             "coupon_min_order_value": dict(min_order="500000"),
         }
@@ -182,11 +181,25 @@ class CouponUsageTest(unittest.TestCase):
                 self.assertEqual(ctx.exception.code, code)
                 self.assertEqual(coupon.UsedCount, 0)
 
-    def test_promotion_not_active_status_is_rejected(self):
-        self.f.coupon(self.admin, promotion_status="Scheduled")
+    def test_draft_promotion_is_rejected(self):
+        self.f.coupon(self.admin, promotion_status="Draft")
         with self.assertRaises(BusinessRuleError) as ctx:
             self.apply("SALE10", self.lines(), Decimal("200000.00"))
         self.assertEqual(ctx.exception.code, "coupon_expired")
+
+    def test_scheduled_coupon_starts_without_admin_visiting_and_ignores_old_pause(self):
+        coupon = self.f.coupon(self.admin, promotion_status="Scheduled", active=False)
+        self.apply("SALE10", self.lines(), Decimal("200000.00"))
+        self.assertEqual(coupon.UsedCount, 1)
+        self.assertTrue(coupon.IsActive)
+
+    def test_final_use_disables_and_cancellation_reenables_coupon(self):
+        coupon = self.f.coupon(self.admin, usage_limit=1)
+        self.apply("SALE10", self.lines(), Decimal("200000.00"))
+        self.assertFalse(coupon.IsActive)
+        with self.svc.transaction():
+            self.svc.release_coupon_usage(coupon.CouponId)
+        self.assertTrue(coupon.IsActive)
 
     def test_coupon_scoped_to_other_product_is_not_applicable(self):
         from app.models import PromotionProduct

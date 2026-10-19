@@ -26,11 +26,11 @@ export const ORDER_COLUMNS = [
 
 export default function AdminTable({ columns, rows = [], rowKey, loading, error, onRetry, emptyText = 'Chưa có dữ liệu.', emptyContent, label = 'Bảng dữ liệu', className = '', variant }) {
   const products = variant === 'products'
-  return <div className="w-full rounded-sm" role="region" aria-label={label} aria-busy={loading}>
-    <div className="w-full overflow-x-auto" tabIndex={0}><table className={`w-full border-collapse text-left text-xs leading-normal ${className}`}>
-      <thead><tr>{columns.map((column) => <th key={column.key} scope="col" className={`h-11 py-2.5 text-[11px] font-medium whitespace-nowrap text-admin-muted ${products ? 'bg-admin-page px-2.5 first:rounded-l-[9px] last:rounded-r-[9px]' : 'border-b border-admin-border pr-3 last:pr-0'} ${column.className ?? ''}`}>{column.label}</th>)}</tr></thead>
+  return <div className="admin-table-region w-full rounded-sm" role="region" aria-label={label} aria-busy={loading}>
+    <div className="admin-table-scroll w-full overflow-x-auto" tabIndex={0}><table className={`admin-table ${products ? 'admin-table--products' : ''} w-full border-collapse text-left text-sm leading-normal ${className}`}>
+      <thead><tr>{columns.map((column) => <th key={column.key} scope="col" className={`border-b border-admin-border bg-admin-page px-3.5 py-3.5 text-[13px] font-semibold whitespace-nowrap text-admin-muted ${column.className ?? ''}`}>{column.label}</th>)}</tr></thead>
       <tbody>
-        {!loading && !error && rows.map((row) => <tr key={row[rowKey]}>{columns.map((column) => <td key={column.key} className={`${products ? 'h-[76px] px-2.5 text-[11px]' : 'h-11 border-b border-admin-border py-2.5 pr-3 last:pr-0'} align-middle ${column.className ?? ''}`}>{column.render ? column.render(row[column.key], row) : row[column.key] ?? '—'}</td>)}</tr>)}
+        {!loading && !error && rows.map((row) => <tr key={row[rowKey]}>{columns.map((column) => <td key={column.key} className={`border-b border-admin-border px-3.5 py-4 text-sm align-middle ${column.className ?? ''}`}>{column.render ? column.render(row[column.key], row) : row[column.key] ?? '—'}</td>)}</tr>)}
       </tbody>
     </table></div>
     {(loading || error || !rows.length) && <div className="flex min-h-[170px] items-center justify-center">
@@ -40,8 +40,8 @@ export default function AdminTable({ columns, rows = [], rowKey, loading, error,
 }
 
 export function AdminPanel({ title, action, children, className = '', ...props }) {
-  return <section className={`min-w-0 rounded-[14px] border border-admin-border bg-white p-[18px] ${className}`} {...props}>
-    {title && <header className="mb-[13px] flex items-center justify-between gap-3"><h3 className="m-0 text-[15px] font-semibold">{title}</h3>{action}</header>}
+  return <section className={`admin-panel min-w-0 rounded-[16px] border border-admin-border bg-white p-[22px] ${className}`} {...props}>
+    {title && <header className="mb-4 flex flex-wrap items-center justify-between gap-3"><h3 className="m-0 text-lg font-semibold">{title}</h3>{action}</header>}
     {children}
   </section>
 }
