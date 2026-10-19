@@ -1,0 +1,275 @@
+/* Order confirmation (Figma "Xác nhận đặt hàng" 261:333: a 1290-wide card, form 820 + summary 450). Colours come from
+   the .shop-shell tokens; the page adds the Figma field border/background and the selected-option tint. */
+.checkout-page {
+  --checkout-line: #dbe0eb;
+  --checkout-field: #f5f7fa;
+  --checkout-selected: #fff0f2;
+  --checkout-shadow: 0 2px 10px rgb(0 0 0 / 8%);
+  width: min(1290px, calc(100% - 32px));
+  margin: 21px auto 48px;
+}
+
+.checkout-card { display: flex; flex-direction: column; gap: 18px; padding: 24px 24px 36px; border-radius: 16px; background: #fff; }
+
+.checkout-breadcrumb ol { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; font-size: 12px; color: var(--color-muted-600); }
+.checkout-breadcrumb li + li::before { content: "›"; margin-right: 6px; font-weight: 400; }
+.checkout-breadcrumb a { color: inherit; font-weight: 500; text-decoration: none; }
+.checkout-breadcrumb a:hover { color: var(--color-brand-500); }
+.checkout-breadcrumb [aria-current] { color: var(--color-ink-900); font-weight: 600; }
+.checkout-title { margin: 0; color: var(--color-ink-900); font-size: 28px; font-weight: 700; line-height: 1.2; }
+
+/* Figma "Checkout Steps". */
+.checkout-steps {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 58px;
+  margin: 0;
+  padding: 10px 20px;
+  border-radius: 12px;
+  box-shadow: var(--checkout-shadow);
+  list-style: none;
+  color: var(--color-muted-600);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.checkout-steps li { display: flex; align-items: center; gap: 8px; }
+.checkout-steps li.is-done { font-weight: 600; }
+.checkout-steps li.is-current { color: var(--color-brand-500); font-weight: 700; }
+
+.checkout-columns { display: grid; grid-template-columns: minmax(0, 1fr) 450px; align-items: start; gap: 20px; }
+.checkout-form { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+
+/* Figma section cards and "Section Header". */
+.checkout-section { display: flex; flex-direction: column; gap: 14px; padding: 20px; border-radius: 14px; background: #fff; box-shadow: var(--checkout-shadow); }
+.checkout-section-title { display: flex; align-items: center; gap: 10px; margin: 0; color: var(--color-ink-900); font-size: 18px; font-weight: 700; }
+.checkout-step {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 14px;
+  color: #fff;
+  background: var(--color-brand-500);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.checkout-subhead { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.checkout-subhead h3, .checkout-legend { margin: 0; padding: 0; color: var(--color-ink-900); font-size: 13px; font-weight: 600; }
+.checkout-link { padding: 4px 0; border: 0; color: var(--color-brand-500); background: none; font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
+.checkout-link:hover { text-decoration: underline; }
+.checkout-link:focus-visible { border-radius: 4px; outline: 2px solid var(--color-brand-300); outline-offset: 2px; }
+.checkout-muted { margin: 0; color: var(--color-muted-600); font-size: 13px; }
+.checkout-error { margin: 0; color: var(--color-brand-600); font-size: 12px; font-weight: 500; line-height: 18px; }
+.checkout-inline-error { margin: 0; padding: 10px 12px; border-radius: 10px; color: var(--color-brand-600); background: var(--color-brand-50); font-size: 13px; line-height: 20px; }
+.checkout-inline-error button { padding: 0; border: 0; color: inherit; background: none; font: inherit; font-weight: 600; text-decoration: underline; cursor: pointer; }
+
+/* Figma "Customer Fields": read-only values in grey 46px boxes. */
+.checkout-readonly { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin: 0; }
+.checkout-readonly > div, .checkout-field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.checkout-readonly dt, .checkout-field label { color: var(--color-muted-600); font-size: 12px; font-weight: 500; }
+.checkout-readonly dd {
+  display: flex;
+  align-items: center;
+  min-height: 46px;
+  margin: 0;
+  padding: 0 12px;
+  overflow: hidden;
+  border: 1px solid var(--checkout-line);
+  border-radius: 9px;
+  color: var(--color-ink-900);
+  background: var(--checkout-field);
+  font-size: 13px;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+/* Figma "Delivery Address". */
+.checkout-address { display: flex; flex-direction: column; gap: 12px; }
+.checkout-address-card { padding: 12px 14px; border: 1px solid var(--checkout-line); border-radius: 10px; background: var(--checkout-field); }
+.checkout-address-card p { margin: 0; color: var(--color-muted-600); font-size: 12px; line-height: 18px; overflow-wrap: anywhere; }
+.checkout-address-card .checkout-address-name { margin-bottom: 5px; color: var(--color-ink-900); font-size: 13px; font-weight: 600; }
+.checkout-badge { display: inline-block; margin-left: 8px; padding: 1px 8px; border-radius: 999px; color: var(--color-brand-500); background: #ffebf0; font-size: 11px; font-weight: 600; vertical-align: 1px; }
+
+.checkout-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.checkout-field.is-wide { grid-column: 1 / -1; }
+.checkout-required { color: var(--color-brand-500); }
+.checkout-field input, .checkout-textarea {
+  width: 100%;
+  min-height: 46px;
+  padding: 0 12px;
+  border: 1px solid var(--checkout-line);
+  border-radius: 9px;
+  color: var(--color-ink-900);
+  background: #fff;
+  font: inherit;
+  font-size: 13px;
+  transition: border-color 160ms, box-shadow 160ms;
+}
+
+.checkout-field input::placeholder, .checkout-textarea::placeholder { color: var(--color-muted-600); }
+.checkout-field input:focus, .checkout-textarea:focus { border-color: var(--color-brand-300); outline: 0; box-shadow: 0 0 0 3px var(--color-brand-100); }
+.checkout-field input[aria-invalid="true"] { border-color: var(--color-brand-500); }
+
+/* Figma "Note Input": 72px. */
+.checkout-textarea { display: block; min-height: 72px; padding: 12px 14px; border-radius: 10px; line-height: 18px; resize: vertical; }
+
+/* Figma "Option/…": 100px radio cards; shipping side by side, payment and addresses stacked. */
+.checkout-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; min-width: 0; margin: 0; padding: 0; border: 0; }
+.checkout-options.is-stacked { grid-template-columns: minmax(0, 1fr); }
+.checkout-options > .checkout-legend { grid-column: 1 / -1; margin-bottom: 2px; }
+.checkout-options > :is(.checkout-muted, .checkout-inline-error, .checkout-error) { grid-column: 1 / -1; }
+.checkout-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 100px;
+  padding: 12px 14px;
+  border: 1px solid var(--checkout-line);
+  border-radius: 10px;
+  background: #fff;
+  cursor: pointer;
+  transition: border-color 160ms, background 160ms;
+}
+
+.checkout-options.is-stacked .checkout-option { min-height: 72px; }
+.checkout-section > .checkout-options.is-stacked .checkout-option { min-height: 100px; }
+.checkout-option:hover { border-color: var(--color-brand-300); }
+.checkout-option.is-selected { padding: 11.5px 13.5px; border: 1.5px solid var(--color-brand-500); background: var(--checkout-selected); }
+.checkout-option:focus-within { box-shadow: 0 0 0 3px var(--color-brand-100); }
+
+/* Figma "Radio/Default" (20px, 1.5px border) and "Radio/Selected" (the design's icon). */
+.checkout-radio {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  border: 1.5px solid var(--checkout-line);
+  border-radius: 10px;
+  background: #fff;
+  appearance: none;
+  cursor: pointer;
+}
+
+.checkout-radio:checked { border: 0; background: url("../../assets/icons/radio-selected.svg") center / 20px 20px no-repeat; }
+.checkout-radio:focus-visible { outline: 2px solid var(--color-brand-300); outline-offset: 2px; }
+.checkout-option-copy { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.checkout-option-title { color: var(--color-ink-900); font-size: 14px; font-weight: 600; overflow-wrap: anywhere; }
+.checkout-option-detail { color: var(--color-muted-600); font-size: 12px; line-height: 18px; overflow-wrap: anywhere; }
+
+.checkout-payment-note { display: flex; gap: 8px; margin: 0; padding-top: 4px; color: var(--color-muted-600); font-size: 11px; line-height: 17px; }
+.checkout-payment-note > span { color: var(--color-brand-500); font-size: 14px; font-weight: 600; line-height: 17px; }
+
+/* ---------- Figma "Checkout Summary": stays in view while the form scrolls under the sticky header. ---------- */
+.checkout-summary {
+  position: sticky;
+  top: 154px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 20px;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: var(--checkout-shadow);
+}
+
+.checkout-summary-title { margin: 0; color: var(--color-ink-900); font-size: 20px; font-weight: 700; }
+.checkout-items { display: flex; flex-direction: column; gap: 12px; margin: 0; padding: 0 0 14px; border-bottom: 1px solid var(--checkout-line); list-style: none; }
+.checkout-item { display: flex; align-items: center; gap: 12px; }
+.checkout-item-media {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  overflow: hidden;
+  width: 84px;
+  height: 84px;
+  border: 1px solid var(--checkout-line);
+  border-radius: 10px;
+  background: var(--color-accent-50);
+}
+
+.checkout-item-media img { width: 100%; height: 100%; object-fit: contain; }
+.checkout-item-noimage { color: #b9c6dd; font-size: 12px; font-weight: 700; letter-spacing: 0.04em; }
+.checkout-item-info { display: flex; flex: 1; flex-direction: column; gap: 5px; min-width: 0; }
+.checkout-item-name { margin: 0; color: var(--color-ink-900); font-size: 13px; font-weight: 600; line-height: 18px; overflow-wrap: anywhere; }
+.checkout-item-meta { margin: 0; color: var(--color-muted-600); font-size: 11px; line-height: 16px; }
+.checkout-item-total { margin: 0; color: var(--color-brand-500); font-size: 13px; font-weight: 700; }
+
+.checkout-totals { display: flex; flex-direction: column; gap: 14px; margin: 0; padding-bottom: 14px; border-bottom: 1px solid var(--checkout-line); }
+.checkout-totals > div, .checkout-total { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 28px; font-size: 13px; }
+.checkout-totals dt { color: var(--color-muted-600); }
+.checkout-totals dd { margin: 0; color: var(--color-ink-900); font-weight: 600; text-align: right; }
+.checkout-totals .is-muted { color: var(--color-muted-600); font-weight: 500; }
+.checkout-total { margin: 0; color: var(--color-ink-900); font-weight: 600; text-transform: uppercase; }
+.checkout-total > span:last-child { color: var(--color-brand-500); font-size: 17px; font-weight: 700; text-transform: none; }
+.checkout-total > span.is-muted { color: var(--color-muted-600); font-size: 13px; font-weight: 500; }
+.checkout-note { margin: 0; color: var(--color-muted-600); font-size: 11px; line-height: 17px; }
+
+/* Figma "Summary/Giảm giá" (red) and "Coupon Applied" (38px, 12px grey: "Mã giảm giá · Chưa áp dụng"). */
+.checkout-totals dd.is-discount { color: var(--color-brand-500); }
+.checkout-totals > .checkout-coupon { min-height: 38px; font-size: 12px; }
+.checkout-coupon dt, .checkout-totals .checkout-coupon dd { color: var(--color-muted-600); font-weight: 500; }
+.checkout-totals .checkout-coupon dd { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 4px 10px; }
+.checkout-coupon strong { color: var(--color-ink-900); font-weight: 700; letter-spacing: 0.02em; }
+.checkout-coupon-problem { margin: -4px 0 0; padding: 10px 12px; border-radius: 10px; color: var(--color-brand-600); background: var(--color-brand-50); font-size: 12px; line-height: 18px; }
+.checkout-coupon-problem p { margin: 0; }
+.checkout-coupon-problem div { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 4px; }
+.checkout-coupon-problem button { padding: 0; border: 0; color: inherit; background: none; font: inherit; font-weight: 600; text-decoration: underline; cursor: pointer; }
+.checkout-block { margin: -4px 0 0; color: var(--color-brand-600); font-size: 12px; line-height: 18px; }
+
+/* Why placing the order failed; amber when it is not known whether the order was created. */
+.checkout-order-problem { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border-radius: 10px; color: var(--color-brand-600); background: var(--color-brand-50); font-size: 12px; line-height: 18px; }
+.checkout-order-problem.is-unknown { border: 1px solid var(--color-warning-500); color: var(--color-ink-900); background: #fff7ec; }
+.checkout-order-problem p { margin: 0; }
+.checkout-order-problem a, .checkout-order-problem button { padding: 0; border: 0; color: inherit; background: none; font: inherit; font-weight: 600; text-decoration: underline; cursor: pointer; }
+
+/* Figma "Button/XÁC NHẬN ĐẶT HÀNG" (50px) and "Button/← Quay lại giỏ hàng" (44px), 9px radius. */
+.checkout-submit, .checkout-back {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  border-radius: 9px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 160ms;
+}
+
+.checkout-submit { height: 50px; border: 0; color: #fff; background: var(--color-brand-500); text-transform: uppercase; }
+.checkout-submit:hover:not(:disabled) { background: var(--color-brand-600); }
+.checkout-submit:disabled { background: #e7a4aa; cursor: not-allowed; }
+.checkout-back { height: 44px; border: 1px solid var(--color-brand-500); color: var(--color-brand-500); background: #fff; }
+.checkout-back:hover { background: var(--color-brand-50); }
+.checkout-submit:focus-visible, .checkout-back:focus-visible { outline: 3px solid var(--color-brand-300); outline-offset: 2px; }
+
+/* ---------- Narrower screens ---------- */
+@media (max-width: 1100px) {
+  .checkout-columns { grid-template-columns: minmax(0, 1fr) 360px; }
+}
+
+/* One column: the summary (with the confirm button) follows the form. */
+@media (max-width: 900px) {
+  .checkout-columns { grid-template-columns: minmax(0, 1fr); }
+  .checkout-summary { position: static; }
+  .checkout-readonly { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 640px) {
+  .checkout-page { width: calc(100% - 24px); margin-top: 16px; }
+  .checkout-card { gap: 14px; padding: 14px 14px 24px; border-radius: 14px; }
+  .checkout-title { font-size: 24px; }
+  .checkout-steps { flex-direction: column; align-items: flex-start; gap: 6px; padding: 12px 16px; }
+  .checkout-section { padding: 16px; }
+  .checkout-section-title { font-size: 16px; }
+  .checkout-readonly, .checkout-fields, .checkout-options { grid-template-columns: minmax(0, 1fr); }
+  .checkout-option, .checkout-section > .checkout-options.is-stacked .checkout-option { min-height: 72px; }
+  .checkout-summary { padding: 16px; }
+}
