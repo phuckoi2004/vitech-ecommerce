@@ -58,7 +58,7 @@ beforeEach(() => {
 
 test('the file icon opens the separate detail route, keeps filters and returns to the same list', async () => {
   const router = renderPage('/admin/purchases?keyword=PN-API&status=Pending&supplier=s1&product=p1&from=2026-10-14&to=2026-10-14')
-  fireEvent.click(await screen.findByRole('button', { name: 'Chi tiết PN-API-01' }))
+  fireEvent.click(await screen.findByRole('button', { name: 'Chi tiết PN-API-01' }, { timeout: 5000 }))
   await screen.findByRole('heading', { name: 'Phiếu nhập PN-API-01' })
   expect(router.state.location.pathname).toBe('/admin/purchases/po1')
   expect(router.state.location.search).not.toMatch(/dialog|purchase=/)

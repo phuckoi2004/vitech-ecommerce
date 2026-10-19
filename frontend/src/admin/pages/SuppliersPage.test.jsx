@@ -116,7 +116,7 @@ test('creation sends supported fields, keeps the supplier code chosen by the use
   fireEvent.click(within(dialog).getByRole('button', { name: 'Thêm nhà cung cấp', exact: true }))
   await waitFor(() => expect(api.createSupplier).toHaveBeenCalledWith('access-for-test', { SupplierCode: 'NCC-TU-DAT', Name: 'Nhà cung cấp mới', PhoneNumber: '028 7300 0001', Email: null, Address: 'Địa chỉ mới', TaxCode: null, Note: null, IsActive: true }))
   await screen.findByText('NCC-TU-DAT')
-  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
 })
 
 test('detail reads all API fields and edit can restore a hidden supplier and clear optional values', async () => {

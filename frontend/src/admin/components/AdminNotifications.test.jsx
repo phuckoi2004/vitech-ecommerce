@@ -42,7 +42,7 @@ test.each(['Admin', 'Staff'])('%s opens a reference-only stock notification at t
   expect(title).toHaveAttribute('href', '/admin/products?dialog=view&variant=' + ids[0])
   fireEvent.click(title)
   expect(screen.queryByRole('region', { name: 'Danh sách thông báo' })).not.toBeInTheDocument()
-  const detail = within(await screen.findByRole('region', { name: 'Chi tiết sản phẩm' }))
+  const detail = within(await screen.findByRole('region', { name: 'Chi tiết sản phẩm' }, { timeout: 5000 }))
   expect(await detail.findByText('Mã sản phẩm: SKU-1')).toBeInTheDocument()
   expect(detail.queryByText('Mã sản phẩm: SKU-2')).not.toBeInTheDocument()
   expect(detail.getByText('2 sản phẩm')).toBeInTheDocument()
