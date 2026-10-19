@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { getSupportInbox, getSupportPage } from '../services/support.js'
 import useSupportPoll from '../hooks/useSupportPoll.js'
@@ -8,6 +8,19 @@ import SupportConversation from '../components/SupportConversation.jsx'
 
 export default function SupportPage() {
   const [params, setParams] = useSearchParams()
+  // The router applies a navigation before React renders it, so `params` can be older than the URL
+  // this page last asked for. Until that URL is rendered, the effects below must not write: a URL
+  // built from older params would replace the newer navigation (e.g. "Sau" pressed before the first
+  // conversation was put in the URL).
+  const requestedSearch = useRef(null)
+  const search = params.toString()
+  useEffect(() => { if (requestedSearch.current === search) requestedSearch.current = null }, [search])
+  const changeParams = useCallback((change, options) => {
+    const next = new URLSearchParams(params)
+    change(next)
+    if (next.toString() !== search) requestedSearch.current = next.toString()
+    setParams(next, options)
+  }, [params, search, setParams])
   const tab = params.get('tab') === 'active' ? 'active' : 'waiting'
   const requestedPage = Number(params.get('page'))
   const page = Number.isSafeInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1
@@ -21,30 +34,24 @@ export default function SupportPage() {
   const selected = params.get('conversation') || rows[0]?.ConversationId
   const explicitSelection = params.get('conversation'), firstId = rows[0]?.ConversationId
   useEffect(() => {
-    if (!explicitSelection && firstId) setParams((previous) => {
-      const next = new URLSearchParams(previous)
+    if (!explicitSelection && firstId && requestedSearch.current === null) changeParams((next) => {
       if (!next.has('conversation')) next.set('conversation', firstId)
-      return next
     }, { replace: true })
-  }, [explicitSelection, firstId, setParams])
+  }, [explicitSelection, firstId, changeParams])
   const lastPage = state.data ? Math.max(1, Math.ceil(state.data[tab].Total / 100)) : null
   useEffect(() => {
-    if (lastPage !== null && page > lastPage) setParams((previous) => {
-      const next = new URLSearchParams(previous)
+    if (lastPage !== null && page > lastPage && requestedSearch.current === null) changeParams((next) => {
       if (lastPage === 1) next.delete('page')
       else next.set('page', String(lastPage))
-      return next
     }, { replace: true })
-  }, [lastPage, page, setParams])
+  }, [lastPage, page, changeParams])
   function refresh() { state.refresh(); setReload((value) => value + 1) }
   function navigate(values) {
-    setParams((previous) => {
-      const next = new URLSearchParams(previous)
+    changeParams((next) => {
       for (const [key, value] of Object.entries(values)) {
         if (value) next.set(key, value)
         else next.delete(key)
       }
-      return next
     })
   }
   return <section aria-label="Trung tâm hỗ trợ" className="-my-1 flex min-w-0 flex-col gap-3.5 font-admin text-admin-text">

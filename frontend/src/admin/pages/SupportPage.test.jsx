@@ -294,6 +294,59 @@ test('refresh clamps a vanished last page after another staff member receives it
   await screen.findByRole('button', { name: 'Mở cuộc trò chuyện với Nguyễn Văn An' })
 })
 
+test.each([
+  ['without a choice the first conversation is selected by replacing the URL', '/admin/support', '?conversation=c1', 'REPLACE', 'Nguyễn Văn An'],
+  ['a conversation already chosen in the URL is kept', '/admin/support?conversation=c2', '?conversation=c2', 'POP', 'Khách thứ hai'],
+])('%s', async (_, path, search, historyAction, name) => {
+  conversations = [{ ...initial, LastMessage: message }, { ...initial, ConversationId: 'c2', CustomerName: 'Khách thứ hai' }]
+  const router = open(path)
+  await within(await screen.findByRole('region', { name: 'Nội dung cuộc trò chuyện' })).findByRole('heading', { name })
+  await waitFor(() => expect(router.state.location.search).toBe(search))
+  expect(router.state.historyAction).toBe(historyAction)
+  expect(screen.getByRole('button', { name: 'Mở cuộc trò chuyện với ' + name })).toHaveAttribute('aria-current', 'true')
+})
+
+// Clicks what `find` returns in the microtask after React commits it, before React runs that
+// render's passive effects (they run in a later task): a click a user on a slow device can make.
+// Resolves with the URL the router had at the click.
+function clickBeforeEffects(router, find) {
+  return new Promise((resolve) => {
+    const observer = new MutationObserver(() => {
+      const target = find()
+      if (!target || target.disabled) return
+      observer.disconnect()
+      const search = router.state.location.search
+      fireEvent.click(target)
+      resolve(search)
+    })
+    observer.observe(document.body, { childList: true, subtree: true, attributes: true })
+  })
+}
+
+test('pressing Sau before the first conversation is selected stays on page 2', async () => {
+  const original = api.getAdminData.getMockImplementation()
+  api.getAdminData.mockImplementation((token, path, query, signal) => path === '/admin/conversations/unassigned' ? Promise.resolve({ Items: query.page === 2 ? [{ ...initial, ConversationId: 'c101', CustomerName: 'Khách trang hai' }] : [initial], Total: 101, Page: query.page, PageSize: 100 }) : original(token, path, query, signal))
+  const router = open()
+  // Page 1 is on screen and its first conversation is not in the URL yet.
+  expect(await clickBeforeEffects(router, () => screen.queryByRole('button', { name: 'Sau', exact: true }))).toBe('')
+  await screen.findByRole('button', { name: 'Mở cuộc trò chuyện với Khách trang hai' })
+  expect(screen.getByText('Trang 2 / 2')).toBeInTheDocument()
+  await waitFor(() => expect(router.state.location.search).toBe('?page=2&conversation=c101'))
+  expect(screen.getByRole('button', { name: 'Mở cuộc trò chuyện với Khách trang hai' })).toHaveAttribute('aria-current', 'true')
+  expect(screen.queryByRole('button', { name: 'Mở cuộc trò chuyện với Nguyễn Văn An' })).not.toBeInTheDocument()
+})
+
+test('switching tab while a page past the last one is being clamped keeps the chosen tab', async () => {
+  const original = api.getAdminData.getMockImplementation()
+  api.getAdminData.mockImplementation((token, path, query, signal) => path === '/admin/conversations/unassigned' ? Promise.resolve({ Items: query.page === 3 ? [] : [initial], Total: 150, Page: query.page, PageSize: 100 }) : original(token, path, query, signal))
+  const router = open('/admin/support?page=3')
+  // Page 3 of 2 is on screen and has not been clamped yet.
+  expect(await clickBeforeEffects(router, () => screen.queryByText('Trang 3 / 2') && screen.getByRole('tab', { name: /^Đang hỗ trợ/ }))).toBe('?page=3')
+  expect(await screen.findByText('Bạn chưa có cuộc trò chuyện đang hỗ trợ.')).toBeInTheDocument()
+  await waitFor(() => expect(router.state.location.search).toBe('?tab=active'))
+  expect(screen.getByRole('tab', { name: /^Đang hỗ trợ/ })).toHaveAttribute('aria-selected', 'true')
+})
+
 test('transcript sorts by server timestamp and message ID instead of database relationship order', async () => {
   messages = [{ ...message, MessageId: 'm3', Content: 'Cuối', SentAt: '2026-10-14T08:11:00Z' }, { ...message, MessageId: 'm2', Content: 'Thứ hai' }, { ...message, Content: 'Đầu tiên' }]
   open()
