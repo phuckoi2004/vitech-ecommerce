@@ -16,7 +16,7 @@ function DetailField({ label, children }) {
 
 export default function OrderDialog({ orderId, initialAction, onClose, onDone }) {
   const workflow = useOrderWorkflow(orderId, initialAction, onDone)
-  const { detail, order, payment, needsSerials, serials, intent, busy, error, notice, canUpdate, next, codDelivery, serialItems, blocked, write, assign, choose, reason, collected, setNotice, setCollected } = workflow
+  const { detail, order, payment, needsSerials, serials, intent, busy, error, notice, canUpdate, next, codDelivery, awaitingPayment, serialItems, blocked, write, assign, choose, reason, collected, setNotice, setCollected } = workflow
   const confirming = canUpdate && Boolean(intent)
   const title = confirming ? intent === 'cancel' ? 'Hủy đơn hàng' : 'Cập nhật trạng thái đơn hàng' : 'Chi tiết đơn hàng'
   const itemColumns = [
@@ -31,7 +31,7 @@ export default function OrderDialog({ orderId, initialAction, onClose, onDone })
     <ProductButton secondary disabled={busy} onClick={onClose}>Đóng</ProductButton>
     {order && canUpdate && !confirming && <>
       {canCancelOrder(order) && <ProductButton secondary disabled={busy} onClick={() => choose('cancel')}>Hủy đơn hàng</ProductButton>}
-      {next && <ProductButton disabled={busy} onClick={() => choose('advance')}>{next[1]}</ProductButton>}
+      {next && <ProductButton disabled={busy || awaitingPayment} aria-describedby={awaitingPayment ? 'order-dialog-confirm-blocked' : undefined} onClick={() => choose('advance')}>{next[1]}</ProductButton>}
     </>}
     {confirming && order && <>
       <ProductButton secondary disabled={busy} onClick={() => choose(null)}>Quay lại chi tiết</ProductButton>
@@ -52,6 +52,7 @@ export default function OrderDialog({ orderId, initialAction, onClose, onDone })
         {order.CancelReason && <div className="col-span-2"><DetailField label="Lý do hủy">{order.CancelReason}</DetailField></div>}
       </dl>
       {payment.error && <ErrorState title="Chưa tải được phương thức thanh toán" message={payment.error} onRetry={payment.refresh} className="py-2" />}
+      {awaitingPayment && !confirming && <p id="order-dialog-confirm-blocked" className="m-0 rounded-[10px] bg-amber-50 p-3 text-xs text-amber-700">{blocked}</p>}
       {confirming && <OrderActionForm workflow={workflow} />}
       <section aria-label="Sản phẩm trong đơn"><h3 className="mb-3 text-sm font-semibold">Sản phẩm trong đơn</h3><AdminTable columns={itemColumns} rows={order.Items ?? []} rowKey="OrderItemId" label="Sản phẩm trong đơn" emptyText="Đơn hàng chưa có sản phẩm." className="min-w-[650px] [&_td]:py-3" /></section>
       <dl className="m-0 ml-auto grid w-[320px] max-w-full grid-cols-2 gap-x-4 gap-y-2 text-xs">

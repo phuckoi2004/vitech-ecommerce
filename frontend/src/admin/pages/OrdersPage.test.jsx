@@ -190,6 +190,36 @@ test('an unpaid online payment cannot ship even after serial requirements are sa
   expect(api.updateOrderStatus).not.toHaveBeenCalled()
 })
 
+test('an unpaid transfer order cannot be confirmed from the quick action; the dialog says why', async () => {
+  method = { ...method, Code: 'SEPAY', Name: 'Chuyển khoản' }
+  orders = [{ ...base }]
+  renderPage('/admin/orders?order=o1&action=advance')
+  const dialog = await screen.findByRole('dialog')
+  await within(dialog).findByText('Đơn thanh toán chuyển khoản chỉ được xác nhận sau khi khách đã thanh toán (hiện tại: Chưa thanh toán).')
+  expect(within(dialog).getByRole('button', { name: 'Xác nhận đơn', exact: true })).toBeDisabled()
+  fireEvent.submit(dialog.querySelector('#order-status-form'))
+  expect(api.updateOrderStatus).not.toHaveBeenCalled()
+
+  // Back on the details, the confirm action itself is disabled and points to the reason.
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Quay lại chi tiết' }))
+  const action = within(dialog).getByRole('button', { name: 'Xác nhận đơn', exact: true })
+  expect(action).toBeDisabled()
+  expect(action).toHaveAccessibleDescription('Đơn thanh toán chuyển khoản chỉ được xác nhận sau khi khách đã thanh toán (hiện tại: Chưa thanh toán).')
+  expect(within(dialog).getByRole('button', { name: 'Hủy đơn hàng' })).toBeEnabled()
+})
+
+test('a paid transfer order is confirmed from the quick action as before', async () => {
+  method = { ...method, Code: 'SEPAY', Name: 'Chuyển khoản' }
+  orders = [{ ...base, PaymentStatus: 'Paid' }]
+  renderPage('/admin/orders?order=o1&action=advance')
+  const dialog = await screen.findByRole('dialog')
+  const confirm = within(dialog).getByRole('button', { name: 'Xác nhận đơn', exact: true })
+  await waitFor(() => expect(confirm).toBeEnabled())
+  expect(within(dialog).queryByText(/chỉ được xác nhận sau khi khách đã thanh toán/)).not.toBeInTheDocument()
+  fireEvent.click(confirm)
+  await waitFor(() => expect(api.updateOrderStatus).toHaveBeenCalledWith('access-for-test', 'o1', { OrderStatus: 'Confirmed', Note: null }))
+})
+
 test('COD delivery requires explicit collection and uses the collection endpoint without a client amount', async () => {
   orders = [{ ...base, OrderStatus: 'Shipping' }]
   renderPage('/admin/orders?order=o1&action=advance')

@@ -27,7 +27,7 @@ export default function OrderDetailPage() {
   const [extraOpen, setExtraOpen] = useState(false)
   const { onSubPage } = useOutletContext() ?? {}
   const workflow = useOrderWorkflow(orderId, null, statusDone)
-  const { detail, order, payment, needsSerials, serials, serialItems, canUpdate, next, busy, error, notice, intent, write, assign, choose, setNotice, setCollected } = workflow
+  const { detail, order, payment, needsSerials, serials, serialItems, canUpdate, next, awaitingPayment, blocked, busy, error, notice, intent, write, assign, choose, setNotice, setCollected } = workflow
   useEffect(() => {
     onSubPage?.(order?.OrderCode ?? null)
     return () => onSubPage?.(null)
@@ -72,7 +72,8 @@ export default function OrderDetailPage() {
         <aside aria-label="Xử lý đơn hàng" className="flex min-w-0 flex-col gap-4">
           <section aria-label="Cập nhật trạng thái" className={CARD + ' flex min-h-[221px] flex-col items-start gap-3 py-[18px]'}><h3 className={TITLE}>Cập nhật trạng thái</h3><p className="m-0 text-[11px] leading-[normal] font-medium text-admin-muted">Trạng thái hiện tại</p><OrderBadge value={order.OrderStatus} className="leading-[normal]" />
             {canUpdate ? <>
-              {next && <ProductButton disabled={busy} onClick={() => choose('advance')}>{next[1]}</ProductButton>}
+              {next && <ProductButton disabled={busy || awaitingPayment} aria-describedby={awaitingPayment ? 'order-confirm-blocked' : undefined} onClick={() => choose('advance')}>{next[1]}</ProductButton>}
+              {awaitingPayment && <p id="order-confirm-blocked" className="m-0 text-xs text-amber-700">{blocked}</p>}
               {canCancelOrder(order) && <ProductButton secondary className="min-w-[110px] border-admin-red! text-admin-red! enabled:hover:bg-red-50!" disabled={busy} onClick={() => choose('cancel')}>Hủy đơn</ProductButton>}
               {!next && <p className="m-0 text-xs text-admin-muted">{order.OrderStatus === 'Cancelled' ? 'Đơn hàng đã đóng.' : 'Đơn hàng đã hoàn tất.'}</p>}
             </> : <p className="m-0 text-xs text-admin-muted">Bạn có quyền xem đơn hàng.</p>}

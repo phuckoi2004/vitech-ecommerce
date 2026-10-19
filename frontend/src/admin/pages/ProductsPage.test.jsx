@@ -220,6 +220,9 @@ describe('product variant list', () => {
     await user.type(within(dialog).getByRole('textbox', { name: 'Tên sản phẩm' }), 'Điện thoại mới')
     await user.type(within(dialog).getByRole('textbox', { name: 'Mã sản phẩm (SKU)' }), 'MY-WHITE')
     await user.type(within(dialog).getByRole('textbox', { name: 'Màu sắc' }), 'Trắng')
+    // Giá bán là VND nguyên đồng.
+    expect(within(dialog).getByRole('spinbutton', { name: 'Giá bán (đồng)' })).toHaveAttribute('step', '1')
+    expect(within(dialog).getByRole('spinbutton', { name: 'Giá bán (đồng)' })).toHaveAttribute('max', '9999999999999')
     fireEvent.change(within(dialog).getByRole('spinbutton', { name: 'Giá bán (đồng)' }), { target: { value: '12000000' } })
     fireEvent.change(within(dialog).getByRole('combobox', { name: 'Danh mục' }), { target: { value: 'c1' } })
     fireEvent.change(within(dialog).getByRole('combobox', { name: 'Thương hiệu' }), { target: { value: 'b1' } })

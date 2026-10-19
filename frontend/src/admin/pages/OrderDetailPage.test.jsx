@@ -59,6 +59,48 @@ beforeEach(() => {
   })
 })
 
+test.each([['Pending', 'Chưa thanh toán'], ['Failed', 'Thanh toán thất bại']])(
+  'a transfer order with payment %s cannot be confirmed: the action is disabled with the reason', async (status, label) => {
+    method = { PaymentMethodId: 'pm1', Code: 'SEPAY', Name: 'Chuyển khoản QR' }
+    order = { ...order, PaymentStatus: status }
+    renderPage()
+    const confirm = await screen.findByRole('button', { name: 'Xác nhận đơn', exact: true }, { timeout: 5000 })
+    await waitFor(() => expect(confirm).toBeDisabled())
+    expect(confirm).toHaveAccessibleDescription(`Đơn thanh toán chuyển khoản chỉ được xác nhận sau khi khách đã thanh toán (hiện tại: ${label}).`)
+    fireEvent.click(confirm)
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(api.updateOrderStatus).not.toHaveBeenCalled()
+    expect(screen.getByRole('button', { name: 'Hủy đơn' })).toBeEnabled() // cancelling stays available
+  })
+
+test.each([['a paid transfer order', 'SEPAY', 'Paid'], ['an unpaid COD order', 'COD', 'Pending']])(
+  '%s is confirmed as before', async (_, code, paymentStatus) => {
+    method = { PaymentMethodId: 'pm1', Code: code, Name: code }
+    order = { ...order, PaymentStatus: paymentStatus }
+    renderPage()
+    fireEvent.click(await screen.findByRole('button', { name: 'Xác nhận đơn', exact: true }))
+    const dialog = screen.getByRole('dialog', { name: 'Cập nhật trạng thái đơn hàng' })
+    const submit = within(dialog).getByRole('button', { name: 'Xác nhận đơn', exact: true })
+    await waitFor(() => expect(submit).toBeEnabled())
+    expect(screen.queryByText(/chỉ được xác nhận sau khi khách đã thanh toán/)).not.toBeInTheDocument()
+    fireEvent.click(submit)
+    await waitFor(() => expect(api.updateOrderStatus).toHaveBeenCalledWith('access-for-test', 'o1', { OrderStatus: 'Confirmed', Note: null }))
+  })
+
+test('while its payment method cannot be read, an order is not confirmed', async () => {
+  const answer = api.getAdminData.getMockImplementation()
+  api.getAdminData.mockImplementation(async (token, path, ...rest) => path === '/payment-methods/pm1'
+    ? Promise.reject(new Error('Lỗi tải phương thức thanh toán.')) : answer(token, path, ...rest))
+  renderPage()
+  fireEvent.click(await screen.findByRole('button', { name: 'Xác nhận đơn', exact: true }))
+  const dialog = screen.getByRole('dialog', { name: 'Cập nhật trạng thái đơn hàng' })
+  expect(await within(dialog).findByText('Lỗi tải phương thức thanh toán.')).toBeInTheDocument()
+  expect(within(dialog).getByText('Cần tải được phương thức thanh toán trước khi xác nhận đơn.')).toBeInTheDocument()
+  expect(within(dialog).getByRole('button', { name: 'Xác nhận đơn', exact: true })).toBeDisabled()
+  fireEvent.submit(dialog.querySelector('#order-status-form'))
+  expect(api.updateOrderStatus).not.toHaveBeenCalled()
+})
+
 test('the full route renders Figma sections, live breadcrumb and active orders menu without a detail modal', async () => {
   renderPage()
   await screen.findByRole('heading', { level: 2, name: 'Đơn hàng #DH-API-01' })
