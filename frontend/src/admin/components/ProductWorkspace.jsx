@@ -14,6 +14,7 @@ import { ParentPicker, ProductDeleteDialog } from './ProductDialogs.jsx'
 import { sharedBody, sharedForm } from '../lib/product-form.js'
 import { isAllowedProductImage, PRODUCT_IMAGE_RULE } from '../lib/product-images.js'
 import { ProductButton } from './ProductUi.jsx'
+import StockQuantity from './StockQuantity.jsx'
 import RichTextContent from '../../components/shared/RichTextContent.jsx'
 import RichTextEditor from './RichTextEditor.jsx'
 
@@ -55,7 +56,7 @@ function ProductDetailsPage({ item, onClose, onDone, onEdit, onEditShared, onAdd
         <div><h3 className="m-0 text-[22px] leading-normal font-bold break-words">{item.Name}</h3><p className="mt-[5px] mb-0 text-xs font-medium text-admin-muted">Mã sản phẩm: {item.Sku}</p>{item.IsDefaultVariant && <p className="mt-2 mb-0 text-xs font-semibold text-admin-blue">Biến thể mặc định</p>}</div>
         <hr className="m-0 w-full border-0 border-t border-admin-border" />
         <dl className="m-0 flex flex-col gap-3 text-xs">{[
-          ['Danh mục', item.Category?.Name], ['Thương hiệu', item.Brand?.Name], ['Giá bán', formatMoney(item.Price)], ['Số lượng tồn kho', item.StockQuantity + ' sản phẩm'],
+          ['Danh mục', item.Category?.Name], ['Thương hiệu', item.Brand?.Name], ['Giá bán', formatMoney(item.Price)], ['Số lượng tồn kho', <StockQuantity key="stock" variant={item} detailed />],
           ['Trạng thái', status], ['Màu sắc', item.Color], ['Dung lượng', item.Storage],
         ].map(([label, value]) => <div key={label} className="grid grid-cols-[180px_minmax(0,1fr)] gap-2"><dt className="font-medium text-admin-muted">{label}</dt><dd className={'m-0 font-semibold break-words ' + (label === 'Trạng thái' && item.IsActive && item.Status === 'Active' ? 'text-green-600' : '')}>{value ?? '—'}</dd></div>)}</dl>
         <div><h4 className="m-0 text-[13px] font-semibold">Mô tả sản phẩm</h4><RichTextContent value={item.Description} className="mt-[7px] max-h-[420px] overflow-y-auto" fallback={<p className="mt-[7px] mb-0 text-xs leading-normal text-admin-muted">Chưa có mô tả sản phẩm.</p>} /></div>
