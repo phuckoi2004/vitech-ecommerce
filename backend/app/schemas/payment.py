@@ -86,6 +86,7 @@ class QrPaymentResponse(PaymentTransactionResponse):
     - QrData: URL ảnh QR.
     - TransferContent: nội dung chuyển khoản bắt buộc (mã thanh toán duy nhất của yêu cầu này).
     - Bank, AccountNumber: tài khoản nhận tiền mà cổng thanh toán đã dùng khi tạo QR (NULL nếu cổng không cung cấp).
+    - AccountName: tên chủ tài khoản nhận tiền đã cấu hình lúc tạo QR (NULL nếu không cấu hình).
     - TransferAmount: số tiền cần chuyển, VND nguyên đồng (bằng Amount).
     - ExpiresAt: hạn thanh toán; quá hạn đơn bị hủy tự động. NULL khi đơn không còn ở trạng thái chờ xác nhận (Pending),
       lúc đó hạn QR không còn áp dụng.
@@ -95,6 +96,7 @@ class QrPaymentResponse(PaymentTransactionResponse):
     TransferContent: str
     Bank: str | None
     AccountNumber: str | None
+    AccountName: str | None = None
     TransferAmount: int
     ExpiresAt: datetime | None
 

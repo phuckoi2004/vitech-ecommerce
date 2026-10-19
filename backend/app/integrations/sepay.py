@@ -71,6 +71,8 @@ class SePaySettings:
     webhook_secret: str = field(repr=False)
     account_number: str
     bank: str | None = None
+    # Tên chủ tài khoản nhận tiền (tùy chọn): chỉ để khách đối chiếu trước khi chuyển, không đưa vào ảnh QR.
+    account_name: str | None = None
     qr_image_url: str | None = None
     payment_code_prefix: str | None = None
     payment_code_length: int | None = None
@@ -78,7 +80,8 @@ class SePaySettings:
 
     @classmethod
     def from_env(cls, env: Mapping[str, str] | None = None) -> "SePaySettings":
-        """Đọc cấu hình webhook (bắt buộc: SEPAY_WEBHOOK_SECRET, SEPAY_ACCOUNT_NUMBER) và QR (tùy chọn khi tạo QR)."""
+        """Đọc cấu hình webhook (bắt buộc: SEPAY_WEBHOOK_SECRET, SEPAY_ACCOUNT_NUMBER), QR (tùy chọn khi tạo QR) và
+        SEPAY_ACCOUNT_NAME (luôn tùy chọn)."""
         env = os.environ if env is None else env
 
         def value(name: str) -> str | None:
@@ -97,6 +100,7 @@ class SePaySettings:
             webhook_secret=value("SEPAY_WEBHOOK_SECRET"),
             account_number=value("SEPAY_ACCOUNT_NUMBER"),
             bank=value("SEPAY_BANK"),
+            account_name=value("SEPAY_ACCOUNT_NAME"),
             qr_image_url=value("SEPAY_QR_IMAGE_URL"),
             payment_code_prefix=value("SEPAY_PAYMENT_CODE_PREFIX"),
             payment_code_length=length,
@@ -332,6 +336,7 @@ class SePayQrGateway:
                 "payment_code": code,
                 "bank": self.settings.bank,
                 "account_number": self.settings.account_number,
+                "account_name": self.settings.account_name,
             },
         )
 

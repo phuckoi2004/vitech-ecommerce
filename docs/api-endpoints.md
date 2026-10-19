@@ -158,6 +158,7 @@ Thông báo Admin/Staff mở chi tiết phiếu nhập, bảo hành và đổi t
 | `QrData` | URL ảnh QR. |
 | `TransferContent` | Nội dung chuyển khoản bắt buộc: mã thanh toán duy nhất của yêu cầu này. |
 | `Bank`, `AccountNumber` | Tài khoản nhận tiền mà cổng thanh toán đã dùng khi tạo QR; `null` nếu không có (ví dụ yêu cầu tạo trước khi server lưu thông tin này). |
+| `AccountName` | Tên chủ tài khoản nhận tiền (`SEPAY_ACCOUNT_NAME`) lưu lúc tạo QR, để khách đối chiếu; `null` nếu không cấu hình. Không nằm trong ảnh QR. |
 | `TransferAmount` | Số tiền cần chuyển, số nguyên VND, bằng `Amount` (= `TotalAmount` của đơn). |
 | `ExpiresAt` | Hạn thanh toán = `OrderedAt` + 15 phút khi đơn còn `Pending`; `null` khi đơn đã ở trạng thái khác. Đơn quá hạn chưa thanh toán bị tác vụ `/internal/orders/expire-unpaid-qr` hủy. |
 

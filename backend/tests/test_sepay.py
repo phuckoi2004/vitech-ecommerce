@@ -121,6 +121,15 @@ class SettingsTest(unittest.TestCase):
         self.assertEqual(loaded.account_number, "0123")
         self.assertNotIn("super-secret-value", repr(loaded))
 
+    def test_account_name_is_optional_and_trimmed(self):
+        base = {"SEPAY_WEBHOOK_SECRET": "s", "SEPAY_ACCOUNT_NUMBER": "1"}
+        self.assertIsNone(SePaySettings.from_env(base).account_name)
+        self.assertIsNone(SePaySettings.from_env({**base, "SEPAY_ACCOUNT_NAME": "   "}).account_name)
+        self.assertEqual(SePaySettings.from_env({**base, "SEPAY_ACCOUNT_NAME": " CONG TY VIETECH "}).account_name,
+                         "CONG TY VIETECH")
+        # Not part of the QR configuration: a gateway is built without it.
+        settings(account_name=None).require_qr()
+
     def test_qr_config_validation(self):
         with self.assertRaises(SePayConfigError) as ctx:
             SePaySettings.from_env({"SEPAY_WEBHOOK_SECRET": "s", "SEPAY_ACCOUNT_NUMBER": "1"}).require_qr()
@@ -250,9 +259,13 @@ class QrGatewayTest(unittest.TestCase):
         request = SePayQrGateway(settings()).create_qr_payment(order_code="VT000001", amount=Decimal("130000.00"))
         self.assertEqual(request.response_data, {
             "provider": "SePay", "payment_code": request.gateway_transaction_code,
-            "bank": "Vietcombank", "account_number": "0123456789",
+            "bank": "Vietcombank", "account_number": "0123456789", "account_name": None,
         })
         self.assertNotIn(SECRET, json.dumps(request.response_data) + request.qr_data)
+        named = SePayQrGateway(settings(account_name="CONG TY VIETECH")).create_qr_payment(
+            order_code="VT000001", amount=Decimal("130000.00"))
+        self.assertEqual(named.response_data["account_name"], "CONG TY VIETECH")
+        self.assertEqual(set(parse_qs(urlparse(named.qr_data).query)), {"acc", "bank", "amount", "des"})
 
     def test_amount_must_be_whole_vnd(self):
         gateway = SePayQrGateway(settings())

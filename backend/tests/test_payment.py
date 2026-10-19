@@ -320,7 +320,7 @@ class QrDeadlineBoundaryTest(PaymentTestBase):
 
 
 WEBHOOK_SECRET = "webhook-secret-not-real"
-QR_DETAIL_FIELDS = {"TransferContent", "Bank", "AccountNumber", "TransferAmount", "ExpiresAt"}
+QR_DETAIL_FIELDS = {"TransferContent", "Bank", "AccountNumber", "AccountName", "TransferAmount", "ExpiresAt"}
 
 
 def sepay_settings(**overrides) -> SePaySettings:
@@ -345,7 +345,7 @@ class QrPaymentDetailsTest(PaymentTestBase):
         [stored] = self.txs(order)
         self.assertEqual((qr.TransferContent, qr.Status), (stored.GatewayTransactionCode, "Pending"))
         self.assertTrue(qr.TransferContent.startswith("VTPAY") and len(qr.TransferContent) == 15)
-        self.assertEqual((qr.Bank, qr.AccountNumber), ("Vietcombank", "0123456789"))
+        self.assertEqual((qr.Bank, qr.AccountNumber, qr.AccountName), ("Vietcombank", "0123456789", None))
         self.assertEqual((qr.TransferAmount, qr.Amount), (130000, Decimal("130000.00")))
         self.assertEqual(qr.ExpiresAt, order.OrderedAt + timedelta(minutes=15))
         # The QR image encodes exactly the same transfer.
@@ -365,6 +365,14 @@ class QrPaymentDetailsTest(PaymentTestBase):
             self.f.actor(self.customer), order.OrderId)
         self.assertEqual(again.model_dump(), first.model_dump())
         self.assertEqual(len(self.txs(order)), 1)
+
+    def test_configured_account_name_is_returned_and_kept_for_the_issued_qr(self):
+        order = self.f.order(self.customer, self.qr, total="130000.00")
+        first = self.sepay(account_name="CONG TY VIETECH").create_qr_payment(self.f.actor(self.customer), order.OrderId)
+        self.assertEqual(first.AccountName, "CONG TY VIETECH")
+        # The name stored with this QR is returned again, even once the setting changes or is removed.
+        again = self.sepay(account_name=None).create_qr_payment(self.f.actor(self.customer), order.OrderId)
+        self.assertEqual((again.AccountName, again.PaymentTransactionId), ("CONG TY VIETECH", first.PaymentTransactionId))
 
     def test_deadline_applies_only_while_the_order_awaits_confirmation(self):
         order = self.f.order(self.customer, self.qr, status="Confirmed", total="130000.00")

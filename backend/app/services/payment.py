@@ -677,6 +677,7 @@ class PaymentService(BaseService):
             TransferContent=transaction.GatewayTransactionCode,
             Bank=details.get("bank"),
             AccountNumber=details.get("account_number"),
+            AccountName=details.get("account_name"),
             TransferAmount=int(transaction.Amount),
             ExpiresAt=qr_payment_deadline(order) if order.OrderStatus == ORDER_PENDING else None,
         )

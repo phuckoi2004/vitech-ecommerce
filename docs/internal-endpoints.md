@@ -54,7 +54,7 @@ Tiền về đúng số tiền sau hạn 15 phút (`PaymentService.apply_bank_tr
 |---|---|
 | Router | `app/routers/webhooks.py` → `POST /webhooks/sepay` (chỉ POST), đã đăng ký trong `app/main.py` |
 | Xác thực | HMAC-SHA256 theo tài liệu SePay: `X-SePay-Timestamp` (Unix giây), `X-SePay-Signature: sha256=<hex>` của `"{timestamp}.{raw_body}"`; lệch tối đa 300 giây; so sánh hằng thời gian; dùng bytes gốc của body |
-| Cấu hình | `SEPAY_WEBHOOK_SECRET`, `SEPAY_ACCOUNT_NUMBER` (thiếu → 503, không xử lý). QR: `SEPAY_BANK`, `SEPAY_QR_IMAGE_URL`, `SEPAY_PAYMENT_CODE_PREFIX`, `SEPAY_PAYMENT_CODE_LENGTH` |
+| Cấu hình | `SEPAY_WEBHOOK_SECRET`, `SEPAY_ACCOUNT_NUMBER` (thiếu → 503, không xử lý). QR: `SEPAY_BANK`, `SEPAY_QR_IMAGE_URL`, `SEPAY_PAYMENT_CODE_PREFIX`, `SEPAY_PAYMENT_CODE_LENGTH`; tùy chọn `SEPAY_ACCOUNT_NAME` (tên chủ tài khoản hiển thị cạnh QR) |
 | Body | JSON (cấu hình SePay phải chọn `application/json`) |
 | Phản hồi | `200 {"success": true}` khi sự kiện đã lưu và xử lý xong (kể cả trùng, sai số tiền, không khớp đơn — đã vào đối soát). `401` sai chữ ký/timestamp, `400` payload sai, `503` thiếu cấu hình, `500` lỗi lưu/xử lý → SePay gửi lại |
 | Idempotency | `PaymentWebhookEvents` UNIQUE (Provider, AccountNumber, id) |
