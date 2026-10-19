@@ -283,7 +283,7 @@ def test_purchase_receipt_sets_stock_and_cost_and_duplicates_are_conflicts(pg, t
 # ---------------------------------------------------------------------------------------------- order lifecycle
 
 
-def test_cod_order_delivery_review_return_refund_and_statistics(pg, team, methods):
+def test_cod_order_delivery_review_status_only_return_and_statistics(pg, team, methods):
     client, staff, admin = pg.client, team["staff"], team["admin"]
     item = stocked_variant(pg, team, quantity=10, price="100000.00", cost="70000.00")
     _, customer = new_customer(pg)
@@ -328,31 +328,29 @@ def test_cod_order_delivery_review_return_refund_and_statistics(pg, team, method
     assert client.post("/reviews", headers=customer, json={
         "OrderItemId": line["OrderItemId"], "Rating": 4, "Content": "Lần hai"}).status_code == 409
 
-    # Return one of the two units: Staff handles the goods, Admin approves the amount, refund is confirmed manually.
+    # Return one of the two units through the active status-only workflow (15/10/2026): progress and customer
+    # notifications only. The deferred inspection/approval/refund steps are paused: nothing is refunded or restocked.
     request = ok(client.post("/return-requests", headers=customer, json={
         "OrderItemId": line["OrderItemId"], "RequestType": "Return", "Quantity": 1, "Reason": "Không ưng ý"}), 201)
     request_id = request["ReturnRequestId"]
-    ok(client.post(f"/admin/return-requests/{request_id}/accept", headers=staff))
-    ok(client.post(f"/admin/return-requests/{request_id}/start-receiving", headers=staff))
-    ok(client.post(f"/admin/return-requests/{request_id}/receive", headers=staff, json={}))
-    inspected = ok(client.post(f"/admin/return-requests/{request_id}/inspect", headers=staff,
-                               json={"RestockedQuantity": 1, "DamagedQuantity": 0}))
-    assert Decimal(inspected["CompensationAmount"]) == Decimal("100000")
-    assert client.post(f"/admin/return-requests/{request_id}/approve", headers=staff,
-                       json={"CompensationAmount": "100000.00"}).status_code == 403
-    approved = ok(client.post(f"/admin/return-requests/{request_id}/approve", headers=admin,
-                              json={"CompensationAmount": "100000.00"}))
-    assert approved["CompensationApprovedByUserId"] == team["admin_id"]
-    assert stock_of(pg, item) == 9  # the accepted unit is back in stock exactly once
-
-    refunding = ok(client.post(f"/admin/return-requests/{request_id}/refund", headers=staff))
-    refund_id = refunding["RefundPaymentTransactionId"]
-    assert refunding["Status"] == "Processing"
-    resolved = ok(client.post(f"/admin/refunds/{refund_id}/resolve", headers=admin, json={
-        "Success": True, "EvidenceReference": "UNC-0001", "ResolutionNote": "Đã chuyển khoản hoàn tiền"}))
-    assert (resolved["Status"], Decimal(resolved["Amount"])) == ("Success", Decimal("100000"))
-    completed_request = ok(client.post(f"/admin/return-requests/{request_id}/confirm-refund", headers=staff))
+    base = f"/admin/return-requests/{request_id}"
+    ok(client.post(f"{base}/accept", headers=staff))
+    ok(client.post(f"{base}/start-receiving", headers=staff))
+    received = ok(client.post(f"{base}/receive", headers=staff, json={}))
+    assert received["Status"] == "Processing" and received["ReceivedAt"]
+    for action, body in (("inspect", {"RestockedQuantity": 1, "DamagedQuantity": 0}),
+                         ("approve", {"CompensationAmount": "100000.00"}), ("refund", None), ("confirm-refund", None)):
+        paused = client.post(f"{base}/{action}", headers=admin, json=body)
+        assert paused.status_code == 400 and paused.json()["code"] == "service_workflow_paused", action
+    # The order cannot be completed while its return request is still open.
+    blocked = client.post(f"/admin/orders/{order_id}/status", headers=staff, json={"OrderStatus": "Completed"})
+    assert blocked.status_code == 400 and blocked.json()["code"] == "order_has_open_returns"
+    completed_request = ok(client.post(f"{base}/advance", headers=staff, json={"ExpectedStatus": "Processing"}))
     assert completed_request["Status"] == "Completed"
+    assert completed_request["CompensationAmount"] is None and completed_request["RefundPaymentTransactionId"] is None
+    assert stock_of(pg, item) == 8  # nothing restocked
+    payments = ok(client.get(f"/admin/orders/{order_id}/payments", headers=staff))
+    assert [(p["TransactionType"], p["Status"]) for p in payments] == [("Payment", "Success")]  # no refund created
 
     completed = ok(client.post(f"/admin/orders/{order_id}/status", headers=staff, json={"OrderStatus": "Completed"}))
     assert completed["OrderStatus"] == "Completed" and completed["CompletedAt"]
@@ -364,7 +362,7 @@ def test_cod_order_delivery_review_return_refund_and_statistics(pg, team, method
     assert {key: Decimal(revenue[key]) for key in ("OrderValue", "ShippingFee", "CollectedAmount", "RefundedAmount",
                                                    "NetRevenue", "PendingRefundAmount")} == {
         "OrderValue": Decimal("230000"), "ShippingFee": Decimal("30000"), "CollectedAmount": Decimal("230000"),
-        "RefundedAmount": Decimal("100000"), "NetRevenue": Decimal("130000"), "PendingRefundAmount": Decimal("0")}
+        "RefundedAmount": Decimal("0"), "NetRevenue": Decimal("230000"), "PendingRefundAmount": Decimal("0")}
     orders = ok(client.get("/admin/statistics/orders", headers=staff, params=period))
     assert orders["Completed"] >= 1
     notifications = ok(client.get("/users/me/notifications/unread-count", headers=customer))

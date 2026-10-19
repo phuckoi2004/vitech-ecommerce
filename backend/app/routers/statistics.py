@@ -17,17 +17,11 @@ from app.services.statistics import StatisticsService
 from app.services.statistics_report import StatisticsReportService
 from app.schemas.statistics import OrderReportResponse, ReportOptionsResponse, SalesReportResponse
 
-from .dependencies import CurrentActor, Database, InternalOnly, Page, PageSize, get_statistics_service
+from .dependencies import CurrentActor, InternalOnly, Page, PageSize, get_report_service, get_statistics_service
 
 admin_router = APIRouter(prefix="/admin/statistics", tags=["Thống kê"], dependencies=[InternalOnly])
 
 Statistics = Annotated[StatisticsService, Depends(get_statistics_service)]
-
-
-def get_report_service(session: Database):
-    return StatisticsReportService(session)
-
-
 Reports = Annotated[StatisticsReportService, Depends(get_report_service)]
 
 

@@ -251,13 +251,17 @@ class WarrantyService(BaseService):
             return "Finished" if request.ResultApprovedAt is not None else "Repairing"
         return request.Status
 
-    def advance_status(self, actor: Actor, request_id: uuid.UUID, data: WarrantyProgressRequest) -> AdminWarrantyRequestDetailResponse:
+    def advance_status(self, actor: Actor, request_id: uuid.UUID, data: WarrantyProgressRequest, *,
+                       notes: ServiceRequestNote | None = None) -> AdminWarrantyRequestDetailResponse:
         """Active forward-only workflow. One Staff/Admin publishes the actual result; no repair-centre form.
 
         ResultApprovedAt/By retain their columns and record confirmation/publication by the operator.
         No separate reviewer, automatic stock movement, replacement or financial operation is performed.
+        ``notes``: the operator's optional step note (Note: customer-visible, InternalNote: Staff/Admin only),
+        kept in the history line of this step.
         """
         require_role(actor, *STAFF_OR_ADMIN)
+        note, internal_note = step_notes(notes, code=NOTE_FIELD_CODE)
         with self.transaction():
             request, _ = self._lock(request_id)
             stage = self.progress_stage(request)
@@ -292,14 +296,25 @@ class WarrantyService(BaseService):
                     raise BusinessRuleError("Phiếu đổi máy cũ cần được xử lý riêng; tạm thời không hỗ trợ đổi máy", code="warranty_replacement_paused")
                 request.Status, request.CompletedAt = COMPLETED, now
                 event = "Đã trả sản phẩm cho khách, đóng phiếu bảo hành."
-            self._history(request, actor.user_id, old, request.Status, event)
+            self._history(request, actor.user_id, old, request.Status, compose_note(event, note),
+                          internal_note=internal_note)
             self._notify_customer(request, "Cập nhật yêu cầu bảo hành", f"Yêu cầu {request.RequestCode}: {event}")
             self.requests.flush()
             return self.get_warranty_request(actor, request_id)
 
+    def receive_status(
+        self, actor: Actor, request_id: uuid.UUID, data: ServiceRequestNote | None = None
+    ) -> AdminWarrantyRequestDetailResponse:
+        """POST .../receive: the active workflow's reception step (stage New), keeping the operator's step note.
+
+        Same effects as advancing from New (no serial/stock movement); a repeated click is refused as stale.
+        """
+        return self.advance_status(actor, request_id, WarrantyProgressRequest(ExpectedStage="New"), notes=data)
+
     def reject_status(self, actor: Actor, request_id: uuid.UUID, data: ServiceRequestRejection) -> AdminWarrantyRequestDetailResponse:
         require_role(actor, *STAFF_OR_ADMIN)
         reason = required_text(data.Reason, code="rejection_reason_required", message="Cần ghi lý do từ chối")
+        internal_note = optional_text(data.InternalNote)  # Staff/Admin only; never in the customer notification
         with self.transaction():
             request, _ = self._lock(request_id)
             if request.Status not in (NEW, HANDED_OVER, PROCESSING):
@@ -308,7 +323,8 @@ class WarrantyService(BaseService):
             request.Status, request.EligibilityStatus, request.EligibilityReason = REJECTED, INELIGIBLE, reason
             if request.AssignedStaffId is None:
                 request.AssignedStaffId = actor.user_id
-            self._history(request, actor.user_id, old, REJECTED, f"Yêu cầu bị từ chối. Lý do: {reason}")
+            self._history(request, actor.user_id, old, REJECTED, f"Yêu cầu bị từ chối. Lý do: {reason}",
+                          internal_note=internal_note)
             self._notify_customer(request, "Yêu cầu bảo hành bị từ chối", f"Yêu cầu {request.RequestCode}. Lý do: {reason}")
             self.requests.flush()
             return self.get_warranty_request(actor, request_id)

@@ -215,32 +215,74 @@ Tài liệu sinh từ code router (`backend/app/routers`). Chạy backend rồi 
 | POST | `/warranty-requests` | Đăng nhập | `WarrantyRequestCreate` |  | `WarrantyRequestDetailResponse` | `create_warranty_request` |
 | GET | `/warranty-requests` | Đăng nhập |  | status, page, page_size | `PageResponse[WarrantyRequestResponse]` | `list_my_warranty_requests` |
 | GET | `/warranty-requests/{request_id}` | Đăng nhập |  |  | `WarrantyRequestDetailResponse` | `get_my_warranty_request` |
-| POST | `/warranty-requests/{request_id}/cancel` | Đăng nhập | `Union (tùy chọn)` |  | `WarrantyRequestDetailResponse` | `cancel_warranty_request` |
+| POST | `/warranty-requests/{request_id}/cancel` | Đăng nhập | `ServiceRequestNote` (tùy chọn, chỉ `Note`) |  | `WarrantyRequestDetailResponse` | `cancel_warranty_request` |
 | POST | `/return-requests` | Đăng nhập | `ReturnRequestCreate` |  | `ReturnRequestDetailResponse` | `create_return_request` |
 | GET | `/return-requests` | Đăng nhập |  | status, page, page_size | `PageResponse[ReturnRequestResponse]` | `list_my_return_requests` |
 | GET | `/return-requests/{request_id}` | Đăng nhập |  |  | `ReturnRequestDetailResponse` | `get_my_return_request` |
-| POST | `/return-requests/{request_id}/cancel` | Đăng nhập | `Union (tùy chọn)` |  | `ReturnRequestDetailResponse` | `cancel_return_request` |
+| POST | `/return-requests/{request_id}/cancel` | Đăng nhập | `ServiceRequestNote` (tùy chọn, chỉ `Note`) |  | `ReturnRequestDetailResponse` | `cancel_return_request` |
+| POST | `/admin/warranty-requests/{request_id}/advance` | Staff/Admin | `WarrantyProgressRequest` |  | `AdminWarrantyRequestDetailResponse` | `advance_status` |
 | GET | `/admin/warranty-requests` | Staff/Admin |  | status, eligibility_status, customer_id, assigned_staff_id, supplier_id, page, page_size | `PageResponse[AdminWarrantyRequestResponse]` | `list_warranty_requests` |
 | GET | `/admin/warranty-requests/{request_id}` | Staff/Admin |  |  | `AdminWarrantyRequestDetailResponse` | `get_warranty_request` |
-| POST | `/admin/warranty-requests/{request_id}/receive` | Staff/Admin | `Union (tùy chọn)` |  | `AdminWarrantyRequestDetailResponse` | `receive_warranty_request` |
-| POST | `/admin/warranty-requests/{request_id}/inspect` | Staff/Admin | `WarrantyEligibilityUpdate` |  | `AdminWarrantyRequestDetailResponse` | `inspect_warranty_request` |
-| POST | `/admin/warranty-requests/{request_id}/hand-over` | Staff/Admin | `WarrantyHandoverCreate` |  | `AdminWarrantyRequestDetailResponse` | `hand_over_warranty_request` |
-| POST | `/admin/warranty-requests/{request_id}/start-processing` | Staff/Admin | `Union (tùy chọn)` |  | `AdminWarrantyRequestDetailResponse` | `start_warranty_processing` |
-| POST | `/admin/warranty-requests/{request_id}/propose-result` | Staff/Admin | `WarrantyResultProposal` |  | `AdminWarrantyRequestDetailResponse` | `propose_warranty_result` |
-| POST | `/admin/warranty-requests/{request_id}/approve-result` | Staff/Admin | `Union (tùy chọn)` |  | `AdminWarrantyRequestDetailResponse` | `approve_warranty_result` |
-| POST | `/admin/warranty-requests/{request_id}/reject-result` | Staff/Admin | `WarrantyResultRejection` |  | `AdminWarrantyRequestDetailResponse` | `reject_warranty_result` |
-| POST | `/admin/warranty-requests/{request_id}/reject` | Staff/Admin | `ServiceRequestRejection` |  | `AdminWarrantyRequestDetailResponse` | `reject_warranty_request` |
-| POST | `/admin/warranty-requests/{request_id}/complete` | Staff/Admin | `Union (tùy chọn)` |  | `AdminWarrantyRequestDetailResponse` | `complete_warranty_request` |
-| GET | `/admin/return-requests` | Staff/Admin |  | status, request_type, customer_id, assigned_staff_id, page, page_size | `PageResponse[AdminReturnRequestResponse]` | `list_return_requests` |
+| POST | `/admin/warranty-requests/{request_id}/receive` | Staff/Admin | `ServiceRequestNote` (tùy chọn) |  | `AdminWarrantyRequestDetailResponse` | `receive_status` (bước `New`) |
+| POST | `/admin/warranty-requests/{request_id}/inspect` | Staff/Admin | `WarrantyEligibilityUpdate` |  | 400 `service_workflow_paused` | Tạm dừng, không gọi Service |
+| POST | `/admin/warranty-requests/{request_id}/hand-over` | Staff/Admin | `WarrantyHandoverCreate` |  | 400 `service_workflow_paused` | Tạm dừng, không gọi Service |
+| POST | `/admin/warranty-requests/{request_id}/start-processing` | Staff/Admin | `ServiceRequestNote` (tùy chọn) |  | 400 `service_workflow_paused` | Tạm dừng, không gọi Service |
+| POST | `/admin/warranty-requests/{request_id}/propose-result` | Staff/Admin | `WarrantyResultProposal` |  | 400 `service_workflow_paused` | Tạm dừng, không gọi Service |
+| POST | `/admin/warranty-requests/{request_id}/approve-result` | Staff/Admin | `ServiceRequestNote` (tùy chọn) |  | 400 `service_workflow_paused` | Tạm dừng, không gọi Service |
+| POST | `/admin/warranty-requests/{request_id}/reject-result` | Staff/Admin | `WarrantyResultRejection` |  | 400 `service_workflow_paused` | Tạm dừng, không gọi Service |
+| POST | `/admin/warranty-requests/{request_id}/reject` | Staff/Admin | `ServiceRequestRejection` |  | `AdminWarrantyRequestDetailResponse` | `reject_status` |
+| POST | `/admin/warranty-requests/{request_id}/complete` | Staff/Admin | `WarrantyCompletion` (tùy chọn) |  | 400 `service_workflow_paused` | Tạm dừng, không gọi Service |
+| GET | `/admin/return-requests` | Staff/Admin |  | status, request_type, customer_id, assigned_staff_id, pending_first, page, page_size | `PageResponse[AdminReturnRequestResponse]` | `list_return_requests` |
 | GET | `/admin/return-requests/{request_id}` | Staff/Admin |  |  | `AdminReturnRequestDetailResponse` | `get_return_request` |
-| POST | `/admin/return-requests/{request_id}/accept` | Staff/Admin | `Union (tùy chọn)` |  | `AdminReturnRequestDetailResponse` | `accept_return_request` |
-| POST | `/admin/return-requests/{request_id}/reject` | Staff/Admin | `ServiceRequestRejection` |  | `AdminReturnRequestDetailResponse` | `reject_return_request` |
-| POST | `/admin/return-requests/{request_id}/start-receiving` | Staff/Admin | `Union (tùy chọn)` |  | `AdminReturnRequestDetailResponse` | `start_return_receiving` |
-| POST | `/admin/return-requests/{request_id}/receive` | Staff/Admin | `ReturnGoodsReceive` |  | `AdminReturnRequestDetailResponse` | `receive_return_goods` |
-| POST | `/admin/return-requests/{request_id}/inspect` | Staff/Admin | `ReturnInspection` |  | `AdminReturnRequestDetailResponse` | `inspect_return_goods` |
-| POST | `/admin/return-requests/{request_id}/approve` | Staff/Admin | `ReturnApproval` |  | `AdminReturnRequestDetailResponse` | `approve_return_request` |
-| POST | `/admin/return-requests/{request_id}/refund` | Staff/Admin | `Union (tùy chọn)` |  | `AdminReturnRequestDetailResponse` | `refund_return_request` |
-| POST | `/admin/return-requests/{request_id}/confirm-refund` | Staff/Admin |  |  | `AdminReturnRequestDetailResponse` | `confirm_return_refund` |
+| POST | `/admin/return-requests/{request_id}/advance` | Staff/Admin | `ReturnProgressRequest` |  | `AdminReturnRequestDetailResponse` | `advance_status` |
+| POST | `/admin/return-requests/{request_id}/accept` | Staff/Admin | `ServiceRequestNote` (tùy chọn) |  | `AdminReturnRequestDetailResponse` | `advance_status` (Pending → Approved) |
+| POST | `/admin/return-requests/{request_id}/reject` | Staff/Admin | `ServiceRequestRejection` |  | `AdminReturnRequestDetailResponse` | `reject_status` |
+| POST | `/admin/return-requests/{request_id}/start-receiving` | Staff/Admin | `ServiceRequestNote` (tùy chọn) |  | `AdminReturnRequestDetailResponse` | `advance_status` (Approved → Receiving) |
+| POST | `/admin/return-requests/{request_id}/receive` | Staff/Admin | `ReturnGoodsReceive` (bắt buộc, tối thiểu `{}`) |  | `AdminReturnRequestDetailResponse` | `advance_status` (Receiving → Processing) |
+| POST | `/admin/return-requests/{request_id}/inspect` | Staff/Admin | `ReturnInspection` |  | 400 `service_workflow_paused` | Tạm dừng, không gọi Service |
+| POST | `/admin/return-requests/{request_id}/approve` | Staff/Admin | `ReturnApproval` |  | 400 `service_workflow_paused` | Tạm dừng, không gọi Service |
+| POST | `/admin/return-requests/{request_id}/refund` | Staff/Admin | `ReturnRefundCreate` (tùy chọn) |  | 400 `service_workflow_paused` | Tạm dừng, không gọi Service |
+| POST | `/admin/return-requests/{request_id}/confirm-refund` | Staff/Admin |  |  | 400 `service_workflow_paused` | Tạm dừng, không gọi Service |
+
+### Luồng bảo hành đang hoạt động (từ 15/10/2026)
+
+- **Chỉ cập nhật tiến trình:** mỗi bước đổi trạng thái/mốc thời gian của phiếu, ghi một dòng lịch sử và gửi thông báo cho khách. Không chuyển trạng thái serial, không nhập/xuất kho, không có thao tác tài chính; không có bước gửi trung tâm bảo hành hay người duyệt riêng.
+- **Giai đoạn** (`ExpectedStage`, suy ra từ phiếu) và tác động của mỗi lần `POST .../advance`:
+  - `New` (phiếu `New`, chưa tiếp nhận): ghi `ReceivedAt`; trạng thái vẫn `New`, giai đoạn chuyển sang `Inspecting`.
+  - `Inspecting`: trạng thái `Processing`, `EligibilityStatus` = `Eligible`.
+  - `Repairing`: bắt buộc `ResultType` (`Repaired`, `PartReplaced`, `NotRepairable`) và `ResultNote` không rỗng. Người thực hiện công bố kết quả ngay: lưu `ResultType`, `ResultNote`, `ResultProposedAt`/`ResultApprovedAt` và người thực hiện. Khách thấy kết quả từ lúc này.
+  - `Finished`: trạng thái `Completed`, ghi `CompletedAt`.
+  - Phiếu chưa có người phụ trách được gán `AssignedStaffId` là người thực hiện bước đó.
+- **`POST .../advance`** với `{"ExpectedStage": "<giai đoạn hiện tại>"}` (kèm `ResultType`, `ResultNote` ở bước `Repairing`) là route giao diện quản trị đang dùng. Route này không nhận `Note`/`InternalNote`. `ResultNote` là nội dung khách xem được và có trong thông báo gửi khách.
+- **`POST .../receive`** là bước `New` của luồng trên, có thêm ghi chú tùy chọn: `Note` khách xem được (nối vào dòng lịch sử dạng `<sự kiện> Ghi chú: <Note>`), `InternalNote` chỉ Staff/Admin thấy. Ghi chú không đưa vào thông báo gửi khách. Route không đổi trạng thái serial.
+- **`POST .../reject`** với `{"Reason": "...", "InternalNote": "..." (tùy chọn)}`: từ chối phiếu `New` (kể cả trước khi tiếp nhận), `HandedOver` hoặc `Processing`. Trạng thái chuyển `Rejected`, `EligibilityStatus` = `Ineligible`, `Reason` được lưu vào `EligibilityReason`, khách xem được và có trong thông báo. `InternalNote` chỉ lưu trong lịch sử cho Staff/Admin, không có trong response của khách hay thông báo.
+- **Khách hủy** (`POST /warranty-requests/{request_id}/cancel`): chỉ khi phiếu còn `New` và chưa được tiếp nhận; ngược lại trả 400 `warranty_not_cancellable`.
+- **Lỗi:**
+  - 401 khi thiếu Bearer token hợp lệ; 403 `permission_denied` khi Customer gọi route `/admin/...`.
+  - 404 `warranty_request_not_found`.
+  - 409 `service_request_stale`: giai đoạn hiện tại khác `ExpectedStage`. Gồm cả bấm lặp lại, gọi `/receive` khi đã tiếp nhận, và gọi `/advance` trên phiếu đã đóng.
+  - 400 `warranty_result_required` (bước `Repairing` thiếu `ResultType`), `result_note_required` (`ResultNote` rỗng), `warranty_result_not_applicable` (gửi `ResultType`/`ResultNote` ở bước khác), `warranty_replacement_paused` (phiếu đổi máy cũ ở bước `Finished`), `service_request_closed` (từ chối phiếu đã đóng).
+  - 422: body sai (trường lạ, `ExpectedStage`/`ResultType` ngoài danh sách, ví dụ `ProductReplaced`, `Reason` rỗng).
+- **Tạm dừng:** `inspect`, `hand-over`, `start-processing`, `propose-result`, `approve-result`, `reject-result`, `complete` luôn trả 400 `service_workflow_paused` và không thay đổi phiếu. Phần cài đặt cũ được giữ trong Service để tham khảo, chờ quyết định nghiệp vụ.
+
+### Luồng đổi/trả đang hoạt động (từ 15/10/2026)
+
+- **Chỉ cập nhật tiến trình:** mỗi bước đổi trạng thái phiếu, ghi một dòng lịch sử và gửi thông báo cho khách. Không tạo giao dịch hoàn tiền, không nhập/xuất kho, không đổi trạng thái serial. `Completed` **không** có nghĩa là đã hoàn tiền.
+- **Chuyển trạng thái** (mỗi lần tiến một bước): `Pending → Approved → Receiving → Processing → Completed`. Bước `Receiving → Processing` ghi `ReceivedAt`, bước `Processing → Completed` ghi `CompletedAt`. Phiếu chưa có người phụ trách được gán `AssignedStaffId` là người thực hiện bước đó.
+- **`POST .../advance`** với `{"ExpectedStatus": "<trạng thái hiện tại>"}` là route giao diện quản trị đang dùng. Route này không nhận ghi chú: gửi thêm trường khác trả 422.
+- **`POST .../accept`, `.../start-receiving`, `.../receive`** là các bước ứng với `ExpectedStatus` lần lượt `Pending`, `Approved`, `Receiving`, có thêm ghi chú tùy chọn:
+  - `Note`: khách xem được, nối vào dòng lịch sử dạng `<sự kiện>. Ghi chú: <Note>`.
+  - `InternalNote`: chỉ Staff/Admin thấy (trường `InternalNote` của lịch sử trong response admin), không có trong response của khách.
+  - Ghi chú không được đưa vào nội dung thông báo gửi khách.
+  - `/receive`: phải gửi body `ReturnGoodsReceive` (tối thiểu `{}`). `SerialNumber` được chấp nhận nhưng **hiện không được đối chiếu hay xử lý**: không kiểm tra khớp serial của phiếu và không đổi trạng thái serial. Việc đối chiếu serial khi nhận hàng chưa được chốt nghiệp vụ.
+- **`POST .../reject`** với `{"Reason": "..."}`: từ chối phiếu ở trạng thái còn mở (`Pending`, `Approved`, `Receiving`, `Processing`). `Reason` khách xem được, được lưu vào `DecisionReason` và có trong thông báo. `InternalNote` (tùy chọn) chỉ lưu trong lịch sử cho Staff/Admin, không có trong response của khách hay thông báo.
+- **Lỗi:**
+  - 401 khi thiếu Bearer token hợp lệ; 403 `permission_denied` khi Customer gọi (bị chặn trước khi vào Service).
+  - 404 `return_request_not_found`.
+  - 409 `service_request_stale`: trạng thái hiện tại khác trạng thái mong đợi. Gồm cả bấm lặp lại, và gọi `/accept`, `/start-receiving`, `/receive` khi phiếu đã ở bước khác hoặc đã đóng.
+  - 400 `service_request_closed`: gọi `/advance` với `ExpectedStatus` là trạng thái đã đóng (`Completed`, `Rejected`, `Cancelled`), hoặc từ chối phiếu đã đóng.
+  - 422: body sai (trường lạ, sai kiểu, `ExpectedStatus` ngoài danh sách, `Reason` rỗng).
+- **Tạm dừng:** `inspect`, `approve`, `refund`, `confirm-refund` luôn trả 400 `service_workflow_paused` và không thay đổi phiếu. Phần cài đặt tài chính/kiểm định cũ được giữ lại trong Service để tham khảo, chờ quyết định nghiệp vụ.
 
 ## Tin tức và banner
 

@@ -13,9 +13,8 @@ from fastapi import APIRouter, Depends, Query, Request, Response, status
 from fastapi.concurrency import run_in_threadpool
 
 from app.core.errors import AuthError
-from app.core.storage import AvatarStorage, get_avatar_storage
 from app.services.actor import ADMIN_ONLY, require_role
-from app.services.product_media import PRODUCT_IMAGE_MAX_BYTES, upload_product_image
+from app.services.product_media import PRODUCT_IMAGE_MAX_BYTES, ProductMediaService
 
 from app.schemas import (
     AdminProductDetailResponse,
@@ -63,6 +62,7 @@ from .dependencies import (
     get_brand_service,
     get_category_service,
     get_image_service,
+    get_product_media_service,
     get_product_service,
     get_serial_service,
     get_variant_service,
@@ -77,13 +77,13 @@ Brands = Annotated[BrandService, Depends(get_brand_service)]
 Products = Annotated[ProductService, Depends(get_product_service)]
 Variants = Annotated[ProductVariantService, Depends(get_variant_service)]
 CatalogItems = Annotated[CatalogItemService, Depends(get_catalog_item_service)]
+ProductMedia = Annotated[ProductMediaService, Depends(get_product_media_service)]
 
 
 @admin_router.post("/product-image-uploads", status_code=status.HTTP_201_CREATED)
-async def stage_product_image(request: Request, actor: CurrentActor,
-                              storage: Annotated[AvatarStorage | None, Depends(get_avatar_storage)]):
+async def stage_product_image(request: Request, actor: CurrentActor, service: ProductMedia):
     """Raw file body. Returns an image URL; catalog changes remain a separate confirmed save."""
-    require_role(actor, *ADMIN_ONLY)
+    require_role(actor, *ADMIN_ONLY)  # refuse Staff before reading the body; the Service checks again
     declared = request.headers.get("Content-Length", "")
     if declared.isdigit() and int(declared) > PRODUCT_IMAGE_MAX_BYTES:
         raise AuthError(413, "Ảnh sản phẩm tối đa 2 MB.")
@@ -92,7 +92,8 @@ async def stage_product_image(request: Request, actor: CurrentActor,
         if len(data) + len(chunk) > PRODUCT_IMAGE_MAX_BYTES:
             raise AuthError(413, "Ảnh sản phẩm tối đa 2 MB.")
         data.extend(chunk)
-    url = await run_in_threadpool(upload_product_image, actor, bytes(data), storage)
+    payload = bytes(data)
+    url = await run_in_threadpool(lambda: service.upload_product_image(actor, payload))
     return {"ImageUrl": url}
 
 

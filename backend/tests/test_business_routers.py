@@ -25,6 +25,22 @@ SERVICE_PROVIDERS = [value for name, value in vars(deps).items()
 BUSINESS_MODULES = ("catalog", "wishlist_cart", "orders", "payments", "promotions", "purchasing", "reviews",
                     "chat", "service_requests", "content", "statistics")
 STAGE5_ACCOUNT_PATHS = ("/auth", "/users/me/avatar", "/users/me/default-address", "/admin/users")
+# Legacy repair-centre, independent-approval and return-finance endpoints paused for business consultation
+# (app/routers/service_requests.py: paused_service_workflow). They answer service_workflow_paused and never reach a
+# Service; listed explicitly so no other route can be exempted silently.
+PAUSED_ROUTES = frozenset({
+    "/admin/warranty-requests/{request_id}/inspect",
+    "/admin/warranty-requests/{request_id}/hand-over",
+    "/admin/warranty-requests/{request_id}/start-processing",
+    "/admin/warranty-requests/{request_id}/propose-result",
+    "/admin/warranty-requests/{request_id}/approve-result",
+    "/admin/warranty-requests/{request_id}/reject-result",
+    "/admin/warranty-requests/{request_id}/complete",
+    "/admin/return-requests/{request_id}/inspect",
+    "/admin/return-requests/{request_id}/approve",
+    "/admin/return-requests/{request_id}/refund",
+    "/admin/return-requests/{request_id}/confirm-refund",
+})
 
 
 class Recorder:
@@ -50,6 +66,10 @@ def business_routes():
                 if name == "users" and (route.path.startswith(STAGE5_ACCOUNT_PATHS) or route.path == "/users/me"):
                     continue
                 yield route
+
+
+def is_paused(route):
+    return "paused_service_workflow()" in inspect.getsource(route.endpoint)
 
 
 def expected_method(route):
@@ -102,7 +122,11 @@ def call(client, route, *, json=None):
 def test_every_business_service_method_is_reachable_through_one_route():
     routes = list(business_routes())
     assert len(routes) > 180
+    assert {route.path for route in routes if is_paused(route)} == PAUSED_ROUTES
     for route in routes:
+        if is_paused(route):
+            assert not re.findall(r"service\.(\w+)\(", inspect.getsource(route.endpoint)), route.path
+            continue
         expected_method(route)  # exactly one Service call per endpoint: no business logic in Routers
 
 
@@ -114,6 +138,11 @@ def test_routes_without_required_body_call_their_service_method(harness):
             continue
         recorder.calls.clear()
         response = call(client, route)
+        if is_paused(route):
+            assert response.status_code == 400, (route.path, response.status_code, response.text)
+            assert response.json()["code"] == "service_workflow_paused", route.path
+            assert recorder.calls == [], route.path
+            continue
         assert response.status_code == 404, (route.path, response.status_code, response.text)
         assert response.json()["code"] == "probe", route.path
         assert [name for name, _, _ in recorder.calls] == [expected_method(route)], route.path
