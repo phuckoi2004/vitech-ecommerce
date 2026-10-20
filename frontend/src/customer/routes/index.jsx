@@ -11,8 +11,11 @@ import ProductPage from '../pages/ProductPage.jsx'
 import NewsPage from '../pages/NewsPage.jsx'
 import ChatPage from '../pages/ChatPage.jsx'
 import InfoPage from '../pages/InfoPage.jsx'
-import { CartPage, NotificationsPage, WishlistPage } from '../pages/CustomerLists.jsx'
-import { ACCOUNT_PATH, CART_PATH, CHAT_PATH, FORGOT_PASSWORD_PATH, HOME_PATH, INFO_PATHS, LOGIN_PATH, NEWS_PATH, NOTIFICATIONS_PATH, REGISTER_PATH, SEARCH_PATH, WISHLIST_PATH } from './paths.js'
+import CartPage from '../pages/CartPage.jsx'
+import CheckoutPage from '../pages/CheckoutPage.jsx'
+import OrderResultPage from '../pages/OrderResultPage.jsx'
+import { NotificationsPage, WishlistPage } from '../pages/CustomerLists.jsx'
+import { ACCOUNT_PATH, CART_PATH, CHAT_PATH, CHECKOUT_PATH, FORGOT_PASSWORD_PATH, HOME_PATH, INFO_PATHS, LOGIN_PATH, NEWS_PATH, NOTIFICATIONS_PATH, ORDERS_PATH, REGISTER_PATH, SEARCH_PATH, WISHLIST_PATH } from './paths.js'
 
 // Customer site (Vietnamese URLs). Auth pages use their own two-column frame; other pages share CustomerLayout.
 // Unknown URLs outside /admin show the 404 page inside the customer layout.
@@ -33,6 +36,8 @@ export const customerRoutes = [
       { path: `${NEWS_PATH}/:slug`, element: <NewsPage /> },
       ...Object.entries(INFO_PATHS).map(([page, path]) => ({ path, element: <InfoPage page={page} /> })),
       { path: CART_PATH, element: <RequireCustomer><CartPage /></RequireCustomer> },
+      { path: CHECKOUT_PATH, element: <RequireCustomer><CheckoutPage /></RequireCustomer> },
+      { path: `${ORDERS_PATH}/:orderId`, element: <RequireCustomer><OrderResultPage /></RequireCustomer> },
       { path: WISHLIST_PATH, element: <RequireCustomer><WishlistPage /></RequireCustomer> },
       { path: NOTIFICATIONS_PATH, element: <RequireCustomer><NotificationsPage /></RequireCustomer> },
       { path: CHAT_PATH, element: <RequireCustomer><ChatPage /></RequireCustomer> },

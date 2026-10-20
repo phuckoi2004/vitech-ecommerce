@@ -142,14 +142,19 @@ class OwnershipAndCancelTest(OrderTestBase):
         self.assertEqual(sum(1 for h in self.order.status_histories if h.NewStatus == "Cancelled"), 1)
 
     def test_customer_can_cancel_only_pending(self):
+        self.order.PaymentStatus = "Paid"  # đơn QR chỉ được xác nhận khi đã thanh toán
         self.set_status(self.order.OrderId, "Confirmed")
-        with self.assertRaises(BusinessRuleError):
+        with self.assertRaises(BusinessRuleError) as ctx:
             self.svc.cancel_customer_order(self.f.actor(self.customer), self.order.OrderId, OrderCancelRequest())
+        self.assertEqual(ctx.exception.code, "order_not_cancellable")
         self.assertEqual(self.variant.StockQuantity, 3)
 
-    def test_cancel_keeps_paid_status_for_refund_flow(self):
+    def test_paid_order_is_cancelled_by_staff_and_keeps_paid_status_for_refund_flow(self):
         self.order.PaymentStatus = "Paid"
-        self.svc.cancel_customer_order(self.f.actor(self.customer), self.order.OrderId, OrderCancelRequest())
+        with self.assertRaises(BusinessRuleError) as ctx:
+            self.svc.cancel_customer_order(self.f.actor(self.customer), self.order.OrderId, OrderCancelRequest())
+        self.assertEqual(ctx.exception.code, "order_paid_not_cancellable")
+        self.set_status(self.order.OrderId, "Cancelled")
         self.assertEqual((self.order.OrderStatus, self.order.PaymentStatus), ("Cancelled", "Paid"))
 
 
@@ -171,6 +176,7 @@ class StatusTransitionTest(OrderTestBase):
         with self.assertRaises(BusinessRuleError) as ctx:
             self.set_status(order.OrderId, "Shipping")
         self.assertEqual(ctx.exception.code, "invalid_status_transition")
+        order.PaymentStatus = "Paid"  # đơn QR chỉ được xác nhận khi đã thanh toán
         self.assertEqual(self.set_status(order.OrderId, "Confirmed").ConfirmedAt is not None, True)
         with self.assertRaises(BusinessRuleError):
             self.set_status(order.OrderId, "Confirmed")  # gọi lặp
@@ -322,7 +328,7 @@ class QrExpiryTest(OrderTestBase):
         pending_qr = self.f.payment(expired, status="Pending", gateway_code="GW-EXP")
         pending_qr.QrData = "qr://x"
 
-        self.assertEqual(self.svc.expire_unpaid_qr_orders(), 3)
+        self.assertEqual(self.svc.expire_unpaid_qr_orders().processed, 3)
         for order in (expired, failed, exactly):
             self.assertEqual((order.OrderStatus, order.PaymentStatus), ("Cancelled", "Cancelled"))
             self.assertEqual(order.CancelReason, "Hết hạn thanh toán QR (15 phút)")
@@ -340,14 +346,14 @@ class QrExpiryTest(OrderTestBase):
 
         just_before = self.f.order(self.customer, self.qr, ordered_at=NOW - timedelta(minutes=15) + timedelta(microseconds=1))
         at_deadline = self.f.order(self.customer, self.qr, ordered_at=NOW - timedelta(minutes=15))
-        self.assertEqual(self.svc.expire_unpaid_qr_orders(), 1)
+        self.assertEqual(self.svc.expire_unpaid_qr_orders().processed, 1)
         self.assertEqual((just_before.OrderStatus, at_deadline.OrderStatus), ("Pending", "Cancelled"))
         self.assertFalse(self.svc.is_qr_payment_expired(just_before))
 
     def test_running_twice_restores_stock_and_coupon_once(self):
         self.f.order(self.customer, self.qr, lines=((self.variant, 2),), coupon=self.coupon, ordered_at=self.old(20))
-        self.assertEqual(self.svc.expire_unpaid_qr_orders(), 1)
-        self.assertEqual(self.svc.expire_unpaid_qr_orders(), 0)
+        self.assertEqual(self.svc.expire_unpaid_qr_orders().processed, 1)
+        self.assertEqual(self.svc.expire_unpaid_qr_orders().processed, 0)
         self.assertEqual((self.variant.StockQuantity, self.coupon.UsedCount), (5, 0))
 
     def test_order_paid_after_listing_is_not_expired(self):
@@ -360,7 +366,7 @@ class QrExpiryTest(OrderTestBase):
             return locked
 
         self.svc.orders.get_by_id_for_update = paid_meanwhile
-        self.assertEqual(self.svc.expire_unpaid_qr_orders(), 0)
+        self.assertEqual(self.svc.expire_unpaid_qr_orders().processed, 0)
         self.assertEqual((order.OrderStatus, self.variant.StockQuantity), ("Pending", 3))
 
     def test_expiry_must_run_as_own_use_case(self):

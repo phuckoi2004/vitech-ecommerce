@@ -77,10 +77,10 @@ class CancelMarksPendingQrTest(CancelPendingQrTestBase):
 
     def test_qr_expiry_still_cancels_pending_qr_exactly_once(self):
         self.order.OrderedAt = NOW - timedelta(minutes=16)  # quá hạn 15 phút
-        self.assertEqual(self.orders.expire_unpaid_qr_orders(), 1)
+        self.assertEqual(self.orders.expire_unpaid_qr_orders().processed, 1)
         self.assertEqual((self.qr_tx.Status, self.order.OrderStatus, self.order.CancelReason),
                          ("Cancelled", "Cancelled", "Hết hạn thanh toán QR (15 phút)"))
-        self.assertEqual(self.orders.expire_unpaid_qr_orders(), 0)
+        self.assertEqual(self.orders.expire_unpaid_qr_orders().processed, 0)
 
     def test_successful_payment_is_never_cancelled_and_paid_order_awaits_manual_refund(self):
         self.callback()

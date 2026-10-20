@@ -229,7 +229,22 @@ class CouponUsageTest(unittest.TestCase):
 
 
 class DiscountMathTest(unittest.TestCase):
+    def test_whole_vnd_allocation_sums_to_discount_in_whole_dong_and_never_exceeds_line(self):
+        rng = random.Random(11)
+        for _ in range(3000):
+            lines = [
+                SimpleDiscountLine(uuid.uuid4(), uuid.uuid4(), Decimal(rng.randint(1, 10**8)))
+                for _ in range(rng.randint(1, 6))
+            ]
+            base = sum(line.gross for line in lines)
+            discount = Decimal(rng.randint(0, int(base)))
+            allocate_discount(discount, lines)
+            self.assertEqual(sum(line.discount for line in lines), discount)
+            self.assertTrue(all(line.discount == line.discount.to_integral_value() for line in lines))
+            self.assertTrue(all(Decimal("0") <= line.discount <= line.gross for line in lines))
+
     def test_allocation_always_sums_to_discount_and_never_exceeds_line(self):
+        """Dữ liệu cũ có giá trị lẻ xu: phân bổ theo xu, vẫn đúng tổng và không vượt dòng."""
         rng = random.Random(7)
         for _ in range(3000):
             lines = [

@@ -28,7 +28,8 @@ export function shippingBody(form) {
   const Code = form.Code.trim(), Name = form.Name.trim(), fee = String(form.BaseFee).trim(), days = String(form.EstimatedDays).trim()
   if (!Code || Code.length > 50) throw new Error('Mã phương thức cần từ 1 đến 50 ký tự.')
   if (!Name || Name.length > 255) throw new Error('Tên phương thức cần từ 1 đến 255 ký tự.')
-  if (!/^\d{1,13}(\.\d{1,2})?$/.test(fee)) throw new Error('Phí cơ bản phải không âm, tối đa 13 chữ số và 2 chữ số thập phân.')
+  // VND nguyên đồng; "30000.00" đọc từ API vẫn hợp lệ (phần thập phân bằng 0).
+  if (!/^\d{1,13}(\.0{1,2})?$/.test(fee)) throw new Error('Phí cơ bản phải là số nguyên VND không âm, tối đa 13 chữ số.')
   if (!/^\d+$/.test(days) || Number(days) > 30) throw new Error('Số ngày giao dự kiến phải là số nguyên từ 0 đến 30.')
   if (typeof form.IsActive !== 'boolean') throw new Error('Vui lòng chọn trạng thái hợp lệ.')
   return { Code, Name, BaseFee: fee, EstimatedDays: Number(days), IsActive: form.IsActive }

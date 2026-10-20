@@ -99,6 +99,42 @@ def test_deferred_financial_endpoints_cannot_mutate_returns(returns, endpoint, b
     assert client.get(path).json()['Status'] == 'Pending'
 
 
+def test_return_step_endpoints_keep_their_step_notes_without_money_or_stock_effects(returns):
+    client, engine, current, rows, actors, _ = returns
+    path = '/admin/return-requests/' + str(rows[1].ReturnRequestId)
+    steps = [('accept', 'Approved', 'Đã gọi xác nhận với khách', 'Khách hẹn gửi chiều nay'),
+             ('start-receiving', 'Receiving', 'Đã đặt đơn vị vận chuyển', 'Vận đơn nội bộ VD-01'),
+             ('receive', 'Processing', 'Đã nhận đủ 1 sản phẩm', 'Hộp móp nhẹ')]
+    statements = []
+    def capture(_connection, _cursor, statement, _params, _context, _many):
+        statements.append(statement)
+    event.listen(engine, 'before_cursor_execute', capture)
+    try:
+        for endpoint, status, note, internal_note in steps:
+            response = client.post(path + '/' + endpoint, json={'Note': note, 'InternalNote': internal_note})
+            assert response.status_code == 200, response.text
+            body = response.json()
+            assert body['Status'] == status
+            [line] = [h for h in body['Histories'] if note in (h['Note'] or '')]
+            assert (line['NewStatus'], line['InternalNote']) == (status, internal_note)
+        assert body['ReceivedAt'] is not None
+        assert client.post(path + '/receive', json={}).status_code == 409  # already received: a repeated click is stale
+        writes = [s for s in statements if s.lstrip().split(' ', 1)[0].upper() in ('INSERT', 'UPDATE', 'DELETE')]
+        assert writes
+        assert all(not any(table in s for table in ('PaymentTransactions', 'ProductSerials', 'ProductVariants', 'StockAdjustments')) for s in writes)
+    finally:
+        event.remove(engine, 'before_cursor_execute', capture)
+    other = '/admin/return-requests/' + str(rows[3].ReturnRequestId)
+    response = client.post(other + '/accept')  # the note body is optional
+    assert response.status_code == 200 and response.json()['Status'] == 'Approved'
+    assert [h['Note'] for h in response.json()['Histories'] if h['NewStatus'] == 'Approved'] == ['Đã tiếp nhận yêu cầu.']
+    current['actor'] = actors[0]
+    mine = client.get('/return-requests/' + str(rows[1].ReturnRequestId)).json()
+    for _, _, note, internal_note in steps:
+        assert note in str(mine['Histories']) and internal_note not in str(mine)
+    assert client.post(other + '/start-receiving').status_code == 403  # customers cannot drive staff steps
+
+
 @pytest.mark.parametrize('result', ['Repaired', 'PartReplaced', 'NotRepairable'])
 def test_warranty_result_is_required_published_to_customer_and_then_closed(warranty, result):
     client, engine, current, rows, actors, _ = warranty
@@ -139,6 +175,61 @@ def test_warranty_rejection_before_reception_is_staff_action_and_terminal(warran
     current['actor'] = actors[0]
     detail = client.get('/warranty-requests/' + str(rows[0].WarrantyRequestId)).json()
     assert detail['EligibilityReason'] == 'Khách gửi sai yêu cầu'
+
+
+def test_warranty_receive_keeps_the_step_notes_and_moves_no_serial(warranty):
+    client, engine, current, rows, actors, _ = warranty
+    path = '/admin/warranty-requests/' + str(rows[0].WarrantyRequestId)
+    response = client.post(path + '/receive', json={'Note': 'Đã nhận máy, trầy nhẹ góc', 'InternalNote': 'Kệ B2'})
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body['Status'] == 'New' and body['ReceivedAt'] is not None
+    [step] = [h for h in body['Histories'] if 'Đã nhận máy, trầy nhẹ góc' in (h['Note'] or '')]
+    assert step['InternalNote'] == 'Kệ B2' and step['ChangedByUserId'] == str(actors[1].user_id)
+    assert client.post(path + '/receive').status_code == 409  # already received: a repeated click is stale
+    current['actor'] = actors[0]
+    customer = client.get('/warranty-requests/' + str(rows[0].WarrantyRequestId)).json()
+    assert 'Đã nhận máy, trầy nhẹ góc' in str(customer['Histories'])
+    assert 'Kệ B2' not in str(customer)
+    with Session(engine) as session:
+        assert all(s.Status == 'Sold' for s in session.scalars(select(ProductSerial)))
+
+
+@pytest.mark.parametrize('kind', ['returns', 'warranty'])
+@pytest.mark.parametrize('internal_note', ['Đã gọi khách xác nhận, lưu ghi âm', None])
+def test_rejection_keeps_the_internal_note_for_staff_only(request, kind, internal_note):
+    client, engine, current, rows, actors, _ = request.getfixturevalue(kind)
+    if kind == 'returns':
+        admin_path, customer_path = '/admin/return-requests/', '/return-requests/'
+        request_id, reason_field = rows[1].ReturnRequestId, 'DecisionReason'
+    else:
+        admin_path, customer_path = '/admin/warranty-requests/', '/warranty-requests/'
+        request_id, reason_field = rows[0].WarrantyRequestId, 'EligibilityReason'
+    path = admin_path + str(request_id)
+    body = {'Reason': 'Sản phẩm không thuộc diện hỗ trợ'}
+    if internal_note:
+        body['InternalNote'] = internal_note
+    current['actor'] = actors[0]
+    assert client.post(path + '/reject', json=body).status_code == 403  # customers cannot reject
+    current['actor'] = actors[1]
+    response = client.post(path + '/reject', json=body)
+    assert response.status_code == 200, response.text
+    detail = response.json()
+    assert detail['Status'] == 'Rejected'
+    [line] = [h for h in detail['Histories'] if h['NewStatus'] == 'Rejected']
+    assert 'Sản phẩm không thuộc diện hỗ trợ' in line['Note'] and line['InternalNote'] == internal_note
+    assert line['ChangedByUserId'] == str(actors[1].user_id)
+    response = client.post(path + '/reject', json={'Reason': 'Lần hai'})
+    assert response.status_code == 400 and response.json()['code'] == 'service_request_closed'
+    current['actor'] = actors[0]
+    mine = client.get(customer_path + str(request_id)).json()
+    assert mine['Status'] == 'Rejected' and mine[reason_field] == 'Sản phẩm không thuộc diện hỗ trợ'
+    assert 'Sản phẩm không thuộc diện hỗ trợ' in str(mine['Histories'])
+    with Session(engine) as session:
+        contents = [n.Content for n in session.scalars(select(Notification))]
+    assert any('Sản phẩm không thuộc diện hỗ trợ' in content for content in contents)
+    if internal_note:
+        assert internal_note not in str(mine) and not any(internal_note in content for content in contents)
 
 
 def test_migration_sql_changes_only_the_two_approved_checks():

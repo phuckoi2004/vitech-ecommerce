@@ -33,7 +33,6 @@ from .service_request import required_text
 
 EDITABLE_FIELDS = frozenset({"Code", "Name", "BaseFee", "EstimatedDays", "IsActive"})
 REQUIRED_FIELDS = ("Code", "Name", "BaseFee", "EstimatedDays")
-_CENT = Decimal("0.01")
 MAX_ESTIMATED_DAYS = 30
 
 
@@ -117,8 +116,9 @@ def _clean_values(data: Any, *, creating: bool) -> dict[str, Any]:
                                        message="Phải nhập tên phương thức vận chuyển")
     if "BaseFee" in values:
         fee = values["BaseFee"]
-        if not isinstance(fee, Decimal) or fee < 0 or fee != fee.quantize(_CENT):
-            raise BusinessRuleError("Phí vận chuyển phải >= 0 và đúng đơn vị xu", code="invalid_shipping_fee")
+        # VND nguyên đồng: tổng đơn hàng (và số tiền chuyển khoản QR) không có phần lẻ.
+        if not isinstance(fee, Decimal) or fee < 0 or fee != fee.to_integral_value():
+            raise BusinessRuleError("Phí vận chuyển phải là số nguyên VND không âm", code="invalid_shipping_fee")
     if "EstimatedDays" in values:
         days = values["EstimatedDays"]
         if not isinstance(days, int) or isinstance(days, bool) or days < 0 or days > MAX_ESTIMATED_DAYS:

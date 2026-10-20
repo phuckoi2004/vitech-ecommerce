@@ -24,13 +24,18 @@ người dùng; mỗi loại có cơ chế xác thực riêng và tự tắt (50
 | Đường dẫn | `POST /internal/orders/expire-unpaid-qr?limit=100` |
 | Use case | `OrderService.expire_unpaid_qr_orders(limit=...)` |
 | Đầu vào | `limit` (1–1000, mặc định 100) |
-| Đầu ra | `200 {"Processed": <số đơn đã hủy>}` |
-| Quy tắc | Chỉ đơn `Pending`, `PaymentStatus` Pending/Failed, phương thức khác COD, `OrderedAt + 15 phút <= now` (UTC). Mỗi đơn một transaction; khóa đơn và kiểm tra lại; hoàn tồn kho/coupon đúng một lần; hủy giao dịch QR đang chờ. |
+| Đầu ra | `200 {"Processed", "Selected", "Skipped", "Failed"}` (số đơn đã hủy, được chọn, bỏ qua vì không còn đủ điều kiện khi khóa, lỗi); `Failed > 0` → `500` kèm cùng số liệu |
+| Quy tắc | Chỉ đơn `Pending`, `PaymentStatus` Pending/Failed, phương thức khác COD, `OrderedAt + 15 phút <= now` (UTC); tối đa `limit` đơn, cũ nhất trước. Mỗi đơn một transaction; khóa đơn và kiểm tra lại; hoàn tồn kho/coupon đúng một lần; hủy giao dịch QR đang chờ. |
 | Gọi lặp / chồng nhau | An toàn: đơn đã hủy hoặc đã thanh toán bị bỏ qua sau khi khóa. |
-| Lỗi | Lỗi ở một đơn làm dừng lần chạy (các đơn trước đã commit); cron lần sau chạy tiếp. |
+| Lỗi | Đơn lỗi được rollback toàn bộ, ghi log và đếm vào `Failed`; các đơn sau vẫn được xử lý; đơn lỗi giữ nguyên và được chọn lại ở lần chạy sau. Lỗi ở bước chọn đơn (chưa xử lý đơn nào, nên không có số liệu): lỗi database → `503 {"detail"}`; lỗi bất ngờ khác → `500 {"detail", "code": "job_selection_failed"}`; lỗi nghiệp vụ giữ mã HTTP và `code` của nó. |
+| Timeout | Mỗi transaction của tác vụ: `lock_timeout` 5 giây, `statement_timeout` 30 giây (`SET LOCAL`, chỉ trong transaction đó; giá trị giả định, xem `app/services/internal_jobs.py`). |
+| Log | Logger `app.jobs`: bắt đầu/kết thúc (số liệu, thời gian), từng bản ghi lỗi (id nội bộ, loại lỗi database/business/unexpected, SQLSTATE hoặc mã lỗi; vi phạm ràng buộc DB là database kèm SQLSTATE, kể cả khi đã được đổi thành lỗi nghiệp vụ); không ghi secret, dữ liệu cá nhân, payload hay nội dung lỗi của driver. Kết thúc có lỗi ghi ở mức WARNING. |
 
-Callback thanh toán thành công đến sau khi đơn đã hết hạn: ghi nhận tiền, mở đối soát
-`PaymentAfterCancellation`, thông báo Staff/Admin hoàn thủ công (`PaymentService.apply_bank_transfer`).
+Tiền về đúng số tiền sau hạn 15 phút (`PaymentService.apply_bank_transfer`): thứ quyết định là đơn đã bị hủy hay chưa.
+- Đơn chưa bị hủy (tác vụ này chưa chạy tới): vẫn giữ hàng và coupon, nên được ghi nhận `Paid` như thường; tác vụ
+  này bỏ qua đơn đã thanh toán.
+- Đơn đã bị hủy (hết hạn, khách hoặc Staff/Admin hủy): ghi nhận tiền (`Success`), `PaymentStatus` `Paid`, mở đối soát
+  `PaymentAfterCancellation`, thông báo Staff/Admin hoàn thủ công; không khôi phục đơn.
 
 ## Xử lý lại webhook thanh toán
 
@@ -39,7 +44,8 @@ Callback thanh toán thành công đến sau khi đơn đã hết hạn: ghi nh�
 | Đường dẫn | `POST /internal/payment-webhooks/process?limit=100&older_than_minutes=5` |
 | Use case | `PaymentWebhookService.process_unprocessed(older_than=..., limit=...)` |
 | Đầu vào | `limit` (1–1000, mặc định 100); `older_than_minutes` (1–1440, mặc định 5): chỉ lấy sự kiện còn `Received` nhận trước mốc này |
-| Đầu ra | `200 {"Processed": <số sự kiện đã xử lý>}` |
+| Đầu ra | Như tác vụ hết hạn: `200 {"Processed", "Selected", "Skipped", "Failed"}`; `Failed > 0` → `500` kèm số liệu. `Skipped`: sự kiện đã được xử lý ở nơi khác (SePay gửi lại) |
+| Lỗi | Sự kiện lỗi được rollback, ghi log, đếm vào `Failed` và giữ nguyên `Received` để lần chạy sau thử lại (không đánh dấu, không bỏ); các sự kiện sau vẫn được xử lý. Timeout và log như tác vụ hết hạn. |
 | Cấu hình | Cần `SEPAY_WEBHOOK_SECRET`, `SEPAY_ACCOUNT_NUMBER`; thiếu → `503` (sau khi đã qua kiểm tra bí mật cron) |
 
 ## Webhook SePay
@@ -48,7 +54,9 @@ Callback thanh toán thành công đến sau khi đơn đã hết hạn: ghi nh�
 |---|---|
 | Router | `app/routers/webhooks.py` → `POST /webhooks/sepay` (chỉ POST), đã đăng ký trong `app/main.py` |
 | Xác thực | HMAC-SHA256 theo tài liệu SePay: `X-SePay-Timestamp` (Unix giây), `X-SePay-Signature: sha256=<hex>` của `"{timestamp}.{raw_body}"`; lệch tối đa 300 giây; so sánh hằng thời gian; dùng bytes gốc của body |
-| Cấu hình | `SEPAY_WEBHOOK_SECRET`, `SEPAY_ACCOUNT_NUMBER` (thiếu → 503, không xử lý). QR: `SEPAY_BANK`, `SEPAY_QR_IMAGE_URL`, `SEPAY_PAYMENT_CODE_PREFIX`, `SEPAY_PAYMENT_CODE_LENGTH` |
+| Cấu hình | `SEPAY_WEBHOOK_SECRET`, `SEPAY_ACCOUNT_NUMBER` (thiếu → 503, không xử lý). QR: `SEPAY_BANK`, `SEPAY_QR_IMAGE_URL` (chỉ địa chỉ ảnh, không kèm `?...`), `SEPAY_PAYMENT_CODE_PREFIX`, `SEPAY_PAYMENT_CODE_LENGTH`; tùy chọn `SEPAY_ACCOUNT_NAME` (tên chủ tài khoản hiển thị cạnh QR), `SEPAY_MAIN_ACCOUNT_NUMBER` |
+| Tài khoản nhận | `SEPAY_ACCOUNT_NUMBER` là tài khoản khách chuyển vào (`acc` của QR). Ngân hàng chỉ hỗ trợ tài khoản ảo (VA) chính thức, như MSB ("No main account, must use VA"): điền **số VA**; SePay gửi số VA trong `subAccount`, tài khoản ngân hàng trong `accountNumber`. Giao dịch được nhận khi `accountNumber` hoặc `subAccount` trùng `SEPAY_ACCOUNT_NUMBER`; có `SEPAY_MAIN_ACCOUNT_NUMBER` thì giao dịch qua VA phải có `accountNumber` là tài khoản đó. Khác → `Ignored` (`ignored_other_account`), không ghi nhận thanh toán |
+| Mã thanh toán | `code` do SePay tách theo "Cấu trúc mã thanh toán" (dashboard: Công ty → Cấu hình chung) phải trùng tiền tố/độ dài cấu hình. SePay gửi `code = null` thì chỉ lấy mã đứng riêng đúng mẫu tiền tố + độ dài trong `content`, và chỉ khi có đúng một mã; mã vẫn phải trùng một yêu cầu QR và đúng số tiền |
 | Body | JSON (cấu hình SePay phải chọn `application/json`) |
 | Phản hồi | `200 {"success": true}` khi sự kiện đã lưu và xử lý xong (kể cả trùng, sai số tiền, không khớp đơn — đã vào đối soát). `401` sai chữ ký/timestamp, `400` payload sai, `503` thiếu cấu hình, `500` lỗi lưu/xử lý → SePay gửi lại |
 | Idempotency | `PaymentWebhookEvents` UNIQUE (Provider, AccountNumber, id) |

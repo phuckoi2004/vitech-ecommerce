@@ -23,7 +23,12 @@ REMOTE_HEAD = "b81569bc34b0"
 MERGE_HEAD = "c6a4e2b8d901"
 # Head after the merge: drops the unused Stage 4 OtpChallenges table (decision 11/10/2026).
 OTP_HEAD = "3d9f987f3c6f"
-HEAD = "7e4c9b2d1a60"
+WORKFLOW_HEAD = "7e4c9b2d1a60"
+# Two branches from the service-request workflow, joined by a history-only merge revision.
+CATEGORY_IMAGE_HEAD = "6f8a2c4d9b10"
+NEWS_VIEW_HEAD = "71a4d9c8e620"
+CATALOG_DELETE_HEAD = "a6d2e8f4b190"
+HEAD = "b2f8c6d4e901"
 COUPON_REVISION = "213feab4a632"
 STATUS_REVISION = "dd773e03e503"
 TRANSACTION_TYPE_REVISION = "9b10f42fc70d"
@@ -83,10 +88,14 @@ def test_unique_revision_ids_and_one_complete_canonical_graph():
     duplicates = {revision: [name for name, identifier in identifiers if identifier == revision]
                   for revision, count in counts.items() if count > 1}
     assert duplicates == {}, f"Duplicate Alembic revision identifiers: {duplicates}"
-    assert len(identifiers) == 23
+    assert len(identifiers) == 27
     graph = scripts()
     assert graph.get_heads() == [HEAD]
-    assert graph.get_revision(HEAD).down_revision == OTP_HEAD
+    assert graph.get_revision(HEAD).down_revision == (CATALOG_DELETE_HEAD, NEWS_VIEW_HEAD)
+    assert graph.get_revision(CATALOG_DELETE_HEAD).down_revision == WORKFLOW_HEAD
+    assert graph.get_revision(NEWS_VIEW_HEAD).down_revision == CATEGORY_IMAGE_HEAD
+    assert graph.get_revision(CATEGORY_IMAGE_HEAD).down_revision == WORKFLOW_HEAD
+    assert graph.get_revision(WORKFLOW_HEAD).down_revision == OTP_HEAD
     assert graph.get_revision(OTP_HEAD).down_revision == MERGE_HEAD
     assert graph.get_bases() == ["2cb2e7418b06"]
     assert {revision.revision for revision in graph.walk_revisions()} == set(counts)

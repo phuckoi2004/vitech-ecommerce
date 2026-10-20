@@ -7,7 +7,7 @@ from urllib.parse import urlsplit
 from pydantic import Field, field_validator, model_validator
 
 from .catalog import AdminProductVariantListResponse, ProductImageResponse
-from .common import Money, NonNegativeInt, ProductStatus, RequestSchema, varchar
+from .common import NonNegativeInt, ProductStatus, RequestSchema, VndAmount, varchar
 from app.core.catalog_media import technical_specifications, validate_specifications
 
 
@@ -64,7 +64,7 @@ class CatalogVariantWrite(RequestSchema):
     Sku: varchar(50)
     Color: varchar(50)
     Storage: varchar(50) | None = None
-    Price: Money
+    Price: VndAmount
     MinStockLevel: NonNegativeInt = 0
     IsActive: bool = True
     IsSerialTracked: bool = False

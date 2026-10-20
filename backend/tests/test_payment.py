@@ -1,10 +1,16 @@
 """PaymentService: QR, callback (gửi lặp/đến muộn), hoàn tiền tách khỏi transaction, đối soát, COD."""
 
+import os
 import unittest
 import uuid
+from datetime import timedelta
 from decimal import Decimal
+from unittest import mock
+from urllib.parse import parse_qs, urlparse
 
+from app.integrations.sepay import SePayQrGateway, SePaySettings
 from app.models import PaymentTransaction
+from app.schemas import PaymentTransactionResponse, QrPaymentResponse
 from app.services import (
     BusinessRuleError,
     ConflictError,
@@ -283,7 +289,7 @@ class LateCallbackAfterExpiryTest(PaymentTestBase):
         order = self.f.order(self.customer, self.qr, total="130000.00", lines=((variant, 2),))
         self.svc.create_qr_payment(self.f.actor(self.customer), order.OrderId)
         order.OrderedAt = NOW - timedelta(minutes=16)
-        self.assertEqual(order_service(self.db, self.session).expire_unpaid_qr_orders(), 1)
+        self.assertEqual(order_service(self.db, self.session).expire_unpaid_qr_orders().processed, 1)
         self.assertEqual((order.OrderStatus, variant.StockQuantity, self.txs(order)[0].Status), ("Cancelled", 5, "Cancelled"))
 
         self.callback(f"GW-{order.OrderCode}", "130000.00")
@@ -311,6 +317,163 @@ class QrDeadlineBoundaryTest(PaymentTestBase):
         with self.assertRaises(BusinessRuleError) as ctx:
             self.svc.create_qr_payment(self.f.actor(self.customer), late.OrderId)
         self.assertEqual(ctx.exception.code, "order_payment_expired")
+
+
+WEBHOOK_SECRET = "webhook-secret-not-real"
+QR_DETAIL_FIELDS = {"TransferContent", "Bank", "AccountNumber", "AccountName", "TransferAmount", "ExpiresAt"}
+
+
+def sepay_settings(**overrides) -> SePaySettings:
+    values = dict(
+        webhook_secret=WEBHOOK_SECRET, account_number="0123456789", bank="Vietcombank",
+        qr_image_url="https://qr.example.test/img", payment_code_prefix="VTPAY", payment_code_length=10,
+    )
+    values.update(overrides)
+    return SePaySettings(**values)
+
+
+class QrPaymentDetailsTest(PaymentTestBase):
+    """Thông tin chuyển khoản trả kèm yêu cầu QR: từ giao dịch đã lưu và đơn hàng, cổng SePay thật (không gọi mạng)."""
+
+    def sepay(self, **overrides):
+        return payment_service(self.db, self.session, gateway=SePayQrGateway(sepay_settings(**overrides)))
+
+    def test_response_carries_the_transfer_details_of_the_stored_request(self):
+        order = self.f.order(self.customer, self.qr, total="130000.00")
+        qr = self.sepay().create_qr_payment(self.f.actor(self.customer), order.OrderId)
+
+        [stored] = self.txs(order)
+        self.assertEqual((qr.TransferContent, qr.Status), (stored.GatewayTransactionCode, "Pending"))
+        self.assertTrue(qr.TransferContent.startswith("VTPAY") and len(qr.TransferContent) == 15)
+        self.assertEqual((qr.Bank, qr.AccountNumber, qr.AccountName), ("Vietcombank", "0123456789", None))
+        self.assertEqual((qr.TransferAmount, qr.Amount), (130000, Decimal("130000.00")))
+        self.assertEqual(qr.ExpiresAt, order.OrderedAt + timedelta(minutes=15))
+        # The QR image encodes exactly the same transfer.
+        query = parse_qs(urlparse(qr.QrData).query)
+        self.assertEqual((query["des"], query["amount"], query["acc"], query["bank"]),
+                         ([qr.TransferContent], ["130000"], ["0123456789"], ["Vietcombank"]))
+        # Only the documented fields are added; raw gateway data and secrets stay out of the customer response.
+        self.assertEqual(set(QrPaymentResponse.model_fields) - set(PaymentTransactionResponse.model_fields), QR_DETAIL_FIELDS)
+        body = qr.model_dump_json()
+        for hidden in (WEBHOOK_SECRET, "ResponseData", "GatewayTransactionCode", "webhook_secret"):
+            self.assertNotIn(hidden, body)
+
+    def test_repeat_call_returns_the_same_request_even_after_the_settings_change(self):
+        order = self.f.order(self.customer, self.qr, total="130000.00")
+        first = self.sepay().create_qr_payment(self.f.actor(self.customer), order.OrderId)
+        again = self.sepay(account_number="9999999999", bank="MBBank").create_qr_payment(
+            self.f.actor(self.customer), order.OrderId)
+        self.assertEqual(again.model_dump(), first.model_dump())
+        self.assertEqual(len(self.txs(order)), 1)
+
+    def test_configured_account_name_is_returned_and_kept_for_the_issued_qr(self):
+        order = self.f.order(self.customer, self.qr, total="130000.00")
+        first = self.sepay(account_name="CONG TY VIETECH").create_qr_payment(self.f.actor(self.customer), order.OrderId)
+        self.assertEqual(first.AccountName, "CONG TY VIETECH")
+        # The name stored with this QR is returned again, even once the setting changes or is removed.
+        again = self.sepay(account_name=None).create_qr_payment(self.f.actor(self.customer), order.OrderId)
+        self.assertEqual((again.AccountName, again.PaymentTransactionId), ("CONG TY VIETECH", first.PaymentTransactionId))
+
+    def test_deadline_applies_only_while_the_order_awaits_confirmation(self):
+        order = self.f.order(self.customer, self.qr, status="Confirmed", total="130000.00")
+        qr = self.sepay().create_qr_payment(self.f.actor(self.customer), order.OrderId)
+        self.assertIsNone(qr.ExpiresAt)
+        self.assertEqual(qr.TransferAmount, 130000)
+
+    def test_gateway_without_account_details_returns_none_rather_than_a_guess(self):
+        order = self.f.order(self.customer, self.qr, total="130000.00")
+        qr = self.svc.create_qr_payment(self.f.actor(self.customer), order.OrderId)  # FakeGateway: no bank/account
+        self.assertEqual((qr.Bank, qr.AccountNumber, qr.TransferContent), (None, None, f"GW-{order.OrderCode}"))
+
+    def test_invalid_orders_get_no_payment_details_and_no_transaction(self):
+        from tests.fakes import NOW
+
+        svc = self.sepay()
+        cases = [
+            ("other customer's order", self.f.order(self.other, self.qr), "order_not_found"),
+            ("COD order", self.f.order(self.customer, self.cod), "payment_method_is_cod"),
+            ("already paid", self.f.order(self.customer, self.qr, payment_status="Paid"), "order_not_payable"),
+            ("cancelled", self.f.order(self.customer, self.qr, status="Cancelled"), "order_not_payable"),
+            ("past the 15 minutes", self.f.order(self.customer, self.qr, ordered_at=NOW - timedelta(minutes=15)),
+             "order_payment_expired"),
+            # Đơn cũ tạo trước quy tắc VND nguyên đồng / chặn đơn 0 đồng: không gọi cổng, không tạo giao dịch.
+            ("zero total", self.f.order(self.customer, self.qr, total="0.00"), "order_total_zero"),
+            ("fractional total", self.f.order(self.customer, self.qr, total="250000.50"), "qr_amount_not_supported"),
+        ]
+        for name, order, code in cases:
+            with self.subTest(name), self.assertRaises((BusinessRuleError, NotFoundError)) as ctx:
+                svc.create_qr_payment(self.f.actor(self.customer), order.OrderId)
+            self.assertEqual(ctx.exception.code, code)
+            self.assertEqual(self.txs(order), [])
+
+    def test_missing_gateway_configuration_creates_nothing(self):
+        order = self.f.order(self.customer, self.qr, total="130000.00")
+        with self.assertRaises(BusinessRuleError) as ctx:
+            payment_service(self.db, self.session, gateway=None).create_qr_payment(self.f.actor(self.customer), order.OrderId)
+        self.assertEqual(ctx.exception.code, "payment_gateway_not_configured")
+        self.assertEqual(self.txs(order), [])
+
+    def test_incomplete_qr_settings_leave_the_gateway_unconfigured(self):
+        from app.routers.dependencies import get_payment_gateway
+
+        webhook_only = {"SEPAY_WEBHOOK_SECRET": WEBHOOK_SECRET, "SEPAY_ACCOUNT_NUMBER": "0123456789"}
+        complete = {**webhook_only, "SEPAY_BANK": "Vietcombank", "SEPAY_QR_IMAGE_URL": "https://qr.example.test/img",
+                    "SEPAY_PAYMENT_CODE_PREFIX": "VTPAY", "SEPAY_PAYMENT_CODE_LENGTH": "10"}
+        for name, env, configured in (("nothing", {}, False), ("webhook only", webhook_only, False),
+                                      ("plain http image", {**complete, "SEPAY_QR_IMAGE_URL": "http://qr.example.test/img"}, False),
+                                      ("complete", complete, True)):
+            with self.subTest(name), mock.patch.dict(os.environ, env, clear=True):
+                self.assertEqual(get_payment_gateway() is not None, configured)
+
+
+class QrPaymentEndpointTest(unittest.TestCase):
+    """POST /orders/{id}/payments/qr serializes the transfer details (Service stubbed; no database)."""
+
+    def test_endpoint_returns_the_transfer_details_as_json(self):
+        from datetime import datetime, timezone
+
+        from fastapi.testclient import TestClient
+
+        from app.core.dependencies import get_current_actor
+        from app.main import app
+        from app.routers import dependencies as deps
+        from app.services import Actor
+
+        actor = Actor(uuid.uuid4(), "Customer")
+        order_id = uuid.uuid4()
+        sample = QrPaymentResponse(
+            PaymentTransactionId=uuid.uuid4(), OrderId=order_id, PaymentMethodId=uuid.uuid4(),
+            TransactionType="Payment", Amount=Decimal("130000.00"), Status="Pending",
+            QrData="https://qr.example.test/img?acc=0123456789&bank=Vietcombank&amount=130000&des=VTPAYABCDE12345",
+            PaidAt=None, CreatedAt=datetime(2026, 10, 9, 8, 0, tzinfo=timezone.utc), RefundOfPaymentTransactionId=None,
+            TransferContent="VTPAYABCDE12345", Bank="Vietcombank", AccountNumber="0123456789", TransferAmount=130000,
+            ExpiresAt=datetime(2026, 10, 9, 8, 15, tzinfo=timezone.utc),
+        )
+        calls = []
+
+        class StubPayments:
+            def create_qr_payment(self, who, order):
+                calls.append((who, order))
+                return sample
+
+        previous = app.dependency_overrides.copy()
+        app.dependency_overrides[deps.get_payment_service] = StubPayments
+        app.dependency_overrides[get_current_actor] = lambda: actor
+        try:
+            response = TestClient(app).post(f"/orders/{order_id}/payments/qr")
+        finally:
+            app.dependency_overrides.clear()
+            app.dependency_overrides.update(previous)
+
+        self.assertEqual(response.status_code, 201, response.text)
+        self.assertEqual(calls, [(actor, order_id)])
+        body = response.json()
+        self.assertEqual(
+            {key: body[key] for key in ("TransferContent", "Bank", "AccountNumber", "TransferAmount", "Amount", "ExpiresAt")},
+            {"TransferContent": "VTPAYABCDE12345", "Bank": "Vietcombank", "AccountNumber": "0123456789",
+             "TransferAmount": 130000, "Amount": "130000.00", "ExpiresAt": "2026-10-09T08:15:00Z"},
+        )
+        self.assertFalse({"ResponseData", "GatewayTransactionCode"} & set(body))
 
 
 class PaymentMethodPermissionTest(PaymentTestBase):

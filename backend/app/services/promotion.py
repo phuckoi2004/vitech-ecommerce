@@ -9,6 +9,8 @@ Nguồn nghiệp vụ: docs/business-requirements.md mục 5, 6, 17 và các quy
 - Coupon giảm trên các dòng thuộc Product/Category được gán cho Promotion (Promotion không gán gì = toàn đơn);
   danh mục chỉ khớp trực tiếp, không gồm danh mục con. Tiền giảm phân bổ theo tỷ lệ vào từng dòng.
 - UsedCount tăng/giảm có khóa dòng coupon; không âm, không vượt UsageLimit.
+- Tiền VND nguyên đồng: số tiền giảm làm tròn xuống đến đồng; giá trị tiền của Promotion (số tiền giảm cố định,
+  MinOrderValue, MaxDiscountAmount) phải là số nguyên (phần trăm được có phần thập phân).
 Cách tính giảm giá ở đây là nguồn duy nhất, OrderService dùng lại.
 """
 
@@ -16,7 +18,7 @@ import uuid
 from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass
 from datetime import datetime
-from decimal import ROUND_DOWN, ROUND_HALF_UP, Decimal
+from decimal import ROUND_FLOOR, ROUND_HALF_UP, Decimal
 from typing import Protocol
 
 from sqlalchemy.orm import Session
@@ -59,6 +61,8 @@ PERCENTAGE = "Percentage"
 LOCKED_WHEN_ACTIVE = ("DiscountType", "DiscountValue", "MinOrderValue", "MaxDiscountAmount", "StartDate", "EndDate")
 
 _CENT = Decimal("0.01")
+_VND = Decimal("1")
+FIXED_AMOUNT = "FixedAmount"
 
 
 # ======================================================================
@@ -92,43 +96,73 @@ def is_promotion_in_effect(promotion: Promotion, now: datetime) -> bool:
     return promotion_status(promotion, now) == PROMOTION_ACTIVE and aware(promotion.StartDate) <= aware(now) <= aware(promotion.EndDate)
 
 
+def is_whole_vnd(value: Decimal) -> bool:
+    """Số tiền VND nguyên đồng (không có phần lẻ)."""
+    return value == value.to_integral_value()
+
+
+def floor_vnd(value: Decimal) -> Decimal:
+    """Làm tròn xuống đến đồng (ROUND_FLOOR trên Decimal, không qua float)."""
+    return value.quantize(_VND, rounding=ROUND_FLOOR)
+
+
+def _check_fixed_amount(discount_type: str | None, discount_value: Decimal | None) -> None:
+    """Số tiền giảm cố định phải là VND nguyên đồng (giảm theo phần trăm được có phần thập phân)."""
+    if discount_type == FIXED_AMOUNT and discount_value is not None and not is_whole_vnd(discount_value):
+        raise BusinessRuleError("Số tiền giảm cố định phải là VND nguyên đồng", code="invalid_discount_value")
+
+
 def calculate_discount(promotion: Promotion, base: Decimal) -> Decimal:
-    """Percentage: base × DiscountValue / 100; FixedAmount: DiscountValue.
-    Giới hạn bởi MaxDiscountAmount (nếu có) và không vượt base."""
+    """Số tiền giảm, VND nguyên đồng.
+
+    Percentage: base × DiscountValue / 100 (DiscountValue được có phần thập phân); FixedAmount: DiscountValue. Giới hạn
+    bởi MaxDiscountAmount (nếu có) và không vượt base, rồi làm tròn xuống đến đồng. Với mức trần và base nguyên đồng,
+    kết quả đúng bằng làm tròn xuống trước rồi mới giới hạn; với dữ liệu cũ có phần lẻ, kết quả vẫn nguyên đồng và
+    không vượt giới hạn nào. Phép tính chính xác: nhân/chia cho 100 nằm trong độ chính xác 28 chữ số của Decimal.
+    """
     if promotion.DiscountType == PERCENTAGE:
-        discount = money(base * promotion.DiscountValue / Decimal("100"))
+        discount = base * promotion.DiscountValue / Decimal("100")
     else:
-        discount = money(promotion.DiscountValue)
+        discount = promotion.DiscountValue
     if promotion.MaxDiscountAmount is not None:
         discount = min(discount, promotion.MaxDiscountAmount)
-    return min(discount, base)
+    return floor_vnd(min(discount, base))
 
 
 def allocate_discount(discount: Decimal, lines: Sequence[DiscountLine]) -> None:
-    """Phân bổ tiền giảm theo tỷ lệ giá trị dòng (discount <= tổng giá trị các dòng).
+    """Phân bổ tiền giảm vào các dòng theo tỷ lệ giá trị dòng (discount <= tổng giá trị các dòng).
 
-    Mỗi dòng nhận phần làm tròn xuống tới cent; số cent còn dư chia cho các dòng có phần lẻ lớn nhất
-    còn sức chứa. Tổng phân bổ đúng bằng ``discount`` và không dòng nào bị giảm quá giá trị của nó.
+    Tổng phân bổ luôn đúng bằng ``discount`` và không dòng nào bị giảm quá giá trị của nó. Tính bằng số nguyên theo
+    đơn vị: mỗi dòng nhận phần nguyên của discount × gross / base; số đơn vị còn thiếu cộng lần lượt cho các dòng có
+    phần dư lớn nhất (bằng nhau: dòng đứng trước). Đơn vị là một đồng khi tiền giảm và mọi dòng nguyên đồng (đơn mới),
+    một xu nếu có giá trị lẻ xu (dữ liệu cũ; theo đồng có thể không chia hết, ví dụ hai dòng 0,5 đồng).
     """
     base = sum((line.gross for line in lines), Decimal("0"))
     if base <= 0 or discount <= 0:
         for line in lines:
             line.discount = Decimal("0")
         return
-    fractions = []
-    for index, line in enumerate(lines):
-        exact = discount * line.gross / base
-        share = exact.quantize(_CENT, rounding=ROUND_DOWN)
-        line.discount = share
-        fractions.append((exact - share, index))
-    remaining_cents = int((discount - sum(line.discount for line in lines)) / _CENT)
-    for _, index in sorted(fractions, reverse=True):
-        if remaining_cents <= 0:
+    if discount > base:
+        raise ValueError("Tiền giảm không được vượt tổng giá trị các dòng")
+    unit = _VND if is_whole_vnd(discount) and all(is_whole_vnd(line.gross) for line in lines) else _CENT
+    total = int(discount / unit)
+    grosses = [int(line.gross / unit) for line in lines]
+    base_units = sum(grosses)
+    shares, order = [], []
+    for index, gross in enumerate(grosses):
+        share, remainder = divmod(total * gross, base_units)
+        shares.append(share)
+        order.append((-remainder, index))
+    # Dòng có phần dư > 0 luôn còn sức chứa (share < phần chính xác <= gross), nên số còn thiếu luôn chia hết.
+    missing = total - sum(shares)
+    for _, index in sorted(order):
+        if missing <= 0:
             break
-        line = lines[index]
-        if line.discount + _CENT <= line.gross:
-            line.discount += _CENT
-            remaining_cents -= 1
+        if shares[index] < grosses[index]:
+            shares[index] += 1
+            missing -= 1
+    for line, share in zip(lines, shares):
+        line.discount = Decimal(share) * unit
 
 
 # ======================================================================
@@ -173,6 +207,7 @@ class PromotionService(BaseService):
         require_role(actor, *ADMIN_ONLY)
         with self.transaction():
             values = data.model_dump(exclude_unset=True, exclude={"ProductIds", "CategoryIds"})
+            _check_fixed_amount(values.get("DiscountType"), values.get("DiscountValue"))
             product_ids, category_ids = self._valid_targets(data.ProductIds, data.CategoryIds)
             promotion = self.promotions.create({**values, "CreatedByUserId": actor.user_id})
             promotion.Status = promotion_status(promotion, self.now())
@@ -204,6 +239,9 @@ class PromotionService(BaseService):
                 raise BusinessRuleError("EndDate phải lớn hơn hoặc bằng StartDate", code="invalid_promotion_period")
             if merged["DiscountType"] == PERCENTAGE and merged["DiscountValue"] > 100:
                 raise BusinessRuleError("Giảm theo phần trăm không quá 100", code="invalid_discount_value")
+            # Chỉ khi loại/giá trị giảm thay đổi: sửa tên/mô tả của dữ liệu cũ có phần lẻ vẫn được.
+            if "DiscountType" in values or "DiscountValue" in values:
+                _check_fixed_amount(merged["DiscountType"], merged["DiscountValue"])
             # Validate everything first, then save metadata and scope in ONE transaction.
             products, categories = self._valid_targets(target_values.get("ProductIds", []), target_values.get("CategoryIds", []))
             self.promotions.update(promotion, values)

@@ -130,6 +130,10 @@ RETURN_NOTIFICATION_TYPE = "Return"
 REFERENCE_TYPE = "ReturnRequest"
 CREATE_FIELDS = frozenset({"OrderItemId", "RequestType", "ProductSerialId", "Quantity", "Reason", "Attachments"})
 FIELD_CODE = "return_field_not_allowed"
+# Bodies of the step endpoints mapped onto advance_status: /accept and /start-receiving (ServiceRequestNote),
+# /receive (ReturnGoodsReceive). Their step notes are kept; SerialNumber is accepted but not processed, because the
+# active workflow runs no serial operation (serial verification on receipt awaits a business decision).
+ADVANCE_NOTE_FIELDS = frozenset({"Note", "InternalNote", "SerialNumber"})
 # Cấu hình ứng dụng (biến môi trường, theo cùng cách với SePaySettings.from_env).
 RETURN_WINDOW_ENV = "RETURN_WINDOW_DAYS"
 DEFAULT_RETURN_WINDOW_DAYS = 7
@@ -314,13 +318,19 @@ class ReturnService(BaseService):
 
     # ================================================================== Staff / Admin: xem
 
-    def advance_status(self, actor: Actor, request_id: uuid.UUID, expected_status: str) -> AdminReturnRequestDetailResponse:
+    def advance_status(
+        self, actor: Actor, request_id: uuid.UUID, expected_status: str, *,
+        notes: ServiceRequestNote | ReturnGoodsReceive | None = None,
+    ) -> AdminReturnRequestDetailResponse:
         """Active workflow (15/10/2026): status only, no refund, stock or serial mutations.
 
         Financial/inspection implementations below are retained for later consultation;
         their HTTP endpoints are paused. Completed here does NOT mean money was refunded.
+        ``notes``: the operator's optional step note (Note: customer-visible, InternalNote: Staff/Admin only),
+        kept in the history line of this step.
         """
         require_role(actor, *STAFF_OR_ADMIN)
+        note, internal_note = step_notes(notes, allowed=ADVANCE_NOTE_FIELDS, code=FIELD_CODE)
         transitions = {PENDING: APPROVED, APPROVED: RECEIVING, RECEIVING: PROCESSING, PROCESSING: COMPLETED}
         labels = {APPROVED: "Đã tiếp nhận yêu cầu", RECEIVING: "Đang điều phối", PROCESSING: "Đang đánh giá hư hại",
                   COMPLETED: "Đã hoàn tất yêu cầu đổi/trả"}
@@ -339,7 +349,8 @@ class ReturnService(BaseService):
                 request.ReceivedAt = self.now()
             if next_status == COMPLETED:
                 request.CompletedAt = self.now()
-            self._history(request, actor.user_id, old, next_status, labels[next_status] + ".")
+            self._history(request, actor.user_id, old, next_status, compose_note(labels[next_status] + ".", note),
+                          internal_note=internal_note)
             self._notify_customer(request, labels[next_status], f"Yêu cầu {request.RequestCode}: {labels[next_status]}.")
             self.requests.flush()
             return self.get_return_request(actor, request_id)
@@ -348,6 +359,7 @@ class ReturnService(BaseService):
         """Staff/Admin can reject any open status; no money, stock or serial side effects."""
         require_role(actor, *STAFF_OR_ADMIN)
         reason = required_text(data.Reason, code="rejection_reason_required", message="Cần ghi lý do từ chối")
+        internal_note = optional_text(data.InternalNote)  # Staff/Admin only; never in the customer notification
         with self.transaction():
             request, _, _ = self._lock(request_id)
             if request.Status not in (PENDING, APPROVED, RECEIVING, PROCESSING):
@@ -356,7 +368,8 @@ class ReturnService(BaseService):
             request.Status, request.DecisionReason = REJECTED, reason
             if request.AssignedStaffId is None:
                 request.AssignedStaffId = actor.user_id
-            self._history(request, actor.user_id, old, REJECTED, f"Yêu cầu bị từ chối. Lý do: {reason}")
+            self._history(request, actor.user_id, old, REJECTED, f"Yêu cầu bị từ chối. Lý do: {reason}",
+                          internal_note=internal_note)
             self._notify_customer(request, "Yêu cầu đổi/trả bị từ chối", f"Yêu cầu {request.RequestCode}. Lý do: {reason}")
             self.requests.flush()
             return self.get_return_request(actor, request_id)

@@ -31,7 +31,7 @@ from app.routers import dependencies as deps
 from tests.postgres_safety import (
     POSTGRES_TESTS_ENABLED,
     UnsafePostgresTestDatabase,
-    require_separate_test_database,
+    require_test_database_target,
 )
 
 from .support import PASSWORD, Person, Seed, expect
@@ -57,7 +57,8 @@ def api_engine(request):
         pytest.skip("set RUN_POSTGRES_TESTS=1 to run the API tests against TEST_DATABASE_URL")
     test_url = _setting("TEST_DATABASE_URL")
     try:
-        require_separate_test_database(test_url, _setting("DATABASE_URL"))
+        require_test_database_target(test_url, _setting("DATABASE_URL"),
+                                     expected_project=_setting("TEST_DATABASE_PROJECT_REF"), environ=os.environ)
     except UnsafePostgresTestDatabase as error:
         pytest.fail(str(error), pytrace=False)
     request.getfixturevalue("postgres_test_lock")  # one PostgreSQL test run at a time on this database

@@ -1,3 +1,4 @@
+import { request } from '../services/api/client.js'
 import { apiRequest } from './auth-api.js'
 
 export const AVATAR_MAX_BYTES = 2 * 1024 * 1024
@@ -18,6 +19,11 @@ export function uploadAvatar(accessToken, file) {
 
 export function getDefaultAddress(accessToken) {
   return apiRequest('/users/me/default-address', { method: 'GET', accessToken })
+}
+
+// AddressResponse[] of the customer's address book (Customer only; deleted addresses are not listed).
+export function listAddresses(accessToken, { signal } = {}) {
+  return request('/users/me/addresses', { accessToken, signal })
 }
 
 export function saveDefaultAddress(accessToken, address) {

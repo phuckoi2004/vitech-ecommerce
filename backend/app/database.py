@@ -1,20 +1,10 @@
-import os
-from pathlib import Path
-
-from dotenv import load_dotenv
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
+from app.core.env import database_url
 
-BASE_DIR = Path(__file__).resolve().parent.parent
-ENV_FILE = BASE_DIR / ".env"
-
-load_dotenv(ENV_FILE)
-
-DATABASE_URL = os.getenv("DATABASE_URL")
-
-if not DATABASE_URL:
-    raise ValueError(f"DATABASE_URL chưa được cấu hình trong {ENV_FILE}")
+# Development/test: backend/.env.local (never backend/.env); see app.core.env.
+DATABASE_URL = database_url()
 
 
 engine = create_engine(

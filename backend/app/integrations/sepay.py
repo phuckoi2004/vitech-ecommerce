@@ -28,6 +28,7 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from decimal import Decimal
+from time import perf_counter
 from typing import Any, Literal
 from urllib.parse import urlencode, urlparse
 from zoneinfo import ZoneInfo
@@ -69,8 +70,14 @@ class WebhookAuthenticationError(Exception):
 @dataclass(frozen=True)
 class SePaySettings:
     webhook_secret: str = field(repr=False)
+    # Tài khoản khách chuyển tiền vào (tham số `acc` của QR). Ngân hàng chỉ hỗ trợ tài khoản ảo (VA) chính thức, như
+    # MSB ("No main account, must use VA" theo developer.sepay.vn): đây là số VA, SePay gửi nó trong `subAccount`.
     account_number: str
+    # Tùy chọn, chỉ cho VA: tài khoản ngân hàng chứa VA, mà SePay gửi trong `accountNumber` của giao dịch qua VA.
+    main_account_number: str | None = None
     bank: str | None = None
+    # Tên chủ tài khoản nhận tiền (tùy chọn): chỉ để khách đối chiếu trước khi chuyển, không đưa vào ảnh QR.
+    account_name: str | None = None
     qr_image_url: str | None = None
     payment_code_prefix: str | None = None
     payment_code_length: int | None = None
@@ -78,7 +85,8 @@ class SePaySettings:
 
     @classmethod
     def from_env(cls, env: Mapping[str, str] | None = None) -> "SePaySettings":
-        """Đọc cấu hình webhook (bắt buộc: SEPAY_WEBHOOK_SECRET, SEPAY_ACCOUNT_NUMBER) và QR (tùy chọn khi tạo QR)."""
+        """Đọc cấu hình webhook (bắt buộc: SEPAY_WEBHOOK_SECRET, SEPAY_ACCOUNT_NUMBER), QR (tùy chọn khi tạo QR),
+        SEPAY_MAIN_ACCOUNT_NUMBER và SEPAY_ACCOUNT_NAME (luôn tùy chọn)."""
         env = os.environ if env is None else env
 
         def value(name: str) -> str | None:
@@ -96,7 +104,9 @@ class SePaySettings:
         return cls(
             webhook_secret=value("SEPAY_WEBHOOK_SECRET"),
             account_number=value("SEPAY_ACCOUNT_NUMBER"),
+            main_account_number=value("SEPAY_MAIN_ACCOUNT_NUMBER"),
             bank=value("SEPAY_BANK"),
+            account_name=value("SEPAY_ACCOUNT_NAME"),
             qr_image_url=value("SEPAY_QR_IMAGE_URL"),
             payment_code_prefix=value("SEPAY_PAYMENT_CODE_PREFIX"),
             payment_code_length=length,
@@ -116,12 +126,24 @@ class SePaySettings:
         ]
         if missing:
             raise SePayConfigError(f"Thiếu cấu hình QR: {', '.join(missing)}")
-        if urlparse(self.qr_image_url).scheme != "https":
+        image_url = urlparse(self.qr_image_url)
+        if image_url.scheme != "https":
             raise SePayConfigError("SEPAY_QR_IMAGE_URL phải dùng https")
+        # Tham số do server ghép (acc, bank, amount, des); một link QR dán sẵn tham số sẽ bị lặp và lệch số tiền/mã.
+        if image_url.query or image_url.fragment or "?" in self.qr_image_url:
+            raise SePayConfigError("SEPAY_QR_IMAGE_URL chỉ là địa chỉ ảnh, không kèm tham số (ví dụ https://qr.sepay.vn/img)")
         if not _PREFIX_PATTERN.match(self.payment_code_prefix):
             raise SePayConfigError("SEPAY_PAYMENT_CODE_PREFIX chỉ gồm chữ/số, tối đa 20 ký tự")
         if not MIN_RANDOM_CODE_LENGTH <= self.payment_code_length <= 30:
             raise SePayConfigError(f"SEPAY_PAYMENT_CODE_LENGTH phải từ {MIN_RANDOM_CODE_LENGTH} đến 30")
+
+    @property
+    def payment_code_pattern(self) -> re.Pattern[str] | None:
+        """Mã thanh toán đúng cấu hình (tiền tố + đúng số ký tự ngẫu nhiên), đứng riêng; None nếu cấu hình QR không hợp lệ."""
+        prefix, length = self.payment_code_prefix, self.payment_code_length
+        if not prefix or not _PREFIX_PATTERN.match(prefix) or length is None or not MIN_RANDOM_CODE_LENGTH <= length <= 30:
+            return None
+        return re.compile(rf"(?<![A-Za-z0-9]){re.escape(prefix)}[A-Z0-9]{{{length}}}(?![A-Za-z0-9])")
 
 
 # ======================================================================
@@ -223,11 +245,25 @@ class SePayWebhookPayload(BaseModel):
             "gateway": self.gateway,
             "transaction_date": self.transactionDate,
             "account_number": self.accountNumber,
+            "sub_account": self.subAccount or None,
             "code": self.code,
             "transfer_type": self.transferType,
             "transfer_amount": self.transferAmount,
             "reference_code": self.referenceCode,
         }
+
+
+def find_payment_code(content: str | None, pattern: re.Pattern[str] | None) -> str | None:
+    """Mã thanh toán trong nội dung chuyển khoản, cho giao dịch SePay gửi `code` = null.
+
+    SePay chỉ điền `code` khi "Cấu trúc mã thanh toán" trong dashboard khớp tiền tố. Ở đây chỉ nhận đúng mẫu tiền tố +
+    số ký tự đã cấu hình, đứng riêng (không dính chữ/số trước hoặc sau), và chỉ khi nội dung có đúng một mã như vậy;
+    không so khớp chuỗi con khác. Mã tìm được vẫn phải trùng một yêu cầu QR đã cấp và đúng số tiền mới được ghi nhận.
+    """
+    if not content or pattern is None:
+        return None
+    found = set(pattern.findall(content))
+    return found.pop() if len(found) == 1 else None
 
 
 def parse_sepay_payload(raw_body: bytes) -> tuple[SePayWebhookPayload, dict[str, Any]]:
@@ -258,32 +294,48 @@ def handle_sepay_webhook(
     - Thiếu cấu hình → 503 (không bao giờ xử lý khi chưa xác thực được).
     - Sai/thiếu chữ ký, timestamp → 401. Payload không hợp lệ → 400.
     - Lỗi lưu/xử lý (ví dụ database) → 500 để SePay gửi lại; sự kiện đã lưu sẽ được xử lý lại theo idempotency.
+    Log mỗi mốc kèm thời gian đã trôi qua kể từ lúc nhận (mốc T1) và độ trễ so với giờ giao dịch ngân hàng (T0);
+    không ghi secret, chữ ký hay nội dung payload.
     """
+    started = perf_counter()
+    received_at = now()
+
+    def elapsed() -> str:
+        return f"{(perf_counter() - started) * 1000:.0f} ms"
+
+    logger.info("Webhook SePay: nhận request (%d byte)", len(raw_body))
     try:
         settings = settings_loader()
     except SePayConfigError as exc:
-        logger.error("Webhook SePay bị từ chối do cấu hình: %s", exc)
+        logger.error("Webhook SePay bị từ chối do cấu hình: %s; trả 503 sau %s", exc, elapsed())
         return 503, dict(FAILURE_BODY)
     try:
         verify_sepay_signature(
-            raw_body, headers, secret=settings.webhook_secret, now=now(),
+            raw_body, headers, secret=settings.webhook_secret, now=received_at,
             tolerance_seconds=settings.timestamp_tolerance_seconds,
         )
     except WebhookAuthenticationError as exc:
-        logger.warning("Từ chối webhook SePay: %s", exc.reason)
+        logger.warning("Từ chối webhook SePay: %s; trả 401 sau %s", exc.reason, elapsed())
         return 401, dict(FAILURE_BODY)
+    logger.info("Webhook SePay: chữ ký hợp lệ (%s)", elapsed())
     try:
         payload, data = parse_sepay_payload(raw_body)
     except (ValueError, UnicodeDecodeError, ValidationError):
-        logger.warning("Payload webhook SePay không hợp lệ")
+        logger.warning("Payload webhook SePay không hợp lệ; trả 400 sau %s", elapsed())
         return 400, dict(FAILURE_BODY)
+    bank_time = payload.transaction_time_utc
+    lag = f"{received_at - bank_time.timestamp():.0f} s" if bank_time else "không rõ"
+    logger.info("Webhook SePay id=%s: payload hợp lệ, %s %s; giao dịch ngân hàng lúc %s, tới backend sau %s (%s)",
+                payload.id, payload.transferType, payload.transferAmount,
+                bank_time.isoformat() if bank_time else "không rõ", lag, elapsed())
     try:
         outcome = process(payload, data, settings)
     except Exception as exc:
         # Không ghi chi tiết lỗi (có thể chứa dữ liệu payload/SQL); SePay sẽ gửi lại.
-        logger.error("Không ghi nhận được webhook SePay id=%s (%s)", payload.id, type(exc).__name__)
+        logger.error("Không ghi nhận được webhook SePay id=%s (%s); trả 500 sau %s", payload.id, type(exc).__name__,
+                     elapsed())
         return 500, dict(FAILURE_BODY)
-    logger.info("Webhook SePay id=%s: %s", payload.id, outcome)
+    logger.info("Webhook SePay id=%s: %s; trả 200 sau %s", payload.id, outcome, elapsed())
     return 200, dict(SUCCESS_BODY)
 
 
@@ -326,7 +378,14 @@ class SePayQrGateway:
         return QrPaymentRequest(
             gateway_transaction_code=code,
             qr_data=f"{self.settings.qr_image_url}?{query}",
-            response_data={"provider": "SePay", "payment_code": code},
+            # Tài khoản nhận tiền của đúng QR này, để trả lại cho khách khi gọi lại (không chứa secret).
+            response_data={
+                "provider": "SePay",
+                "payment_code": code,
+                "bank": self.settings.bank,
+                "account_number": self.settings.account_number,
+                "account_name": self.settings.account_name,
+            },
         )
 
     def verify_callback(self, payload: Mapping[str, Any]) -> GatewayPaymentResult:

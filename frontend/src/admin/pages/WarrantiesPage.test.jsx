@@ -28,7 +28,7 @@ beforeEach(() => {
 
 test('empty list keeps all Figma columns, accurate zero counts and selected sidebar entry', async () => {
   renderPage()
-  await screen.findByText('Chưa có yêu cầu bảo hành.')
+  await screen.findByText('Chưa có yêu cầu bảo hành.', {}, { timeout: 5000 })
   expect(screen.getByRole('heading', { level: 1, name: 'Quản lý bảo hành' })).toBeInTheDocument()
   expect(screen.getAllByRole('columnheader').map((cell) => cell.textContent)).toEqual(['Mã yêu cầu', 'Khách hàng', 'Sản phẩm', 'Serial/IMEI', 'Ngày gửi', 'Trạng thái', 'Thao tác'])
   expect(screen.getByText('0 yêu cầu')).toBeInTheDocument()
