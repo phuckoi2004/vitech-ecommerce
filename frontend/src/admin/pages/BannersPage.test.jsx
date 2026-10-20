@@ -49,7 +49,7 @@ test('empty banner page retains all columns and accurate counts inside the conte
   expect(screen.getByRole('searchbox')).toHaveValue('')
 })
 
-test('search and status cover the full array, paginate five rows, and reset page on submit', async () => {
+test('search and status automatically filter the full array and reset pagination', async () => {
   banners = Array.from({ length: 12 }, (_, i) => ({ ...banner, BannerId: 'b' + i, Title: i === 11 ? 'Mục cần tìm' : 'Banner ' + i, IsActive: i !== 11 }))
   const router = renderPage('/admin/banners?page=2')
   await screen.findByText('Hiển thị 6–10 trong 12 banner')
@@ -57,7 +57,7 @@ test('search and status cover the full array, paginate five rows, and reset page
   fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'MỤC CẦN TÌM' } })
   fireEvent.change(screen.getByRole('combobox'), { target: { value: 'inactive' } })
   expect(router.state.location.search).toBe('?page=2')
-  fireEvent.click(screen.getByRole('button', { name: 'Tìm kiếm', exact: true }))
+  expect(screen.queryByRole('button', { name: 'Tìm kiếm', exact: true })).not.toBeInTheDocument()
   await screen.findByRole('button', { name: 'Xem Mục cần tìm' })
   expect(screen.getByText('Hiển thị 1–1 trong 1 banner')).toBeInTheDocument()
   expect(router.state.location.search).not.toContain('page=')
@@ -81,16 +81,15 @@ test('errors retry and unsafe destination links are never made clickable', async
   expect(screen.getByText('Không tải được ảnh')).toBeVisible()
 })
 
-test('new banners require local upload and block saving/closing until the returned Supabase URL is ready', async () => {
+test('new banners require an image and block saving/closing until the uploaded Supabase URL is ready', async () => {
   const router = renderPage('/admin/banners?dialog=new')
   const dialog = await screen.findByRole('region', { name: 'Thêm banner quảng cáo' }), ui = within(dialog)
   expect(router.state.location.pathname).toBe('/admin/banners/new')
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   expect(screen.getByRole('button', { name: 'Banner', exact: true })).toHaveAttribute('aria-current', 'page')
-  expect(ui.queryByRole('textbox', { name: /URL ảnh|Đường dẫn ảnh/i })).not.toBeInTheDocument()
   fireEvent.change(ui.getByRole('textbox', { name: 'Tiêu đề' }), { target: { value: ' Banner mới ' } })
   fireEvent.click(ui.getByRole('button', { name: 'Lưu banner' }))
-  await ui.findByText('Vui lòng chọn ảnh banner từ máy và chờ tải lên hoàn tất.')
+  await ui.findByText('Vui lòng chọn ảnh banner (tải từ máy hoặc dán đường dẫn) và chờ tải lên hoàn tất.')
   expect(api.createBanner).not.toHaveBeenCalled()
   let finish
   api.uploadProductImage.mockImplementationOnce(() => new Promise((resolve) => { finish = resolve }))
@@ -103,6 +102,24 @@ test('new banners require local upload and block saving/closing until the return
   fireEvent.click(ui.getByRole('button', { name: 'Lưu banner' }))
   await waitFor(() => expect(api.createBanner).toHaveBeenCalledWith('access-for-test', { Title: 'Banner mới', ImageUrl: 'https://storage.example.test/new.png', LinkUrl: null, DisplayOrder: 0, StartDate: null, EndDate: null, IsActive: true }))
   await screen.findByText('Đã thêm banner.')
+})
+
+test('a banner image can also be a pasted https address instead of an upload', async () => {
+  renderPage('/admin/banners?dialog=new')
+  const ui = within(await screen.findByRole('region', { name: 'Thêm banner quảng cáo' }))
+  fireEvent.change(ui.getByRole('textbox', { name: 'Tiêu đề' }), { target: { value: 'Banner dán link' } })
+  const address = ui.getByRole('textbox', { name: 'Đường dẫn ảnh banner' })
+  fireEvent.change(address, { target: { value: 'http://cdn.example.test/banner.webp' } })
+  fireEvent.keyDown(address, { key: 'Enter' })
+  expect(ui.getByRole('alert')).toHaveTextContent('phải bắt đầu bằng https://')
+  expect(api.createBanner).not.toHaveBeenCalled()
+  fireEvent.change(address, { target: { value: 'https://cdn.example.test/banner.webp' } })
+  fireEvent.click(ui.getByRole('button', { name: 'Dùng ảnh từ đường dẫn' }))
+  expect(ui.getByRole('img', { name: 'Ảnh banner' })).toHaveAttribute('src', 'https://cdn.example.test/banner.webp')
+  expect(address).toHaveValue('')
+  expect(api.uploadProductImage).not.toHaveBeenCalled()
+  fireEvent.click(ui.getByRole('button', { name: 'Lưu banner' }))
+  await waitFor(() => expect(api.createBanner).toHaveBeenCalledWith('access-for-test', expect.objectContaining({ Title: 'Banner dán link', ImageUrl: 'https://cdn.example.test/banner.webp' })))
 })
 
 test('editing validates links and date ranges, preserves unchanged timestamps, and sends only editable fields', async () => {

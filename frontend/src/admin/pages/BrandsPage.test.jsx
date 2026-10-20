@@ -136,6 +136,24 @@ test('create suggests a slug, preserves a manually edited slug and sends only su
   expect(await screen.findByRole('button', { name: 'Chi tiết Thiết bị mới hơn' })).toBeInTheDocument()
 })
 
+test('a brand logo can be a pasted link, including http and spaces, but not an embedded data: image', async () => {
+  brands = [brand]
+  renderPage()
+  fireEvent.click(await screen.findByRole('button', { name: '+ Thêm thương hiệu' }))
+  const dialog = screen.getByRole('dialog', { name: 'Thêm thương hiệu' })
+  fireEvent.change(within(dialog).getByRole('textbox', { name: 'Tên thương hiệu' }), { target: { value: 'Hãng link' } })
+  const address = within(dialog).getByRole('textbox', { name: 'Đường dẫn ảnh logo thương hiệu' })
+  fireEvent.change(address, { target: { value: 'data:image/png;base64,iVBORw0KGgo=' } })
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Dùng ảnh từ đường dẫn' }))
+  expect(within(dialog).getByRole('alert')).toHaveTextContent('ảnh nhúng (data:)')
+  fireEvent.change(address, { target: { value: 'http://cdn.example.test/logo hang.png' } })
+  fireEvent.keyDown(address, { key: 'Enter' })
+  expect(within(dialog).getByRole('img', { name: 'Ảnh logo thương hiệu 1' })).toHaveAttribute('src', 'http://cdn.example.test/logo%20hang.png')
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Thêm thương hiệu' }))
+  await waitFor(() => expect(api.createBrand).toHaveBeenCalledWith('access-for-test', expect.objectContaining({ Name: 'Hãng link', LogoUrl: 'http://cdn.example.test/logo%20hang.png' })))
+  expect(api.uploadProductImage).not.toHaveBeenCalled()
+})
+
 test('view reads logo and API details; editing can clear optional values without changing the slug', async () => {
   brands = [{ ...brand, LogoUrl: 'https://example.com/brand.png' }]
   const router = renderPage('/admin/brands?status=active')

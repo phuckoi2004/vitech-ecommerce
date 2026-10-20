@@ -12,13 +12,13 @@ import useBrowserMonth from '../hooks/useBrowserMonth.js'
 
 const STOCK_COLUMNS = [
   { key: 'ProductName', label: 'Sản phẩm', render: (value, row) => <span className="flex flex-col gap-1"><strong className="font-medium">{value}</strong><small className="text-[10px] text-admin-muted">{row.VariantName} · {row.Sku}</small></span> },
-  { key: 'StockQuantity', label: 'Tồn kho', render: (value) => <span className="flex items-center justify-between gap-3 font-semibold text-admin-red">{value}<img src={warningDot} width="10" height="10" alt="Tồn kho thấp" /></span> },
+  { key: 'StockQuantity', label: 'Tồn kho', className: 'w-[112px]', render: (value) => <span className="flex items-center justify-between gap-2 font-semibold text-admin-red">{value}<img src={warningDot} width="10" height="10" className="shrink-0" alt="Tồn kho thấp" /></span> },
 ]
 
 function StatCard({ label, value, loading, error, note, tone = '' }) {
   return <article aria-label={label} aria-busy={loading} className="flex min-h-[132px] min-w-0 flex-col gap-2 rounded-[14px] border border-admin-border bg-white px-5 py-[18px] max-[480px]:p-4">
     <h3 className="text-[13px] font-medium text-admin-muted">{label}</h3>
-    <strong className="text-[28px] leading-[1.2] font-bold wrap-anywhere">{loading ? <span className="flex h-[34px] items-center gap-2 text-sm text-admin-muted"><Spinner />Đang tải…</span> : error ? '—' : value}</strong>
+    <strong className={`${String(value).length > 15 ? 'text-[20px]' : 'text-[28px]'} leading-[1.2] font-bold whitespace-nowrap`}>{loading ? <span className="flex h-[34px] items-center gap-2 text-sm text-admin-muted"><Spinner />Đang tải…</span> : error ? '—' : value}</strong>
     {note && !loading && !error && <p className={`text-xs font-medium ${tone || 'text-admin-muted'}`}>{note}</p>}
   </article>
 }
@@ -44,12 +44,12 @@ export default function DashboardPage() {
   const summaryError = orders.error || pending.error || stock.error || revenue.error || currentRevenue?.error || previousOrders.error || previousRevenue?.error
   const refresh = () => [orders, previousOrders, pending, latest, stock, revenue].forEach((state) => state.refresh())
 
-  return <section aria-labelledby="dashboard-heading" className="flex flex-col gap-[22px]">
+  return <section aria-labelledby="dashboard-heading" className="flex min-w-0 flex-col gap-[22px]">
     <div className="flex items-center justify-between gap-4"><h2 id="dashboard-heading" className="text-xl leading-6 font-bold">Tổng quan hoạt động</h2>
       <Button variant="ghost" size="sm" className="h-6! px-2! text-[11px]!" onClick={refresh} disabled={[orders, pending, stock, revenue].some((state) => state.loading)}>Làm mới</Button>
     </div>
     {summaryError && <ErrorState title="Một số thống kê chưa tải được" message={summaryError} onRetry={refresh} className="w-full max-w-none py-4" />}
-    <div className="grid grid-cols-4 gap-4 max-[1050px]:grid-cols-2 max-[480px]:gap-3">
+    <div className="grid grid-cols-4 gap-4 max-[1400px]:grid-cols-2 max-[600px]:grid-cols-1 max-[480px]:gap-3">
       <StatCard label="Tổng đơn hàng" value={(orders.data?.TotalOrders ?? 0).toLocaleString('vi-VN')} loading={orders.loading} error={orders.error} note={<GrowthNote current={orders.data?.TotalOrders} previous={previousOrders.data?.TotalOrders} />} />
       <StatCard label="Doanh thu" value={formatMoney(currentRevenue?.data?.NetRevenue ?? 0)} loading={revenue.loading} error={revenue.error || currentRevenue?.error} note={<GrowthNote current={currentRevenue?.data?.NetRevenue} previous={previousRevenue?.data?.NetRevenue} />} />
       <StatCard label="Đơn chờ xử lý" value={(pending.data?.Total ?? 0).toLocaleString('vi-VN')} loading={pending.loading} error={pending.error} note={pending.data?.Total > 0 ? 'Cần xử lý đơn hàng' : null} tone="text-[#f59e0b]" />
@@ -62,7 +62,7 @@ export default function DashboardPage() {
       </AdminPanel>
       <AdminPanel title="Cảnh báo tồn kho" className="min-h-[310px]">
         <p className="mb-3.5 text-[11px] text-admin-muted">Các sản phẩm cần nhập thêm</p>
-        <AdminTable label="Cảnh báo tồn kho" columns={STOCK_COLUMNS} rows={stock.data?.Items} rowKey="ProductVariantId" loading={stock.loading} error={stock.error} onRetry={stock.refresh} emptyText="Chưa có sản phẩm cần cảnh báo." />
+        <AdminTable label="Cảnh báo tồn kho" columns={STOCK_COLUMNS} rows={stock.data?.Items} rowKey="ProductVariantId" loading={stock.loading} error={stock.error} onRetry={stock.refresh} emptyText="Chưa có sản phẩm cần cảnh báo." className="admin-table--dashboard-stock" />
         {stock.data?.Total > 4 && <Link className="mt-3 inline-block text-xs text-admin-red hover:underline" to="/admin/inventory?tab=low-stock">Xem tất cả ({stock.data.Total})</Link>}
       </AdminPanel>
     </div>

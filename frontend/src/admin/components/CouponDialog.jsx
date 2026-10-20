@@ -32,7 +32,7 @@ function CouponDetails({ row, promotions, now, can, onEdit, onDelete, onClose })
     <div className="flex flex-col gap-[7px]"><h3 className="m-0 text-xs font-medium text-admin-muted">Mô tả chương trình</h3><p className="m-0 whitespace-pre-wrap break-words">{program?.Description || '—'}</p></div>
     <CouponProgram promotion={program} />
     <PromotionAudit row={row} />
-    <div className="flex justify-end"><PromotionPopupButton secondary onClick={onClose}>Đóng</PromotionPopupButton>{can('delete') && <PromotionPopupButton secondary danger onClick={onDelete}>Xóa mã</PromotionPopupButton>}{can('update') && <PromotionPopupButton onClick={onEdit}>Sửa thông tin</PromotionPopupButton>}</div>
+    <div className="flex justify-end gap-2"><PromotionPopupButton secondary onClick={onClose}>Đóng</PromotionPopupButton>{can('delete') && <PromotionPopupButton secondary danger onClick={onDelete}>Xóa mã</PromotionPopupButton>}{can('update') && <PromotionPopupButton onClick={onEdit}>Sửa thông tin</PromotionPopupButton>}</div>
   </div>
 }
 
@@ -59,7 +59,7 @@ function CouponMutation({ mode, row, promotions, promotionId, now, can, onBusy, 
   return <div className="flex flex-col gap-[15px] text-xs leading-[normal]">
     <p className="m-0 text-admin-muted">Bạn có chắc muốn xóa mã giảm giá <strong className="font-semibold break-words text-admin-text">{row.Code}</strong> khỏi hệ thống?</p>
     {failure && <p role="alert" className="m-0 rounded-lg bg-red-50 p-3 text-admin-red">{couponError(failure)}</p>}
-    <div className="flex justify-end"><PromotionPopupButton secondary disabled={busy} onClick={onClose}>Hủy</PromotionPopupButton>{!inUse && can('delete') && <PromotionPopupButton secondary danger disabled={busy} onClick={() => void execute((token) => deleteCoupon(token, row.CouponId), 'Đã xóa mã giảm giá.')}>{busy ? 'Đang xóa…' : 'Xóa mã giảm giá'}</PromotionPopupButton>}</div>
+    <div className="flex justify-end gap-2"><PromotionPopupButton secondary disabled={busy} onClick={onClose}>Hủy</PromotionPopupButton>{!inUse && can('delete') && <PromotionPopupButton secondary danger disabled={busy} onClick={() => void execute((token) => deleteCoupon(token, row.CouponId), 'Đã xóa mã giảm giá.')}>{busy ? 'Đang xóa…' : 'Xóa mã giảm giá'}</PromotionPopupButton>}</div>
   </div>
 }
 
@@ -73,7 +73,7 @@ export default function CouponDialog({ mode, couponId, promotionId, can, onClose
   useCouponRefresh(refreshView, mode === 'view')
   const loading = detail.loading || directory.loading, failure = detail.error || directory.error
   const title = { new: 'Thêm mã giảm giá mới', edit: 'Sửa mã giảm giá', view: 'Chi tiết mã giảm giá', delete: 'Xóa mã giảm giá?' }[mode]
-  return <Modal variant="promotion-popup" open title={title} busy={busy} onClose={onClose} className={'rounded-[14px]! [&&:focus-visible]:outline-none! shadow-[0px_8px_24px_0px_rgba(0,0,0,0.14)]! ' + (mode === 'delete' ? 'w-[460px]! min-h-[280px]' : mode === 'view' ? 'w-[650px]! min-h-[690px]' : 'w-[680px]! min-h-[850px]')}>
+  return <Modal variant="promotion-popup" open title={title} busy={busy} onClose={onClose} className={'rounded-[14px]! [&&:focus-visible]:outline-none! shadow-[0px_8px_24px_0px_rgba(0,0,0,0.14)]! ' + (mode === 'delete' ? 'w-[460px]!' : mode === 'view' ? 'w-[650px]!' : 'w-[680px]!')}>
     {loading ? <LoadingState label="Đang tải mã giảm giá…" /> : failure ? <ErrorState message={failure} onRetry={() => { detail.refresh(); directory.refresh() }} /> : mode !== 'new' && !detail.data ? <p>Không tìm thấy mã giảm giá.</p> : mode === 'view' ? <CouponDetails row={detail.data} promotions={directory.data ?? []} now={now} can={can} onEdit={onEdit} onDelete={onDelete} onClose={onClose} /> : <CouponMutation mode={mode} row={mode === 'new' ? null : detail.data} promotions={directory.data ?? []} promotionId={promotionId} now={now} can={can} onBusy={setBusy} onClose={onClose} onDone={onDone} />}
   </Modal>
 }

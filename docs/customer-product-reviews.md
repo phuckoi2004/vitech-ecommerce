@@ -2,9 +2,11 @@
 
 Phần đánh giá nằm trong trang `/san-pham/:slug`, sau mô tả/thông số và trước sản phẩm tương tự. Bấm số đánh giá dưới tên sản phẩm để đi đến phần này.
 
+Giao diện đối chiếu [Figma — Product Reviews, node 821:371](https://www.figma.com/design/aLG7De0fgbWCfaIpzIrPii/VieTech---Homepage-UI?node-id=821-371): nền trắng, điểm trung bình màu đậm, sao vàng, thanh thống kê đỏ, bộ lọc dạng viên và từng đánh giá có khung bo góc. Hiện tối đa 3 đánh giá ban đầu; nút **Xem thêm đánh giá** tải nối tiếp 3 mục, giữ các mục đã đọc cả khi tải thêm bị lỗi. Đổi bộ lọc hoặc gửi/sửa thành công sẽ tải lại danh sách từ đầu. Số liệu lấy từ API, không dùng số điểm hoặc đánh giá mẫu của Figma.
+
 ## Quy tắc sử dụng
 
-- Bất kỳ ai cũng được đọc đánh giá công khai, lọc theo 1–5 sao và chuyển trang. Không tự tạo đánh giá mẫu khi API rỗng hoặc lỗi.
+- Bất kỳ ai cũng được đọc đánh giá công khai, lọc theo 1–5 sao và xem thêm. Không tự tạo đánh giá mẫu khi API rỗng hoặc lỗi.
 - Customer đăng nhập mới viết đánh giá. Khách chưa đăng nhập dùng hộp chọn đăng nhập/đăng ký hiện có, giữ URL sản phẩm để quay lại; không thêm form xác thực mới.
 - Form đọc đơn của chính Customer với `order_status=Delivered`, có phân trang. Sau khi chọn đơn, đọc chi tiết để chọn đúng phiên bản của sản phẩm đang xem. Không suy đoán theo tên, SKU hoặc tự nhập mã dòng đơn.
 - Chỉ đơn đang `Delivered` hợp lệ; `Completed`, `Shipping`, `Cancelled` không hợp lệ theo `ReviewService` hiện tại. Backend luôn kiểm tra lại sở hữu, trạng thái và trùng đánh giá.
@@ -19,7 +21,7 @@ Phần đánh giá nằm trong trang `/san-pham/:slug`, sau mô tả/thông số
 
 | Mục đích | API |
 |---|---|
-| Danh sách công khai | `GET /products/{product_id}/reviews?rating=…&page=…&page_size=5` |
+| Danh sách công khai | `GET /products/{product_id}/reviews?rating=…&page=…&page_size=3` |
 | Phân bố 5 mức sao | Cùng API, mỗi mức `page_size=1`, đọc `Total` |
 | Đơn đã giao của khách | `GET /orders?order_status=Delivered&page=…&page_size=10` |
 | Dòng sản phẩm trong đơn | `GET /orders/{order_id}` |
@@ -40,15 +42,16 @@ Các yêu cầu riêng tư dùng `useCustomerRequest` để tái sử dụng ref
 | File | Vai trò |
 |---|---|
 | `frontend/src/customer/components/product/ProductReviews.jsx`, `ProductReviews.css` | Danh sách, thống kê, lọc, phân trang, sửa và xem ảnh |
+| `frontend/src/customer/components/product/useProductReviewList.js` | Tải nối tiếp, giữ danh sách khi thử lại và bỏ phản hồi cũ khi đổi bộ lọc |
 | `frontend/src/customer/components/product/ReviewComposer.jsx` | Chọn đơn/phiên bản đã mua và gửi/sửa |
 | `frontend/src/customer/components/product/ReviewStars.jsx` | Sao nguyên/lẻ và nhãn trợ năng |
 | `frontend/src/lib/review-api.js` | Đọc công khai, thống kê, điều kiện sửa và đối chiếu dòng đơn |
 | `frontend/src/customer/pages/ProductPage.jsx` | Tích hợp vào trang sản phẩm, cập nhật số sao và hộp đăng nhập cũ |
-| `frontend/src/customer/components/product/ProductReviews.test.jsx` | 24 ca kiểm thử giao diện, quyền, lỗi và nghiệp vụ |
+| `frontend/src/customer/components/product/ProductReviews.test.jsx` | 26 ca kiểm thử giao diện, quyền, lỗi và nghiệp vụ |
 
 ## Kiểm chứng
 
-- 88 test liên quan đạt, gồm 24 ca mới và ca tích hợp khách chưa đăng nhập. Bộ kiểm tra gồm quyền Customer/Staff/Admin, lọc và phân trang thật, API lỗi/tải lại, POST/PATCH đúng trường, đơn sai trạng thái, không có đơn, trùng đánh giá, hạn sửa đúng tại 7 ngày và gửi lặp.
+- 47 test đánh giá và trang sản phẩm đạt, gồm 26 ca đánh giá và ca tích hợp khách chưa đăng nhập. Bộ kiểm tra gồm quyền Customer/Staff/Admin, lọc và tải thêm qua API, giữ danh sách khi tải thêm lỗi, bỏ phản hồi cũ khi đổi lọc, POST/PATCH đúng trường, đơn sai trạng thái, không có đơn, trùng đánh giá, hạn sửa đúng tại 7 ngày và gửi lặp.
 - Build đạt; lint không có lỗi mới, còn 3 cảnh báo Admin có sẵn.
 - Browser đạt ở 1440/768/390/320px; danh sách/form không tràn ngang, gửi/sửa/lọc/cập nhật thống kê và đóng bằng Escape hoạt động, không có lỗi JavaScript.
 - Đọc API localhost thật với Samsung Galaxy S26: phần đánh giá hoạt động, dữ liệu hiện có 0 đánh giá. Lượt này chỉ GET, không tạo đơn, đánh giá mẫu hoặc ghi database thật.

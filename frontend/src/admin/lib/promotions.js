@@ -1,4 +1,4 @@
-export const PROMOTION_PAGE_SIZE = 4
+export const PROMOTION_PAGE_SIZE = 6
 export const PROMOTION_TYPES = { Percentage: 'Phần trăm', FixedAmount: 'Số tiền' }
 export const PROMOTION_STATUSES = { Draft: 'Bản nháp', Scheduled: 'Sắp diễn ra', Active: 'Đang diễn ra', Expired: 'Đã kết thúc', Cancelled: 'Đã hủy' }
 export const promotionMoney = (value) => Number(value).toLocaleString('vi-VN', { maximumFractionDigits: 2 }) + 'đ'

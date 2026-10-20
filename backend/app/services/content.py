@@ -42,6 +42,7 @@ from app.schemas import (
     NewsArticleUpdate,
     PageResponse,
 )
+from app.schemas.content import NewsArticleViewResponse
 
 from .actor import ADMIN_ONLY, Actor, require_role
 from .base import BaseService, utc_now
@@ -83,6 +84,14 @@ class ContentService(BaseService):
             raise NotFoundError("Không tìm thấy bài viết", code="news_article_not_found")
         return NewsArticleResponse.model_validate(article)
 
+    def record_article_view(self, slug: str) -> NewsArticleViewResponse:
+        """Record one public page open. Reading lists or Admin previews does not count."""
+        with self.transaction():
+            count = self.articles.increment_published_view(slug)
+            if count is None:
+                raise NotFoundError("Không tìm thấy bài viết", code="news_article_not_found")
+            return NewsArticleViewResponse(ViewCount=count)
+
     # ================================================================== Tin tức: Admin
 
     def admin_list_articles(
@@ -113,8 +122,8 @@ class ContentService(BaseService):
         with self.transaction():
             self._ensure_slug_unique(values["Slug"])
             article = self.articles.create(
-                {**values, **self._article_state(ARTICLE_DRAFT, None, target), "CreatedByUserId": actor.user_id,
-                 "CreatedAt": self.now()}
+                {**values, **self._article_state(ARTICLE_DRAFT, None, target), "ViewCount": 0,
+                 "CreatedByUserId": actor.user_id, "CreatedAt": self.now()}
             )
             self.articles.flush()
             return AdminNewsArticleResponse.model_validate(article)

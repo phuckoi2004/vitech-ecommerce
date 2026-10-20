@@ -5,10 +5,11 @@ Không xử lý mật khẩu/OTP và không log dữ liệu nhạy cảm.
 
 import re
 import uuid
+from datetime import datetime
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import func, or_, select, update
 
-from app.models import Address, Notification, User
+from app.models import Address, Conversation, Notification, User
 
 from .base import BaseRepository
 
@@ -142,6 +143,19 @@ class AddressRepository(BaseRepository[Address]):
 
 class NotificationRepository(BaseRepository[Notification]):
     model = Notification
+
+    def get_conversation(self, conversation_id: uuid.UUID) -> Conversation | None:
+        return self.session.get(Conversation, conversation_id)
+
+    def resolve_chat_queue(self, conversation_id: uuid.UUID, now: datetime) -> None:
+        self.session.execute(update(Notification).where(
+            Notification.NotificationType == 'Chat', Notification.ReferenceType == 'Conversation',
+            Notification.ReferenceId == conversation_id,
+            Notification.ActionUrl == f'/admin/support?conversation={conversation_id}',
+        ).values(
+            IsRead=True, ReadAt=func.coalesce(Notification.ReadAt, now), ActionUrl='/admin/support',
+            Title='Yêu cầu hỗ trợ đã được xử lý', Content='Cuộc trò chuyện này không còn trong hàng đợi tiếp nhận.',
+        ))
 
     def list_by_user(
         self,

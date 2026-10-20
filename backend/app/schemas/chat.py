@@ -10,7 +10,7 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from pydantic import model_validator
+from pydantic import Field, model_validator
 
 from app.models.chat import MESSAGE_CONTENT_MAX_LENGTH
 
@@ -28,6 +28,10 @@ class ConversationCreate(RequestSchema):
     """CustomerId lấy từ người dùng đăng nhập; Status do server gán."""
 
     Mode: ConversationMode
+
+
+class MessageReadRequest(RequestSchema):
+    MessageIds: list[uuid.UUID] = Field(min_length=1, max_length=100)
 
 
 # Không có schema cập nhật hội thoại tổng quát (đợt 5.3.1): Status/Mode/AssignedStaffId chỉ đổi qua nghiệp vụ
@@ -102,6 +106,7 @@ class AdminConversationResponse(ConversationResponse):
     CustomerName: str | None = None
     CustomerEmail: str | None = None
     LastMessage: AdminMessageResponse | None = None
+    UnreadCount: int = 0
 
 
 class AdminConversationDetailResponse(AdminConversationResponse):

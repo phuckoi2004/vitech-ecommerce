@@ -76,7 +76,7 @@ beforeEach(() => {
 })
 
 test.each([
-  [20, false, true, 'Còn hàng', 'text-green-600'],
+  [20, false, true, 'Đang bán', 'text-green-600'],
   [3, true, true, 'Sắp hết', 'text-amber-600'],
   [0, true, true, 'Hết hàng', 'text-admin-red'],
   [20, false, false, 'Tạm ẩn', 'text-admin-muted'],
@@ -84,7 +84,9 @@ test.each([
   variantDetails.set('v1', { ...variantDetails.get('v1'), StockQuantity, IsLowStock, IsActive })
   renderPage('/admin/products?dialog=view&variant=v1')
   const detail = within(await screen.findByRole('region', { name: 'Chi tiết sản phẩm' }))
-  expect(detail.getByText(label)).toHaveClass(color)
+  // Stock quantity shows its own label, so check the badge in the "Trạng thái" field.
+  const status = within(detail.getByText('Trạng thái', { selector: 'dt' }).nextElementSibling)
+  expect(status.getByText(label)).toHaveClass(color)
 })
 
 describe('product variant list', () => {
@@ -238,20 +240,30 @@ describe('product variant list', () => {
     expect(within(dialog).queryByRole('combobox', { name: 'Sản phẩm gốc' })).not.toBeInTheDocument()
     expect(within(dialog).queryByRole('textbox', { name: 'Đường dẫn (slug)' })).not.toBeInTheDocument()
     expect(within(dialog).queryByRole('spinbutton', { name: /^Tồn kho|Giá vốn/ })).not.toBeInTheDocument()
-    fireEvent.change(within(dialog).getByLabelText('Thông số kỹ thuật (JSON)'), { target: { value: '[]' } })
+    // Specifications are typed in the description editor, one "Tên: Giá trị" line each.
+    const specifications = within(dialog).getByRole('textbox', { name: 'Thông số kỹ thuật' }).editor
+    act(() => { specifications.commands.setContent('<p>RAM: 16GB</p><p>Pin 5000 mAh</p>') })
     fireEvent.click(within(dialog).getByRole('button', { name: 'Thêm sản phẩm' }))
-    expect(await within(dialog).findByRole('alert')).toHaveTextContent('đối tượng JSON')
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent('dòng “Pin 5000 mAh” chưa đúng dạng Tên: Giá trị')
     expect(api.createCatalogItem).not.toHaveBeenCalled()
-    fireEvent.change(within(dialog).getByLabelText('Thông số kỹ thuật (JSON)'), { target: { value: '{"RAM":"16GB"}' } })
+    act(() => { specifications.commands.setContent('<p>RAM: 16GB</p><ul><li><p>Pin: 5000 mAh</p></li></ul><p>Màn hình: 6.7 inch<br>Tần số quét: 120 Hz</p>') })
     api.uploadProductImage.mockResolvedValueOnce({ ImageUrl: 'https://example.com/white.png' })
     await user.upload(within(dialog).getByLabelText('Tải ảnh sản phẩm'), new File(['image'], 'white.png', { type: 'image/png' }))
-    expect(within(dialog).queryByRole('textbox', { name: /Đường dẫn ảnh/ })).not.toBeInTheDocument()
+    // A photo can also be added by its address, but never twice.
+    const address = within(dialog).getByRole('textbox', { name: 'Đường dẫn ảnh sản phẩm' })
+    fireEvent.change(address, { target: { value: 'https://example.com/white.png' } })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Thêm ảnh từ đường dẫn' }))
+    expect(within(within(dialog).getByRole('region', { name: 'Bộ ảnh sản phẩm' })).getByRole('alert')).toHaveTextContent('Ảnh này đã có trong bộ ảnh.')
+    fireEvent.change(address, { target: { value: 'example.com/back.png' } })
+    fireEvent.keyDown(address, { key: 'Enter' })
+    expect(within(dialog).getByRole('img', { name: 'Ảnh sản phẩm 2' })).toHaveAttribute('src', 'https://example.com/back.png')
     fireEvent.click(within(dialog).getByRole('button', { name: 'Thêm sản phẩm' }))
     await waitFor(() => expect(api.createCatalogItem).toHaveBeenCalledWith('access-for-test', {
       Sku: 'MY-WHITE', Color: 'Trắng', Storage: null, Price: '12000000', MinStockLevel: 0, IsSerialTracked: false, IsActive: true,
-      VariantImageUrls: ['https://example.com/white.png'], DefaultImageUrl: 'https://example.com/white.png', IsDefaultVariant: true,
+      VariantImageUrls: ['https://example.com/white.png', 'https://example.com/back.png'], DefaultImageUrl: 'https://example.com/white.png', IsDefaultVariant: true,
       Product: { Name: 'Điện thoại mới', CategoryId: 'c1', BrandId: 'b1', WarrantyMonths: 12, Status: 'Draft',
-        Description: null, Specifications: { RAM: '16GB' }, Images: [{ ImageUrl: 'https://example.com/white.png', IsDefault: true }] },
+        Description: null, Specifications: { RAM: '16GB', Pin: '5000 mAh', 'Màn hình': '6.7 inch', 'Tần số quét': '120 Hz' },
+        Images: [{ ImageUrl: 'https://example.com/white.png', IsDefault: true }, { ImageUrl: 'https://example.com/back.png', IsDefault: false }] },
     }))
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
     expect(router.state.location.search).toBe('')
@@ -421,7 +433,7 @@ describe('product variant list', () => {
     await waitFor(() => expect(api.getAdminData).toHaveBeenCalledWith('access-for-test', '/admin/products',
       { keyword: '', page: 2, page_size: 20 }, expect.any(AbortSignal)))
     fireEvent.change(within(dialog).getByRole('searchbox', { name: 'Tìm sản phẩm đã có' }), { target: { value: 'Mẫu' } })
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Tìm' }))
+    expect(within(dialog).queryByRole('button', { name: 'Tìm', exact: true })).not.toBeInTheDocument()
     await waitFor(() => expect(api.getAdminData).toHaveBeenCalledWith('access-for-test', '/admin/products',
       { keyword: 'Mẫu', page: 1, page_size: 20 }, expect.any(AbortSignal)))
     fireEvent.change(within(dialog).getByRole('combobox', { name: 'Sản phẩm đã có' }), { target: { value: bareId } })
@@ -479,19 +491,21 @@ describe('product variant list', () => {
     fireEvent.click(within(await openSharedEditor()).getByRole('button', { name: 'Sửa thông tin chung' }))
     const dialog = await screen.findByRole('region', { name: 'Cập nhật sản phẩm' })
     const editor = (await within(dialog).findByRole('textbox', { name: 'Mô tả' })).editor
+    // The specifications editor below has the same toolbar; use the description's own.
+    const tools = within(within(dialog).getByRole('toolbar', { name: 'Định dạng mô tả sản phẩm' }))
     const selectText = (from, to) => act(() => { editor.commands.setTextSelection({ from, to }) })
     act(() => { editor.chain().focus().insertContent('<p>Thiết kế</p><p>Màn hình lớn</p>').run() })
     selectText(1, 9)
-    fireEvent.change(within(dialog).getByRole('combobox', { name: 'Cỡ chữ' }), { target: { value: '24px' } })
-    fireEvent.change(within(dialog).getByRole('combobox', { name: 'Phông chữ' }), { target: { value: 'Georgia, serif' } })
-    fireEvent.click(within(dialog).getByRole('button', { name: 'In đậm (Ctrl + B)' }))
+    fireEvent.change(tools.getByRole('combobox', { name: 'Cỡ chữ' }), { target: { value: '24px' } })
+    fireEvent.change(tools.getByRole('combobox', { name: 'Phông chữ' }), { target: { value: 'Georgia, serif' } })
+    fireEvent.click(tools.getByRole('button', { name: 'In đậm (Ctrl + B)' }))
     selectText(20, 23)
-    fireEvent.click(within(dialog).getByRole('button', { name: 'In đậm (Ctrl + B)' }))
+    fireEvent.click(tools.getByRole('button', { name: 'In đậm (Ctrl + B)' }))
     act(() => { editor.commands.setTextSelection(23) })
     // The image goes through the existing product image upload endpoint; saving waits for it.
     let finish
     api.uploadProductImage.mockImplementationOnce(() => new Promise((resolve) => { finish = resolve }))
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Chèn hoặc sửa ảnh' }))
+    fireEvent.click(tools.getByRole('button', { name: 'Chèn hoặc sửa ảnh' }))
     fireEvent.change(within(dialog).getByRole('textbox', { name: 'Mô tả ảnh' }), { target: { value: 'Mặt sau' } })
     const file = new File([new Uint8Array(64)], 'mat-sau.png', { type: 'image/png' })
     fireEvent.change(within(dialog).getByLabelText('Chọn ảnh để chèn vào mô tả'), { target: { files: [file] } })
@@ -618,6 +632,41 @@ describe('product variant list', () => {
     })))
     expect(api.updateCatalogProduct).not.toHaveBeenCalled()
     expect(variantDetails.get('v1').Sku).toBe(variant.Sku)
+  })
+
+  test('re-saving the variant that is already default does not claim the default again', async () => {
+    seedVariants()
+    variantDetails.set('v2', { ...variantDetails.get('v2'), IsDefaultVariant: true })
+    renderPage('/admin/products?dialog=edit&variant=v2')
+    const page = await screen.findByRole('region', { name: 'Cập nhật sản phẩm' })
+    expect(within(page).getByLabelText('Biến thể mặc định')).toBeChecked()
+    fireEvent.click(within(page).getByRole('button', { name: 'Lưu thay đổi' }))
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Xác nhận' }))
+    await waitFor(() => expect(api.updateCatalogItem).toHaveBeenCalledWith('access-for-test', 'v2', expect.objectContaining({ IsDefaultVariant: false })))
+  })
+
+  test('photos added while editing a variant are selected for it and saved together, never left for its siblings', async () => {
+    seedVariants()
+    const shared = { ImageUrl: 'https://demo.supabase.co/black.png', IsDefault: true }
+    variantDetails.set('v2', { ...variantDetails.get('v2'), Images: [shared], VariantImages: [], IsDefaultVariant: false })
+    renderPage('/admin/products?dialog=edit&variant=v2')
+    const page = await screen.findByRole('region', { name: 'Cập nhật sản phẩm' })
+    api.uploadProductImage.mockResolvedValueOnce({ ImageUrl: 'https://demo.supabase.co/blue-front.png' })
+    await userEvent.setup().upload(within(page).getByLabelText('Tải ảnh sản phẩm'), new File(['a'], 'front.png', { type: 'image/png' }))
+    const address = within(page).getByRole('textbox', { name: 'Đường dẫn ảnh sản phẩm' })
+    fireEvent.change(address, { target: { value: 'https://cdn.example.test/blue-back.png' } })
+    fireEvent.keyDown(address, { key: 'Enter' })
+    expect(within(page).getByLabelText('Chọn ảnh 1 cho biến thể')).not.toBeChecked()
+    expect(within(page).getByLabelText('Chọn ảnh 2 cho biến thể')).toBeChecked()
+    expect(within(page).getByLabelText('Chọn ảnh 3 cho biến thể')).toBeChecked()
+    expect(within(page).getByLabelText('Ảnh đại diện biến thể 2')).toBeChecked()
+    fireEvent.click(within(page).getByRole('button', { name: 'Lưu thay đổi' }))
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Xác nhận' }))
+    await waitFor(() => expect(api.updateCatalogItem).toHaveBeenCalledWith('access-for-test', 'v2', expect.objectContaining({
+      VariantImageUrls: ['https://demo.supabase.co/blue-front.png', 'https://cdn.example.test/blue-back.png'],
+      DefaultImageUrl: 'https://demo.supabase.co/blue-front.png', IsDefaultVariant: false,
+      AdditionalImages: [{ ImageUrl: 'https://demo.supabase.co/blue-front.png' }, { ImageUrl: 'https://cdn.example.test/blue-back.png' }],
+    })))
   })
 
 })

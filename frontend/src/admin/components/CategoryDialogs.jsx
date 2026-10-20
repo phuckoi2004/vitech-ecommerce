@@ -4,10 +4,12 @@ import { ErrorState, LoadingState } from '../../components/shared/index.js'
 import useInternalAuth from '../../hooks/useInternalAuth.js'
 import { slugFromName } from '../../lib/admin-products.js'
 import { availableParents } from '../lib/categories.js'
+import { imageUrlFromInput } from '../lib/product-images.js'
 import { createCategory, deleteCategory, updateCategory } from '../services/categories.js'
 import useAdminQuery from '../hooks/useAdminQuery.js'
 import Modal from './Modal.jsx'
 import { PRODUCT_CONTROL, ProductButton } from './ProductUi.jsx'
+import AdminImagePicker from './AdminImagePicker.jsx'
 
 function CategoryError({ message }) {
   return message ? <p role="alert" className="mb-4 rounded-[10px] bg-admin-red/5 p-3 text-sm text-admin-red">{message}</p> : null
@@ -17,10 +19,12 @@ function CategoryEditor({ category, categories, onBusy, onClose, onDone }) {
   const auth = useInternalAuth()
   const [form, setForm] = useState(() => ({
     Name: category?.Name ?? '', Slug: category?.Slug ?? '', Description: category?.Description ?? '',
+    ImageUrl: category?.ImageUrl ?? '',
     ParentCategoryId: category?.ParentCategoryId ?? '', DisplayOrder: category?.DisplayOrder ?? 0, IsActive: category?.IsActive ?? true,
   }))
   const [slugEdited, setSlugEdited] = useState(Boolean(category))
   const [busy, setBusy] = useState(false)
+  const [uploading, setUploading] = useState(false)
   const [error, setError] = useState('')
   function change(key, value) {
     setForm((previous) => ({ ...previous, [key]: value, ...(key === 'Name' && !slugEdited ? { Slug: slugFromName(value) } : {}) }))
@@ -29,12 +33,14 @@ function CategoryEditor({ category, categories, onBusy, onClose, onDone }) {
   }
   async function save(event) {
     event.preventDefault()
-    if (busy) return
+    if (busy || uploading) return
     if (!form.Name.trim()) { setError('Tên danh mục không được để trống.'); return }
     if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(form.Slug.trim())) { setError('Đường dẫn chỉ gồm chữ thường không dấu, số và dấu gạch ngang.'); return }
     if (form.DisplayOrder === '' || !Number.isSafeInteger(Number(form.DisplayOrder))) { setError('Thứ tự hiển thị phải là số nguyên.'); return }
+    const image = form.ImageUrl.trim() ? imageUrlFromInput(form.ImageUrl) : { url: null }
+    if (image.error) { setError(image.error); return }
     const body = { ...form, Name: form.Name.trim(), Slug: form.Slug.trim(), Description: form.Description.trim() || null,
-      ParentCategoryId: form.ParentCategoryId || null, DisplayOrder: Number(form.DisplayOrder) }
+      ImageUrl: image.url, ParentCategoryId: form.ParentCategoryId || null, DisplayOrder: Number(form.DisplayOrder) }
     setError(''); setBusy(true); onBusy(true)
     try {
       await auth.withAccessToken((token) => category ? updateCategory(token, category.CategoryId, body) : createCategory(token, body))
@@ -46,7 +52,7 @@ function CategoryEditor({ category, categories, onBusy, onClose, onDone }) {
   return <form onSubmit={save}>
     <CategoryError message={error || categories.error} />
     {categories.error && <ProductButton secondary onClick={categories.refresh}>Thử lại danh sách danh mục</ProductButton>}
-    <fieldset disabled={busy} className="grid min-w-0 grid-cols-2 gap-4 border-0 p-0">
+    <fieldset disabled={busy || uploading} className="grid min-w-0 grid-cols-2 gap-4 border-0 p-0">
       <Field id="category-name" label="Tên danh mục" className="col-span-full" required maxLength={255} value={form.Name} onChange={(event) => change('Name', event.target.value)} />
       <Field id="category-slug" label="Đường dẫn (slug)" className="col-span-full" required maxLength={300} pattern="[a-z0-9]+(-[a-z0-9]+)*" hint="Được gợi ý từ tên danh mục; bạn có thể chỉnh lại." value={form.Slug} onChange={(event) => change('Slug', event.target.value)} />
       <Field id="category-parent" label="Danh mục cha"><select id="category-parent" className={PRODUCT_CONTROL} value={form.ParentCategoryId} disabled={categories.loading || Boolean(categories.error)} onChange={(event) => change('ParentCategoryId', event.target.value)}>
@@ -54,11 +60,12 @@ function CategoryEditor({ category, categories, onBusy, onClose, onDone }) {
       </select></Field>
       <Field id="category-order" label="Thứ tự hiển thị" type="number" step={1} required value={form.DisplayOrder} onChange={(event) => change('DisplayOrder', event.target.value)} />
       <Field id="category-description" label="Mô tả" className="col-span-full"><textarea id="category-description" className={PRODUCT_CONTROL} rows={4} value={form.Description} onChange={(event) => change('Description', event.target.value)} /></Field>
+      <div className="col-span-full"><AdminImagePicker title="Ảnh danh mục (không bắt buộc)" name="danh mục" multiple={false} disabled={busy} hint="Có thể để trống. Danh mục không có ảnh vẫn hiển thị bình thường." images={form.ImageUrl ? [{ ImageUrl: form.ImageUrl, IsDefault: true }] : []} onChange={(images) => change('ImageUrl', images[0]?.ImageUrl ?? '')} onUploadBusy={(value) => { setUploading(value); onBusy(value) }} /></div>
       <Field id="category-status" label="Trạng thái" className="col-span-full"><select id="category-status" className={PRODUCT_CONTROL} value={form.IsActive ? 'active' : 'hidden'} onChange={(event) => change('IsActive', event.target.value === 'active')}>
         <option value="active">Đang hiển thị</option><option value="hidden">Đã ẩn</option>
       </select></Field>
     </fieldset>
-    <div className="mt-5 flex justify-end gap-2"><ProductButton secondary disabled={busy} onClick={onClose}>Hủy</ProductButton><ProductButton type="submit" loading={busy} disabled={categories.loading || Boolean(categories.error)}>{category ? 'Lưu thay đổi' : 'Thêm danh mục'}</ProductButton></div>
+    <div className="mt-5 flex justify-end gap-2"><ProductButton secondary disabled={busy || uploading} onClick={onClose}>Hủy</ProductButton><ProductButton type="submit" loading={busy} disabled={uploading || categories.loading || Boolean(categories.error)}>{category ? 'Lưu thay đổi' : 'Thêm danh mục'}</ProductButton></div>
   </form>
 }
 
@@ -69,6 +76,7 @@ function CategoryDetails({ category, categories, onEdit, onClose }) {
     <h3 className="mb-5 break-words text-lg font-semibold">{category.Name}</h3>
     <dl className="grid grid-cols-2 gap-5">{[['Đường dẫn', category.Slug], ['Trạng thái', category.IsActive ? 'Đang hiển thị' : 'Đã ẩn'], ['Danh mục cha', parent], ['Thứ tự hiển thị', category.DisplayOrder]].map(([label, value]) => <div key={label}><dt className="text-xs text-admin-muted">{label}</dt><dd className="mt-1 break-words text-sm">{value}</dd></div>)}</dl>
     <h4 className="mt-5 text-xs text-admin-muted">Mô tả</h4><p className="mt-1 text-sm whitespace-pre-wrap">{category.Description || 'Chưa có mô tả.'}</p>
+    <div className="mt-5"><AdminImagePicker title="Ảnh danh mục" name="danh mục" disabled multiple={false} canRemove={() => false} images={category.ImageUrl ? [{ ImageUrl: category.ImageUrl, IsDefault: true }] : []} /></div>
     {categories.error && <div className="mt-3"><CategoryError message={categories.error} /><ProductButton secondary onClick={categories.refresh}>Thử lại danh sách danh mục</ProductButton></div>}
     <div className="mt-6 flex justify-end gap-2"><ProductButton secondary onClick={onClose}>Đóng</ProductButton>{auth.permissions.includes('categories:update') && <ProductButton onClick={onEdit}>Sửa danh mục</ProductButton>}</div>
   </>

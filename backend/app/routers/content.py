@@ -19,6 +19,7 @@ from app.schemas import (
     PageResponse,
 )
 from app.services.content import ContentService
+from app.schemas.content import NewsArticleViewResponse
 
 from .dependencies import CurrentActor, InternalOnly, Page, PageSize, get_content_service
 
@@ -39,6 +40,11 @@ def list_news(service: Content, page: Page = 1, page_size: PageSize = 20):
 @router.get("/news/{slug}", response_model=NewsArticleResponse)
 def get_news(slug: str, service: Content):
     return service.get_published_article(slug)
+
+
+@router.post("/news/{slug}/views", response_model=NewsArticleViewResponse)
+def record_news_view(slug: str, service: Content):
+    return service.record_article_view(slug)
 
 
 @router.get("/banners", response_model=list[BannerResponse])

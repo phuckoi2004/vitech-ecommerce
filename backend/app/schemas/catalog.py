@@ -29,23 +29,25 @@ from .common import (
 
 
 class CategoryCreate(RequestSchema):
-    NULLABLE_FIELDS = frozenset({"ParentCategoryId", "Description"})
+    NULLABLE_FIELDS = frozenset({"ParentCategoryId", "Description", "ImageUrl"})
 
     ParentCategoryId: uuid.UUID | None = None
     Name: varchar(255)
     Slug: varchar(300)
     Description: str | None = None
+    ImageUrl: varchar(500) | None = None
     DisplayOrder: int | None = None
     IsActive: bool | None = None
 
 
 class CategoryUpdate(RequestSchema):
-    NULLABLE_FIELDS = frozenset({"ParentCategoryId", "Description"})
+    NULLABLE_FIELDS = frozenset({"ParentCategoryId", "Description", "ImageUrl"})
 
     ParentCategoryId: uuid.UUID | None = None
     Name: varchar(255) | None = None
     Slug: varchar(300) | None = None
     Description: str | None = None
+    ImageUrl: varchar(500) | None = None
     DisplayOrder: int | None = None
     IsActive: bool | None = None
 
@@ -62,6 +64,7 @@ class CategoryResponse(ResponseSchema):
     Name: str
     Slug: str
     Description: str | None
+    ImageUrl: str | None = None
     DisplayOrder: int
     IsActive: bool
 

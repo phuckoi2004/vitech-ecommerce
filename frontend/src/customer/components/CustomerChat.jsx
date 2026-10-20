@@ -20,6 +20,12 @@ function AiIcon() {
 // One employee-chat entry. Opening the window starts/reuses the real customer conversation.
 // AI is intentionally a coming-soon view and never creates a conversation or sends a message.
 export default function CustomerChat() {
+  const { user } = useCustomerSession()
+  // Reset only the chat window when the customer changes, preserving the page and route guard.
+  return <CustomerChatWindow key={user?.UserId ?? 'anonymous'} />
+}
+
+function CustomerChatWindow() {
   const { ready, user } = useCustomerSession()
   const navigate = useNavigate()
   const [kind, setKind] = useState(null)
@@ -45,15 +51,20 @@ export default function CustomerChat() {
     setKind((current) => current === 'Staff' ? null : 'Staff')
   }
 
-  // Product consultation opens the existing employee chat without creating another chat UI.
+  // Product and news consultation reuse these chat windows.
   useEffect(() => {
     function openConsultation() {
       if (!ready) return
       if (!user) { navigate(CHAT_PATH); return }
       setKind('Staff')
     }
+    function openAiConsultation() { setKind('AI') }
     window.addEventListener('vietech-open-staff-chat', openConsultation)
-    return () => window.removeEventListener('vietech-open-staff-chat', openConsultation)
+    window.addEventListener('vietech-open-ai-chat', openAiConsultation)
+    return () => {
+      window.removeEventListener('vietech-open-staff-chat', openConsultation)
+      window.removeEventListener('vietech-open-ai-chat', openAiConsultation)
+    }
   }, [ready, user, navigate])
 
   return <>

@@ -1,0 +1,1304 @@
+{
+  "batch": "catalog-child-categories-2026-10-17",
+  "policy": "One primary child category per existing product. Preserve product IDs, descriptions of user-authored S26, stock, variants and prices.",
+  "references": [
+    "https://cellphones.com.vn/mobile.html",
+    "https://cellphones.com.vn/laptop.html",
+    "https://cellphones.com.vn/tablet.html",
+    "https://cellphones.com.vn/thiet-bi-am-thanh/tai-nghe.html",
+    "https://gearvn.com/"
+  ],
+  "categories": [
+    {
+      "parent_slug": "dien-thoai",
+      "name": "Điện thoại pin trâu",
+      "slug": "samsung",
+      "description": "Các mẫu được chọn có dung lượng pin công bố từ 6.000 mAh; thời lượng thực tế tùy cách sử dụng.",
+      "display_order": 1,
+      "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/d/i/dien-thoai-honor-600-cam.jpg",
+      "existing_category_id": "0e2734f1-d239-4252-b27e-101d3cb2a76f"
+    },
+    {
+      "parent_slug": "dien-thoai",
+      "name": "Điện thoại chơi game",
+      "slug": "dien-thoai-choi-game",
+      "description": "Nhóm ưu tiên cấu hình xử lý, RAM và màn hình cho nhu cầu chơi game; kết quả tùy trò chơi và thiết lập.",
+      "display_order": 2,
+      "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/d/i/dien-thoai-nubia-neo-5-gt-special-edition.jpg"
+    },
+    {
+      "parent_slug": "dien-thoai",
+      "name": "Điện thoại chụp ảnh",
+      "slug": "dien-thoai-chup-anh",
+      "description": "Các mẫu có hệ thống camera là điểm nhấn, gồm những phiên bản hỗ trợ nhiều tiêu cự hoặc camera tele.",
+      "display_order": 3,
+      "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/d/i/dien-thoai-oppo-find-x8-xam-1.png"
+    },
+    {
+      "parent_slug": "dien-thoai",
+      "name": "Điện thoại màn hình gập",
+      "slug": "dien-thoai-man-hinh-gap",
+      "description": "Các mẫu có màn hình gập, mở rộng không gian hiển thị khi cần.",
+      "display_order": 4,
+      "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/f/i/find_n3_-_combo_product_-_gold.png"
+    },
+    {
+      "parent_slug": "dien-thoai",
+      "name": "Điện thoại mỏng nhẹ",
+      "slug": "dien-thoai-mong-nhe",
+      "description": "Nhóm ưu tiên thiết kế mỏng, thuận tiện mang theo hằng ngày.",
+      "display_order": 5,
+      "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/i/p/iphone_air-3_2.jpg"
+    },
+    {
+      "parent_slug": "dien-thoai",
+      "name": "Điện thoại phổ thông",
+      "slug": "dien-thoai-pho-thong",
+      "description": "Các mẫu tập trung liên lạc, ứng dụng cơ bản và chi phí dễ tiếp cận.",
+      "display_order": 6,
+      "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/d/i/dien-thoai-itel-p55-plus-8gb-256gb_1__2.png"
+    },
+    {
+      "parent_slug": "dien-thoai",
+      "name": "Điện thoại tầm trung",
+      "slug": "dien-thoai-tam-trung",
+      "description": "Nhóm cân bằng cấu hình, camera và nhu cầu sử dụng thường ngày.",
+      "display_order": 7,
+      "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/d/i/dien-thoai-samsung-galaxy-a37-2_2.jpg"
+    },
+    {
+      "parent_slug": "dien-thoai",
+      "name": "Điện thoại cao cấp",
+      "slug": "dien-thoai-cao-cap",
+      "description": "Các dòng máy cao cấp dành cho người dùng quan tâm cấu hình và trải nghiệm tổng thể.",
+      "display_order": 8,
+      "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/d/i/dien-thoai-samsung-galaxy-s25-plus_3_.png"
+    },
+    {
+      "parent_slug": "dien-thoai",
+      "name": "Điện thoại nhỏ gọn",
+      "slug": "dien-thoai-nho-gon",
+      "description": "Các mẫu được chọn có màn hình không quá 6,3 inch, ưu tiên kích thước dễ cầm.",
+      "display_order": 9,
+      "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/i/p/iphone-13_2_2.jpg"
+    },
+    {
+      "parent_slug": "dien-thoai",
+      "name": "Điện thoại màn hình lớn",
+      "slug": "dien-thoai-man-hinh-lon",
+      "description": "Các mẫu được chọn có màn hình 6,9 inch, dành thêm không gian cho nội dung và giải trí.",
+      "display_order": 10,
+      "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/i/p/iphone-16-pro-max.png"
+    },
+    {
+      "parent_slug": "laptop",
+      "name": "Laptop gaming",
+      "slug": "laptop-gaming",
+      "description": "Các dòng laptop gaming có GPU rời; hiệu năng thực tế phụ thuộc trò chơi, công suất và tản nhiệt.",
+      "display_order": 1,
+      "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/t/e/text_d_i_7_36.png"
+    },
+    {
+      "parent_slug": "laptop",
+      "name": "Laptop học tập",
+      "slug": "laptop-hoc-tap",
+      "description": "Nhóm dành cho tài liệu, bài giảng và những công cụ học tập thông dụng; cần đối chiếu phần mềm của ngành học.",
+      "display_order": 2,
+      "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/g/r/group_945_42.png"
+    },
+    {
+      "parent_slug": "laptop",
+      "name": "Laptop văn phòng",
+      "slug": "laptop-van-phong",
+      "description": "Các mẫu phục vụ tài liệu, bảng tính và công việc văn phòng hằng ngày.",
+      "display_order": 3,
+      "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/g/r/group_945_1_21.png"
+    },
+    {
+      "parent_slug": "laptop",
+      "name": "Laptop đồ họa",
+      "slug": "laptop-do-hoa",
+      "description": "Các cấu hình có GPU rời để cân nhắc với phần mềm đồ họa; yêu cầu màu sắc cần kiểm tra thêm thông số màn hình.",
+      "display_order": 4,
+      "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/t/e/text_d_i_11_12.png"
+    },
+    {
+      "parent_slug": "laptop",
+      "name": "Laptop mỏng nhẹ",
+      "slug": "laptop-mong-nhe",
+      "description": "Nhóm ưu tiên tính di động, phù hợp người thường mang máy đi học hoặc làm việc.",
+      "display_order": 5,
+      "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/m/a/macbook_11_1.png"
+    },
+    {
+      "parent_slug": "laptop",
+      "name": "Laptop 2 trong 1",
+      "slug": "laptop-2-trong-1",
+      "description": "Dòng máy có thiết kế xoay gập, hỗ trợ thay đổi cách sử dụng màn hình.",
+      "display_order": 6,
+      "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/g/r/group_823_5.png"
+    },
+    {
+      "parent_slug": "laptop",
+      "name": "Laptop AI",
+      "slug": "laptop-ai",
+      "description": "Các mẫu có bộ xử lý tích hợp NPU được công bố; tính năng AI phụ thuộc phần mềm và dịch vụ hỗ trợ.",
+      "display_order": 7,
+      "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/g/r/group_744_1_42.png"
+    },
+    {
+      "parent_slug": "laptop",
+      "name": "Laptop màn hình lớn",
+      "slug": "laptop-man-hinh-lon",
+      "description": "Các mẫu có màn hình từ 15,3 inch, tăng không gian bố trí nội dung.",
+      "display_order": 8,
+      "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/t/e/text_ng_n_2__13_19.png"
+    },
+    {
+      "parent_slug": "laptop",
+      "name": "Laptop lập trình",
+      "slug": "laptop-lap-trinh",
+      "description": "Nhóm để cân nhắc cho môi trường phát triển và công cụ lập trình; cần đối chiếu hệ điều hành và yêu cầu dự án.",
+      "display_order": 9,
+      "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/t/e/text_ng_n_4__10_30.png"
+    },
+    {
+      "parent_slug": "laptop",
+      "name": "Laptop cao cấp",
+      "slug": "laptop-cao-cap",
+      "description": "Các phiên bản cấu hình và dung lượng lưu trữ cao hơn trong dòng máy đã chọn.",
+      "display_order": 10,
+      "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/m/a/macbook_2__1_6_1.png"
+    },
+    {
+      "parent_slug": "may-tinh-bang",
+      "name": "Máy tính bảng học tập",
+      "slug": "may-tinh-bang-hoc-tap",
+      "description": "Nhóm dành cho tài liệu, bài giảng và ứng dụng học tập trên màn hình cảm ứng.",
+      "display_order": 1,
+      "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/i/p/ipad-air-11-wifi-1.jpg"
+    },
+    {
+      "parent_slug": "may-tinh-bang",
+      "name": "Máy tính bảng văn phòng",
+      "slug": "may-tinh-bang-van-phong",
+      "description": "Các phiên bản kèm bàn phím để nhập liệu và xử lý công việc cơ bản; ứng dụng cần tương thích hệ điều hành.",
+      "display_order": 2,
+      "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/h/u/huawei-matepad-11-5-s-2026_1.jpg"
+    },
+    {
+      "parent_slug": "may-tinh-bang",
+      "name": "Máy tính bảng chơi game",
+      "slug": "may-tinh-bang-choi-game",
+      "description": "Nhóm ưu tiên bộ xử lý và màn hình cho nhu cầu chơi game, tùy khả năng tương thích của từng trò chơi.",
+      "display_order": 3,
+      "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/n/u/nubia-pad-pro_5.jpg"
+    },
+    {
+      "parent_slug": "may-tinh-bang",
+      "name": "Máy tính bảng sáng tạo",
+      "slug": "may-tinh-bang-sang-tao",
+      "description": "Nhóm để cân nhắc cho vẽ, chỉnh sửa ảnh và các ứng dụng sáng tạo; phụ kiện cần được chọn đúng loại tương thích.",
+      "display_order": 4,
+      "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/1/_/1_1__1_1.png"
+    },
+    {
+      "parent_slug": "may-tinh-bang",
+      "name": "Máy tính bảng giải trí",
+      "slug": "may-tinh-bang-giai-tri",
+      "description": "Các mẫu có màn hình rộng để xem video, đọc nội dung và giải trí hằng ngày.",
+      "display_order": 5,
+      "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/m/a/may-tinh-bang-honor-pad-v9-wifi.jpg"
+    },
+    {
+      "parent_slug": "may-tinh-bang",
+      "name": "Máy tính bảng nhỏ gọn",
+      "slug": "may-tinh-bang-nho-gon",
+      "description": "Các mẫu được chọn có màn hình dưới 10 inch, thuận tiện cầm và mang theo.",
+      "display_order": 6,
+      "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/m/a/may-tinh-bang-samsung-galaxy-tab-a11-wifi.jpg"
+    },
+    {
+      "parent_slug": "may-tinh-bang",
+      "name": "Máy tính bảng màn hình lớn",
+      "slug": "may-tinh-bang-man-hinh-lon",
+      "description": "Các mẫu được chọn có màn hình 13 inch, mở rộng không gian xem tài liệu và nội dung.",
+      "display_order": 7,
+      "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/1/_/1_720_3.png"
+    },
+    {
+      "parent_slug": "may-tinh-bang",
+      "name": "Máy tính bảng kèm bút",
+      "slug": "may-tinh-bang-kem-but",
+      "description": "Các phiên bản trong nhóm có ghi kèm bút ở tên cấu hình nguồn; cần đối chiếu đúng gói sản phẩm.",
+      "display_order": 8,
+      "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/m/a/may-tinh-bang-lenovo-legion-tab-pro-gen-2-zahd0452vn-kem-but-ban-phim.jpg"
+    },
+    {
+      "parent_slug": "may-tinh-bang",
+      "name": "Máy tính bảng kèm bàn phím",
+      "slug": "may-tinh-bang-kem-ban-phim",
+      "description": "Các phiên bản trong nhóm được công bố kèm bàn phím, thuận tiện nhập liệu.",
+      "display_order": 9,
+      "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/h/u/huawei-matepad-papermate-11-5-inch_1_9.jpg"
+    },
+    {
+      "parent_slug": "may-tinh-bang",
+      "name": "Máy tính bảng phổ thông",
+      "slug": "may-tinh-bang-pho-thong",
+      "description": "Nhóm tập trung các ứng dụng cơ bản, đọc nội dung và giải trí với cấu hình dễ tiếp cận.",
+      "display_order": 10,
+      "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/m/a/may-tinh-bang-teclast-p30_3.png"
+    },
+    {
+      "parent_slug": "tai-nghe",
+      "name": "Tai nghe chống ồn chủ động",
+      "slug": "tai-nghe-chong-on-chu-dong",
+      "description": "Nhóm có công nghệ chống ồn chủ động được nguồn sản phẩm công bố; hiệu quả thay đổi theo môi trường và độ vừa vặn.",
+      "display_order": 1,
+      "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/u/l/ultra2_3.png"
+    },
+    {
+      "parent_slug": "tai-nghe",
+      "name": "Tai nghe chụp tai",
+      "slug": "tai-nghe-chup-tai",
+      "description": "Thiết kế chụp tai dành cho người thích kiểu đeo bao quanh tai.",
+      "display_order": 2,
+      "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/t/a/tai-nghe-chup-tai-alpha-works-lite-500_1_2.png"
+    },
+    {
+      "parent_slug": "tai-nghe",
+      "name": "Tai nghe thể thao",
+      "slug": "tai-nghe-the-thao",
+      "description": "Các mẫu được định hướng thể thao ở thông tin sản phẩm; nên chọn kiểu đeo vừa vặn với hoạt động.",
+      "display_order": 3,
+      "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/t/a/tai-nghe-bluetooth-anker-soundcore-c50i-spa.png"
+    },
+    {
+      "parent_slug": "tai-nghe",
+      "name": "Tai nghe có dây",
+      "slug": "tai-nghe-co-day",
+      "description": "Các mẫu kết nối âm thanh bằng dây; cần kiểm tra cổng và micro của phiên bản.",
+      "display_order": 4,
+      "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/g/r/group_27_1__1_2.png"
+    },
+    {
+      "parent_slug": "tai-nghe",
+      "name": "Tai nghe đeo cổ",
+      "slug": "tai-nghe-deo-co",
+      "description": "Thiết kế có dây nối hai bên tai, sử dụng kết nối Bluetooth với thiết bị nguồn.",
+      "display_order": 5,
+      "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/g/r/group_187_1_1.png"
+    },
+    {
+      "parent_slug": "tai-nghe",
+      "name": "Tai nghe Hi-Res",
+      "slug": "tai-nghe-hi-res",
+      "description": "Các mẫu có Hi-Res Audio hoặc Hi-Res Audio Wireless được công bố; chất lượng còn phụ thuộc nguồn nhạc và thiết bị phát.",
+      "display_order": 6,
+      "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/f/r/frame_392.png"
+    },
+    {
+      "parent_slug": "tai-nghe",
+      "name": "Tai nghe đàm thoại",
+      "slug": "tai-nghe-dam-thoai",
+      "description": "Nhóm có micro và xử lý giảm ồn cuộc gọi để cân nhắc với nhu cầu đàm thoại; không đồng nhất ENC với ANC.",
+      "display_order": 7,
+      "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/t/a/tai-nghe-bluetooth-true-wireless-baseus-bass-bs-2-lite-_1_.png"
+    },
+    {
+      "parent_slug": "tai-nghe",
+      "name": "Tai nghe pin lâu",
+      "slug": "tai-nghe-pin-lau",
+      "description": "Nhóm có thời lượng riêng tai nghe công bố từ 8 giờ; thời gian kèm hộp sạc được thể hiện riêng trong mô tả.",
+      "display_order": 8,
+      "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/t/a/tai-nghe-bluetooth-jbl-wave-buds_26_.png"
+    },
+    {
+      "parent_slug": "tai-nghe",
+      "name": "Tai nghe cho hệ sinh thái Apple",
+      "slug": "tai-nghe-he-sinh-thai-apple",
+      "description": "Các dòng AirPods để sử dụng cùng thiết bị Apple; một số tính năng yêu cầu thiết bị và hệ điều hành tương thích.",
+      "display_order": 9,
+      "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/a/p/apple-airpods-4-thumb.png"
+    },
+    {
+      "parent_slug": "tai-nghe",
+      "name": "Tai nghe cho hệ sinh thái Galaxy",
+      "slug": "tai-nghe-he-sinh-thai-galaxy",
+      "description": "Các dòng Galaxy Buds để cân nhắc khi dùng thiết bị Samsung Galaxy; tính năng đồng bộ tùy phiên bản.",
+      "display_order": 10,
+      "image_url": "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/f/r/frame_318.png"
+    }
+  ],
+  "assignments": [
+    {
+      "sku": "VT-DEMO-20261017-28C40E34C531",
+      "product_slug": "honor-600-5g-8gb-256gb-28c40e34",
+      "product_name": "HONOR 600 5G 8GB 256GB",
+      "parent_slug": "dien-thoai",
+      "child_slug": "samsung",
+      "source_url": "https://cellphones.com.vn/dien-thoai-honor-600.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-950811A0E80F",
+      "product_slug": "meizu-lucky-08-5g-8gb-256gb-950811a0",
+      "product_name": "Meizu Lucky 08 5G 8GB 256GB",
+      "parent_slug": "dien-thoai",
+      "child_slug": "samsung",
+      "source_url": "https://cellphones.com.vn/dien-thoai-meizu-lucky-08-8gb-256gb.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-B208D709B5B4",
+      "product_slug": "samsung-galaxy-a07-5g-4gb-128gb-b208d709",
+      "product_name": "Samsung Galaxy A07 5G 4GB 128GB",
+      "parent_slug": "dien-thoai",
+      "child_slug": "samsung",
+      "source_url": "https://cellphones.com.vn/dien-thoai-samsung-galaxy-a07-5g.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-B3F8936DFBE0",
+      "product_slug": "honor-x7d-5g-8gb-256gb-b3f8936d",
+      "product_name": "HONOR X7d 5G 8GB 256GB",
+      "parent_slug": "dien-thoai",
+      "child_slug": "samsung",
+      "source_url": "https://cellphones.com.vn/dien-thoai-honor-x7d-5g-8gb-256gb.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-3AC70DE81B8C",
+      "product_slug": "xiaomi-17t-5g-12gb-512gb-3ac70de8",
+      "product_name": "Xiaomi 17T 5G 12GB 512GB",
+      "parent_slug": "dien-thoai",
+      "child_slug": "samsung",
+      "source_url": "https://cellphones.com.vn/dien-thoai-xiaomi-17t.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-4BFBCC4D33D5",
+      "product_slug": "xiaomi-redmi-note-17-pro-max-5g-8gb-512gb-4bfbcc4d",
+      "product_name": "Xiaomi Redmi Note 17 Pro Max 5G 8GB 512GB",
+      "parent_slug": "dien-thoai",
+      "child_slug": "samsung",
+      "source_url": "https://cellphones.com.vn/dien-thoai-xiaomi-redmi-note-17-pro-max-5g.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-EB6134624B74",
+      "product_slug": "nubia-neo-5-gt-special-edition-12gb-256gb-eb613462",
+      "product_name": "Nubia Neo 5 GT Special Edition 12GB 256GB",
+      "parent_slug": "dien-thoai",
+      "child_slug": "dien-thoai-choi-game",
+      "source_url": "https://cellphones.com.vn/dien-thoai-nubia-neo-5-gt-special-edition.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-C134E4A89829",
+      "product_slug": "xiaomi-17t-pro-5g-12gb-512gb-c134e4a8",
+      "product_name": "Xiaomi 17T Pro 5G 12GB 512GB",
+      "parent_slug": "dien-thoai",
+      "child_slug": "dien-thoai-choi-game",
+      "source_url": "https://cellphones.com.vn/dien-thoai-xiaomi-17t-pro.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-5E1F2AC455D9",
+      "product_slug": "xiaomi-poco-f9-ultra-5g-16gb-512gb-5e1f2ac4",
+      "product_name": "Xiaomi POCO F9 Ultra 5G 16GB 512GB",
+      "parent_slug": "dien-thoai",
+      "child_slug": "dien-thoai-choi-game",
+      "source_url": "https://cellphones.com.vn/dien-thoai-xiaomi-poco-f9-ultra-16gb-512gb.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-A73A884B92A0",
+      "product_slug": "oppo-find-x8-16gb-512gb-a73a884b",
+      "product_name": "OPPO Find X8 16GB 512GB",
+      "parent_slug": "dien-thoai",
+      "child_slug": "dien-thoai-chup-anh",
+      "source_url": "https://cellphones.com.vn/dien-thoai-oppo-find-x8.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-1FBC509BEAEF",
+      "product_slug": "oppo-reno15-5g-12gb-256gb-1fbc509b",
+      "product_name": "OPPO Reno15 5G 12GB 256GB",
+      "parent_slug": "dien-thoai",
+      "child_slug": "dien-thoai-chup-anh",
+      "source_url": "https://cellphones.com.vn/dien-thoai-oppo-reno15.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-4D2ACD499B67",
+      "product_slug": "samsung-galaxy-s25-ultra-12gb-256gb-4d2acd49",
+      "product_name": "Samsung Galaxy S25 Ultra 12GB 256GB",
+      "parent_slug": "dien-thoai",
+      "child_slug": "dien-thoai-chup-anh",
+      "source_url": "https://cellphones.com.vn/dien-thoai-samsung-galaxy-s25-ultra.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-0E3CBF9479A5",
+      "product_slug": "oppo-reno10-pro-5g-12gb-256gb-0e3cbf94",
+      "product_name": "OPPO Reno10 Pro+ 5G 12GB 256GB",
+      "parent_slug": "dien-thoai",
+      "child_slug": "dien-thoai-chup-anh",
+      "source_url": "https://cellphones.com.vn/oppo-reno10-pro-plus.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-EAD5E9D3B780",
+      "product_slug": "samsung-galaxy-s26-ultra-5g-12gb-256gb-ead5e9d3",
+      "product_name": "Samsung Galaxy S26 Ultra 5G 12GB 256GB",
+      "parent_slug": "dien-thoai",
+      "child_slug": "dien-thoai-chup-anh",
+      "source_url": "https://cellphones.com.vn/dien-thoai-samsung-galaxy-s26-ultra.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-CCFF1CAC2161",
+      "product_slug": "oppo-find-n3-16gb-512gb-ccff1cac",
+      "product_name": "OPPO Find N3 16GB 512GB",
+      "parent_slug": "dien-thoai",
+      "child_slug": "dien-thoai-man-hinh-gap",
+      "source_url": "https://cellphones.com.vn/oppo-find-n3.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-9882A4A1CBD7",
+      "product_slug": "samsung-galaxy-z-fold8-ultra-5g-12gb-256gb-9882a4a1",
+      "product_name": "Samsung Galaxy Z Fold8 Ultra 5G 12GB 256GB",
+      "parent_slug": "dien-thoai",
+      "child_slug": "dien-thoai-man-hinh-gap",
+      "source_url": "https://cellphones.com.vn/dien-thoai-samsung-galaxy-z-fold-8-ultra.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-DBBDC39304D0",
+      "product_slug": "iphone-air-256gb-dbbdc393",
+      "product_name": "iPhone Air 256GB",
+      "parent_slug": "dien-thoai",
+      "child_slug": "dien-thoai-mong-nhe",
+      "source_url": "https://cellphones.com.vn/iphone-air-256gb.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-93CE1D139A16",
+      "product_slug": "dien-thoai-itel-p55-plus-nfc-8gb-256gb-93ce1d13",
+      "product_name": "Điện thoại Itel P55 Plus NFC 8GB 256GB",
+      "parent_slug": "dien-thoai",
+      "child_slug": "dien-thoai-pho-thong",
+      "source_url": "https://cellphones.com.vn/dien-thoai-itel-p55-plus-8gb-256gb.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-73696A3A68E3",
+      "product_slug": "dien-thoai-meizu-mblu-22-pro-nfc-4gb-128gb-73696a3a",
+      "product_name": "Điện thoại Meizu Mblu 22 Pro NFC 4GB 128GB",
+      "parent_slug": "dien-thoai",
+      "child_slug": "dien-thoai-pho-thong",
+      "source_url": "https://cellphones.com.vn/dien-thoai-meizu-mblu-22-pro.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-786594040DA1",
+      "product_slug": "dien-thoai-meizu-mblu-note-21-pro-nfc-8gb-256gb-78659404",
+      "product_name": "Điện thoại Meizu Mblu Note 21 Pro NFC 8GB 256GB",
+      "parent_slug": "dien-thoai",
+      "child_slug": "dien-thoai-pho-thong",
+      "source_url": "https://cellphones.com.vn/dien-thoai-meizu-mblu-note-21-pro.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-3756E423AFE8",
+      "product_slug": "samsung-galaxy-a37-5g-8gb-128gb-3756e423",
+      "product_name": "Samsung Galaxy A37 5G 8GB 128GB",
+      "parent_slug": "dien-thoai",
+      "child_slug": "dien-thoai-tam-trung",
+      "source_url": "https://cellphones.com.vn/dien-thoai-samsung-galaxy-a37.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-33F132BF8F61",
+      "product_slug": "oppo-reno16-f-5g-8gb-256gb-33f132bf",
+      "product_name": "OPPO Reno16 F 5G 8GB 256GB",
+      "parent_slug": "dien-thoai",
+      "child_slug": "dien-thoai-tam-trung",
+      "source_url": "https://cellphones.com.vn/dien-thoai-oppo-reno16-f.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-85E92384EA4D",
+      "product_slug": "samsung-galaxy-a57-5g-8gb-128gb-85e92384",
+      "product_name": "Samsung Galaxy A57 5G 8GB 128GB",
+      "parent_slug": "dien-thoai",
+      "child_slug": "dien-thoai-tam-trung",
+      "source_url": "https://cellphones.com.vn/dien-thoai-samsung-galaxy-a57.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-213B783688CE",
+      "product_slug": "xiaomi-redmi-note-14-pro-plus-5g-8gb-256gb-213b7836",
+      "product_name": "Xiaomi Redmi Note 14 Pro Plus 5G 8GB 256GB",
+      "parent_slug": "dien-thoai",
+      "child_slug": "dien-thoai-tam-trung",
+      "source_url": "https://cellphones.com.vn/dien-thoai-xiaomi-redmi-note-14-pro-plus.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-D2CB2A2FFD3C",
+      "product_slug": "samsung-galaxy-s25-plus-256gb-d2cb2a2f",
+      "product_name": "Samsung Galaxy S25 Plus 256GB",
+      "parent_slug": "dien-thoai",
+      "child_slug": "dien-thoai-cao-cap",
+      "source_url": "https://cellphones.com.vn/dien-thoai-samsung-galaxy-s25-plus.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-17E7A43FCE6E",
+      "product_slug": "oppo-find-x5-pro-5g-12gb-256gb-17e7a43f",
+      "product_name": "OPPO Find X5 Pro 5G 12GB 256GB",
+      "parent_slug": "dien-thoai",
+      "child_slug": "dien-thoai-cao-cap",
+      "source_url": "https://cellphones.com.vn/oppo-find-x5-pro.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-E51DC6572200",
+      "product_slug": "iphone-17-pro-256gb-e51dc657",
+      "product_name": "iPhone 17 Pro 256GB",
+      "parent_slug": "dien-thoai",
+      "child_slug": "dien-thoai-cao-cap",
+      "source_url": "https://cellphones.com.vn/iphone-17-pro.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-22E452FDBCA5",
+      "product_slug": "iphone-18-pro-1tb-22e452fd",
+      "product_name": "iPhone 18 Pro 1TB",
+      "parent_slug": "dien-thoai",
+      "child_slug": "dien-thoai-cao-cap",
+      "source_url": "https://cellphones.com.vn/iphone-18-pro-1tb.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-C5C5AAE68AEE",
+      "product_slug": "iphone-13-128gb-c5c5aae6",
+      "product_name": "iPhone 13 128GB",
+      "parent_slug": "dien-thoai",
+      "child_slug": "dien-thoai-nho-gon",
+      "source_url": "https://cellphones.com.vn/iphone-13.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-555EFF42AD5E",
+      "product_slug": "iphone-16-128gb-555eff42",
+      "product_name": "iPhone 16 128GB",
+      "parent_slug": "dien-thoai",
+      "child_slug": "dien-thoai-nho-gon",
+      "source_url": "https://cellphones.com.vn/iphone-16.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-A7B5BE91DE86",
+      "product_slug": "iphone-16e-128gb-a7b5be91",
+      "product_name": "iPhone 16e 128GB",
+      "parent_slug": "dien-thoai",
+      "child_slug": "dien-thoai-nho-gon",
+      "source_url": "https://cellphones.com.vn/iphone-16e.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-BCB830F22EE9",
+      "product_slug": "iphone-17-256gb-bcb830f2",
+      "product_name": "iPhone 17 256GB",
+      "parent_slug": "dien-thoai",
+      "child_slug": "dien-thoai-nho-gon",
+      "source_url": "https://cellphones.com.vn/iphone-17-256gb.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-CD8544302DD5",
+      "product_slug": "dien-thoai-iphone-16-pro-max-256gb-cd854430",
+      "product_name": "Điện thoại iPhone 16 Pro Max 256GB",
+      "parent_slug": "dien-thoai",
+      "child_slug": "dien-thoai-man-hinh-lon",
+      "source_url": "https://cellphones.com.vn/iphone-16-pro-max.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-219CDB292F72",
+      "product_slug": "iphone-17-pro-max-512gb-219cdb29",
+      "product_name": "iPhone 17 Pro Max 512GB",
+      "parent_slug": "dien-thoai",
+      "child_slug": "dien-thoai-man-hinh-lon",
+      "source_url": "https://cellphones.com.vn/iphone-17-pro-max-512gb.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-4F4C34294E95",
+      "product_slug": "iphone-18-pro-max-1tb-4f4c3429",
+      "product_name": "iPhone 18 Pro Max 1TB",
+      "parent_slug": "dien-thoai",
+      "child_slug": "dien-thoai-man-hinh-lon",
+      "source_url": "https://cellphones.com.vn/iphone-18-pro-max-1tb.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-49AA77337743",
+      "product_slug": "laptop-asus-tuf-gaming-f16-fx607vj-rl034w-49aa7733",
+      "product_name": "Laptop ASUS TUF Gaming F16 FX607VJ-RL034W",
+      "parent_slug": "laptop",
+      "child_slug": "laptop-gaming",
+      "source_url": "https://cellphones.com.vn/laptop-asus-tuf-gaming-f16-fx607vj-rl034w.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-7B20CA9639BE",
+      "product_slug": "laptop-msi-cyborg-15-a13uc-2082vn-7b20ca96",
+      "product_name": "Laptop MSI Cyborg 15 A13UC-2082VN",
+      "parent_slug": "laptop",
+      "child_slug": "laptop-gaming",
+      "source_url": "https://cellphones.com.vn/laptop-msi-cyborg-15-a13uc-2082vn.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-554D761E55D4",
+      "product_slug": "laptop-acer-gaming-aspire-7-a715-59g-59rd-554d761e",
+      "product_name": "Laptop Acer Gaming Aspire 7 A715-59G-59RD",
+      "parent_slug": "laptop",
+      "child_slug": "laptop-gaming",
+      "source_url": "https://cellphones.com.vn/laptop-acer-gaming-aspire-7-a715-59g-59rd.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-D6A84048580F",
+      "product_slug": "laptop-acer-gaming-nitro-propanel-anv15-52-50va-d6a84048",
+      "product_name": "Laptop Acer Gaming Nitro ProPanel ANV15-52-50VA",
+      "parent_slug": "laptop",
+      "child_slug": "laptop-gaming",
+      "source_url": "https://cellphones.com.vn/laptop-acer-gaming-nitro-v-15-propanel-anv15-52-50va.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-DAD55AE3DF9B",
+      "product_slug": "laptop-lenovo-legion-5-15irx10-83ly00hrvn-dad55ae3",
+      "product_name": "Laptop Lenovo Legion 5 15IRX10 83LY00HRVN",
+      "parent_slug": "laptop",
+      "child_slug": "laptop-gaming",
+      "source_url": "https://cellphones.com.vn/laptop-lenovo-legion-5-15irx10-83ly00hrvn.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-6919784DD052",
+      "product_slug": "laptop-lenovo-loq-15irh11e-83y9003vvn-6919784d",
+      "product_name": "Laptop Lenovo LOQ 15IRH11E 83Y9003VVN",
+      "parent_slug": "laptop",
+      "child_slug": "laptop-gaming",
+      "source_url": "https://cellphones.com.vn/laptop-lenovo-loq-15irh11e-83y9003vvn.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-3C8437CD7E1E",
+      "product_slug": "laptop-hp-victus-15-fa2451tx-d17wppa-3c8437cd",
+      "product_name": "Laptop HP Victus 15-FA2451TX D17WPPA",
+      "parent_slug": "laptop",
+      "child_slug": "laptop-gaming",
+      "source_url": "https://cellphones.com.vn/laptop-hp-victus-15-fa2451tx-d17wppa.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-BFA863B890EA",
+      "product_slug": "laptop-hp-victus-15-fa2731tx-b85lnpa-bfa863b8",
+      "product_name": "Laptop HP Victus 15-FA2731TX B85LNPA",
+      "parent_slug": "laptop",
+      "child_slug": "laptop-gaming",
+      "source_url": "https://cellphones.com.vn/laptop-hp-victus-15-fa2731tx-b85lnpa.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-A585247C829E",
+      "product_slug": "laptop-acer-aspire-lite-14-al14-44p-r0sp-a585247c",
+      "product_name": "Laptop Acer Aspire Lite 14 AL14-44P-R0SP",
+      "parent_slug": "laptop",
+      "child_slug": "laptop-hoc-tap",
+      "source_url": "https://cellphones.com.vn/laptop-acer-aspire-lite-14-al14-44p-r0sp.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-47607AD3BACC",
+      "product_slug": "laptop-lenovo-ideapad-slim-3-14ahp10-83k9004rvn-47607ad3",
+      "product_name": "Laptop Lenovo IdeaPad Slim 3 14AHP10 83K9004RVN",
+      "parent_slug": "laptop",
+      "child_slug": "laptop-hoc-tap",
+      "source_url": "https://cellphones.com.vn/laptop-lenovo-ideapad-slim-3-14ahp10-83k9004rvn.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-AE6822F73900",
+      "product_slug": "laptop-lenovo-ideapad-slim-3-14iwc11-83rq002pvn-ae6822f7",
+      "product_name": "Laptop Lenovo IdeaPad Slim 3 14IWC11 83RQ002PVN",
+      "parent_slug": "laptop",
+      "child_slug": "laptop-hoc-tap",
+      "source_url": "https://cellphones.com.vn/laptop-lenovo-ideapad-slim-3-14iwc11-83rq002pvn.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-EA6800C2C230",
+      "product_slug": "macbook-neo-13-inch-a18-pro-2026-6cpu-5gpu-8gb-256gb-ea6800c2",
+      "product_name": "MacBook Neo 13 inch A18 Pro 2026 6CPU 5GPU 8GB 256GB",
+      "parent_slug": "laptop",
+      "child_slug": "laptop-hoc-tap",
+      "source_url": "https://cellphones.com.vn/macbook-neo-13-a18-pro-6-cpu-5-gpu-8gb-256gb.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-D897759827A8",
+      "product_slug": "laptop-dell-14-dc14250-dc4c5375w1-bao-hanh-2-nam-d8977598",
+      "product_name": "Laptop Dell 14 DC14250 DC4C5375W1 - Bảo hành 2 năm",
+      "parent_slug": "laptop",
+      "child_slug": "laptop-van-phong",
+      "source_url": "https://cellphones.com.vn/laptop-dell-14-dc14250-dc4c5375w1.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-83608E25BE32",
+      "product_slug": "laptop-asus-vivobook-14-x1404va-eb355w-83608e25",
+      "product_name": "Laptop ASUS Vivobook 14 X1404VA-EB355W",
+      "parent_slug": "laptop",
+      "child_slug": "laptop-van-phong",
+      "source_url": "https://cellphones.com.vn/laptop-asus-vivobook-14-x1404va-eb355w.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-5FAAE4443595",
+      "product_slug": "laptop-dell-14-dc14250-dc4c5386w-5faae444",
+      "product_name": "Laptop Dell 14 DC14250 DC4C5386W",
+      "parent_slug": "laptop",
+      "child_slug": "laptop-van-phong",
+      "source_url": "https://cellphones.com.vn/laptop-dell-14-dc14250-dc4c5386w.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-B4E89AD397E2",
+      "product_slug": "laptop-msi-modern-15-f1mg-1225vn-b4e89ad3",
+      "product_name": "Laptop MSI Modern 15 F1MG-1225VN",
+      "parent_slug": "laptop",
+      "child_slug": "laptop-van-phong",
+      "source_url": "https://cellphones.com.vn/laptop-msi-modern-15-f1mg-1225vn.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-BDCD18EB45FD",
+      "product_slug": "laptop-hp-probook-4-g1i-16-bq5d8pt-bdcd18eb",
+      "product_name": "Laptop HP ProBook 4 G1I 16 BQ5D8PT",
+      "parent_slug": "laptop",
+      "child_slug": "laptop-van-phong",
+      "source_url": "https://cellphones.com.vn/laptop-hp-probook-4-g1i-16-bq5d8pt.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-AEA9F415568F",
+      "product_slug": "laptop-gaming-gigabyte-eagle-gl6j-9ljr2vnf93sh-aea9f415",
+      "product_name": "Laptop Gaming Gigabyte Eagle GL6J-9LJR2VNF93SH",
+      "parent_slug": "laptop",
+      "child_slug": "laptop-do-hoa",
+      "source_url": "https://cellphones.com.vn/laptop-gigabyte-eagle-gl6j-9ljr2vnf93sh.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-E8BD3031D92E",
+      "product_slug": "laptop-msi-katana-15-b13vek-2440vn-e8bd3031",
+      "product_name": "Laptop MSI Katana 15 B13VEK-2440VN",
+      "parent_slug": "laptop",
+      "child_slug": "laptop-do-hoa",
+      "source_url": "https://cellphones.com.vn/laptop-msi-katana-15-b13vek-2440vn.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-FFC97B86B29C",
+      "product_slug": "macbook-air-m4-13-inch-2025-10cpu-8gpu-16gb-256gb-ffc97b86",
+      "product_name": "MacBook Air M4 13 inch 2025 10CPU 8GPU 16GB 256GB",
+      "parent_slug": "laptop",
+      "child_slug": "laptop-mong-nhe",
+      "source_url": "https://cellphones.com.vn/apple-macbook-air-13-m4-10cpu-8gpu-16gb-256gb-2025.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-E14BA295C585",
+      "product_slug": "laptop-hp-14em0023au-d0bg7pa-e14ba295",
+      "product_name": "Laptop HP 14‑EM0023AU D0BG7PA",
+      "parent_slug": "laptop",
+      "child_slug": "laptop-mong-nhe",
+      "source_url": "https://cellphones.com.vn/laptop-hp-14-em0023au-d0bg7pa.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-7E0A12CE05FD",
+      "product_slug": "macbook-air-m5-13-inch-2026-10cpu-8gpu-16gb-512gb-sac-70w-7e0a12ce",
+      "product_name": "MacBook Air M5 13 inch 2026 10CPU 8GPU 16GB 512GB Sạc 70W",
+      "parent_slug": "laptop",
+      "child_slug": "laptop-mong-nhe",
+      "source_url": "https://cellphones.com.vn/macbook-air-13-inch-m5-10-cpu-8-gpu-16gb-512gb-2026-sac-70w.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-7279FA29BD41",
+      "product_slug": "laptop-acer-swift-air-14-sfa14-i31-55nr-7279fa29",
+      "product_name": "Laptop Acer Swift Air 14 SFA14-I31-55NR",
+      "parent_slug": "laptop",
+      "child_slug": "laptop-mong-nhe",
+      "source_url": "https://cellphones.com.vn/laptop-acer-swift-air-14-sfa14-i31-55nr.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-CE38ADFCAFF0",
+      "product_slug": "macbook-air-m5-13-inch-2026-10cpu-8gpu-16gb-512gb-ce38adfc",
+      "product_name": "MacBook Air M5 13 inch 2026 10CPU 8GPU 16GB 512GB",
+      "parent_slug": "laptop",
+      "child_slug": "laptop-mong-nhe",
+      "source_url": "https://cellphones.com.vn/macbook-air-13-m5-10-cpu-8-gpu-16gb-512gb.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-C5494EF11F30",
+      "product_slug": "apple-macbook-air-m2-2024-8cpu-8gpu-16gb-256gb-i-chinh-hang-apple-viet-nam-c5494ef1",
+      "product_name": "Apple MacBook Air M2 2024 8CPU 8GPU 16GB 256GB I Chính hãng Apple Việt Nam",
+      "parent_slug": "laptop",
+      "child_slug": "laptop-mong-nhe",
+      "source_url": "https://cellphones.com.vn/macbook-air-m2-2022-16gb.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-412D7FDED1F8",
+      "product_slug": "laptop-hp-omnibook-x-flip-14-fm0088tu-bz7q2pa-412d7fde",
+      "product_name": "Laptop HP Omnibook X Flip 14-FM0088TU BZ7Q2PA",
+      "parent_slug": "laptop",
+      "child_slug": "laptop-2-trong-1",
+      "source_url": "https://cellphones.com.vn/laptop-hp-omnibook-x-flip-14-fm0088tu-bz7q2pa.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-14020422BE82",
+      "product_slug": "laptop-hp-omnibook-5-ai-16-af1048tu-bz7q9pa-14020422",
+      "product_name": "Laptop HP Omnibook 5 AI 16-AF1048TU BZ7Q9PA",
+      "parent_slug": "laptop",
+      "child_slug": "laptop-ai",
+      "source_url": "https://cellphones.com.vn/laptop-hp-omnibook-5-ai-16-af1048tu-bz7q9pa.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-A253BFAC7640",
+      "product_slug": "laptop-asus-zenbook-s-14-ux5406aa-su348w-a253bfac",
+      "product_name": "Laptop ASUS Zenbook S 14 UX5406AA-SU348W",
+      "parent_slug": "laptop",
+      "child_slug": "laptop-ai",
+      "source_url": "https://cellphones.com.vn/laptop-asus-zenbook-s-14-ux5406aa-su348w.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-0A79BB300D40",
+      "product_slug": "laptop-hp-omnibook-5-16-ag1068au-bz7t0pa-0a79bb30",
+      "product_name": "Laptop HP Omnibook 5 16-AG1068AU BZ7T0PA",
+      "parent_slug": "laptop",
+      "child_slug": "laptop-man-hinh-lon",
+      "source_url": "https://cellphones.com.vn/laptop-hp-omnibook-5-16-ag1068au-bz7t0pa-ryzen-ai-5.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-D858432D4A79",
+      "product_slug": "macbook-air-m5-15-inch-2026-10cpu-10gpu-16gb-512gb-d858432d",
+      "product_name": "MacBook Air M5 15 inch 2026 10CPU 10GPU 16GB 512GB",
+      "parent_slug": "laptop",
+      "child_slug": "laptop-man-hinh-lon",
+      "source_url": "https://cellphones.com.vn/macbook-air-15-m5-10-cpu-10-gpu-16gb-512gb.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-E8F1F4760BFC",
+      "product_slug": "laptop-asus-vivobook-14-x1407ca-ly008w-e8f1f476",
+      "product_name": "Laptop ASUS VivoBook 14 X1407CA-LY008W",
+      "parent_slug": "laptop",
+      "child_slug": "laptop-lap-trinh",
+      "source_url": "https://cellphones.com.vn/laptop-asus-vivobook-14-x1407ca-ly008w.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-B3095DB78427",
+      "product_slug": "laptop-asus-vivobook-14-x1407ca-ly203w-b3095db7",
+      "product_name": "Laptop ASUS Vivobook 14 X1407CA-LY203W",
+      "parent_slug": "laptop",
+      "child_slug": "laptop-lap-trinh",
+      "source_url": "https://cellphones.com.vn/laptop-asus-vivobook-14-x1407ca-ly203w.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-5FA4E4C61B2F",
+      "product_slug": "macbook-neo-13-inch-a18-pro-2026-6cpu-5gpu-8gb-512gb-touch-id-5fa4e4c6",
+      "product_name": "MacBook Neo 13 inch A18 Pro 2026 6CPU 5GPU 8GB 512GB Touch ID",
+      "parent_slug": "laptop",
+      "child_slug": "laptop-lap-trinh",
+      "source_url": "https://cellphones.com.vn/macbook-neo-13-a18-pro-6-cpu-5-gpu-8gb-512gb.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-5F92AFBB4042",
+      "product_slug": "macbook-air-m5-13-inch-2026-10cpu-10gpu-24gb-1tb-sac-70w-5f92afbb",
+      "product_name": "MacBook Air M5 13 inch 2026 10CPU 10GPU 24GB 1TB Sạc 70W",
+      "parent_slug": "laptop",
+      "child_slug": "laptop-cao-cap",
+      "source_url": "https://cellphones.com.vn/macbook-air-13-inch-m5-10-cpu-10-gpu-24gb-1tb-2026-sac-70w.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-CEACC6870E8C",
+      "product_slug": "macbook-air-m5-13-inch-2026-10cpu-10gpu-16gb-1tb-ceacc687",
+      "product_name": "MacBook Air M5 13 inch 2026 10CPU 10GPU 16GB 1TB",
+      "parent_slug": "laptop",
+      "child_slug": "laptop-cao-cap",
+      "source_url": "https://cellphones.com.vn/macbook-air-13-m5-10-cpu-10-gpu-16gb-1tb.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-7F146F595708",
+      "product_slug": "ipad-air-11-inch-m3-wifi-128gb-2025-7f146f59",
+      "product_name": "iPad Air 11 inch M3 Wifi 128GB 2025",
+      "parent_slug": "may-tinh-bang",
+      "child_slug": "may-tinh-bang-hoc-tap",
+      "source_url": "https://cellphones.com.vn/apple-ipad-air-m3.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-470B81592763",
+      "product_slug": "ipad-a16-wifi-256gb-2025-470b8159",
+      "product_name": "iPad A16 Wifi 256GB 2025",
+      "parent_slug": "may-tinh-bang",
+      "child_slug": "may-tinh-bang-hoc-tap",
+      "source_url": "https://cellphones.com.vn/ipad-a16-11-inch-256gb.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-A5A17AE9642C",
+      "product_slug": "huawei-matepad-11-5-s-2026-12gb-256gb-kem-ban-phim-a5a17ae9",
+      "product_name": "Huawei MatePad 11.5 S 2026 12GB 256GB - Kèm bàn phím",
+      "parent_slug": "may-tinh-bang",
+      "child_slug": "may-tinh-bang-van-phong",
+      "source_url": "https://cellphones.com.vn/may-tinh-bang-huawei-matepad-11-5-s-2026.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-A39982CA2263",
+      "product_slug": "lenovo-idea-tab-plus-matte-edition-wifi-8gb-128gb-zag70981vn-kem-but-ban-phim-a39982ca",
+      "product_name": "Lenovo Idea Tab Plus Matte Edition Wifi 8GB 128GB ZAG70981VN - Kèm bút, bàn phím",
+      "parent_slug": "may-tinh-bang",
+      "child_slug": "may-tinh-bang-van-phong",
+      "source_url": "https://cellphones.com.vn/may-tinh-bang-lenovo-idea-tab-plus-wifi-8gb-128gb-zag70981vn-kem-but-ban-phim.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-BD06F9357AEF",
+      "product_slug": "nubia-pad-pro-8gb-256gb-bd06f935",
+      "product_name": "Nubia Pad Pro 8GB 256GB",
+      "parent_slug": "may-tinh-bang",
+      "child_slug": "may-tinh-bang-choi-game",
+      "source_url": "https://cellphones.com.vn/may-tinh-bang-nubia-pad-pro-8gb-256gb.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-16F0C981B8CC",
+      "product_slug": "xiaomi-pad-8-pro-8gb-128gb-16f0c981",
+      "product_name": "Xiaomi Pad 8 Pro 8GB 128GB",
+      "parent_slug": "may-tinh-bang",
+      "child_slug": "may-tinh-bang-choi-game",
+      "source_url": "https://cellphones.com.vn/may-tinh-bang-xiaomi-pad-8-pro-8gb-128gb.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-DE6BC12F3D56",
+      "product_slug": "lenovo-legion-tab-gen-5-12gb-256gb-de6bc12f",
+      "product_name": "Lenovo Legion Tab Gen 5 12GB 256GB",
+      "parent_slug": "may-tinh-bang",
+      "child_slug": "may-tinh-bang-choi-game",
+      "source_url": "https://cellphones.com.vn/may-tinh-bang-lenovo-legion-tab-gen-5-12gb-256gb-zah20030vn.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-D63B28350AF8",
+      "product_slug": "ipad-air-11-inch-m4-wifi-128gb-2026-d63b2835",
+      "product_name": "iPad Air 11 inch M4 Wifi 128GB 2026",
+      "parent_slug": "may-tinh-bang",
+      "child_slug": "may-tinh-bang-sang-tao",
+      "source_url": "https://cellphones.com.vn/apple-ipad-air-m4-11-inch-128gb-wifi.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-43EC1C3C6D93",
+      "product_slug": "samsung-galaxy-tab-s10-fe-wifi-12gb-256gb-43ec1c3c",
+      "product_name": "Samsung Galaxy Tab S10 FE Wifi 12GB 256GB",
+      "parent_slug": "may-tinh-bang",
+      "child_slug": "may-tinh-bang-sang-tao",
+      "source_url": "https://cellphones.com.vn/may-tinh-bang-samsung-galaxy-tab-s10-fe-wifi-12gb-256gb.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-36BF8B48A7DA",
+      "product_slug": "honor-pad-v9-wifi-8gb-256gb-36bf8b48",
+      "product_name": "HONOR Pad V9 Wifi 8GB 256GB",
+      "parent_slug": "may-tinh-bang",
+      "child_slug": "may-tinh-bang-giai-tri",
+      "source_url": "https://cellphones.com.vn/may-tinh-bang-honor-pad-v9-wifi.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-9B19C23ACA5F",
+      "product_slug": "xiaomi-poco-pad-x1-8gb-512gb-9b19c23a",
+      "product_name": "Xiaomi Poco Pad X1 8GB 512GB",
+      "parent_slug": "may-tinh-bang",
+      "child_slug": "may-tinh-bang-giai-tri",
+      "source_url": "https://cellphones.com.vn/may-tinh-bang-xiaomi-poco-pad-x1.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-C5D4613FFC3A",
+      "product_slug": "samsung-galaxy-tab-a11-wifi-4gb-64gb-c5d4613f",
+      "product_name": "Samsung Galaxy Tab A11 Wifi 4GB 64GB",
+      "parent_slug": "may-tinh-bang",
+      "child_slug": "may-tinh-bang-nho-gon",
+      "source_url": "https://cellphones.com.vn/may-tinh-bang-samsung-galaxy-tab-a11-wifi.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-0E9725EBE3BD",
+      "product_slug": "xiaomi-redmi-pad-2-9-7-inch-wifi-4gb-64gb-0e9725eb",
+      "product_name": "Xiaomi Redmi Pad 2 9.7 inch Wifi 4GB 64GB",
+      "parent_slug": "may-tinh-bang",
+      "child_slug": "may-tinh-bang-nho-gon",
+      "source_url": "https://cellphones.com.vn/may-tinh-bang-xiaomi-redmi-pad-2-9-7-inch.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-13B1B36C79A3",
+      "product_slug": "ipad-air-13-inch-m4-wifi-128gb-2026-13b1b36c",
+      "product_name": "iPad Air 13 inch M4 Wifi 128GB 2026",
+      "parent_slug": "may-tinh-bang",
+      "child_slug": "may-tinh-bang-man-hinh-lon",
+      "source_url": "https://cellphones.com.vn/apple-ipad-air-m4-13-inch-128gb-wifi.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-5AA7B63DA6D8",
+      "product_slug": "lenovo-idea-tab-pro-gen-2-matte-edition-8gb-256gb-zahd0452vn-kem-but-ban-phim-5aa7b63d",
+      "product_name": "Lenovo Idea Tab Pro Gen 2 Matte Edition 8GB 256GB ZAHD0452VN - Kèm bút, bàn phím",
+      "parent_slug": "may-tinh-bang",
+      "child_slug": "may-tinh-bang-kem-but",
+      "source_url": "https://cellphones.com.vn/may-tinh-bang-lenovo-idea-tab-pro-gen-2-zahd0452vn-kem-but-ban-phim.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-7DE5EEEC02D4",
+      "product_slug": "lenovo-yoga-tab-wifi-12gb-256gb-tb710-zag60105vn-kem-but-ban-phim-7de5eeec",
+      "product_name": "Lenovo Yoga Tab Wifi 12GB 256GB TB710 ZAG60105VN - Kèm bút, bàn phím",
+      "parent_slug": "may-tinh-bang",
+      "child_slug": "may-tinh-bang-kem-but",
+      "source_url": "https://cellphones.com.vn/may-tinh-bang-lenovo-yoga-tab-tb710.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-625BDC4D029B",
+      "product_slug": "huawei-matepad-papermatte-11-5-inch-2025-8gb-256gb-kem-ban-phim-625bdc4d",
+      "product_name": "Huawei MatePad Papermatte 11.5 inch 2025 8GB 256GB - Kèm bàn phím",
+      "parent_slug": "may-tinh-bang",
+      "child_slug": "may-tinh-bang-kem-ban-phim",
+      "source_url": "https://cellphones.com.vn/may-tinh-bang-huawei-matepad-papermate-11-5-inch.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-FD4568F76C49",
+      "product_slug": "may-tinh-bang-teclast-wifi-p30-4gb-128gb-fd4568f7",
+      "product_name": "Máy tính bảng Teclast Wifi P30 4GB 128GB",
+      "parent_slug": "may-tinh-bang",
+      "child_slug": "may-tinh-bang-pho-thong",
+      "source_url": "https://cellphones.com.vn/may-tinh-bang-teclast-p30-wifi.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-7D20A14C7B89",
+      "product_slug": "honor-pad-x8b-wifi-6gb-128gb-7d20a14c",
+      "product_name": "Honor Pad X8b Wifi 6GB 128GB",
+      "parent_slug": "may-tinh-bang",
+      "child_slug": "may-tinh-bang-pho-thong",
+      "source_url": "https://cellphones.com.vn/may-tinh-bang-honor-pad-x8b.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-A69590D80210",
+      "product_slug": "may-tinh-bang-teclast-t50-plus-6gb-256gb-a69590d8",
+      "product_name": "Máy tính bảng Teclast T50 Plus 6GB 256GB",
+      "parent_slug": "may-tinh-bang",
+      "child_slug": "may-tinh-bang-pho-thong",
+      "source_url": "https://cellphones.com.vn/may-tinh-bang-teclast-t50-plus.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-AC9804C39645",
+      "product_slug": "tai-nghe-bluetooth-true-wireless-bose-quietcomfort-ultra-earbuds-2-ac9804c3",
+      "product_name": "Tai nghe Bluetooth True Wireless Bose Quietcomfort Ultra Earbuds 2",
+      "parent_slug": "tai-nghe",
+      "child_slug": "tai-nghe-chong-on-chu-dong",
+      "source_url": "https://cellphones.com.vn/tai-nghe-bluetooth-bose-quietcomfort-ultra-earbuds-2.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-1F62CFD8A0DA",
+      "product_slug": "tai-nghe-tws-huawei-freebuds-neo-1f62cfd8",
+      "product_name": "Tai nghe TWS Huawei Freebuds Neo",
+      "parent_slug": "tai-nghe",
+      "child_slug": "tai-nghe-chong-on-chu-dong",
+      "source_url": "https://cellphones.com.vn/tai-nghe-huawei-freebuds-neo.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-DB0AB4B69111",
+      "product_slug": "tai-nghe-bluetooth-bose-quietcomfort-earbuds-db0ab4b6",
+      "product_name": "Tai nghe bluetooth Bose Quietcomfort Earbuds",
+      "parent_slug": "tai-nghe",
+      "child_slug": "tai-nghe-chong-on-chu-dong",
+      "source_url": "https://cellphones.com.vn/tai-nghe-bose-quietcomfort-earbuds.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-6B1310AE934E",
+      "product_slug": "tai-nghe-bluetooth-samsung-galaxy-buds-core-anc-6b1310ae",
+      "product_name": "Tai nghe Bluetooth Samsung Galaxy Buds Core (ANC)",
+      "parent_slug": "tai-nghe",
+      "child_slug": "tai-nghe-chong-on-chu-dong",
+      "source_url": "https://cellphones.com.vn/tai-nghe-bluetooth-samsung-galaxy-buds-core.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-82DE67D951DD",
+      "product_slug": "tai-nghe-bluetooth-true-wireless-anker-soundcore-r50i-nc-82de67d9",
+      "product_name": "Tai nghe Bluetooth True Wireless Anker Soundcore R50I NC",
+      "parent_slug": "tai-nghe",
+      "child_slug": "tai-nghe-chong-on-chu-dong",
+      "source_url": "https://cellphones.com.vn/tai-nghe-khong-day-anker-soundcore-r50i-nc.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-456C883B6F3F",
+      "product_slug": "tai-nghe-bluetooth-chup-tai-alpha-works-lite-500-456c883b",
+      "product_name": "Tai nghe Bluetooth chụp tai Alpha Works Lite 500",
+      "parent_slug": "tai-nghe",
+      "child_slug": "tai-nghe-chup-tai",
+      "source_url": "https://cellphones.com.vn/tai-nghe-chup-tai-alpha-works-lite-500.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-B0D777F8568C",
+      "product_slug": "tai-nghe-bluetooth-chup-tai-marshall-major-5-b0d777f8",
+      "product_name": "Tai nghe Bluetooth chụp tai Marshall Major 5",
+      "parent_slug": "tai-nghe",
+      "child_slug": "tai-nghe-chup-tai",
+      "source_url": "https://cellphones.com.vn/tai-nghe-chup-tai-marshall-major-5.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-DE912B5DF7F8",
+      "product_slug": "tai-nghe-chup-tai-bose-quietcomfort-ultra-gen-2-de912b5d",
+      "product_name": "Tai nghe chụp tai Bose Quietcomfort Ultra Gen 2",
+      "parent_slug": "tai-nghe",
+      "child_slug": "tai-nghe-chup-tai",
+      "source_url": "https://cellphones.com.vn/tai-nghe-chup-tai-bose-quietcomfort-ultra-gen-2.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-D1ACA5603B4B",
+      "product_slug": "tai-nghe-bluetooth-the-thao-anker-soundcore-c50i-d1aca560",
+      "product_name": "Tai nghe Bluetooth thể thao Anker Soundcore C50i",
+      "parent_slug": "tai-nghe",
+      "child_slug": "tai-nghe-the-thao",
+      "source_url": "https://cellphones.com.vn/tai-nghe-bluetooth-anker-soundcore-c50i.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-66CA70CCF142",
+      "product_slug": "tai-nghe-sony-mdr-e9lp-66ca70cc",
+      "product_name": "Tai nghe Sony MDR E9LP",
+      "parent_slug": "tai-nghe",
+      "child_slug": "tai-nghe-co-day",
+      "source_url": "https://cellphones.com.vn/sony-mdr-e9lp.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-AF5153873550",
+      "product_slug": "tai-nghe-chup-tai-sony-mdr-zx110ap-af515387",
+      "product_name": "Tai nghe chụp tai Sony MDR-ZX110AP",
+      "parent_slug": "tai-nghe",
+      "child_slug": "tai-nghe-co-day",
+      "source_url": "https://cellphones.com.vn/sony-mdr-zx110ap.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-698D27266BC8",
+      "product_slug": "tai-nghe-bluetooth-sony-wi-c100-698d2726",
+      "product_name": "Tai nghe Bluetooth Sony WI-C100",
+      "parent_slug": "tai-nghe",
+      "child_slug": "tai-nghe-deo-co",
+      "source_url": "https://cellphones.com.vn/tai-nghe-bluetooth-sony-wi-c100.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-23AB09FA2B97",
+      "product_slug": "tai-nghe-bluetooth-xiaomi-redmi-buds-8-pro-23ab09fa",
+      "product_name": "Tai nghe Bluetooth Xiaomi Redmi Buds 8 Pro",
+      "parent_slug": "tai-nghe",
+      "child_slug": "tai-nghe-hi-res",
+      "source_url": "https://cellphones.com.vn/tai-nghe-bluetooth-xiaomi-redmi-buds-8-pro.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-2476C276CF23",
+      "product_slug": "tai-nghe-bluetooth-true-wireless-anker-soundcore-r60i-nc-2476c276",
+      "product_name": "Tai nghe Bluetooth True Wireless Anker Soundcore R60i NC",
+      "parent_slug": "tai-nghe",
+      "child_slug": "tai-nghe-hi-res",
+      "source_url": "https://cellphones.com.vn/tai-nghe-khong-day-anker-soundcore-r60i-nc-a3959.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-8B5E93D69F9C",
+      "product_slug": "tai-nghe-bluetooth-true-wireless-baseus-bass-bs2-lite-8b5e93d6",
+      "product_name": "Tai nghe Bluetooth True Wireless Baseus Bass BS2 Lite",
+      "parent_slug": "tai-nghe",
+      "child_slug": "tai-nghe-dam-thoai",
+      "source_url": "https://cellphones.com.vn/tai-nghe-bluetooth-true-wireless-baseus-bass-bs-2-lite.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-BFD4E128DF53",
+      "product_slug": "tai-nghe-bluetooth-true-wireless-anker-soundcore-k20i-a3994-bfd4e128",
+      "product_name": "Tai nghe Bluetooth True Wireless Anker Soundcore K20i - A3994",
+      "parent_slug": "tai-nghe",
+      "child_slug": "tai-nghe-dam-thoai",
+      "source_url": "https://cellphones.com.vn/tai-nghe-khong-day-anker-soundcore-k20i-a3994.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-A6AD69F60F14",
+      "product_slug": "tai-nghe-bluetooth-true-wireless-jbl-wave-buds-a6ad69f6",
+      "product_name": "Tai nghe Bluetooth True Wireless JBL Wave Buds",
+      "parent_slug": "tai-nghe",
+      "child_slug": "tai-nghe-pin-lau",
+      "source_url": "https://cellphones.com.vn/tai-nghe-bluetooth-jbl-wave-buds.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-08EF813C7EBC",
+      "product_slug": "tai-nghe-bluetooth-true-wireless-jbl-tune-buds-2-08ef813c",
+      "product_name": "Tai nghe Bluetooth True Wireless JBL Tune Buds 2",
+      "parent_slug": "tai-nghe",
+      "child_slug": "tai-nghe-pin-lau",
+      "source_url": "https://cellphones.com.vn/tai-nghe-khong-day-jbl-tune-buds-2.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-7940022BFF2B",
+      "product_slug": "tai-nghe-bluetooth-true-wireless-anker-soundcore-r50i-a3949-7940022b",
+      "product_name": "Tai nghe Bluetooth True Wireless Anker Soundcore R50i A3949",
+      "parent_slug": "tai-nghe",
+      "child_slug": "tai-nghe-pin-lau",
+      "source_url": "https://cellphones.com.vn/tai-nghe-khong-day-anker-soundcore-r50i-a3949.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-0436A9BA2C05",
+      "product_slug": "tai-nghe-bluetooth-true-wireless-jbl-wave-beam-0436a9ba",
+      "product_name": "Tai nghe Bluetooth True Wireless JBL Wave Beam",
+      "parent_slug": "tai-nghe",
+      "child_slug": "tai-nghe-pin-lau",
+      "source_url": "https://cellphones.com.vn/tai-nghe-khong-day-jbl-wave-beam.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-9A2C62077224",
+      "product_slug": "tai-nghe-bluetooth-true-wireless-sony-wf-c510-9a2c6207",
+      "product_name": "Tai nghe Bluetooth True Wireless Sony WF-C510",
+      "parent_slug": "tai-nghe",
+      "child_slug": "tai-nghe-pin-lau",
+      "source_url": "https://cellphones.com.vn/tai-nghe-bluetooth-sony-wf-c510.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-3A89DD4FB87D",
+      "product_slug": "tai-nghe-khong-day-jbl-wave-buds-2-3a89dd4f",
+      "product_name": "Tai nghe không dây JBL Wave Buds 2",
+      "parent_slug": "tai-nghe",
+      "child_slug": "tai-nghe-pin-lau",
+      "source_url": "https://cellphones.com.vn/tai-nghe-khong-day-jbl-wave-buds-2.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-EBD0258823B4",
+      "product_slug": "tai-nghe-bluetooth-apple-airpods-4-ebd02588",
+      "product_name": "Tai nghe Bluetooth Apple AirPods 4",
+      "parent_slug": "tai-nghe",
+      "child_slug": "tai-nghe-he-sinh-thai-apple",
+      "source_url": "https://cellphones.com.vn/apple-airpods-4.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-54658418032E",
+      "product_slug": "tai-nghe-bluetooth-apple-airpods-5-2026-sac-khong-day-mkft4-54658418",
+      "product_name": "Tai nghe Bluetooth Apple AirPods 5 2026 Sạc Không Dây (MKFT4)",
+      "parent_slug": "tai-nghe",
+      "child_slug": "tai-nghe-he-sinh-thai-apple",
+      "source_url": "https://cellphones.com.vn/apple-airpods-5-sac-khong-day.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-B352914E7384",
+      "product_slug": "tai-nghe-bluetooth-apple-airpods-5-2026-sac-co-day-mkfw4-b352914e",
+      "product_name": "Tai nghe Bluetooth Apple AirPods 5 2026 Sạc Có Dây (MKFW4)",
+      "parent_slug": "tai-nghe",
+      "child_slug": "tai-nghe-he-sinh-thai-apple",
+      "source_url": "https://cellphones.com.vn/apple-airpods-5.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-BE3BA52BB0D1",
+      "product_slug": "tai-nghe-bluetooth-apple-airpods-pro-2-2023-usb-c-be3ba52b",
+      "product_name": "Tai nghe Bluetooth Apple AirPods Pro 2 2023 USB-C",
+      "parent_slug": "tai-nghe",
+      "child_slug": "tai-nghe-he-sinh-thai-apple",
+      "source_url": "https://cellphones.com.vn/apple-airpods-pro-2-usb-c.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-A71255A1DDAA",
+      "product_slug": "tai-nghe-bluetooth-true-wireless-samsung-galaxy-buds-3-a71255a1",
+      "product_name": "Tai nghe Bluetooth True Wireless Samsung Galaxy Buds 3",
+      "parent_slug": "tai-nghe",
+      "child_slug": "tai-nghe-he-sinh-thai-galaxy",
+      "source_url": "https://cellphones.com.vn/samsung-galaxy-buds-3.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-BEF412D8182E",
+      "product_slug": "tai-nghe-bluetooth-true-wireless-samsung-galaxy-buds-3-pro-bef412d8",
+      "product_name": "Tai nghe Bluetooth True Wireless Samsung Galaxy Buds 3 Pro",
+      "parent_slug": "tai-nghe",
+      "child_slug": "tai-nghe-he-sinh-thai-galaxy",
+      "source_url": "https://cellphones.com.vn/tai-nghe-samsung-galaxy-buds-3-pro.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-AA31335CDD51",
+      "product_slug": "tai-nghe-samsung-galaxy-buds-4-pro-aa31335c",
+      "product_name": "Tai nghe Samsung Galaxy Buds 4 Pro",
+      "parent_slug": "tai-nghe",
+      "child_slug": "tai-nghe-he-sinh-thai-galaxy",
+      "source_url": "https://cellphones.com.vn/tai-nghe-samsung-galaxy-buds-4-pro.html"
+    },
+    {
+      "sku": "VT-DEMO-20261017-C04D207F6895",
+      "product_slug": "tai-nghe-samsung-galaxy-buds-4-c04d207f",
+      "product_name": "Tai nghe Samsung Galaxy Buds 4",
+      "parent_slug": "tai-nghe",
+      "child_slug": "tai-nghe-he-sinh-thai-galaxy",
+      "source_url": "https://cellphones.com.vn/tai-nghe-samsung-galaxy-buds-4.html"
+    },
+    {
+      "sku": null,
+      "product_slug": "samsung-galaxy-s26-4e299bca994342df93a324d7e6fbc5d5",
+      "product_name": "Samsung Galaxy S26",
+      "parent_slug": "dien-thoai",
+      "child_slug": "dien-thoai-cao-cap",
+      "source_url": null
+    }
+  ]
+}

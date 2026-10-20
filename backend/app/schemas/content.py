@@ -54,6 +54,13 @@ class NewsArticleSummary(ResponseSchema):
     ThumbnailUrl: str | None
     Status: NewsArticleStatus
     PublishedAt: datetime | None
+    ViewCount: int
+
+
+class NewsArticleViewResponse(ResponseSchema):
+    """Total page opens, updated only through the public view-recording endpoint."""
+
+    ViewCount: int
 
 
 class NewsArticleResponse(NewsArticleSummary):

@@ -9,8 +9,9 @@ import useAdminQuery from '../hooks/useAdminQuery.js'
 import { uploadProductImage } from '../services/product-media.js'
 import Modal from './Modal.jsx'
 import AdminImagePicker from './AdminImagePicker.jsx'
-import { sharedBody, sharedForm } from '../lib/product-form.js'
+import { SPECIFICATION_EDITOR, sharedBody, sharedForm } from '../lib/product-form.js'
 import { PRODUCT_CONTROL, ProductButton } from './ProductUi.jsx'
+import useAutoFilters from '../hooks/useAutoFilters.js'
 
 // Tiptap stays out of the main bundle: this dialog is reachable from the eagerly loaded products page.
 const RichTextEditor = lazy(() => import('./RichTextEditor.jsx'))
@@ -35,17 +36,16 @@ function SharedFields({ form, change, categories, brands, disabled, onUploadImag
     <Field id="product-warranty" label="Bảo hành (tháng)" type="number" min={0} step={1} required value={form.WarrantyMonths} onChange={(event) => change('WarrantyMonths', event.target.value)} />
     <ChoiceField id="product-status" label="Trạng thái sản phẩm" value={form.Status} options={PRODUCT_STATUSES} onChange={(value) => change('Status', value)} />
     <div className="col-span-full font-sans"><Suspense fallback={<LoadingState label="Đang tải trình soạn thảo…" className="py-4" />}><RichTextEditor id="product-description" label="Mô tả" labelClassName="text-sm font-semibold text-ink-900" disabled={disabled} value={form.Description} onChange={(value) => change('Description', value)} onUploadImage={onUploadImage} onUploadBusy={onUploadBusy} /></Suspense></div>
-    <Field id="product-specifications" label="Thông số kỹ thuật (JSON)" hint={'Ví dụ: {"RAM":"16GB","Màn hình":"6.7 inch"}'} className="col-span-full"><textarea id="product-specifications" className={PRODUCT_CONTROL + ' font-mono'} rows={3} value={form.Specifications} onChange={(event) => change('Specifications', event.target.value)} /></Field>
+    <div className="col-span-full font-sans"><Suspense fallback={<LoadingState label="Đang tải trình soạn thảo…" className="py-4" />}><RichTextEditor id="product-specifications" label="Thông số kỹ thuật" labelClassName="text-sm font-semibold text-ink-900" {...SPECIFICATION_EDITOR} disabled={disabled} value={form.Specifications} onChange={(value) => change('Specifications', value)} /></Suspense></div>
     <div className="col-span-full"><AdminImagePicker images={form.Images} onChange={(images) => change('Images', images)} onUploadBusy={onUploadBusy} hint="Ảnh nằm trong bộ ảnh của sản phẩm." /></div>
   </div>
 }
 
 export function ParentPicker({ value, onChange, selected, lookup }) {
-  const [search, setSearch] = useState('')
-  return <div className="mb-5 rounded-xl border border-admin-border p-4">
+  const { draft, setDraft, formProps } = useAutoFilters({ keyword: lookup.keyword ?? '' }, (values) => lookup.search(values.keyword))
+  return <div className="mb-5 rounded-xl border border-admin-border p-4" onCompositionStart={formProps.onCompositionStart} onCompositionEnd={formProps.onCompositionEnd}>
     <div className="mb-3 flex items-end gap-2">
-      <Field id="parent-search" label="Tìm sản phẩm đã có" type="search" className="min-w-0 flex-1" value={search} onChange={(event) => setSearch(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); lookup.search(search.trim()) } }} />
-      <ProductButton secondary onClick={() => lookup.search(search.trim())}>Tìm</ProductButton>
+      <Field id="parent-search" label="Tìm sản phẩm đã có" type="search" maxLength={255} className="min-w-0 flex-1" value={draft.keyword} onChange={(event) => setDraft({ keyword: event.target.value })} onKeyDown={(event) => { if (event.key === 'Enter' && !event.nativeEvent.isComposing) formProps.onSubmit(event) }} />
     </div>
     {lookup.error ? <ErrorState message={lookup.error} onRetry={lookup.refresh} /> : <ChoiceField id="parent-product" label="Sản phẩm đã có" value={value} onChange={onChange} disabled={lookup.loading}
       options={[...(selected && !lookup.data?.Items.some((entry) => entry.ProductId === selected.ProductId) ? [[selected.ProductId, selected.Name]] : []),

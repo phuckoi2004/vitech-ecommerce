@@ -5,7 +5,7 @@ import { AuthContext } from '../../auth/context.js'
 import { makeAuth } from '../../test/auth.js'
 import { adminRoutes } from '../routes/index.jsx'
 
-const api = vi.hoisted(() => ({ getAdminData: vi.fn(), claimSupportConversation: vi.fn(), sendSupportMessage: vi.fn(), closeSupportConversation: vi.fn() }))
+const api = vi.hoisted(() => ({ getAdminData: vi.fn(), claimSupportConversation: vi.fn(), sendSupportMessage: vi.fn(), closeSupportConversation: vi.fn(), markSupportRead: vi.fn() }))
 vi.mock('../../services/api/admin.js', () => ({ getAdminData: api.getAdminData, getDashboardStock: async () => ({ Items: [], Total: 0 }), getRevenueSeries: async () => [] }))
 vi.mock('../services/support.js', async (original) => ({ ...await original(), ...Object.fromEntries(Object.entries(api).filter(([key]) => key !== 'getAdminData')) }))
 const permissions = ['admin.portal', 'chat:view', 'chat:create']
@@ -21,18 +21,26 @@ function open(path = '/admin/support', role = 'Admin', granted = permissions) {
 const page = (items) => ({ Items: structuredClone(items), Total: items.length, Page: 1, PageSize: 100 })
 beforeEach(() => {
   vi.resetAllMocks()
-  conversations = [{ ...initial, LastMessage: message }]; messages = [message]; actorId = 'Admin-id'
-  api.getAdminData.mockImplementation(async (_, path) => {
+  conversations = [{ ...initial, LastMessage: message }]; messages = [{ ...message, IsRead: false }]; actorId = 'Admin-id'
+  api.getAdminData.mockImplementation(async (_, path, query) => {
     if (path === '/users/me/notifications/unread-count') return { Count: 0 }
     if (path === '/admin/conversations/unassigned') return page(conversations.filter((row) => row.Status === 'Open' && !row.AssignedStaffId))
-    if (path === '/admin/conversations/assigned') return page(conversations.filter((row) => row.Status === 'Open' && row.AssignedStaffId === actorId))
-    const row = conversations.find((row) => path === '/admin/conversations/' + row.ConversationId)
-    if (row) return { ...structuredClone(row), Messages: structuredClone(messages.filter((m) => m.ConversationId === row.ConversationId)) }
+    if (path === '/admin/conversations/assigned') return page(conversations.filter((row) => row.Status === (query?.status || 'Open') && row.AssignedStaffId === actorId))
+    if (path === '/admin/conversations') return page(conversations.filter(row => !query?.status || row.Status === query.status))
+    const row = conversations.find((row) => path === '/admin/conversations/' + row.ConversationId + '/summary')
+    if (row) return structuredClone(row)
+    const thread = conversations.find(row => path === '/admin/conversations/' + row.ConversationId + '/message-window')
+    if (thread) {
+      const all = messages.filter(m => m.ConversationId === thread.ConversationId).sort((a, b) => Date.parse(a.SentAt) - Date.parse(b.SentAt) || a.MessageId.localeCompare(b.MessageId))
+      const items = query?.after_message_id ? all.slice(all.findIndex(m => m.MessageId === query.after_message_id) + 1) : query?.before_message_id ? all.slice(0, all.findIndex(m => m.MessageId === query.before_message_id)).slice(-50) : all.slice(-50)
+      return { ...page(items), Total: all.length }
+    }
     throw Object.assign(new Error('Không tìm thấy hội thoại'), { status: 404 })
   })
   api.claimSupportConversation.mockImplementation(async (_, id) => { const row = conversations.find((c) => c.ConversationId === id); row.AssignedStaffId = actorId; return structuredClone(row) })
   api.sendSupportMessage.mockImplementation(async (_, id, content) => { const reply = { ...message, MessageId: 'reply', ConversationId: id, SenderType: 'Staff', Content: content }; messages.push(reply); return reply })
   api.closeSupportConversation.mockImplementation(async (_, id) => { conversations.find((c) => c.ConversationId === id).Status = 'Closed' })
+  api.markSupportRead.mockImplementation(async (_, id, ids) => { messages.forEach(message => { if (message.ConversationId === id && ids.includes(message.MessageId)) message.IsRead = true }); return { Updated: ids.length } })
 })
 
 test('waiting screen uses real counts and messages, omitting the unwanted instruction', async () => {
@@ -235,33 +243,51 @@ test('list load errors do not fabricate zero counts and retry succeeds', async (
 
 test('polling reloads incoming messages without clearing the reply draft', async () => {
   conversations[0].AssignedStaffId = 'Admin-id'
-  open('/admin/support?tab=active&conversation=c1')
-  const reply = await screen.findByRole('textbox', { name: 'Tin nhắn trả lời' })
-  fireEvent.change(reply, { target: { value: 'Bản nháp' } })
-  messages.push({ ...message, MessageId: 'm2', Content: 'Khách vừa gửi thêm' })
-  // Exercise a real polling interval without advancing unrelated auth timers.
-  await act(async () => { await new Promise((resolve) => setTimeout(resolve, 5200)) })
-  expect(within(screen.getByRole('log')).getByText('Khách vừa gửi thêm')).toBeInTheDocument()
-  expect(reply).toHaveValue('Bản nháp')
-}, 10000)
+  await import('./SupportPage.jsx')
+  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+  try {
+    await act(async () => { open('/admin/support?tab=active&conversation=c1') })
+    const reply = screen.getByRole('textbox', { name: 'Tin nhắn trả lời' })
+    fireEvent.change(reply, { target: { value: 'Bản nháp' } })
+    messages.push({ ...message, MessageId: 'm2', Content: 'Khách vừa gửi thêm' })
+    await act(async () => { await vi.advanceTimersByTimeAsync(5000) })
+    expect(within(screen.getByRole('log')).getByText('Khách vừa gửi thêm')).toBeInTheDocument()
+    expect(reply).toHaveValue('Bản nháp')
+    expect(api.getAdminData).toHaveBeenCalledWith('access-for-test', '/admin/conversations/c1/message-window', { limit: 100, after_sent_at: message.SentAt, after_message_id: 'm1' }, expect.any(AbortSignal))
+  } finally { vi.useRealTimers() }
+})
 
 test('manual refresh observes a customer closure and disables replies', async () => {
   conversations[0].AssignedStaffId = 'Admin-id'
-  open('/admin/support?tab=active&conversation=c1')
-  const reply = await screen.findByRole('textbox', { name: 'Tin nhắn trả lời' })
+  await import('./SupportPage.jsx')
+  // Settle the initial read acknowledgement and the inbox refresh it triggers
+  // before clicking a button whose enabled state depends on that refresh.
+  await act(async () => { open('/admin/support?tab=active&conversation=c1') })
+  const reply = screen.getByRole('textbox', { name: 'Tin nhắn trả lời' })
   fireEvent.change(reply, { target: { value: 'Chưa gửi' } })
+  const refresh = screen.getByRole('button', { name: 'Làm mới' })
+  expect(refresh).toBeEnabled()
+  const original = api.getAdminData.getMockImplementation()
+  let finishRefresh
+  api.getAdminData.mockImplementation((...args) => args[1] === '/admin/conversations/c1/summary'
+    ? new Promise(resolve => { finishRefresh = () => resolve(structuredClone(conversations[0])) }) : original(...args))
   conversations[0].Status = 'Closed'
-  fireEvent.click(screen.getByRole('button', { name: 'Làm mới' }))
-  await waitFor(() => expect(screen.queryByRole('textbox')).not.toBeInTheDocument())
-  expect(screen.getByText('Đã kết thúc')).toBeInTheDocument()
+  await act(async () => { fireEvent.click(refresh) })
+  expect(finishRefresh).toBeTypeOf('function')
+  expect(screen.getByRole('button', { name: 'Gửi tin nhắn' })).toBeDisabled()
+  expect(reply).toHaveValue('Chưa gửi')
+  await act(async () => { finishRefresh() })
+  expect(screen.queryByRole('textbox', { name: 'Tin nhắn trả lời' })).not.toBeInTheDocument()
+  expect(within(screen.getByRole('region', { name: 'Nội dung cuộc trò chuyện' })).getByText('Đã kết thúc')).toBeInTheDocument()
   expect(api.sendSupportMessage).not.toHaveBeenCalled()
+  expect(api.closeSupportConversation).not.toHaveBeenCalled()
 })
 
 test('late detail response from an earlier selection cannot replace the selected chat', async () => {
   conversations.push({ ...initial, ConversationId: 'c2', CustomerName: 'Khách thứ hai' })
   const original = api.getAdminData.getMockImplementation()
   let finish
-  api.getAdminData.mockImplementation((...args) => args[1] === '/admin/conversations/c1' ? new Promise((resolve) => { finish = resolve }) : original(...args))
+  api.getAdminData.mockImplementation((...args) => args[1] === '/admin/conversations/c1/summary' ? new Promise((resolve) => { finish = resolve }) : original(...args))
   open('/admin/support?conversation=c1')
   fireEvent.click(await screen.findByRole('button', { name: 'Mở cuộc trò chuyện với Khách thứ hai' }))
   await within(await screen.findByRole('region', { name: 'Nội dung cuộc trò chuyện' })).findByRole('heading', { name: 'Khách thứ hai' })
@@ -278,7 +304,8 @@ test('additional inbox pages keep totals and select the newly loaded conversatio
   await screen.findByRole('button', { name: 'Mở cuộc trò chuyện với Khách trang hai' })
   expect(screen.getByText('Trang 2 / 2')).toBeInTheDocument()
   expect(screen.getByRole('tab', { name: 'Đang chờ 101' })).toBeInTheDocument()
-  await waitFor(() => expect(router.state.location.search).toContain('conversation=c101'))
+  expect(router.state.location.search).toContain('page=2')
+  expect(screen.getByRole('button', { name: 'Mở cuộc trò chuyện với Khách trang hai' })).toHaveAttribute('aria-current', 'true')
   expect(api.getAdminData).toHaveBeenCalledWith('access-for-test', '/admin/conversations/unassigned', { page: 2, page_size: 100 }, expect.any(AbortSignal))
 })
 
@@ -299,4 +326,74 @@ test('transcript sorts by server timestamp and message ID instead of database re
   open()
   const log = await screen.findByRole('log')
   expect([...log.querySelectorAll('article p:first-child')].map((p) => p.textContent)).toEqual(['Đầu tiên', 'Thứ hai', 'Cuối'])
+})
+
+test.each(['Admin', 'Staff'])('%s opens closed history using the permitted scope without reply controls', async role => {
+  conversations[0].AssignedStaffId = role + '-id'; conversations[0].Status = 'Closed'
+  open('/admin/support?tab=closed', role)
+  const log = await screen.findByRole('log')
+  expect(within(log).getByText(message.Content)).toBeInTheDocument()
+  expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: 'Kết thúc hỗ trợ' })).not.toBeInTheDocument()
+  expect(api.getAdminData).toHaveBeenCalledWith('access-for-test', role === 'Admin' ? '/admin/conversations' : '/admin/conversations/assigned', { status: 'Closed', page: 1, page_size: 100 }, expect.any(AbortSignal))
+})
+
+test('Admin all-conversations view does not grant takeover or mark another operator’s messages read', async () => {
+  conversations[0].AssignedStaffId = 'another-staff'
+  open('/admin/support?tab=all')
+  await screen.findByText('Cuộc trò chuyện đang do nhân viên khác phụ trách.')
+  expect(screen.getByRole('tab', { name: 'Tất cả hội thoại 1' })).toHaveAttribute('aria-selected', 'true')
+  expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
+  expect(api.markSupportRead).not.toHaveBeenCalled()
+})
+
+test('Staff cannot select the Admin all-conversations scope through the URL', async () => {
+  open('/admin/support?tab=all', 'Staff')
+  await screen.findByRole('log')
+  expect(screen.queryByRole('tab', { name: /Tất cả hội thoại/ })).not.toBeInTheDocument()
+  expect(api.getAdminData.mock.calls.some(([, path]) => path === '/admin/conversations')).toBe(false)
+})
+
+test('Admin can observe existing AI conversations without receiving staff claim or reply controls', async () => {
+  conversations[0].Mode = 'AI'
+  open('/admin/support?tab=all')
+  await screen.findByText('Hội thoại với AI chỉ được xem tại đây.')
+  expect(screen.queryByRole('button', { name: 'Tiếp nhận cuộc trò chuyện' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
+  expect(api.markSupportRead).not.toHaveBeenCalled()
+})
+
+test('only the opened assigned thread marks incoming customer messages read', async () => {
+  conversations[0].AssignedStaffId = 'Staff-id'
+  messages.push({ ...message, MessageId: 'staff-reply', SenderType: 'Staff' })
+  open('/admin/support?tab=active', 'Staff')
+  await waitFor(() => expect(api.markSupportRead).toHaveBeenCalledExactlyOnceWith('access-for-test', 'c1', ['m1']))
+  expect(await within(screen.getByRole('log')).findByText(/Đã đọc/)).toBeInTheDocument()
+})
+
+test('long threads fetch the latest window then load older messages without requesting the full transcript', async () => {
+  messages = Array.from({ length: 120 }, (_, i) => ({ ...message, MessageId: 'm' + String(i).padStart(3, '0'), Content: 'Nội dung ' + i }))
+  open('/admin/support?conversation=c1')
+  await within(await screen.findByRole('log')).findByText('Nội dung 119', { exact: true })
+  expect(screen.queryByText('Nội dung 0', { exact: true })).not.toBeInTheDocument()
+  fireEvent.click(screen.getByRole('button', { name: 'Xem tin nhắn cũ hơn' }))
+  await within(screen.getByRole('log')).findByText('Nội dung 20', { exact: true })
+  expect(api.getAdminData).toHaveBeenCalledWith('access-for-test', '/admin/conversations/c1/message-window', { limit: 50, before_sent_at: message.SentAt, before_message_id: 'm070' }, expect.any(AbortSignal))
+  expect(api.getAdminData.mock.calls.some(([, path]) => path === '/admin/conversations/c1')).toBe(false)
+})
+
+test('on compact screens the inbox opens first and reads start only after selecting a conversation', async () => {
+  vi.stubGlobal('matchMedia', () => ({ matches: true, addEventListener() {}, removeEventListener() {} }))
+  try {
+    conversations[0].AssignedStaffId = 'Staff-id'
+    open('/admin/support?tab=active', 'Staff')
+    const row = await screen.findByRole('button', { name: 'Mở cuộc trò chuyện với Nguyễn Văn An' })
+    expect(api.markSupportRead).not.toHaveBeenCalled()
+    expect(screen.queryByRole('log')).not.toBeInTheDocument()
+    fireEvent.click(row)
+    await screen.findByRole('textbox', { name: 'Tin nhắn trả lời' })
+    await waitFor(() => expect(api.markSupportRead).toHaveBeenCalledTimes(1))
+    fireEvent.click(screen.getByRole('button', { name: 'Quay lại danh sách hội thoại' }))
+    expect(document.querySelector('#support-workspace')).toHaveAttribute('data-mobile-view', 'list')
+  } finally { vi.unstubAllGlobals() }
 })

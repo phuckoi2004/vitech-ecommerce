@@ -3,7 +3,7 @@ import Button from '../../components/shared/Button.jsx'
 import { productInitials } from '../../lib/admin-products.js'
 
 export function ProductButton({ secondary = false, className = '', ...props }) {
-  return <Button variant={secondary ? 'secondary' : 'primary'} className={`h-10! cursor-pointer rounded-[10px]! border px-3.5! font-admin! text-xs! ${secondary ? 'border-admin-border! bg-white! text-admin-blue! enabled:hover:bg-admin-soft!' : 'border-admin-blue! bg-admin-blue! text-white! enabled:hover:bg-admin-navy!'} ${className}`} {...props} />
+  return <Button variant={secondary ? 'secondary' : 'primary'} className={`admin-button h-10! cursor-pointer rounded-[10px]! border px-3.5! font-admin! text-sm! ${secondary ? 'border-admin-border! bg-white! text-admin-blue! enabled:hover:bg-admin-soft!' : 'border-admin-blue! bg-admin-blue! text-white! enabled:hover:bg-admin-navy!'} ${className}`} {...props} />
 }
 
 export function ProductThumbnail({ name, src, large = false }) {

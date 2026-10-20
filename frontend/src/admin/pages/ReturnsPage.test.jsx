@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import { beforeEach, expect, test, vi } from 'vitest'
 import { AuthContext } from '../../auth/context.js'
@@ -61,19 +61,19 @@ test('newest first within each group, quick status filter and staff read access'
   expect(screen.getByRole('combobox', { name: 'Trạng thái', exact: true })).toHaveValue('Pending')
 })
 
-test('accent-insensitive search and inclusive Vietnam dates combine on submit, reset pagination and clear', async () => {
+test('accent-insensitive search and inclusive Vietnam dates apply automatically, reset pagination and clear', async () => {
   rows = [item, { ...item, ReturnRequestId: 'r1', RequestCode: 'RT-1', RequestedAt: '2026-10-14T17:00:00Z' }]
   const router = renderPage('/admin/returns?page=2')
   await screen.findByText('2 yêu cầu')
   fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'nguyen van an' } })
   fireEvent.change(screen.getByLabelText('Từ ngày'), { target: { value: '2026-10-15' } })
   fireEvent.change(screen.getByLabelText('Đến ngày'), { target: { value: '2026-10-15' } })
-  fireEvent.click(screen.getByRole('button', { name: 'Tìm kiếm', exact: true }))
+  await waitFor(() => expect(router.state.location.search).toContain('keyword=nguyen+van+an'))
   expect(tableRows()).toEqual(['RT-0', 'RT-1'])
   expect(router.state.location.search).not.toContain('page=')
   fireEvent.change(screen.getByLabelText('Từ ngày'), { target: { value: '2026-10-16' } })
   expect(screen.getByRole('alert')).toHaveTextContent('Từ ngày không được sau Đến ngày.')
-  expect(screen.getByRole('button', { name: 'Tìm kiếm', exact: true })).toBeDisabled()
+  expect(screen.queryByRole('button', { name: 'Tìm kiếm', exact: true })).not.toBeInTheDocument()
   fireEvent.click(screen.getByRole('button', { name: 'Xóa lọc' }))
   expect(screen.getByRole('searchbox')).toHaveValue('')
   expect(screen.getByLabelText('Từ ngày')).toHaveValue('')

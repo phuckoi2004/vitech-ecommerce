@@ -98,10 +98,13 @@ function withoutPastedImages(html) {
 // Tiptap editor for product descriptions. `value` may be legacy plain text or saved HTML; `onChange` receives HTML
 // (or '' when empty) only after the administrator edits, so untouched descriptions are saved exactly as loaded.
 // `onUploadImage(file)` resolves to the uploaded image URL; `onUploadBusy` lets the form block saving meanwhile.
+// Other fields (technical specifications) reuse it with their own texts and `allowImages={false}`.
 export default function RichTextEditor({ id, label, labelClassName = '', value, onChange, readOnly = false, disabled = false,
-  placeholder = 'Nhập mô tả sản phẩm…', onUploadImage, onUploadBusy }) {
+  placeholder = 'Nhập mô tả sản phẩm…', onUploadImage, onUploadBusy, allowImages = true, emptyText = 'Chưa có mô tả sản phẩm.',
+  toolbarLabel = 'Định dạng mô tả sản phẩm', hint, readOnlyHint = 'Mô tả dùng chung cho các biến thể của sản phẩm.',
+  imageUploadLabel = 'Chọn ảnh để chèn vào mô tả' }) {
   const labelId = id + '-label', hintId = id + '-hint', linkInputId = id + '-link', imageAltId = id + '-image-alt'
-  const editable = !readOnly && !disabled, canUpload = Boolean(onUploadImage)
+  const editable = !readOnly && !disabled, canUpload = allowImages && Boolean(onUploadImage)
   const lastValue = useRef(value), toolbar = useRef(null), fileInput = useRef(null), uploading = useRef(false), mounted = useRef(true), imageSelection = useRef(null)
   const callbacks = useRef({})
   const [linkDraft, setLinkDraft] = useState(null), [linkError, setLinkError] = useState('')
@@ -116,9 +119,9 @@ export default function RichTextEditor({ id, label, labelClassName = '', value, 
         link: { openOnClick: false, defaultProtocol: 'https', HTMLAttributes: { target: '_blank', rel: 'noopener noreferrer nofollow' } },
       }),
       TextStyle, FontFamily, FontSize,
-      Image.configure({ allowBase64: false }),
+      ...(allowImages ? [Image.configure({ allowBase64: false })] : []),
       TextAlign.configure({ types: ['paragraph'], alignments: ['left', ...ALIGNMENTS] }),
-      Placeholder.configure({ showOnlyWhenEditable: false, placeholder: ({ editor: current }) => current.isEditable ? placeholder : 'Chưa có mô tả sản phẩm.' }),
+      Placeholder.configure({ showOnlyWhenEditable: false, placeholder: ({ editor: current }) => current.isEditable ? placeholder : emptyText }),
     ],
     content: editorHtml(value),
     editable,
@@ -271,7 +274,7 @@ export default function RichTextEditor({ id, label, labelClassName = '', value, 
   return <div className="flex min-w-0 flex-col gap-[7px]">
     <span id={labelId} className={labelClassName} onClick={() => editor?.commands.focus()}>{label}</span>
     <div className="vt-rich-editor" data-readonly={readOnly}>
-      {!readOnly && <div ref={toolbar} role="toolbar" aria-label="Định dạng mô tả sản phẩm" aria-controls={id} onKeyDown={moveFocus}
+      {!readOnly && <div ref={toolbar} role="toolbar" aria-label={toolbarLabel} aria-controls={id} onKeyDown={moveFocus}
         className="flex flex-wrap items-center gap-0.5 border-b border-admin-border bg-admin-page px-1.5 py-1.5">
         <div className="flex items-center gap-1.5">
           <select aria-label="Phông chữ" title="Phông chữ" className={SELECT + ' w-[140px]'} disabled={busy} value={familyOption ? familyOption[0] : fontFamily}
@@ -286,7 +289,7 @@ export default function RichTextEditor({ id, label, labelClassName = '', value, 
         </div>
         {TOOL_GROUPS.map((group, groupIndex) => <div key={groupIndex} className="flex items-center gap-0.5">
           <span className="mx-1 h-5 w-px bg-admin-border" aria-hidden="true" />
-          {group.map((tool) => {
+          {group.filter((tool) => allowImages || tool.key !== 'image').map((tool) => {
             const toolState = state?.[tool.key], toggle = Boolean(tool.active)
             return <button key={tool.key} type="button" title={tool.label} aria-label={tool.label} aria-pressed={toggle ? Boolean(toolState?.active) : undefined}
               tabIndex={tool.key === focusable ? 0 : -1} disabled={busy || toolState?.enabled === false || (tool.key === 'image' && !canUpload && !state?.image.active)}
@@ -311,7 +314,7 @@ export default function RichTextEditor({ id, label, labelClassName = '', value, 
       {imageDraft !== null && editable && <div className="flex flex-wrap items-center gap-2 border-b border-admin-border bg-white px-2.5 py-2">
         {canUpload && <>
           <button type="button" disabled={busy} className={PANEL_PRIMARY} onClick={() => fileInput.current?.click()}>Tải ảnh từ máy</button>
-          <input ref={fileInput} type="file" tabIndex={-1} disabled={busy} className="sr-only" aria-label="Chọn ảnh để chèn vào mô tả" accept={PRODUCT_IMAGE_TYPES.join(',')} multiple
+          <input ref={fileInput} type="file" tabIndex={-1} disabled={busy} className="sr-only" aria-label={imageUploadLabel} accept={PRODUCT_IMAGE_TYPES.join(',')} multiple
             onChange={(event) => void uploadImages(event.target.files)} />
           <span className="text-[11px] text-admin-muted">{PRODUCT_IMAGE_RULE}</span>
         </>}
@@ -325,8 +328,8 @@ export default function RichTextEditor({ id, label, labelClassName = '', value, 
     </div>
     {imageStatus && <p role="status" className="m-0 text-[11px] text-admin-blue">{imageStatus}</p>}
     {imageError && <p role="alert" className="m-0 text-[11px] text-admin-red">{imageError}</p>}
-    <p id={hintId} className="m-0 text-[11px] text-admin-muted">{readOnly ? 'Mô tả dùng chung cho các biến thể của sản phẩm.'
-      : 'Bôi đen chữ rồi chọn phông, cỡ chữ hoặc định dạng. Enter tạo đoạn mới, Shift + Enter xuống dòng trong cùng đoạn.'
+    <p id={hintId} className="m-0 text-[11px] text-admin-muted">{readOnly ? readOnlyHint
+      : hint ?? 'Bôi đen chữ rồi chọn phông, cỡ chữ hoặc định dạng. Enter tạo đoạn mới, Shift + Enter xuống dòng trong cùng đoạn.'
         + (canUpload ? ' Có thể kéo thả hoặc dán ảnh vào ô mô tả.' : '')}</p>
   </div>
 }

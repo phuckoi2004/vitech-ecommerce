@@ -88,7 +88,7 @@ class CatalogItemService(BaseService):
             self.images.create({"ProductId": product_id, "ImageUrl": url, "DisplayOrder": index, "IsDefault": default})
         self.images.flush()
 
-    def _save_media(self, product, variant_id, data, *, previous_default=None):
+    def _save_media(self, product, variant_id, data, *, previous_default=None, created=False):
         existing = self.images.list_by_product(product.ProductId)
         known = {image.ImageUrl for image in existing}
         order = max((image.DisplayOrder for image in existing), default=-1) + 1
@@ -107,7 +107,8 @@ class CatalogItemService(BaseService):
         set_variant_media(product, variant_id, urls=urls,
                           default_url=data.DefaultImageUrl or (urls[0] if urls else None),
                           make_default=data.IsDefaultVariant,
-                          variants=self.variants.list_by_product(product.ProductId), previous_default=previous_default)
+                          variants=self.variants.list_by_product(product.ProductId), previous_default=previous_default,
+                          created=created)
         self.products.flush()
 
     def create_item(self, actor: Actor, data: CatalogItemCreate) -> CatalogItemResponse:
@@ -126,7 +127,7 @@ class CatalogItemService(BaseService):
             previous_default = default_variant_id(product, self.variants.list_by_product(product_id))
             variant = self.stock_items.create_variant(actor, ProductVariantCreate(
                 ProductId=product_id, **self._variant_values(data)))
-            self._save_media(product, variant.ProductVariantId, data, previous_default=previous_default)
+            self._save_media(product, variant.ProductVariantId, data, previous_default=previous_default, created=True)
             self.session.expire(product, ["variants"])
             return self.get_item(actor, variant.ProductVariantId)
 

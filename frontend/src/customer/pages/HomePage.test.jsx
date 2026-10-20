@@ -63,6 +63,11 @@ function mockApi(overrides = {}) {
       }
       const brand = url.searchParams.get('brand_id')
       if (brand) ids = ids.filter((id) => DETAILS[id].BrandId === brand)
+      ids = ids.filter((id) => {
+        const price = Math.min(...DETAILS[id].Variants.map((variant) => Number(variant.Price)))
+        return (!url.searchParams.has('min_price') || price >= Number(url.searchParams.get('min_price')))
+          && (!url.searchParams.has('max_price') || price <= Number(url.searchParams.get('max_price')))
+      })
       const size = Number(url.searchParams.get('page_size'))
       return json({ Items: ids.slice(0, size).map((id) => ({ ProductId: id, BrandId: DETAILS[id].BrandId,
         CategoryId: DETAILS[id].CategoryId, SoldQuantity: DETAILS[id].SoldQuantity })), Total: ids.length, Page: 1, PageSize: size })
@@ -120,12 +125,13 @@ describe('catalog sections', () => {
     renderHome()
 
     const menu = await screen.findByRole('navigation', { name: 'Danh mục sản phẩm' })
-    expect(await within(menu).findByRole('link', { name: 'Điện thoại' })).toHaveAttribute('href', '/danh-muc/dien-thoai')
+    expect(await within(menu).findByRole('button', { name: 'Điện thoại', exact: true })).toHaveAttribute('aria-expanded', 'false')
 
     const newest = screen.getByRole('region', { name: 'Sản phẩm nổi bật' })
     const iphone = (await within(newest).findByRole('heading', { name: 'iPhone 18 Pro Max' })).closest('a')
     expect(iphone).toHaveAttribute('href', '/san-pham/iphone-18-pro-max')
-    expect(iphone).toHaveTextContent('Từ 20.990.000 ₫')
+    expect(iphone).toHaveTextContent('20.990.000 ₫')
+    expect(iphone).not.toHaveTextContent('Từ')
     expect(iphone).toHaveTextContent('4,8')
     expect(iphone).toHaveTextContent('Đã bán 1,2k')
     const galaxy = within(newest).getByRole('heading', { name: 'Galaxy S26 Ultra' }).closest('a')
@@ -251,18 +257,158 @@ describe('catalog sections', () => {
   })
 })
 
-describe('header', () => {
-  test('search opens the search page with the keyword; an empty search does nothing', async () => {
-    mockApi()
+describe('category menu beside the banner', () => {
+  test('category images come from the API and fall back to icons if missing or broken', async () => {
+    mockApi({ '/categories': (url) => json(url.searchParams.get('parent_id')
+      ? [{ ...CHILDREN['c-phone'][0], ImageUrl: 'https://cdn.example/child.png' }]
+      : ROOTS.map((item, index) => ({ ...item, ImageUrl: index === 0 ? 'https://cdn.example/phone.png' : null }))) })
+    renderHome()
+    const menu = await screen.findByRole('navigation', { name: 'Danh mục sản phẩm' })
+    const button = await within(menu).findByRole('button', { name: 'Điện thoại', exact: true })
+    expect(button.querySelector('img')).toHaveAttribute('src', 'https://cdn.example/phone.png')
+    fireEvent.error(button.querySelector('img'))
+    expect(button.querySelector('svg')).toBeInTheDocument()
+    expect(within(menu).getByRole('button', { name: 'Laptop', exact: true }).querySelector('svg')).toBeInTheDocument()
+  })
+
+  test('brand and price filters keep category scope, without child categories or suggestions', async () => {
+    const calls = mockApi({
+      '/brands': json([...BRANDS, { BrandId: 'b-unrelated', Name: 'Hãng chỉ bán laptop', Slug: 'laptop-brand' }]),
+      '/categories/slug/dien-thoai': json(ROOTS[0]),
+    })
     const user = userEvent.setup()
+    const router = renderHome()
+    const menu = await screen.findByRole('navigation', { name: 'Danh mục sản phẩm' })
+    const phone = await within(menu).findByRole('button', { name: 'Điện thoại', exact: true })
+    await user.click(phone)
+    const panel = await within(menu).findByRole('region', { name: 'Khám phá Điện thoại' })
+    expect(phone).toHaveAttribute('aria-expanded', 'true')
+    expect(await within(panel).findByRole('link', { name: 'Apple', exact: true })).toHaveAttribute('href', '/danh-muc/dien-thoai?brand=b-apple')
+    expect(await within(panel).findByRole('link', { name: 'Samsung', exact: true })).toHaveAttribute('href', '/danh-muc/dien-thoai?brand=b-samsung')
+    const samsung = within(panel).getByRole('link', { name: 'Samsung', exact: true })
+    expect(samsung.querySelector('img')).toHaveAttribute('src', BRANDS[1].LogoUrl)
+    fireEvent.error(samsung.querySelector('img'))
+    expect(samsung).toHaveTextContent('Samsung')
+    expect(within(panel).queryByRole('link', { name: 'Hãng chỉ bán laptop' })).not.toBeInTheDocument()
+    expect(within(panel).queryByRole('region', { name: 'Danh mục con' })).not.toBeInTheDocument()
+    expect(within(panel).queryByRole('region', { name: 'Gợi ý sản phẩm' })).not.toBeInTheDocument()
+    expect(within(panel).queryByRole('link', { name: 'Xem tất cả' })).not.toBeInTheDocument()
+    expect(within(panel).getByRole('link', { name: 'Dưới 5 triệu' })).toHaveAttribute('href', '/danh-muc/dien-thoai?price=under-5')
+    expect(within(panel).getByRole('link', { name: 'Từ 20 triệu' })).toHaveAttribute('href', '/danh-muc/dien-thoai?price=from-20')
+    expect(within(panel).getByRole('region', { name: 'Thương hiệu' }).querySelectorAll('a')).toHaveLength(2)
+    await user.click(within(panel).getByRole('link', { name: 'Apple', exact: true }))
+    expect(router.state.location.pathname).toBe('/danh-muc/dien-thoai')
+    expect(router.state.location.search).toBe('?brand=b-apple')
+    await waitFor(() => expect(calls.some((call) => call.startsWith('/products?') && call.includes('category_id=c-phone') && call.includes('brand_id=b-apple'))).toBe(true))
+  })
+
+  test('switching to an empty category removes previous brands', async () => {
+    mockApi()
+    renderHome()
+    const menu = await screen.findByRole('navigation', { name: 'Danh mục sản phẩm' })
+    fireEvent.click(await within(menu).findByRole('button', { name: 'Điện thoại', exact: true }))
+    const phone = await within(menu).findByRole('region', { name: 'Khám phá Điện thoại' })
+    await within(phone).findByRole('link', { name: 'Apple', exact: true })
+    fireEvent.click(within(menu).getByRole('button', { name: 'Laptop', exact: true }))
+    const laptop = await within(menu).findByRole('region', { name: 'Khám phá Laptop' })
+    await within(laptop).findByText('Chưa có thương hiệu có sản phẩm trong danh mục này.')
+    expect(within(laptop).queryByRole('link', { name: 'Apple', exact: true })).not.toBeInTheDocument()
+    expect(within(laptop).getAllByRole('link')).toHaveLength(5)
+  })
+
+  test('choosing a menu price range applies it to all category results', async () => {
+    const calls = mockApi({ '/categories/slug/dien-thoai': () => json(ROOTS[0]) })
+    const router = renderHome()
+    const menu = await screen.findByRole('navigation', { name: 'Danh mục sản phẩm' })
+    fireEvent.click(await within(menu).findByRole('button', { name: 'Điện thoại', exact: true }))
+    fireEvent.click(within(menu).getByRole('link', { name: 'Dưới 5 triệu' }))
+    await screen.findByText('Không có sản phẩm phù hợp')
+    expect(router.state.location.pathname).toBe('/danh-muc/dien-thoai')
+    expect(screen.getByRole('combobox', { name: 'Khoảng giá' })).toHaveValue('under-5')
+    expect(calls.some((call) => call.startsWith('/products?') && call.includes('category_id=c-phone') && call.includes('max_price=4999999.99'))).toBe(true)
+  })
+
+  test('keyboard opens and closes the panel with focus restored, and outside clicks dismiss it', async () => {
+    mockApi()
+    renderHome()
+    const menu = await screen.findByRole('navigation', { name: 'Danh mục sản phẩm' })
+    const button = await within(menu).findByRole('button', { name: 'Điện thoại', exact: true })
+    button.focus()
+    fireEvent.keyDown(button, { key: 'ArrowRight' })
+    const panel = await within(menu).findByRole('region', { name: 'Khám phá Điện thoại' })
+    expect(within(panel).getByRole('button', { name: 'Đóng danh mục' })).toHaveFocus()
+    fireEvent.keyDown(document.activeElement, { key: 'Escape' })
+    expect(within(menu).queryByRole('region', { name: 'Khám phá Điện thoại' })).not.toBeInTheDocument()
+    expect(button).toHaveFocus()
+    fireEvent.click(button)
+    fireEvent.pointerDown(document.body)
+    expect(button).toHaveAttribute('aria-expanded', 'false')
+  })
+
+  test('desktop hover opens the menu and clicking the same category keeps it open', async () => {
+    vi.stubGlobal('matchMedia', () => ({ matches: true }))
+    mockApi()
+    renderHome()
+    const menu = await screen.findByRole('navigation', { name: 'Danh mục sản phẩm' })
+    const button = await within(menu).findByRole('button', { name: 'Điện thoại', exact: true })
+    fireEvent.mouseEnter(button)
+    expect(button).toHaveAttribute('aria-expanded', 'true')
+    fireEvent.click(button)
+    expect(button).toHaveAttribute('aria-expanded', 'true')
+    fireEvent.click(within(menu).getByRole('button', { name: 'Đóng danh mục' }))
+    expect(button).toHaveAttribute('aria-expanded', 'false')
+  })
+
+  test('failed brand data is retryable rather than shown as an empty category', async () => {
+    let failing = true
+    mockApi({ '/products': (url) => url.searchParams.get('page_size') === '100' && failing
+      ? json({ detail: 'Không tải được hãng.' }, 503)
+      : json({ Items: [{ ProductId: 'p1', BrandId: 'b-apple' }], Total: 1, Page: 1, PageSize: 100 }) })
+    renderHome()
+    const menu = await screen.findByRole('navigation', { name: 'Danh mục sản phẩm' })
+    fireEvent.click(await within(menu).findByRole('button', { name: 'Điện thoại', exact: true }))
+    const panel = await within(menu).findByRole('region', { name: 'Khám phá Điện thoại' })
+    const brands = within(panel).getByRole('region', { name: 'Thương hiệu' })
+    await within(brands).findByText('Không tải được hãng.')
+    expect(within(brands).queryByText('Chưa có thương hiệu có sản phẩm trong danh mục này.')).not.toBeInTheDocument()
+    failing = false
+    fireEvent.click(within(brands).getByRole('button', { name: 'Thử lại' }))
+    expect(await within(brands).findByRole('link', { name: 'Apple' })).toBeInTheDocument()
+  })
+})
+
+describe('header', () => {
+  test('typing searches without a button, clearing resets results and Back returns home', async () => {
+    mockApi()
     const router = renderHome()
 
     const box = await screen.findByRole('searchbox', { name: 'Tìm kiếm sản phẩm' })
-    await user.click(screen.getByRole('button', { name: 'Tìm kiếm' }))
+    expect(screen.queryByRole('button', { name: 'Tìm kiếm', exact: true })).not.toBeInTheDocument()
+    fireEvent.change(box, { target: { value: '  iphone 18  ' } })
     expect(router.state.location.pathname).toBe('/')
-    await user.type(box, '  iphone 18  ')
-    await user.click(screen.getByRole('button', { name: 'Tìm kiếm' }))
-    expect(`${router.state.location.pathname}${router.state.location.search}`).toBe('/tim-kiem?q=iphone%2018')
+    await waitFor(() => expect(`${router.state.location.pathname}${router.state.location.search}`).toBe('/tim-kiem?q=iphone%2018'))
+    await waitFor(() => expect(box).toHaveValue('iphone 18'))
+    fireEvent.change(box, { target: { value: '' } })
+    await waitFor(() => expect(`${router.state.location.pathname}${router.state.location.search}`).toBe('/tim-kiem'))
+    await act(async () => router.navigate(-1))
+    expect(router.state.location.pathname).toBe('/')
+    expect(box).toHaveValue('')
+  })
+
+  test('Vietnamese composition finishes before searching, and navigation cancels a pending search', async () => {
+    mockApi()
+    const router = renderHome()
+    const box = await screen.findByRole('searchbox', { name: 'Tìm kiếm sản phẩm' })
+    fireEvent.compositionStart(box)
+    fireEvent.change(box, { target: { value: 'điện thoại' } })
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 350)) })
+    expect(router.state.location.pathname).toBe('/')
+    fireEvent.compositionEnd(box)
+    await waitFor(() => expect(router.state.location.search).toBe('?q=' + encodeURIComponent('điện thoại')))
+    fireEvent.change(box, { target: { value: 'laptop' } })
+    await act(async () => router.navigate('/gioi-thieu'))
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 350)) })
+    expect(router.state.location.pathname).toBe('/gioi-thieu')
   })
 
   test('guests get links to cart, notifications and wishlist; signed-in customers see unread notifications', async () => {

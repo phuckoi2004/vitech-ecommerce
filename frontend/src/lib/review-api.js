@@ -1,6 +1,6 @@
 import { request } from '../services/api/client.js'
 
-export const REVIEW_PAGE_SIZE = 5
+export const REVIEW_PAGE_SIZE = 3
 export const REVIEW_EDIT_WINDOW_MS = 7 * 24 * 60 * 60 * 1000
 
 export function listProductReviews(productId, { rating, page = 1, pageSize = REVIEW_PAGE_SIZE, signal } = {}) {

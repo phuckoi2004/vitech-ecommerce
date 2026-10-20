@@ -44,23 +44,25 @@ export default function PromotionEditor({ row, products, categories, busy, error
       </div>
       <div className="grid grid-cols-2 gap-3.5">
         <Field label="Đơn hàng tối thiểu"><MoneyInput aria-label="Đơn tối thiểu" {...moneyProps} required placeholder="Nhập giá trị đơn tối thiểu" value={form.MinOrderValue} onChange={(event) => change('MinOrderValue', event.target.value)} /></Field>
-        <Field label="Danh mục"><Select aria-label="Danh mục áp dụng" required disabled={locked} value={selection.categoryId} onChange={(event) => { setSelection({ categoryId: event.target.value, allProducts: true, productIds: [], changed: true }); setValidation('') }}>
-          <option value="" disabled hidden />
-          <option value={ALL_PROMOTION_CATEGORIES}>Tất cả danh mục</option>
-          {selection.categoryId === SAVED_PROMOTION_SCOPE && <option value={SAVED_PROMOTION_SCOPE} disabled>Phạm vi đã lưu (nhiều danh mục / sản phẩm)</option>}
-          {categories.map((category) => <option key={category.CategoryId} value={category.CategoryId}>{category.Name}</option>)}
-          {selection.categoryId && ![ALL_PROMOTION_CATEGORIES, SAVED_PROMOTION_SCOPE].includes(selection.categoryId) && !categories.some((category) => category.CategoryId === selection.categoryId) && <option value={selection.categoryId} disabled>Danh mục đã lưu</option>}
-        </Select></Field>
+        <Field label="Giảm tối đa (đồng)"><MoneyInput aria-label="Giảm tối đa" {...moneyProps} placeholder="Không giới hạn" value={form.MaxDiscountAmount} onChange={(event) => change('MaxDiscountAmount', event.target.value)} /></Field>
       </div>
       <div className="grid grid-cols-2 gap-3.5">
         <Field label="Thời gian bắt đầu"><DateInput aria-label="Bắt đầu" placeholder="Chọn ngày giờ bắt đầu" required disabled={locked} value={form.StartDate} onChange={(event) => change('StartDate', event.target.value)} /></Field>
         <Field label="Thời gian kết thúc"><DateInput aria-label="Kết thúc" placeholder="Chọn ngày giờ kết thúc" required disabled={locked} value={form.EndDate} onChange={(event) => change('EndDate', event.target.value)} /></Field>
       </div>
-      <PromotionTargetPicker key={selection.categoryId} products={products} selection={selection} disabled={busy || locked} onChange={(next) => { setSelection(next); setValidation('') }} />
-      <details className="text-[11px] leading-[normal] text-admin-muted"><summary className="cursor-pointer">Thiết lập bổ sung</summary><div className="mt-3 max-w-[308px]"><Field label="Giảm tối đa (đồng)"><MoneyInput aria-label="Giảm tối đa" {...moneyProps} placeholder="Không giới hạn" value={form.MaxDiscountAmount} onChange={(event) => change('MaxDiscountAmount', event.target.value)} /></Field></div></details>
+      <div className="grid grid-cols-2 gap-3.5">
+        <Field label="Danh mục"><Select aria-label="Danh mục áp dụng" required disabled={locked} value={selection.categoryId} onChange={(event) => { setSelection({ categoryId: event.target.value, allProducts: true, productIds: [], changed: true }); setValidation('') }}>
+          <option value="" disabled hidden>Chọn danh mục áp dụng</option>
+          <option value={ALL_PROMOTION_CATEGORIES}>Tất cả danh mục</option>
+          {selection.categoryId === SAVED_PROMOTION_SCOPE && <option value={SAVED_PROMOTION_SCOPE} disabled>Phạm vi đã lưu (nhiều danh mục / sản phẩm)</option>}
+          {categories.map((category) => <option key={category.CategoryId} value={category.CategoryId}>{category.Name}</option>)}
+          {selection.categoryId && ![ALL_PROMOTION_CATEGORIES, SAVED_PROMOTION_SCOPE].includes(selection.categoryId) && !categories.some((category) => category.CategoryId === selection.categoryId) && <option value={selection.categoryId} disabled>Danh mục đã lưu</option>}
+        </Select></Field>
+        <PromotionTargetPicker key={selection.categoryId} products={products} selection={selection} disabled={busy || locked} onChange={(next) => { setSelection(next); setValidation('') }} />
+      </div>
     </fieldset>
     <p className="m-0 text-[11px] leading-[normal] text-admin-muted">{locked ? 'Chương trình đang hoạt động: chỉ được sửa tên, mô tả và trạng thái.' : row ? 'Hệ thống kiểm tra các trường nhập liệu trước khi cập nhật và thông báo kết quả.' : 'Hệ thống kiểm tra định dạng và các trường bắt buộc trước khi thêm mới khuyến mãi.'}</p>
     {(error || validation) && <p role="alert" className="m-0 rounded-lg bg-red-50 p-3 text-xs text-admin-red">{validation || error}</p>}
-    <div className="flex justify-end"><PromotionPopupButton secondary disabled={busy} onClick={onClose}>Hủy</PromotionPopupButton><PromotionPopupButton type="submit" disabled={busy}>{busy ? 'Đang lưu…' : row ? 'Cập nhật' : 'Thêm khuyến mãi mới'}</PromotionPopupButton></div>
+    <div className="flex justify-end gap-2"><PromotionPopupButton secondary disabled={busy} onClick={onClose}>Hủy</PromotionPopupButton><PromotionPopupButton type="submit" disabled={busy}>{busy ? 'Đang lưu…' : row ? 'Cập nhật' : 'Thêm khuyến mãi mới'}</PromotionPopupButton></div>
   </form>
 }

@@ -306,6 +306,20 @@ class FakeAddressRepo(FakeRepo):
 class FakeNotificationRepo(FakeRepo):
     model = Notification
 
+    def get_conversation(self, conversation_id):
+        return self.db.get(Conversation, conversation_id)
+
+    def resolve_chat_queue(self, conversation_id, now):
+        for note in self.db.rows(Notification):
+            if (note.NotificationType == 'Chat' and note.ReferenceType == 'Conversation'
+                    and note.ReferenceId == conversation_id
+                    and note.ActionUrl == f'/admin/support?conversation={conversation_id}'):
+                note.IsRead = True
+                note.ReadAt = note.ReadAt or now
+                note.ActionUrl = '/admin/support'
+                note.Title = 'Yêu cầu hỗ trợ đã được xử lý'
+                note.Content = 'Cuộc trò chuyện này không còn trong hàng đợi tiếp nhận.'
+
     def _mine(self, user_id, is_read):
         return self._rows(lambda n: n.UserId == user_id and (is_read is None or n.IsRead == is_read))
 
@@ -513,7 +527,8 @@ class FakeConversationRepo(FakeRepo):
             customer = self.db.get(User, conversation.CustomerId)
             messages = sorted(self.db.rows(Message), key=lambda m: (m.SentAt, str(m.MessageId)))
             latest = next((m for m in reversed(messages) if m.ConversationId == id_), None)
-            context[id_] = (customer.FullName, customer.Email, latest)
+            unread = sum(m.ConversationId == id_ and m.SenderType == 'Customer' and not m.IsRead for m in messages)
+            context[id_] = (customer.FullName, customer.Email, latest, unread)
         return context
 
     def create(self, values):
@@ -1163,6 +1178,13 @@ class FakeNewsArticleRepo(FakeRepo):
         rows = self._rows(lambda a: a.Slug == slug)
         return rows[0] if rows else None
 
+    def increment_published_view(self, slug):
+        article = self.get_by_slug(slug)
+        if article is None or article.Status != "Published":
+            return None
+        article.ViewCount += 1
+        return article.ViewCount
+
     def exists_by_slug(self, slug, exclude_id=None):
         return FakeNewsArticleRepo._duplicate(self, slug, exclude_id)
 
@@ -1432,6 +1454,7 @@ def chat_service(db, session, clock=fixed_clock) -> ChatService:
     svc.messages = FakeMessageRepo(db)
     svc.users = FakeUserRepo(db)
     svc.products = FakeProductRepo(db)
+    svc.notifications = notification_service(db, session)
     return svc
 
 

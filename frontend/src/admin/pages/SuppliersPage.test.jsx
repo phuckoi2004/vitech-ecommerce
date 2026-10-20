@@ -69,7 +69,7 @@ test('search covers later API pages, ignores Vietnamese accents and combines wit
   expect(api.getAdminData).toHaveBeenCalledWith('access-for-test', '/admin/suppliers', { active_only: false, page: 2, page_size: 100 }, expect.any(AbortSignal))
   fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'doi tac tan cuoi' } })
   fireEvent.change(screen.getByRole('combobox', { name: 'Trạng thái' }), { target: { value: 'hidden' } })
-  fireEvent.submit(screen.getByRole('search'))
+  expect(screen.queryByRole('button', { name: 'Tìm kiếm', exact: true })).not.toBeInTheDocument()
   await screen.findByText('1 nhà cung cấp')
   expect(screen.getByText('Đối tác tận cuối')).toBeInTheDocument()
   expect(router.state.location.search).toBe('?keyword=doi+tac+tan+cuoi&status=hidden')
@@ -116,7 +116,7 @@ test('creation sends supported fields, keeps the supplier code chosen by the use
   fireEvent.click(within(dialog).getByRole('button', { name: 'Thêm nhà cung cấp', exact: true }))
   await waitFor(() => expect(api.createSupplier).toHaveBeenCalledWith('access-for-test', { SupplierCode: 'NCC-TU-DAT', Name: 'Nhà cung cấp mới', PhoneNumber: '028 7300 0001', Email: null, Address: 'Địa chỉ mới', TaxCode: null, Note: null, IsActive: true }))
   await screen.findByText('NCC-TU-DAT')
-  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
 })
 
 test('detail reads all API fields and edit can restore a hidden supplier and clear optional values', async () => {
