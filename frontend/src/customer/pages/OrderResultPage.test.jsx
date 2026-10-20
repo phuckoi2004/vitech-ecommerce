@@ -288,6 +288,38 @@ describe('order page: waiting for the transfer', () => {
     expect(server.qrRequests()).toHaveLength(1)
   })
 
+  test('coming back to the page (e.g. from the banking app) reads the order at once, one request at a time', async () => {
+    fakeClock('2026-10-16T03:05:00Z')
+    const server = mockApi({ 'GET /orders/o1': (count) => ({ body: count >= 2 ? PAID : ORDER }) })
+    let state = 'visible'
+    Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => state })
+    const changeVisibility = (value, times = 1) => act(async () => {
+      state = value
+      for (let index = 0; index < times; index += 1) document.dispatchEvent(new Event('visibilitychange'))
+    })
+    try {
+      renderAt('/don-hang/o1')
+      await settle()
+      expect(server.reads()).toBe(1)
+
+      await changeVisibility('hidden')
+      await advance(1000)
+      expect(server.reads()).toBe(1)
+      // Back after 1 s: read now rather than 2 s later, and only once even if the event repeats.
+      await changeVisibility('visible', 2)
+      await settle()
+      expect(server.reads()).toBe(2)
+      expect(screen.getByText('VieTech đã nhận được thanh toán cho đơn hàng này. Cảm ơn bạn!')).toBeInTheDocument()
+
+      await changeVisibility('hidden')
+      await changeVisibility('visible')
+      await advance(15000)
+      expect(server.reads()).toBe(2) // paid: no more reads
+    } finally {
+      delete document.visibilityState
+    }
+  })
+
   test('a failed read keeps the QR and the next poll goes on', async () => {
     fakeClock('2026-10-16T03:05:00Z')
     const server = mockApi({ 'GET /orders/o1': (count) => count === 2 ? { status: 503, body: { detail: 'Service Unavailable' } } : { body: ORDER } })

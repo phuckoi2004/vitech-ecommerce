@@ -55,11 +55,24 @@ export default function OrderResultPage() {
   }, [order])
 
   // The next read POLL_MS after the previous answer; stopped (and the request aborted) when polling ends or on leaving.
+  // Coming back to the page (from the banking app or another tab) reads at once: browsers pause or slow the timers of
+  // hidden pages. Still one request at a time: the waiting timer is replaced, not doubled.
   useEffect(() => {
     if (!polling) return undefined
     const controller = new AbortController()
-    const timer = setTimeout(() => void read(controller.signal), POLL_MS)
+    let timer = setTimeout(() => {
+      timer = null
+      void read(controller.signal)
+    }, POLL_MS)
+    function readOnReturn() {
+      if (document.visibilityState !== 'visible' || timer === null) return
+      clearTimeout(timer)
+      timer = null
+      void read(controller.signal)
+    }
+    document.addEventListener('visibilitychange', readOnReturn)
     return () => {
+      document.removeEventListener('visibilitychange', readOnReturn)
       clearTimeout(timer)
       controller.abort()
     }
