@@ -14,7 +14,7 @@ const variants = [
   { ProductVariantId: 'v1', ProductId: 'p1', Name: 'Điện thoại', VariantName: 'Đen', Sku: 'PHONE-DEN', CostPrice: '999.00', IsSerialTracked: true },
   { ProductVariantId: 'v2', ProductId: 'p1', Name: 'Điện thoại', VariantName: 'Trắng', Sku: 'PHONE-TRANG', CostPrice: '888.00', IsSerialTracked: false },
 ]
-const base = { PurchaseOrderId: 'po1', PurchaseOrderCode: 'PN-API-01', SupplierId: 's1', CreatedByUserId: 'staff1', CreatedByName: 'Nhân viên', CreatedAt: '2026-10-12T17:30:00Z', TotalAmount: '2500.00', Status: 'Pending', Note: 'Ghi chú cũ', Items: [{ PurchaseOrderItemId: 'i1', ProductVariantId: 'v1', OrderedQuantity: 2, ReceivedQuantity: 0, UnitPrice: '1250.00', LineTotal: '2500.00', Note: null }] }
+const base = { PurchaseOrderId: 'po1', PurchaseOrderCode: 'PN-API-01', SupplierId: 's1', CreatedByUserId: 'Admin-id', CreatedByName: 'Nhân viên', CreatedAt: '2026-10-12T17:30:00Z', TotalAmount: '2500.00', Status: 'Pending', Note: 'Ghi chú cũ', Items: [{ PurchaseOrderItemId: 'i1', ProductVariantId: 'v1', OrderedQuantity: 2, ReceivedQuantity: 0, UnitPrice: '1250.00', LineTotal: '2500.00', Note: null }] }
 let po, suppliers
 function renderPage(path = '/admin/purchases/new', granted = permissions, role = 'Admin') {
   const router = createMemoryRouter(adminRoutes, { initialEntries: [path] })
@@ -27,10 +27,20 @@ function fillLine(index, id, quantity, price) {
   fireEvent.change(screen.getByRole('spinbutton', { name: 'Đơn giá nhập dòng ' + index }), { target: { value: String(price) } })
 }
 
-test('Staff cannot edit another creators draft through a direct form URL', async () => {
-  renderPage('/admin/purchases/po1/edit', permissions, 'Staff')
+test.each(['Staff', 'Admin'])('%s cannot edit another creators draft through a direct form URL', async (role) => {
+  po.CreatedByUserId = 'another-creator'
+  renderPage('/admin/purchases/po1/edit', permissions, role)
   await screen.findByText(/Phiếu hiện tại không còn được phép sửa/)
   expect(screen.queryByRole('combobox', { name: 'Sản phẩm / biến thể dòng 1' })).not.toBeInTheDocument()
+  expect(api.updatePurchase).not.toHaveBeenCalled()
+})
+
+test.each(['Staff', 'Admin'])('%s cannot edit their rejected purchase through the form URL', async (role) => {
+  po.CreatedByUserId = role + '-id'
+  po.Status = 'Rejected'
+  renderPage('/admin/purchases/po1/edit', permissions, role)
+  await screen.findByText(/Phiếu hiện tại không còn được phép sửa/)
+  expect(screen.queryByRole('form', { name: 'Sửa phiếu nhập' })).not.toBeInTheDocument()
   expect(api.updatePurchase).not.toHaveBeenCalled()
 })
 beforeEach(() => {

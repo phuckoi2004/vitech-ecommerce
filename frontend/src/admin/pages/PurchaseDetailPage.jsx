@@ -10,7 +10,7 @@ import { PURCHASE_STATUSES, purchaseDeletable, purchaseEditable, purchaseListSea
 
 const DESCRIPTIONS = {
   Pending: 'Phiếu đang chờ quản trị viên xác nhận', Approved: 'Phiếu đã được xác nhận, có thể nhận hàng vào kho',
-  Rejected: 'Phiếu bị từ chối, có thể chỉnh sửa và gửi lại để duyệt', Receiving: 'Phiếu đang nhận hàng từng phần',
+  Rejected: 'Phiếu đã bị từ chối và đóng. Nếu cần nhập hàng, hãy tạo phiếu mới', Receiving: 'Phiếu đang nhận hàng từng phần',
   Completed: 'Phiếu đã nhận đủ số lượng đặt', Cancelled: 'Phiếu đã hủy, thông tin được giữ lại để tra cứu', Closed: 'Phiếu đã đóng, giữ nguyên số lượng thực nhận',
 }
 const CARD = 'min-w-0 min-h-[245px] rounded-xl border border-admin-border bg-white p-4'
@@ -31,7 +31,7 @@ export default function PurchaseDetailPage() {
   const canDecide = Boolean(po && can('update') && auth.user.Role === 'Admin' && po.Status === 'Pending' && po.CreatedByUserId !== auth.user.UserId)
   const allowed = {
     edit: can('update') && purchaseEditable(po, auth.user), delete: can('delete') && purchaseDeletable(po, auth.user), approve: canDecide, reject: canDecide,
-    resubmit: can('update') && po?.Status === 'Rejected' && purchaseEditable(po, auth.user), receive: can('update') && po && purchaseReceivable(po), close: can('update') && auth.user.Role === 'Admin' && po?.Status === 'Receiving',
+    receive: can('update') && po && purchaseReceivable(po), close: can('update') && auth.user.Role === 'Admin' && po?.Status === 'Receiving',
   }
   function choose(value) {
     if (busy) return
@@ -78,9 +78,8 @@ export default function PurchaseDetailPage() {
       </section>
       <div role="group" aria-label="Thao tác phiếu nhập" className="flex justify-end gap-0">
         {allowed.delete && <PurchaseButton secondary className="border-admin-red! text-admin-red!" disabled={busy} onClick={() => choose('delete')}>Xóa phiếu</PurchaseButton>}
-        {can('update') && <PurchaseButton secondary disabled={busy || !purchaseEditable(po, auth.user)} title={!purchaseEditable(po, auth.user) ? 'Chỉ sửa phiếu chờ xác nhận hoặc bị từ chối' : undefined} onClick={() => choose('edit')}>Sửa phiếu</PurchaseButton>}
+        {can('update') && <PurchaseButton secondary disabled={busy || !purchaseEditable(po, auth.user)} title={!purchaseEditable(po, auth.user) ? 'Chỉ sửa phiếu do mình tạo và đang chờ xác nhận' : undefined} onClick={() => choose('edit')}>Sửa phiếu</PurchaseButton>}
         {canDecide && <><PurchaseButton secondary className="border-admin-red! enabled:hover:bg-red-50!" disabled={busy} onClick={() => choose('reject')}><span className="text-admin-red">Từ chối</span></PurchaseButton><PurchaseButton disabled={busy} onClick={() => choose('approve')}>Xác nhận phiếu</PurchaseButton></>}
-        {allowed.resubmit && <PurchaseButton disabled={busy} onClick={() => choose('resubmit')}>Gửi lại để duyệt</PurchaseButton>}
         {allowed.close && <PurchaseButton secondary disabled={busy} onClick={() => choose('close')}>Đóng phiếu nhận thiếu</PurchaseButton>}
         {allowed.receive && <PurchaseButton disabled={busy || variants.loading || Boolean(variants.error) || !auth.permissions.includes('products:view')} onClick={() => choose('receive')}>Nhận hàng vào kho</PurchaseButton>}
       </div>
@@ -89,6 +88,6 @@ export default function PurchaseDetailPage() {
       </section>}
     </>}
     {po && allowed[action] && ['edit', 'delete'].includes(action) && <PurchaseDialog key={action + '-' + purchaseId} mode={action} purchaseId={purchaseId} suppliers={suppliers} variants={variants} creatorNames={names} onClose={() => choose('')} onChanged={refresh} onDone={(message) => navigate('/admin/purchases' + purchaseListSearch(params), { replace: true, state: { purchaseNotice: message } })} />}
-    {po && allowed[action] && ['approve', 'reject', 'resubmit', 'close', 'receive'].includes(action) && <PurchaseActionModal key={action + '-' + purchaseId} action={action} workflow={workflow} permitted={Boolean(allowed[action])} onClose={() => choose('')} />}
+    {po && allowed[action] && ['approve', 'reject', 'close', 'receive'].includes(action) && <PurchaseActionModal key={action + '-' + purchaseId} action={action} workflow={workflow} permitted={Boolean(allowed[action])} onClose={() => choose('')} />}
   </section>
 }

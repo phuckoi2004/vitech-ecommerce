@@ -1,9 +1,19 @@
 // @vitest-environment node
 import { expect, test } from 'vitest'
-import { filterPurchases, purchaseCreateBody, purchaseCsv, purchaseFilters, purchaseReceiveBody } from './purchases.js'
+import { filterPurchases, purchaseCreateBody, purchaseCsv, purchaseEditable, purchaseFilters, purchaseReceiveBody } from './purchases.js'
 
 const variants = [{ ProductVariantId: 'v1', ProductId: 'p1', Name: 'Điện thoại', VariantName: 'Đen', Sku: 'DEN-01', IsSerialTracked: true }, { ProductVariantId: 'v2', ProductId: 'p1', Name: 'Điện thoại', VariantName: 'Trắng', Sku: 'TRANG-01', IsSerialTracked: false }]
 const po = { PurchaseOrderId: 'po1', PurchaseOrderCode: 'PN-THAT', SupplierId: 's1', CreatedByUserId: 'u1', CreatedAt: '2026-10-13T17:30:00Z', Status: 'Receiving', TotalAmount: '200.00', Items: [{ PurchaseOrderItemId: 'i1', ProductVariantId: 'v1', OrderedQuantity: 2, ReceivedQuantity: 1 }] }
+
+test.each(['Admin', 'Staff'])('%s can edit only their own draft and retains the existing state rules', (Role) => {
+  const user = { Role, UserId: 'u1' }
+  for (const Status of ['Pending']) {
+    expect(purchaseEditable({ ...po, Status }, user)).toBe(true)
+    expect(purchaseEditable({ ...po, Status, CreatedByUserId: 'someone-else' }, user)).toBe(false)
+    expect(purchaseEditable({ ...po, Status }, null)).toBe(false)
+  }
+  for (const Status of ['Rejected', 'Approved', 'Receiving', 'Completed', 'Closed', 'Cancelled']) expect(purchaseEditable({ ...po, Status }, user)).toBe(false)
+})
 
 test('date filters use the same Vietnam calendar day as the displayed order date, inclusively', () => {
   const filter = purchaseFilters(new URLSearchParams('from=2026-10-14&to=2026-10-14&keyword=dien+thoai&product=p1&supplier=s1'))

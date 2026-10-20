@@ -42,3 +42,18 @@ Phạm vi được người dùng cho phép trong yêu cầu này: frontend admi
 - Chạy rộng backend không bật PostgreSQL integration: 1124 đạt, 17 bỏ qua và 4 thất bại ban đầu. Một thất bại do số lượng migration mới đã được cập nhật và kiểm thử lại thành công.
 - Ba thất bại còn lại nằm trong `test_business_routers.py`: hai bài giả định mọi route đều gọi một `service.*`, không phù hợp route tải ảnh; một bài vẫn giả định receive bảo hành chuyển nguyên body `None` thay vì `WarrantyProgressRequest`. Các route và bài kiểm thử này không được sửa trong phạm vi này.
 - Kiểm thử service dùng fake và kiểm thử catalog dùng SQLite; không thay thế kiểm thử khóa/cascade PostgreSQL đồng thời thực tế.
+
+## Bổ sung: quyền sửa áp dụng cho cả QTV và nhân viên
+
+- Theo yêu cầu tiếp theo trong mục 3.17, bỏ ngoại lệ cho phép Admin sửa/gửi lại phiếu của người khác. Cả Staff và Admin phải là `CreatedByUserId` của phiếu mới được sửa đầu phiếu, thêm/sửa/xóa dòng hoặc gửi lại.
+- Frontend áp dụng cùng điều kiện cho nút sửa/gửi lại và URL mở thẳng form; backend vẫn kiểm tra trước khi ghi. Admin vẫn được duyệt/từ chối và xóa phiếu của người khác theo quyền riêng.
+- Người dùng yêu cầu giữ phần trạng thái để xem xét luồng trước: chưa đổi tập trạng thái, điều kiện sửa Pending/Rejected, quy tắc Admin tạo được Approved ngay hay luồng nhận hàng/đóng thiếu.
+- Vì vậy Admin tạo phiếu mới được Approved ngay thì không sửa nội dung sau khi tạo; Admin chỉ sửa được phiếu của chính mình còn Pending/Rejected, ví dụ phiếu được lập trước khi đổi vai trò.
+- Không có migration hoặc thao tác CSDL thật trong lần bổ sung quyền này.
+
+## Đính chính tiếp theo: từ chối là kết thúc, không gửi lại
+
+- Yêu cầu mới nhất của người dùng: chỉ phiếu `Pending` do chính mình tạo được sửa, áp dụng cho cả Staff/Admin. Phiếu `Rejected` đóng, giữ nguyên người xử lý, thời điểm và lý do; muốn nhập hàng phải lập phiếu mới.
+- Đã bỏ API `/resubmit`, hàm service và nút/form Gửi lại. Không đổi danh sách trạng thái trong CSDL, quy tắc Admin tạo được duyệt ngay, phần nhận hàng hoặc đóng thiếu. Không có migration hay ghi thử dữ liệu thật.
+- Bản báo cáo đầy đủ được cung cấp có `OrderedQuantity` và `ReceivedQuantity` trong `PurchaseOrderItems`; mô tả `PurchaseOrders.Status` chỉ có chờ duyệt / đã duyệt / từ chối. Bảng đặc tả 3.17 không có bước sửa hoặc gửi lại phiếu bị từ chối.
+- Báo cáo có dữ liệu để ghi chênh lệch đặt/thực nhận, nhưng chưa đặc tả nhận nhiều đợt hay đóng phiếu thiếu. `PurchaseReceipts`, `PurchaseReceiptItems`, các trường đóng phiếu và các trạng thái `Receiving`/`Completed`/`Closed` là phần mở rộng hiện có của hệ thống.

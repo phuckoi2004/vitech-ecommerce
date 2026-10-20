@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
-import { addPurchaseItem, deletePurchase, closePurchase, createPurchase, decidePurchase, getPurchaseDirectory, receivePurchase, removePurchaseItem, resubmitPurchase, updatePurchase, updatePurchaseItem } from './purchases.js'
+import { addPurchaseItem, deletePurchase, closePurchase, createPurchase, decidePurchase, getPurchaseDirectory, receivePurchase, removePurchaseItem, updatePurchase, updatePurchaseItem } from './purchases.js'
 const api = vi.hoisted(() => ({ getAdminData: vi.fn() }))
 vi.mock('../../services/api/admin.js', () => api)
 beforeEach(() => vi.resetAllMocks())
@@ -31,16 +31,15 @@ test('all writes target the existing use-case endpoints and encode both order an
   await updatePurchaseItem('access', 'po/id', 'item/id', { OrderedQuantity: 3 })
   await removePurchaseItem('access', 'po/id', 'item/id')
   await decidePurchase('access', 'po/id', { Status: 'Rejected', RejectReason: 'Sai sản phẩm' })
-  await resubmitPurchase('access', 'po/id')
   await receivePurchase('access', 'po/id', { Items: [{ PurchaseOrderItemId: 'item/id', Quantity: 1, SerialNumbers: ['SN1'] }], Note: null })
   await closePurchase('access', 'po/id', { Reason: 'NCC giao thiếu' })
   await deletePurchase('access', 'po/id')
   expect(fetch.mock.calls.map(([url, options]) => [url, options.method])).toEqual([
     ['/api/admin/purchase-orders', 'POST'], ['/api/admin/purchase-orders/po%2Fid', 'PATCH'],
     ['/api/admin/purchase-orders/po%2Fid/items', 'POST'], ['/api/admin/purchase-orders/po%2Fid/items/item%2Fid', 'PATCH'], ['/api/admin/purchase-orders/po%2Fid/items/item%2Fid', 'DELETE'],
-    ['/api/admin/purchase-orders/po%2Fid/decision', 'POST'], ['/api/admin/purchase-orders/po%2Fid/resubmit', 'POST'], ['/api/admin/purchase-orders/po%2Fid/receive', 'POST'], ['/api/admin/purchase-orders/po%2Fid/close', 'POST'], ['/api/admin/purchase-orders/po%2Fid', 'DELETE'],
+    ['/api/admin/purchase-orders/po%2Fid/decision', 'POST'], ['/api/admin/purchase-orders/po%2Fid/receive', 'POST'], ['/api/admin/purchase-orders/po%2Fid/close', 'POST'], ['/api/admin/purchase-orders/po%2Fid', 'DELETE'],
   ])
   expect(fetch.mock.calls.every(([, options]) => options.headers.Authorization === 'Bearer access' && options.credentials === 'include')).toBe(true)
-  expect(JSON.parse(fetch.mock.calls[7][1].body)).toEqual({ Items: [{ PurchaseOrderItemId: 'item/id', Quantity: 1, SerialNumbers: ['SN1'] }], Note: null })
-  expect(fetch.mock.calls[9][1].body).toBeUndefined()
+  expect(JSON.parse(fetch.mock.calls[6][1].body)).toEqual({ Items: [{ PurchaseOrderItemId: 'item/id', Quantity: 1, SerialNumbers: ['SN1'] }], Note: null })
+  expect(fetch.mock.calls[8][1].body).toBeUndefined()
 })

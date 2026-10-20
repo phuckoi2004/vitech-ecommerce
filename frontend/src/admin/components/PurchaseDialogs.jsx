@@ -3,8 +3,8 @@ import { ErrorState, LoadingState } from '../../components/shared/index.js'
 import useInternalAuth from '../../hooks/useInternalAuth.js'
 import { formatDateTime, formatMoney } from '../../lib/format.js'
 import useAdminQuery from '../hooks/useAdminQuery.js'
-import { purchaseDeletable, purchaseEditable, purchaseReceivable, purchaseReceiveBody, variantLabel } from '../lib/purchases.js'
-import { deletePurchase, closePurchase, decidePurchase, receivePurchase, resubmitPurchase } from '../services/purchases.js'
+import { purchaseDeletable, purchaseReceivable, purchaseReceiveBody, variantLabel } from '../lib/purchases.js'
+import { deletePurchase, closePurchase, decidePurchase, receivePurchase } from '../services/purchases.js'
 import AdminTable from './AdminTable.jsx'
 import Modal from './Modal.jsx'
 import { PRODUCT_CONTROL } from './ProductUi.jsx'
@@ -74,7 +74,6 @@ export default function PurchaseDialog({ mode, purchaseId, suppliers, variants, 
     }
     if (action === 'approve' && canDecide) result = await run((token) => decidePurchase(token, po.PurchaseOrderId, { Status: 'Approved' }), 'update', 'Đã xác nhận phiếu nhập.')
     if (action === 'reject' && canDecide) result = await run((token) => decidePurchase(token, po.PurchaseOrderId, { Status: 'Rejected', RejectReason: enteredReason.trim() }), 'update', 'Đã từ chối phiếu nhập.')
-    if (action === 'resubmit' && po.Status === 'Rejected' && purchaseEditable(po, auth.user)) result = await run((token) => resubmitPurchase(token, po.PurchaseOrderId), 'update', 'Đã gửi lại phiếu chờ duyệt.')
     if (action === 'close' && auth.user.Role === 'Admin' && po.Status === 'Receiving') result = await run((token) => closePurchase(token, po.PurchaseOrderId, { Reason: enteredReason.trim() }), 'update', 'Đã đóng phiếu nhận thiếu.')
     if (result) { choose(''); receipts.refresh() }
   }
@@ -95,14 +94,13 @@ export default function PurchaseDialog({ mode, purchaseId, suppliers, variants, 
       <dl className="m-0 grid grid-cols-2 gap-3 rounded-xl bg-admin-page p-4 text-xs"><dt>Trạng thái</dt><dd className="m-0"><PurchaseStatus status={po.Status} /></dd><dt>Nhà cung cấp</dt><dd className="m-0 break-words">{supplierName ?? '—'}</dd><dt>Người tạo</dt><dd className="m-0">{creatorNames[po.CreatedByUserId] ?? '—'}</dd><dt>Ngày lập</dt><dd className="m-0">{formatDateTime(po.CreatedAt)}</dd><dt>Tổng tiền</dt><dd className="m-0 font-semibold text-admin-blue">{formatMoney(po.TotalAmount)}</dd>{po.Note && <><dt>Ghi chú</dt><dd className="m-0 break-words whitespace-pre-wrap">{po.Note}</dd></>}{po.RejectReason && <><dt>Lý do từ chối</dt><dd className="m-0 break-words">{po.RejectReason}</dd></>}{po.CloseReason && <><dt>Lý do đóng phiếu</dt><dd className="m-0 break-words">{po.CloseReason}</dd></>}</dl>
       {<AdminTable columns={columns} rows={po.Items} rowKey="PurchaseOrderItemId" label="Sản phẩm trong phiếu nhập" className="[&_td]:py-3" />}
       {action === 'receive' && purchaseReceivable(po) && can('update') ? <ReceiveForm key={po.Status + '-' + po.Items.map((item) => item.ReceivedQuantity).join('-')} po={po} variants={variants} busy={busy} run={async (...args) => { const result = await run(...args); if (result) { choose(''); receipts.refresh() } return result }} onError={setError} /> : action && <form className="flex flex-col gap-3 rounded-xl border border-admin-border p-4" onSubmit={confirm}>
-        <p className="m-0 text-sm font-semibold">{{ approve: 'Xác nhận duyệt phiếu này?', reject: 'Từ chối phiếu nhập', resubmit: 'Gửi lại phiếu để Admin duyệt?', close: 'Đóng phiếu và giữ nguyên số lượng đã nhận?' }[action]}</p>
+        <p className="m-0 text-sm font-semibold">{{ approve: 'Xác nhận duyệt phiếu này?', reject: 'Từ chối phiếu nhập', close: 'Đóng phiếu và giữ nguyên số lượng đã nhận?' }[action]}</p>
         {action === 'close' && <p className="m-0 text-xs text-admin-muted">Phần còn thiếu sẽ không được tính là đã nhận và không được cộng vào tồn kho.</p>}
         {['reject', 'close'].includes(action) && <PoField label="Lý do"><textarea aria-label="Lý do" required disabled={busy} className={PRODUCT_CONTROL} rows={3} maxLength={2000} value={reason} onChange={(event) => setReason(event.target.value)} /></PoField>}
         <div className="flex justify-end gap-2"><PurchaseButton secondary disabled={busy} onClick={() => choose('')}>Quay lại</PurchaseButton><PurchaseButton type="submit" disabled={busy || (['reject', 'close'].includes(action) && !reason.trim())}>Xác nhận</PurchaseButton></div>
       </form>}
       {!action && <div className="flex flex-wrap gap-2">
         {canDecide && <><PurchaseButton disabled={busy} onClick={() => choose('approve')}>Duyệt phiếu</PurchaseButton><PurchaseButton secondary disabled={busy} onClick={() => choose('reject')}>Từ chối phiếu</PurchaseButton></>}
-        {can('update') && po.Status === 'Rejected' && purchaseEditable(po, auth.user) && <PurchaseButton disabled={busy} onClick={() => choose('resubmit')}>Gửi lại để duyệt</PurchaseButton>}
         {can('update') && purchaseReceivable(po) && <PurchaseButton disabled={busy} onClick={() => choose('receive')}>Nhận hàng vào kho</PurchaseButton>}
         {can('update') && auth.user.Role === 'Admin' && po.Status === 'Receiving' && <PurchaseButton secondary disabled={busy} onClick={() => choose('close')}>Đóng phiếu nhận thiếu</PurchaseButton>}
         {can('delete') && purchaseDeletable(po, auth.user) && <PurchaseButton secondary disabled={busy} onClick={() => choose('delete')}>Xóa phiếu</PurchaseButton>}

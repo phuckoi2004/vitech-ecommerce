@@ -74,9 +74,16 @@ def test_purchase_owner_and_admin_deletion_are_enforced_over_http(flow):
     }), 201)
     path = "/admin/purchase-orders/" + po["PurchaseOrderId"]
     assert as_user(other).patch(path, json={"Note": "forged"}).status_code == 403
+    assert as_user(admin).patch(path, json={"Note": "admin cannot override owner"}).status_code == 403
     assert as_user(staff).delete(path).status_code == 403
     assert as_user(staff).post(path + "/cancel").status_code == 404
+    assert as_user(staff).post(path + "/resubmit").status_code == 404
     assert ok(as_user(staff).patch(path, json={"Note": "own draft"}))["Note"] == "own draft"
+    assert as_user(admin).post(path + "/decision", json={"Status": "Rejected", "RejectReason": "New purchase required"}).status_code == 200
+    assert as_user(staff).patch(path, json={"Note": "cannot reopen"}).status_code == 400
+    assert as_user(admin).post(path + "/resubmit").status_code == 404
+    rejected = ok(as_user(staff).get(path))
+    assert rejected["Status"] == "Rejected" and rejected["RejectReason"] == "New purchase required"
     assert as_user(admin).delete(path).status_code == 204
     assert as_user(staff).get(path).status_code == 404
 

@@ -3,7 +3,7 @@ import { formatDate } from '../../lib/format.js'
 export const PURCHASE_PAGE_SIZE = 5
 export const PURCHASE_TABS = [['', 'Tất cả'], ['Pending', 'Chờ xác nhận'], ['Approved', 'Đã xác nhận'], ['Rejected', 'Từ chối'], ['history', 'Lịch sử đã xử lý']]
 export const PURCHASE_STATUSES = { Pending: 'Chờ xác nhận', Approved: 'Đã xác nhận', Rejected: 'Từ chối', Receiving: 'Đang nhận hàng', Completed: 'Đã nhận đủ', Cancelled: 'Đã hủy', Closed: 'Đóng phiếu thiếu' }
-export const purchaseEditable = (po, user) => Boolean(po) && ['Pending', 'Rejected'].includes(po.Status) && (!user || user.Role === 'Admin' || po.CreatedByUserId === user.UserId)
+export const purchaseEditable = (po, user) => Boolean(po && user) && po.Status === 'Pending' && ['Admin', 'Staff'].includes(user.Role) && po.CreatedByUserId === user.UserId
 export const purchaseDeletable = (po, user) => Boolean(po) && user?.Role === 'Admin'
 export const purchaseReceivable = (po) => ['Approved', 'Receiving'].includes(po.Status)
 export const purchaseQuantity = (po) => po.Items.reduce((total, item) => total + item.OrderedQuantity, 0)

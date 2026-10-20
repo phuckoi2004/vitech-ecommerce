@@ -8,7 +8,7 @@ import PurchasesPage from './PurchasesPage.jsx'
 import PurchaseDetailPageRoute from './PurchaseDetailPageRoute.jsx'
 import PurchaseFormPageRoute from './PurchaseFormPageRoute.jsx'
 
-const api = vi.hoisted(() => ({ getAdminData: vi.fn(), createPurchase: vi.fn(), updatePurchase: vi.fn(), addPurchaseItem: vi.fn(), updatePurchaseItem: vi.fn(), removePurchaseItem: vi.fn(), decidePurchase: vi.fn(), deletePurchase: vi.fn(), resubmitPurchase: vi.fn(), receivePurchase: vi.fn(), closePurchase: vi.fn() }))
+const api = vi.hoisted(() => ({ getAdminData: vi.fn(), createPurchase: vi.fn(), updatePurchase: vi.fn(), addPurchaseItem: vi.fn(), updatePurchaseItem: vi.fn(), removePurchaseItem: vi.fn(), decidePurchase: vi.fn(), deletePurchase: vi.fn(), receivePurchase: vi.fn(), closePurchase: vi.fn() }))
 vi.mock('../../services/api/admin.js', () => ({ getAdminData: api.getAdminData }))
 vi.mock('../services/purchases.js', async (original) => ({ ...await original(), ...Object.fromEntries(Object.entries(api).filter(([key]) => key !== 'getAdminData')) }))
 
@@ -50,7 +50,6 @@ beforeEach(() => {
   api.updatePurchaseItem.mockImplementation(async (_, id, itemId, body) => update(id, { Items: orders.find((po) => po.PurchaseOrderId === id).Items.map((item) => item.PurchaseOrderItemId === itemId ? { ...item, ...body } : item) }))
   api.decidePurchase.mockImplementation(async (_, id, body) => update(id, body))
   api.deletePurchase.mockImplementation(async (_, id) => { orders = orders.filter((po) => po.PurchaseOrderId !== id) })
-  api.resubmitPurchase.mockImplementation(async (_, id) => update(id, { Status: 'Pending', RejectReason: null }))
   api.closePurchase.mockImplementation(async (_, id, body) => update(id, { Status: 'Closed', CloseReason: body.Reason }))
   api.receivePurchase.mockImplementation(async (_, id, body) => {
     const po = orders.find((row) => row.PurchaseOrderId === id)
@@ -145,7 +144,7 @@ test('creation sends only chosen variants and leaves code, status, creator, tota
 })
 
 test('editing sends the header and full desired lines atomically, never sending received quantities', async () => {
-  orders = [structuredClone(base)]
+  orders = [{ ...structuredClone(base), CreatedByUserId: 'Admin-id' }]
   renderPage('/admin/purchases?dialog=edit&purchase=po1')
   const form = await screen.findByRole('form', { name: 'Sửa phiếu nhập' })
   const note = within(form).getByRole('textbox', { name: 'Ghi chú phiếu' })
@@ -192,14 +191,12 @@ test('Admin cannot approve its own pending order; Staff cannot approve or close 
   expect(within(dialog).queryByRole('button', { name: /Duyệt phiếu|Từ chối phiếu/ })).not.toBeInTheDocument()
 })
 
-test('Staff uses receive/resubmit workflow but never receives Admin-only decision controls', async () => {
+test('Staff cannot edit or reopen their rejected purchase', async () => {
   orders = [{ ...structuredClone(base), CreatedByUserId: 'Staff-id', Status: 'Rejected', RejectReason: 'Sai giá' }]
   renderPage('/admin/purchases?dialog=view&purchase=po1', permissions, 'Staff')
   const dialog = await screen.findByRole('dialog')
-  fireEvent.click(await within(dialog).findByRole('button', { name: 'Gửi lại để duyệt' }))
-  fireEvent.click(within(dialog).getByRole('button', { name: 'Xác nhận', exact: true }))
-  await waitFor(() => expect(api.resubmitPurchase).toHaveBeenCalledWith('access-for-test', 'po1'))
-  await waitFor(() => expect(within(dialog).queryByRole('button', { name: 'Gửi lại để duyệt' })).not.toBeInTheDocument())
+  await within(dialog).findByText('Sai giá')
+  expect(within(dialog).queryByRole('button', { name: 'Gửi lại để duyệt' })).not.toBeInTheDocument()
   expect(within(dialog).queryByRole('button', { name: /Duyệt phiếu|Từ chối phiếu|Đóng phiếu nhận thiếu/ })).not.toBeInTheDocument()
 })
 

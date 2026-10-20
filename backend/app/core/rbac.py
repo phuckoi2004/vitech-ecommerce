@@ -25,7 +25,7 @@ ADMIN_FUNCTIONS = (
     "brands",            # B3.13
     "promotions",        # B3.14, including coupons
     "suppliers",         # B3.16
-    "purchases",         # Staff edit/resubmit own drafts; Admin approves/rejects/deletes documents.
+    "purchases",         # Staff/Admin edit only own pending drafts; Admin approves/rejects/deletes.
     "purchase_history",  # B3.18
     "inventory",         # B3.19 (update: alert threshold)
     "shipping_methods",  # B3.21 (shipping options customers choose)

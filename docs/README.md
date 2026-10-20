@@ -55,3 +55,5 @@ Giữ nguyên các biên bản này. Số test đạt, head migration và mô t�
 
 - [Xóa mềm danh mục/thương hiệu, quyền và xóa chứng từ phiếu nhập](updates/2026-10-20-catalog-purchases.md): quyết định mới, cách frontend gọi backend, thay đổi CSDL đã áp dụng và lưu ý revision CSDL khác source. Đọc phần này để cập nhật các mô tả hủy/xóa phiếu cũ; giữ nguyên nội dung lịch sử phía trên.
 
+- Đề xuất bổ sung nhận hàng nhiều đợt vào báo cáo: [bản Word](updates/2026-10-20-purchase-receiving-spec.docx) và [bản Markdown](updates/2026-10-20-purchase-receiving-spec.md). Đây là tài liệu đề xuất riêng, chưa thay nội dung báo cáo gốc.
+
