@@ -34,7 +34,7 @@ export default function PurchaseFormPage() {
   const listPath = '/admin/purchases' + purchaseListSearch(params)
   const detailPath = edit ? '/admin/purchases/' + encodeURIComponent(purchaseId) + purchaseListSearch(params) : listPath
   async function save(body) {
-    if (!allowed || writing.current) return
+    if (!allowed || (edit && !purchaseEditable(detail.data, auth.user)) || writing.current) return
     writing.current = true; setBusy(true); setError('')
     try {
       const result = await auth.withAccessToken((token) => edit ? savePurchaseDraft(token, purchaseId, body) : createPurchase(token, body))
@@ -44,7 +44,7 @@ export default function PurchaseFormPage() {
   }
   return <section aria-label={edit ? 'Sửa phiếu nhập' : 'Tạo phiếu nhập'} className="-mt-1 flex min-w-0 flex-col gap-3.5">
     <div className="flex items-center justify-between"><div><h2 className="m-0 text-xl leading-6 font-bold">{edit ? 'Sửa phiếu nhập' + (detail.data ? ' ' + detail.data.PurchaseOrderCode : '') : 'Tạo phiếu nhập mới'}</h2><p className="mt-[3px] mb-0 text-[11px] leading-[13px] text-admin-muted">Nhập thông tin nhà cung cấp và danh sách sản phẩm cần nhập</p></div><PurchaseButton secondary disabled={busy} onClick={() => navigate(listPath)}>← Danh sách phiếu nhập</PurchaseButton></div>
-    {edit && detail.loading ? <LoadingState label="Đang tải phiếu nhập…" /> : edit && detail.error ? <ErrorState title="Không tải được phiếu nhập" message={detail.error} onRetry={detail.refresh} /> : edit && detail.data && !purchaseEditable(detail.data) ? <p role="status" className="m-0 rounded-xl border border-admin-border p-4 text-xs text-admin-muted">Phiếu hiện tại không còn được phép sửa. Chỉ sửa phiếu chờ xác nhận hoặc bị từ chối.</p> : <>
+    {edit && detail.loading ? <LoadingState label="Đang tải phiếu nhập…" /> : edit && detail.error ? <ErrorState title="Không tải được phiếu nhập" message={detail.error} onRetry={detail.refresh} /> : edit && detail.data && !purchaseEditable(detail.data, auth.user) ? <p role="status" className="m-0 rounded-xl border border-admin-border p-4 text-xs text-admin-muted">Phiếu hiện tại không còn được phép sửa. Chỉ sửa phiếu do mình tạo và đang chờ xác nhận.</p> : <>
       {(!auth.permissions.includes('suppliers:view') || !auth.permissions.includes('products:view')) && <p role="alert" className="m-0 text-xs text-admin-red">Bạn cần quyền xem nhà cung cấp và sản phẩm để lập hoặc sửa phiếu nhập.</p>}
       {suppliers.error && <ErrorState title="Chưa tải được nhà cung cấp" message={suppliers.error} onRetry={suppliers.refresh} className="py-2" />}{variants.error && <ErrorState title="Chưa tải được sản phẩm" message={variants.error} onRetry={variants.refresh} className="py-2" />}
       {allowed && <PurchaseForm po={edit ? detail.data : null} role={auth.user.Role} suppliers={suppliers} variants={variants} busy={busy} error={error} blocked={!auth.permissions.includes('suppliers:view') || !auth.permissions.includes('products:view')} onError={setError} onSave={save} onCancel={() => navigate(detailPath)} />}

@@ -5,7 +5,7 @@ import { AuthContext } from '../../auth/context.js'
 import { makeAuth } from '../../test/auth.js'
 import { adminRoutes } from '../routes/index.jsx'
 
-const api = vi.hoisted(() => ({ getAdminData: vi.fn(), decidePurchase: vi.fn(), updatePurchase: vi.fn(), updatePurchaseItem: vi.fn(), receivePurchase: vi.fn(), resubmitPurchase: vi.fn(), closePurchase: vi.fn(), cancelPurchase: vi.fn() }))
+const api = vi.hoisted(() => ({ getAdminData: vi.fn(), decidePurchase: vi.fn(), updatePurchase: vi.fn(), updatePurchaseItem: vi.fn(), receivePurchase: vi.fn(), closePurchase: vi.fn(), deletePurchase: vi.fn() }))
 vi.mock('../../services/api/admin.js', () => ({ getAdminData: api.getAdminData }))
 vi.mock('../services/purchases.js', async (original) => ({ ...await original(), ...Object.fromEntries(Object.entries(api).filter(([key]) => key !== 'getAdminData')) }))
 
@@ -46,9 +46,8 @@ beforeEach(() => {
   api.decidePurchase.mockImplementation(async (_, __, body) => save({ ...body, DecidedByUserId: 'Admin-id', DecidedAt: '2026-10-14T06:00:00Z' }))
   api.updatePurchase.mockImplementation(async (_, __, body) => save({ ...body, ...(body.Items ? { Items: body.Items.map((line) => ({ ...po.Items.find((item) => item.ProductVariantId === line.ProductVariantId), ...line, LineTotal: String(line.OrderedQuantity * Number(line.UnitPrice)) })) } : {}) }))
   api.updatePurchaseItem.mockImplementation(async (_, __, itemId, body) => save({ Items: po.Items.map((item) => item.PurchaseOrderItemId === itemId ? { ...item, ...body } : item) }))
-  api.resubmitPurchase.mockImplementation(async () => save({ Status: 'Pending', DecidedByUserId: null, DecidedAt: null, RejectReason: null }))
   api.closePurchase.mockImplementation(async (_, __, body) => save({ Status: 'Closed', CloseReason: body.Reason, ClosedByUserId: 'Admin-id', ClosedAt: '2026-10-14T06:00:00Z' }))
-  api.cancelPurchase.mockImplementation(async () => save({ Status: 'Cancelled' }))
+  api.deletePurchase.mockImplementation(async () => save({ Status: 'Cancelled' }))
   api.receivePurchase.mockImplementation(async (_, __, body) => {
     const Items = po.Items.map((item) => ({ ...item, ReceivedQuantity: item.ReceivedQuantity + (body.Items.find((line) => line.PurchaseOrderItemId === item.PurchaseOrderItemId)?.Quantity ?? 0) }))
     receipts.push({ PurchaseReceiptId: 'receipt1', ReceivedAt: '2026-10-14T06:00:00Z', Note: 'Biên nhận thật', Items: body.Items.map((item) => ({ ...item, UnitPrice: '1500000.00' })) })
@@ -58,7 +57,7 @@ beforeEach(() => {
 
 test('the file icon opens the separate detail route, keeps filters and returns to the same list', async () => {
   const router = renderPage('/admin/purchases?keyword=PN-API&status=Pending&supplier=s1&product=p1&from=2026-10-14&to=2026-10-14')
-  fireEvent.click(await screen.findByRole('button', { name: 'Chi tiết PN-API-01' }))
+  fireEvent.click(await screen.findByRole('button', { name: 'Chi tiết PN-API-01' }, { timeout: 5000 }))
   await screen.findByRole('heading', { name: 'Phiếu nhập PN-API-01' })
   expect(router.state.location.pathname).toBe('/admin/purchases/po1')
   expect(router.state.location.search).not.toMatch(/dialog|purchase=/)
@@ -120,7 +119,7 @@ test('rejection requires a reason; a failed request keeps it and blocks repeat w
   expect(api.decidePurchase).toHaveBeenLastCalledWith('access-for-test', 'po1', { Status: 'Rejected', RejectReason: 'Sai giá nhập' })
   await act(async () => finish(save({ Status: 'Rejected', RejectReason: 'Sai giá nhập' })))
   await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
-  expect(screen.getByRole('button', { name: 'Gửi lại để duyệt' })).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: 'Gửi lại để duyệt' })).not.toBeInTheDocument()
   expect(screen.getByText('Sai giá nhập')).toBeInTheDocument()
 })
 
@@ -181,6 +180,7 @@ test.each(['Rejected', 'Cancelled'])('a %s rejected order identifies the rejecti
 })
 
 test('editing opens its own page, saves header and lines together and returns to fresh detail', async () => {
+  po.CreatedByUserId = 'Admin-id'
   const router = renderPage()
   fireEvent.click(await screen.findByRole('button', { name: 'Sửa phiếu' }))
   const form = await screen.findByRole('form', { name: 'Sửa phiếu nhập' })
@@ -236,18 +236,13 @@ test('closed shortage keeps the actual quantities and records the reason; Staff 
   expect(screen.queryByRole('button', { name: 'Nhận hàng vào kho' })).not.toBeInTheDocument()
 })
 
-test('Staff can resubmit a rejected order but cannot close a partially received order', async () => {
-  po.Status = 'Rejected'; po.RejectReason = 'Sai giá'
-  const router = renderPage('/admin/purchases/po1', permissions, 'Staff')
-  fireEvent.click(await screen.findByRole('button', { name: 'Gửi lại để duyệt' }))
-  fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Xác nhận', exact: true }))
-  await waitFor(() => expect(api.resubmitPurchase).toHaveBeenCalledWith('access-for-test', 'po1'))
-  await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
-  po.Status = 'Receiving'; po.Items[0].ReceivedQuantity = 1
-  await act(() => router.navigate('/admin/purchases'))
-  await screen.findByText('PN-API-01')
-  await act(() => router.navigate('/admin/purchases/po1?dialog=close'))
-  await screen.findByText('Điện thoại - Đen')
+test.each(['Staff', 'Admin'])('%s cannot edit or reopen their rejected purchase through a direct action URL', async (role) => {
+  po.Status = 'Rejected'; po.RejectReason = 'Sai giá'; po.CreatedByUserId = role + '-id'
+  renderPage('/admin/purchases/po1?dialog=resubmit', permissions, role)
+  await screen.findByText('Sai giá')
+  expect(screen.getByRole('button', { name: 'Sửa phiếu' })).toBeDisabled()
+  expect(screen.queryByRole('button', { name: 'Gửi lại để duyệt' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: 'Nhận hàng vào kho' })).not.toBeInTheDocument()
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   expect(screen.queryByRole('button', { name: 'Đóng phiếu nhận thiếu' })).not.toBeInTheDocument()
 })

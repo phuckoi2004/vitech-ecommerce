@@ -13,6 +13,7 @@ from .actor import Actor, CUSTOMER_ONLY, require_role
 from .base import BaseService
 from .exceptions import BusinessRuleError, NotFoundError
 from .promotion_state import aware
+from .promotion import SimpleDiscountLine, allocate_discount
 
 ZERO = Decimal("0.00")
 
@@ -174,11 +175,14 @@ class PricingService(BaseService):
             if base <= 0:
                 raise BusinessRuleError("Mã không áp dụng cho sản phẩm này", code="coupon_not_applicable")
             amount = discount_for(coupon.promotion, base)
-            # Proportional allocation, preserving cents and deterministic ties.
-            shares = [(line, (amount * line.LineTotal / base).quantize(CENT, rounding=ROUND_DOWN)) for line in eligible]
-            remaining = int((amount - sum((share for _, share in shares), ZERO)) / CENT)
-            for index, (line, share) in enumerate(shares):
-                line.CouponDiscount = share + (CENT if index < remaining else ZERO)
+            # Match checkout's whole-VND allocation, including legacy fractional-price handling.
+            allocations = [SimpleDiscountLine(
+                by_id[line.ProductVariantId].ProductId,
+                by_id[line.ProductVariantId].product.CategoryId, line.LineTotal,
+            ) for line in eligible]
+            allocate_discount(amount, allocations)
+            for line, allocation in zip(eligible, allocations):
+                line.CouponDiscount = allocation.discount
                 line.LineTotal -= line.CouponDiscount
         for line in lines:
             variant = by_id[line.ProductVariantId]

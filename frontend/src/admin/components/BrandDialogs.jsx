@@ -77,21 +77,20 @@ function BrandDelete({ brand, onBusy, onClose, onDone }) {
   const auth = useInternalAuth()
   const [busy, setBusy] = useState(false)
   const [failure, setFailure] = useState(null)
-  async function remove(hide = false) {
+  async function remove() {
     if (busy) return
     setBusy(true); onBusy(true); setFailure(null)
     try {
-      await auth.withAccessToken((token) => hide ? updateBrand(token, brand.BrandId, { IsActive: false }) : deleteBrand(token, brand.BrandId))
-      onDone(hide ? 'Đã ẩn thương hiệu.' : 'Đã xóa thương hiệu.')
+      await auth.withAccessToken((token) => deleteBrand(token, brand.BrandId))
+      onDone('Đã xóa thương hiệu.')
     } catch (error) { setFailure(error) }
     finally { setBusy(false); onBusy(false) }
   }
   return <>
     <BrandError message={failure?.message} />
     <p>Bạn muốn xóa thương hiệu <strong className="break-words">{brand.Name}</strong>?</p>
-    <p className="mt-3 text-xs leading-relaxed text-admin-muted">Chỉ xóa được thương hiệu không còn sản phẩm liên quan. Nếu muốn tạm ngừng hiển thị, hãy đổi trạng thái thành “Đã ẩn”.</p>
+    <p className="mt-3 text-xs leading-relaxed text-admin-muted">Thương hiệu sẽ bị xóa mềm và không còn xuất hiện với khách hàng, nhân viên hay quản trị viên. Dữ liệu và các liên kết sản phẩm được giữ trong hệ thống. Nếu chỉ muốn khách không thấy, hãy chọn “Đã ẩn” trong phần sửa.</p>
     <div className="mt-6 flex justify-end gap-2"><ProductButton secondary disabled={busy} onClick={onClose}>Hủy</ProductButton>
-      {failure?.code === 'brand_has_products' && brand.IsActive && auth.permissions.includes('brands:update') && <ProductButton secondary disabled={busy} onClick={() => remove(true)}>Ẩn thương hiệu</ProductButton>}
       <ProductButton loading={busy} className="border-admin-red! bg-admin-red! enabled:hover:bg-admin-red/90!" onClick={() => remove()}>Xác nhận xóa</ProductButton>
     </div>
   </>

@@ -82,6 +82,41 @@ def test_public_detail_same_sku_prices_and_per_unit_discount(pricing_shop):
     assert Decimal(quote["Total"]) == 66000000
 
 
+def test_percentage_discount_uses_whole_vnd_in_detail_quote_and_sql_filters(pricing_shop):
+    s = pricing_shop
+    with Session(s["engine"]) as session:
+        variant = session.get(ProductVariant, s["variant"].ProductVariantId)
+        variant.Price, variant.CostPrice = Decimal("101"), Decimal("50")
+        session.commit()
+    program(s, amount="12.5", DiscountType="Percentage")
+    variant = ok(s["client"].get(f'/products/{s["variant"].ProductId}'))["Variants"][0]
+    assert Decimal(variant["DiscountAmount"]) == 12
+    assert Decimal(variant["SalePrice"]) == 89
+    quote = ok(preview(s))
+    assert Decimal(quote["AutomaticDiscount"]) == 12
+    assert Decimal(quote["Total"]) == 89
+    result = ok(s["client"].get("/products", params={"min_price": 89, "max_price": 89}))
+    assert result["Total"] == 1
+
+
+def test_public_coupon_allocates_whole_vnd_across_multiple_lines(pricing_shop):
+    s = pricing_shop
+    variants = [s["variant"].ProductVariantId, s["other"].ProductVariantId]
+    with Session(s["engine"]) as session:
+        for variant_id in variants:
+            variant = session.get(ProductVariant, variant_id)
+            variant.Price, variant.CostPrice = Decimal("101"), Decimal("50")
+        session.commit()
+    coupon(s, amount="1")
+    quote = ok(s["client"].post("/pricing/quote", json={
+        "Items": [{"ProductVariantId": str(variant_id), "Quantity": 1} for variant_id in variants],
+        "CouponCode": "TEST300",
+    }))
+    assert Decimal(quote["CouponDiscount"]) == 1
+    assert Decimal(quote["Total"]) == 201
+    assert sorted(Decimal(line["CouponDiscount"]) for line in quote["Items"]) == [0, 1]
+
+
 def test_coupon_stacks_after_automatic_without_consuming_or_creating_orders(pricing_shop):
     s = pricing_shop
     program(s)

@@ -151,7 +151,7 @@ class PurchaseOrderItem(Base):
 
 
 class PurchaseReceipt(Base):
-    """Một lần nhận hàng thực tế của phiếu nhập (lịch sử; chỉ ghi thêm — trigger trong migration e2b8c4f6a913)."""
+    """Receipt history is immutable, except when its entire purchase document is deleted by Admin."""
 
     __tablename__ = "PurchaseReceipts"
 
@@ -159,7 +159,7 @@ class PurchaseReceipt(Base):
         UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
     )
     PurchaseOrderId: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("PurchaseOrders.PurchaseOrderId", ondelete="RESTRICT"), nullable=False
+        UUID(as_uuid=True), ForeignKey("PurchaseOrders.PurchaseOrderId", ondelete="CASCADE"), nullable=False
     )
     ReceivedByUserId: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("Users.UserId", ondelete="RESTRICT"), nullable=False
@@ -187,7 +187,7 @@ class PurchaseReceiptItem(Base):
         UUID(as_uuid=True), ForeignKey("PurchaseReceipts.PurchaseReceiptId", ondelete="CASCADE"), primary_key=True
     )
     PurchaseOrderItemId: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("PurchaseOrderItems.PurchaseOrderItemId", ondelete="RESTRICT"), primary_key=True
+        UUID(as_uuid=True), ForeignKey("PurchaseOrderItems.PurchaseOrderItemId", ondelete="CASCADE"), primary_key=True
     )
     Quantity: Mapped[int] = mapped_column(Integer, nullable=False)
     UnitPrice: Mapped[Decimal] = mapped_column(Numeric(15, 2), nullable=False)

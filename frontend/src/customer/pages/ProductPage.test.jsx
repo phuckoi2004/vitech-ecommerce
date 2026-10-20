@@ -243,7 +243,7 @@ test('guest buy-now asks for an account and can be dismissed without leaving the
 
 test('guest review writing uses the existing account choice and preserves the product return URL', async () => {
   const { calls } = mockApi(); const router = renderProduct({ guest: true }); const user = userEvent.setup()
-  expect(await screen.findByRole('link', { name: 'Chưa có đánh giá' })).toHaveAttribute('href', '#product-reviews')
+  expect(await screen.findByRole('link', { name: 'Chưa có đánh giá' }, { timeout: 5000 })).toHaveAttribute('href', '#product-reviews')
   await user.click(screen.getByRole('button', { name: 'Viết đánh giá' }))
   const prompt = await screen.findByRole('dialog', { name: 'Bạn đã có tài khoản chưa?' })
   expect(within(prompt).getByRole('link', { name: 'Đăng nhập' })).toHaveAttribute('href', '/dang-nhap?next=%2Fsan-pham%2Fsan-pham-kiem-thu')

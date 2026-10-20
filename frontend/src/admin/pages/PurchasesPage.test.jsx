@@ -8,7 +8,7 @@ import PurchasesPage from './PurchasesPage.jsx'
 import PurchaseDetailPageRoute from './PurchaseDetailPageRoute.jsx'
 import PurchaseFormPageRoute from './PurchaseFormPageRoute.jsx'
 
-const api = vi.hoisted(() => ({ getAdminData: vi.fn(), createPurchase: vi.fn(), updatePurchase: vi.fn(), addPurchaseItem: vi.fn(), updatePurchaseItem: vi.fn(), removePurchaseItem: vi.fn(), decidePurchase: vi.fn(), cancelPurchase: vi.fn(), resubmitPurchase: vi.fn(), receivePurchase: vi.fn(), closePurchase: vi.fn() }))
+const api = vi.hoisted(() => ({ getAdminData: vi.fn(), createPurchase: vi.fn(), updatePurchase: vi.fn(), addPurchaseItem: vi.fn(), updatePurchaseItem: vi.fn(), removePurchaseItem: vi.fn(), decidePurchase: vi.fn(), deletePurchase: vi.fn(), receivePurchase: vi.fn(), closePurchase: vi.fn() }))
 vi.mock('../../services/api/admin.js', () => ({ getAdminData: api.getAdminData }))
 vi.mock('../services/purchases.js', async (original) => ({ ...await original(), ...Object.fromEntries(Object.entries(api).filter(([key]) => key !== 'getAdminData')) }))
 
@@ -49,8 +49,7 @@ beforeEach(() => {
   })
   api.updatePurchaseItem.mockImplementation(async (_, id, itemId, body) => update(id, { Items: orders.find((po) => po.PurchaseOrderId === id).Items.map((item) => item.PurchaseOrderItemId === itemId ? { ...item, ...body } : item) }))
   api.decidePurchase.mockImplementation(async (_, id, body) => update(id, body))
-  api.cancelPurchase.mockImplementation(async (_, id) => update(id, { Status: 'Cancelled' }))
-  api.resubmitPurchase.mockImplementation(async (_, id) => update(id, { Status: 'Pending', RejectReason: null }))
+  api.deletePurchase.mockImplementation(async (_, id) => { orders = orders.filter((po) => po.PurchaseOrderId !== id) })
   api.closePurchase.mockImplementation(async (_, id, body) => update(id, { Status: 'Closed', CloseReason: body.Reason }))
   api.receivePurchase.mockImplementation(async (_, id, body) => {
     const po = orders.find((row) => row.PurchaseOrderId === id)
@@ -145,7 +144,7 @@ test('creation sends only chosen variants and leaves code, status, creator, tota
 })
 
 test('editing sends the header and full desired lines atomically, never sending received quantities', async () => {
-  orders = [structuredClone(base)]
+  orders = [{ ...structuredClone(base), CreatedByUserId: 'Admin-id' }]
   renderPage('/admin/purchases?dialog=edit&purchase=po1')
   const form = await screen.findByRole('form', { name: 'Sửa phiếu nhập' })
   const note = within(form).getByRole('textbox', { name: 'Ghi chú phiếu' })
@@ -192,14 +191,12 @@ test('Admin cannot approve its own pending order; Staff cannot approve or close 
   expect(within(dialog).queryByRole('button', { name: /Duyệt phiếu|Từ chối phiếu/ })).not.toBeInTheDocument()
 })
 
-test('Staff uses receive/resubmit workflow but never receives Admin-only decision controls', async () => {
-  orders = [{ ...structuredClone(base), Status: 'Rejected', RejectReason: 'Sai giá' }]
+test('Staff cannot edit or reopen their rejected purchase', async () => {
+  orders = [{ ...structuredClone(base), CreatedByUserId: 'Staff-id', Status: 'Rejected', RejectReason: 'Sai giá' }]
   renderPage('/admin/purchases?dialog=view&purchase=po1', permissions, 'Staff')
   const dialog = await screen.findByRole('dialog')
-  fireEvent.click(await within(dialog).findByRole('button', { name: 'Gửi lại để duyệt' }))
-  fireEvent.click(within(dialog).getByRole('button', { name: 'Xác nhận', exact: true }))
-  await waitFor(() => expect(api.resubmitPurchase).toHaveBeenCalledWith('access-for-test', 'po1'))
-  await waitFor(() => expect(within(dialog).queryByRole('button', { name: 'Gửi lại để duyệt' })).not.toBeInTheDocument())
+  await within(dialog).findByText('Sai giá')
+  expect(within(dialog).queryByRole('button', { name: 'Gửi lại để duyệt' })).not.toBeInTheDocument()
   expect(within(dialog).queryByRole('button', { name: /Duyệt phiếu|Từ chối phiếu|Đóng phiếu nhận thiếu/ })).not.toBeInTheDocument()
 })
 
@@ -232,19 +229,40 @@ test('closing a shortage requires a reason and preserves actual received and mis
   expect(orders[0].Items[0]).toMatchObject({ OrderedQuantity: 2, ReceivedQuantity: 1 })
 })
 
-test('trash action cancels via the API, never deletes a purchase record', async () => {
+test('trash deletes the document through the API and removes it from the list', async () => {
   orders = [structuredClone(base)]
   const router = renderPage('/admin/purchases?status=Pending')
   fireEvent.click(await screen.findByRole('button', { name: 'Xóa PN-THAT-01' }))
   const dialog = screen.getByRole('dialog', { name: 'Xóa phiếu nhập?' })
   await waitFor(() => expect(within(dialog).getByRole('button', { name: 'Xác nhận xóa' })).toBeEnabled())
-  expect(within(dialog).getByText(/giữ lại lịch sử/)).toBeInTheDocument()
+  expect(within(dialog).getByText(/xóa vĩnh viễn/)).toBeInTheDocument()
   fireEvent.click(within(dialog).getByRole('button', { name: 'Xác nhận xóa' }))
-  await waitFor(() => expect(api.cancelPurchase).toHaveBeenCalledWith('access-for-test', 'po1'))
+  await waitFor(() => expect(api.deletePurchase).toHaveBeenCalledWith('access-for-test', 'po1'))
   await screen.findByText('Không có phiếu nhập phù hợp.')
-  expect(orders).toHaveLength(1)
-  expect(orders[0].Status).toBe('Cancelled')
+  expect(orders).toHaveLength(0)
   expect(router.state.location.search).toBe('?status=Pending')
+})
+
+test('Staff with stale deletion permission sees no trash and cannot open deletion via URL', async () => {
+  orders = [structuredClone(base)]
+  renderPage('/admin/purchases?dialog=delete&purchase=po1', permissions, 'Staff')
+  await screen.findByText('1 phiếu')
+  expect(screen.queryByRole('button', { name: 'Xóa PN-THAT-01' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: 'Hủy phiếu' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'Sửa PN-THAT-01' })).toBeDisabled()
+  expect(api.deletePurchase).not.toHaveBeenCalled()
+})
+
+test('Admin can delete a fully received purchase', async () => {
+  orders = [{ ...structuredClone(base), Status: 'Completed', Items: base.Items.map((item) => ({ ...item, ReceivedQuantity: item.OrderedQuantity })) }]
+  renderPage()
+  fireEvent.click(await screen.findByRole('button', { name: 'Xóa PN-THAT-01' }))
+  const dialog = await screen.findByRole('dialog', { name: 'Xóa phiếu nhập?' })
+  await waitFor(() => expect(within(dialog).getByRole('button', { name: 'Xác nhận xóa' })).toBeEnabled())
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Xác nhận xóa' }))
+  await screen.findByText('Chưa có phiếu nhập.')
+  expect(orders).toHaveLength(0)
 })
 
 test('failed writes retain typed data, disable repeated pending submissions and block modal dismissal', async () => {
@@ -284,7 +302,7 @@ test('view-only sessions cannot access create/edit/cancel dialogs via direct URL
   orders = [structuredClone(base)]
   const router = renderPage('/admin/purchases?dialog=new', ['admin.portal', 'purchases:view', 'suppliers:view', 'products:view'], 'Staff')
   await screen.findByText('1 phiếu')
-  for (const mode of ['new', 'edit', 'cancel']) {
+  for (const mode of ['new', 'edit', 'delete']) {
     await act(() => router.navigate('/admin/purchases?dialog=' + mode + '&purchase=po1'))
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   }

@@ -22,7 +22,8 @@ depends_on: Union[str, Sequence[str], None] = None
 # Các bảng có UpdatedAt được database trigger BEFORE UPDATE cập nhật (docs/database-schema.md).
 UPDATED_AT_TABLES = ("Users", "Products", "Carts", "Reviews")
 
-# Toàn bộ 36 bảng: bật RLS (không policy) và REVOKE quyền của anon/authenticated.
+# Toàn bộ 36 bảng: bật RLS (không policy) và REVOKE quyền của anon/authenticated (role của Supabase Data API;
+# PostgreSQL local không có hai role này, xem revoke_from_data_api_roles).
 # Backend dùng role postgres (BYPASSRLS); React không truy cập bảng qua Supabase Data API.
 ALL_TABLES = (
     "Users",
@@ -62,7 +63,32 @@ ALL_TABLES = (
     "NewsArticles",
     "Banners",
 )
-DATA_API_ROLES = "anon, authenticated"
+DATA_API_ROLES = ("anon", "authenticated")
+
+
+def revoke_from_data_api_roles(statement: str) -> None:
+    """Chạy `{statement} FROM anon, authenticated` với các role trong DATA_API_ROLES đang tồn tại.
+
+    Supabase luôn có cả hai role nên câu lệnh thực thi y như trước (bảo mật Data API không đổi). PostgreSQL thường
+    (database local) không có các role này: không có quyền nào để thu hồi, nên bỏ qua thay vì lỗi; không tạo role.
+    `statement` là SQL cố định trong file này (không có dấu nháy đơn).
+    """
+    names = ", ".join(f"'{role}'" for role in DATA_API_ROLES)
+    op.execute(
+        f"""
+        DO $$
+        DECLARE
+            grantees text;
+        BEGIN
+            SELECT string_agg(quote_ident(rolname), ', ' ORDER BY rolname) INTO grantees
+            FROM pg_catalog.pg_roles WHERE rolname IN ({names});
+            IF grantees IS NOT NULL THEN
+                EXECUTE '{statement} FROM ' || grantees;
+            END IF;
+        END
+        $$
+        """
+    )
 
 
 def upgrade() -> None:
@@ -675,16 +701,15 @@ def upgrade() -> None:
             f"FOR EACH ROW EXECUTE FUNCTION public.set_updated_at()"
         )
 
-    # Viết thủ công: security hardening cho Supabase Data API.
+    # Viết thủ công: security hardening cho Supabase Data API (RLS bật ở mọi môi trường).
     for table in ALL_TABLES:
         op.execute(f'ALTER TABLE "{table}" ENABLE ROW LEVEL SECURITY')
     for table in ALL_TABLES:
-        op.execute(f'REVOKE ALL PRIVILEGES ON TABLE "{table}" FROM {DATA_API_ROLES}')
-    op.execute(f"REVOKE EXECUTE ON FUNCTION public.set_updated_at() FROM {DATA_API_ROLES}")
+        revoke_from_data_api_roles(f'REVOKE ALL PRIVILEGES ON TABLE "{table}"')
+    revoke_from_data_api_roles("REVOKE EXECUTE ON FUNCTION public.set_updated_at()")
     # Bảng mới do postgres tạo trong public không còn tự động cấp quyền cho anon/authenticated.
-    op.execute(
-        f"ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public "
-        f"REVOKE ALL PRIVILEGES ON TABLES FROM {DATA_API_ROLES}"
+    revoke_from_data_api_roles(
+        "ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public REVOKE ALL PRIVILEGES ON TABLES"
     )
 
 

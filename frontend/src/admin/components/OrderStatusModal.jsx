@@ -13,7 +13,7 @@ export default function OrderStatusModal({ workflow }) {
     <ProductButton type="submit" form="order-status-form" disabled={busy || (cancelling ? !canCancelOrder(order) || !reason.trim() : !next || Boolean(blocked) || (codDelivery && !collected))}>{busy ? 'Đang cập nhật…' : cancelling ? 'Xác nhận hủy đơn' : codDelivery ? 'Xác nhận giao và thu tiền' : next?.[1] ?? 'Không còn bước tiếp theo'}</ProductButton>
   </>}>
     {error && <p role="alert" className="mb-3 rounded-[10px] bg-red-50 p-3 text-xs text-red-700">{error}</p>}
-    {!cancelling && ['Processing', 'Shipping'].includes(order.OrderStatus) && payment.error && <ErrorState message={payment.error} onRetry={payment.refresh} className="py-3" />}
+    {!cancelling && ['Pending', 'Processing', 'Shipping'].includes(order.OrderStatus) && payment.error && <ErrorState message={payment.error} onRetry={payment.refresh} className="py-3" />}
     {!cancelling && order.OrderStatus === 'Processing' && serials.error && <ErrorState message={serials.error} onRetry={serials.refresh} className="py-3" />}
     <OrderActionForm workflow={workflow} />
   </Modal>

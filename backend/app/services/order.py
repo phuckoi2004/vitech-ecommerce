@@ -88,11 +88,13 @@ from .actor import ADMIN_ONLY, CUSTOMER_ONLY, STAFF_OR_ADMIN, Actor, require_rol
 from .base import BaseService, utc_now
 from .catalog import ProductVariantService, is_variant_sellable, normalize_serial_number
 from .exceptions import BusinessRuleError, NotFoundError
+from .internal_jobs import JobRun, run_job
 from .promotion import CouponService, money as _money
 from .user import NotificationService
 from .warranty_period import delivery_warranty_period, vietnam_date
 
 ORDER_PENDING = "Pending"
+ORDER_CONFIRMED = "Confirmed"
 ORDER_PROCESSING = "Processing"
 ORDER_SHIPPING = "Shipping"
 ORDER_DELIVERED = "Delivered"
@@ -239,6 +241,15 @@ class OrderService(BaseService):
                 coupon, discount = self.coupon_service.apply_coupon_to_order(data.CouponCode, lines, subtotal)
 
             shipping_fee = shipping.BaseFee
+            total = subtotal - discount + shipping_fee
+            # Phương thức khác COD thanh toán chuyển khoản (QR SePay) nên cần số tiền > 0; COD giữ quy tắc hiện tại.
+            # Lỗi ở đây hủy cả transaction: không tạo đơn, không trừ tồn kho, lượt dùng coupon được hoàn tác.
+            if payment.Code != PAYMENT_METHOD_COD and total <= 0:
+                raise BusinessRuleError(
+                    "Đơn hàng 0 đồng không thể thanh toán chuyển khoản. Vui lòng chọn thanh toán khi nhận hàng (COD) "
+                    "hoặc điều chỉnh mã giảm giá.",
+                    code="order_total_zero",
+                )
             order = self.orders.create(
                 {
                     "OrderCode": self._new_order_code(),
@@ -250,7 +261,7 @@ class OrderService(BaseService):
                     "Subtotal": subtotal,
                     "ShippingFee": shipping_fee,
                     "DiscountAmount": discount,
-                    "TotalAmount": subtotal - discount + shipping_fee,
+                    "TotalAmount": total,
                     "OrderStatus": ORDER_PENDING,
                     "PaymentStatus": PAYMENT_PENDING,
                     "ReceiverName": receiver["ReceiverName"],
@@ -355,7 +366,11 @@ class OrderService(BaseService):
         return OrderItemResponse.model_validate(item)
 
     def cancel_customer_order(self, actor: Actor, order_id: uuid.UUID, data: OrderCancelRequest) -> OrderDetailResponse:
-        """Khách hàng tự hủy đơn của mình khi đơn còn Pending."""
+        """Khách hàng tự hủy đơn của mình khi đơn còn Pending và chưa thanh toán.
+
+        Đơn đã Paid không tự hủy được (order_paid_not_cancellable): hủy đơn đã nhận tiền cần hoàn tiền thủ công, nên do
+        Staff/Admin thực hiện (update_order_status); kiểm tra trên dòng đơn đã khóa, nên tiền về ngay trước đó cũng bị chặn.
+        """
         require_role(actor, *CUSTOMER_ONLY)
         with self.transaction():
             order = self.orders.get_by_id_for_update(order_id)
@@ -364,6 +379,11 @@ class OrderService(BaseService):
             if order.OrderStatus not in CUSTOMER_CANCELLABLE:
                 raise BusinessRuleError(
                     f"Không thể hủy đơn ở trạng thái {order.OrderStatus}", code="order_not_cancellable"
+                )
+            if order.PaymentStatus == PAYMENT_PAID:
+                raise BusinessRuleError(
+                    "Đơn hàng đã được thanh toán nên không thể tự hủy. Vui lòng liên hệ VieTech để được hỗ trợ.",
+                    code="order_paid_not_cancellable",
                 )
             self._cancel(order, changed_by=actor.user_id, reason=data.CancelReason, note=None)
             self.orders.flush()
@@ -748,13 +768,15 @@ class OrderService(BaseService):
     # Hệ thống: hết hạn thanh toán QR
     # ==================================================================
 
-    def expire_unpaid_qr_orders(self, *, limit: int = 100) -> int:
+    def expire_unpaid_qr_orders(self, *, limit: int = 100) -> JobRun:
         """Hủy các đơn QR (không phải COD) còn Pending, chưa thanh toán, quá 15 phút kể từ OrderedAt.
 
         Dành cho endpoint nội bộ được bảo vệ do cron bên ngoài gọi (không phải thao tác người dùng nên không
-        nhận Actor; lịch sử ghi ChangedByUserId = NULL). Mỗi đơn một transaction: khóa đơn → kiểm tra lại điều kiện
-        → hủy (hoàn tồn kho, trả lượt coupon) → hủy giao dịch QR đang chờ. Đơn đã hủy/đã thanh toán (callback
-        đến trước) bị bỏ qua nên tồn kho và coupon chỉ được hoàn đúng một lần. Trả về số đơn đã hủy.
+        nhận Actor; lịch sử ghi ChangedByUserId = NULL). Chọn tối đa ``limit`` đơn, cũ nhất trước; mỗi đơn một
+        transaction (``run_job``): khóa đơn → kiểm tra lại điều kiện → hủy (hoàn tồn kho, trả lượt coupon) → hủy giao
+        dịch QR đang chờ. Đơn đã hủy/đã thanh toán (callback đến trước) bị bỏ qua nên tồn kho và coupon chỉ được hoàn
+        đúng một lần. Đơn lỗi được rollback, ghi log và đếm vào ``failed``; các đơn sau vẫn được xử lý và đơn lỗi được
+        chọn lại ở lần chạy sau. Trả về số liệu của lần chạy (``processed`` = số đơn đã hủy).
         """
         if self.in_transaction():
             raise BusinessRuleError(
@@ -762,22 +784,26 @@ class OrderService(BaseService):
             )
         if limit < 1:
             raise BusinessRuleError("limit phải lớn hơn 0", code="invalid_limit")
-        candidates = self.orders.list_expired_unpaid_order_ids(
-            ordered_before=self.now() - QR_PAYMENT_TTL,
-            order_status=ORDER_PENDING,
-            payment_statuses=UNPAID_PAYMENT_STATUSES,
-            excluded_payment_method_code=PAYMENT_METHOD_COD,
-            limit=limit,
+        return run_job(
+            self,
+            "expire_unpaid_qr_orders",
+            select=lambda: self.orders.list_expired_unpaid_order_ids(
+                ordered_before=self.now() - QR_PAYMENT_TTL,
+                order_status=ORDER_PENDING,
+                payment_statuses=UNPAID_PAYMENT_STATUSES,
+                excluded_payment_method_code=PAYMENT_METHOD_COD,
+                limit=limit,
+            ),
+            handle=self._expire_one,
         )
-        expired = 0
-        for order_id in candidates:
-            with self.transaction():
-                order = self.orders.get_by_id_for_update(order_id)
-                if order is None or not self.is_qr_payment_expired(order):
-                    continue
-                self._cancel(order, changed_by=None, reason=QR_EXPIRED_REASON, note="Hệ thống: hết hạn thanh toán QR")
-                expired += 1
-        return expired
+
+    def _expire_one(self, order_id: uuid.UUID) -> bool:
+        """Một đơn của tác vụ hết hạn, trong transaction của ``run_job``: True khi đã hủy, False khi không còn hết hạn."""
+        order = self.orders.get_by_id_for_update(order_id)
+        if order is None or not self.is_qr_payment_expired(order):
+            return False
+        self._cancel(order, changed_by=None, reason=QR_EXPIRED_REASON, note="Hệ thống: hết hạn thanh toán QR")
+        return True
 
     def is_qr_payment_expired(self, order: Order) -> bool:
         """Đơn QR chưa thanh toán đã quá hạn 15 phút (chỉ áp dụng cho đơn Pending)."""
@@ -951,9 +977,9 @@ class OrderService(BaseService):
                     reference_id=order.OrderId,
                 )
 
-    @staticmethod
-    def _is_cod(order: Order) -> bool:
-        return order.payment_method.Code == PAYMENT_METHOD_COD
+    def _is_cod(self, order: Order) -> bool:
+        # Theo khóa ngoại PaymentMethodId (session.get: dùng bản đã nạp nếu có), không phụ thuộc quan hệ đã được nạp.
+        return self.payment_methods.get_by_id(order.PaymentMethodId).Code == PAYMENT_METHOD_COD
 
     def _move_to(self, order: Order, target: str, *, changed_by: uuid.UUID | None, note: str | None) -> None:
         """Chuyển đơn sang trạng thái kế tiếp (đã kiểm tra hợp lệ): tác động nghiệp vụ, mốc thời gian, lịch sử, thông báo.
@@ -974,8 +1000,15 @@ class OrderService(BaseService):
         """Tác động nghiệp vụ khi Staff/Admin chuyển đơn sang trạng thái kế tiếp.
 
         Không thay đổi PaymentStatus: COD được ghi nhận Paid riêng trong ``confirm_cod_delivery``.
+        Đơn không phải COD chỉ được xác nhận (Confirmed) khi đã Paid: đơn chưa thanh toán ở lại Pending, nơi tác vụ hết
+        hạn QR hủy nó sau 15 phút (đơn đã Confirmed không còn hết hạn). Kiểm tra Shipping giữ lại cho dữ liệu cũ.
         """
-        if target == ORDER_SHIPPING:
+        if target == ORDER_CONFIRMED:
+            if not self._is_cod(order) and order.PaymentStatus != PAYMENT_PAID:
+                raise BusinessRuleError(
+                    "Đơn thanh toán chuyển khoản chỉ được xác nhận sau khi đã thanh toán", code="order_not_paid"
+                )
+        elif target == ORDER_SHIPPING:
             if not self._is_cod(order) and order.PaymentStatus != PAYMENT_PAID:
                 raise BusinessRuleError("Đơn hàng chưa được thanh toán", code="order_not_paid")
             self._ensure_serials_assigned(order)

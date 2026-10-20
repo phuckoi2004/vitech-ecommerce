@@ -107,17 +107,18 @@ test('add form saves local field values to existing API and returns to refreshed
   expect(await table().findByText('Giao ngay')).toBeInTheDocument()
 })
 
-test('edit preloads values, preserves list filters and updates decimal fees and inactive status', async () => {
+test('edit preloads values, preserves list filters and updates whole-VND fees and inactive status', async () => {
   rows = [base]; const router = open('/admin/shipping-methods?keyword=SAME_DAY')
   await loaded()
   fireEvent.click(screen.getByRole('button', { name: 'Sửa ' + base.Name }))
   await screen.findByDisplayValue(base.Code)
   const dialog = within(screen.getByRole('dialog', { name: 'Sửa phương thức vận chuyển' }))
   fireEvent.change(screen.getByLabelText('Tên phương thức'), { target: { value: 'Tên đã sửa' } })
-  fireEvent.change(dialog.getByLabelText('Phí vận chuyển cơ bản'), { target: { value: '12345.67' } })
+  expect(dialog.getByLabelText('Phí vận chuyển cơ bản')).toHaveAttribute('step', '1')
+  fireEvent.change(dialog.getByLabelText('Phí vận chuyển cơ bản'), { target: { value: '12345' } })
   fireEvent.change(dialog.getByLabelText('Trạng thái'), { target: { value: 'false' } })
   fireEvent.click(screen.getByRole('button', { name: 'Lưu thay đổi' }))
-  await waitFor(() => expect(api.updateShippingMethod).toHaveBeenCalledWith('access-for-test', 's1', expect.objectContaining({ Name: 'Tên đã sửa', BaseFee: '12345.67', EstimatedDays: 0, IsActive: false })))
+  await waitFor(() => expect(api.updateShippingMethod).toHaveBeenCalledWith('access-for-test', 's1', expect.objectContaining({ Name: 'Tên đã sửa', BaseFee: '12345', EstimatedDays: 0, IsActive: false })))
   await screen.findByText('Đã cập nhật phương thức vận chuyển.')
   expect(router.state.location.search).toBe('?keyword=SAME_DAY')
   expect(await table().findByText('Tên đã sửa')).toBeInTheDocument()

@@ -19,6 +19,7 @@ from .common import (
     RequestSchema,
     ResponseSchema,
     SerialNumberValue,
+    VndAmount,
     relation_field,
     varchar,
 )
@@ -208,8 +209,8 @@ class ProductVariantCreate(RequestSchema):
     VariantName: varchar(255)
     Color: varchar(50) | None = None
     Storage: varchar(50) | None = None
-    Price: Money
-    CompareAtPrice: Money | None = None
+    Price: VndAmount
+    CompareAtPrice: VndAmount | None = None
     MinStockLevel: NonNegativeInt | None = None
     IsActive: bool | None = None
     IsSerialTracked: bool | None = None
@@ -224,8 +225,8 @@ class ProductVariantUpdate(RequestSchema):
     VariantName: varchar(255) | None = None
     Color: varchar(50) | None = None
     Storage: varchar(50) | None = None
-    Price: Money | None = None
-    CompareAtPrice: Money | None = None
+    Price: VndAmount | None = None
+    CompareAtPrice: VndAmount | None = None
     MinStockLevel: NonNegativeInt | None = None
     IsActive: bool | None = None
     IsSerialTracked: bool | None = None

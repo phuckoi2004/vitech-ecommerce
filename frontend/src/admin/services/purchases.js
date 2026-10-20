@@ -41,7 +41,6 @@ export const addPurchaseItem = (accessToken, id, body) => request(poPath(id) + '
 export const updatePurchaseItem = (accessToken, id, itemId, body) => request(poPath(id) + '/items/' + encodeURIComponent(itemId), { method: 'PATCH', accessToken, body })
 export const removePurchaseItem = (accessToken, id, itemId) => request(poPath(id) + '/items/' + encodeURIComponent(itemId), { method: 'DELETE', accessToken })
 export const decidePurchase = (accessToken, id, body) => request(poPath(id) + '/decision', { method: 'POST', accessToken, body })
-export const cancelPurchase = (accessToken, id) => request(poPath(id) + '/cancel', { method: 'POST', accessToken })
-export const resubmitPurchase = (accessToken, id) => request(poPath(id) + '/resubmit', { method: 'POST', accessToken })
+export const deletePurchase = (accessToken, id) => request(poPath(id), { method: 'DELETE', accessToken })
 export const receivePurchase = (accessToken, id, body) => request(poPath(id) + '/receive', { method: 'POST', accessToken, body })
 export const closePurchase = (accessToken, id, body) => request(poPath(id) + '/close', { method: 'POST', accessToken, body })

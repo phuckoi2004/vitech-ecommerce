@@ -6,7 +6,7 @@ Không cập nhật tồn kho hoặc CostPrice (thuộc Service).
 import uuid
 from typing import Any, NoReturn
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.orm import selectinload
 
 from app.models import PurchaseOrder, PurchaseOrderItem, PurchaseReceipt, PurchaseReceiptItem, Supplier
@@ -38,6 +38,10 @@ class SupplierRepository(BaseRepository[Supplier]):
 
 class PurchaseOrderRepository(BaseRepository[PurchaseOrder]):
     model = PurchaseOrder
+
+    def delete_document(self, po: PurchaseOrder) -> None:
+        """Delete the header; database cascades its lines/receipts, never inventory or serials."""
+        self.session.execute(delete(PurchaseOrder).where(PurchaseOrder.PurchaseOrderId == po.PurchaseOrderId))
 
     def get_by_code(self, purchase_order_code: str) -> PurchaseOrder | None:
         return self.get_one(PurchaseOrder.PurchaseOrderCode == purchase_order_code)

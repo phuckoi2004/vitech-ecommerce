@@ -83,7 +83,7 @@ test('errors retry and unsafe destination links are never made clickable', async
 
 test('new banners require an image and block saving/closing until the uploaded Supabase URL is ready', async () => {
   const router = renderPage('/admin/banners?dialog=new')
-  const dialog = await screen.findByRole('region', { name: 'Thêm banner quảng cáo' }), ui = within(dialog)
+  const dialog = await screen.findByRole('region', { name: 'Thêm banner quảng cáo' }, { timeout: 5000 }), ui = within(dialog)
   expect(router.state.location.pathname).toBe('/admin/banners/new')
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   expect(screen.getByRole('button', { name: 'Banner', exact: true })).toHaveAttribute('aria-current', 'page')

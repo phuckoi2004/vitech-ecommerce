@@ -25,7 +25,7 @@ ADMIN_FUNCTIONS = (
     "brands",            # B3.13
     "promotions",        # B3.14, including coupons
     "suppliers",         # B3.16
-    "purchases",         # B3.17 (update: edit/resubmit, approve/reject Admin-only; delete: cancel)
+    "purchases",         # Staff/Admin edit only own pending drafts; Admin approves/rejects/deletes.
     "purchase_history",  # B3.18
     "inventory",         # B3.19 (update: alert threshold)
     "shipping_methods",  # B3.21 (shipping options customers choose)
@@ -54,7 +54,7 @@ def _grant(name: str, *actions: str) -> set[str]:
 # Exports belong to Admin (decision 09/10/2026). Reviews, news and banners are Admin-only (Stage 4).
 _STAFF_DEFAULT = frozenset(set().union(
     _grant("products", "view"), _grant("categories", "view"), _grant("brands", "view"),
-    _grant("suppliers", "view"), _grant("purchases", "view", "create", "update", "delete"),
+    _grant("suppliers", "view"), _grant("purchases", "view", "create", "update"),
     _grant("purchase_history", "view"), _grant("inventory", "view"),
     _grant("shipping_methods", "view"), _grant("orders", "view", "update"),
     _grant("payment_methods", "view"), _grant("refunds", "view", "create"),

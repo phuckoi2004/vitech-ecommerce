@@ -106,15 +106,13 @@ class CloseShortageTest(ShortageTestBase):
         self.assertEqual(len(self.receipts()), 2)
         self.assertEqual((self.v1.StockQuantity, self.v2.StockQuantity), (11, 2))
 
-    def test_closed_order_cannot_receive_cancel_or_close_again(self):
+    def test_closed_order_cannot_receive_or_close_again(self):
         self.receive(self.po_id, (self.i1, 6))
         self.close()
         before = self.state()
         with self.assertRaises(BusinessRuleError) as ctx:
             self.receive(self.po_id, (self.i1, 1))
         self.assertEqual(ctx.exception.code, "purchase_order_not_receivable")
-        with self.assertRaises(BusinessRuleError):
-            self.svc.cancel_purchase_order(self.f.actor(self.admin), self.po_id)
         with self.assertRaises(BusinessRuleError) as ctx:
             self.close()
         self.assertEqual(ctx.exception.code, "purchase_order_not_closable")

@@ -6,7 +6,7 @@ from pydantic import ValidationError
 
 from app.models import PurchaseOrder
 from app.schemas import PurchaseOrderCreate, PurchaseOrderUpdate
-from app.services import PermissionDeniedError
+from app.services import BusinessRuleError, PermissionDeniedError
 from tests.test_purchasing import PurchaseOrderTestBase
 
 
@@ -24,13 +24,16 @@ class PurchaseCreatorNameTest(PurchaseOrderTestBase):
         with self.assertRaises(PermissionDeniedError):
             self.svc.get_purchase_order(self.f.actor(self.customer), po.PurchaseOrderId)
 
-    def test_rejected_decision_name_clears_when_resubmitted(self):
+    def test_rejected_decision_name_and_reason_remain_on_closed_record(self):
         po = self.create_po()
         rejected = self.reject(po.PurchaseOrderId, by=self.admin)
         self.assertEqual(rejected.DecidedByName, self.admin.FullName)
-        resubmitted = self.svc.resubmit_purchase_order(self.f.actor(self.staff), po.PurchaseOrderId)
-        self.assertIsNone(resubmitted.DecidedByName)
-        self.assertIsNone(resubmitted.DecidedByUserId)
+        with self.assertRaises(BusinessRuleError):
+            self.svc.update_purchase_order(self.f.actor(self.staff), po.PurchaseOrderId, PurchaseOrderUpdate(Note="bad"))
+        detail = self.svc.get_purchase_order(self.f.actor(self.staff), po.PurchaseOrderId)
+        self.assertEqual(detail.DecidedByName, self.admin.FullName)
+        self.assertEqual(detail.DecidedByUserId, self.admin.UserId)
+        self.assertEqual(detail.RejectReason, rejected.RejectReason)
 
     def test_pending_and_automatic_approval_do_not_invent_a_separate_decision(self):
         pending = self.create_po()

@@ -119,7 +119,7 @@ def get_warranty_request(request_id: uuid.UUID, service: Warranty, actor: Curren
 @admin_router.post("/warranty-requests/{request_id}/receive", response_model=AdminWarrantyRequestDetailResponse)
 def receive_warranty_request(request_id: uuid.UUID, service: Warranty, actor: CurrentActor,
                              data: ServiceRequestNote | None = None):
-    return service.advance_status(actor, request_id, WarrantyProgressRequest(ExpectedStage="New"))
+    return service.receive_status(actor, request_id, data)
 
 
 @admin_router.post("/warranty-requests/{request_id}/inspect", response_model=AdminWarrantyRequestDetailResponse)
@@ -220,7 +220,7 @@ def get_return_request(request_id: uuid.UUID, service: Returns, actor: CurrentAc
 @admin_router.post("/return-requests/{request_id}/accept", response_model=AdminReturnRequestDetailResponse)
 def accept_return_request(request_id: uuid.UUID, service: Returns, actor: CurrentActor,
                           data: ServiceRequestNote | None = None):
-    return service.advance_status(actor, request_id, "Pending")
+    return service.advance_status(actor, request_id, "Pending", notes=data)
 
 
 @admin_router.post("/return-requests/{request_id}/reject", response_model=AdminReturnRequestDetailResponse)
@@ -232,12 +232,12 @@ def reject_return_request(request_id: uuid.UUID, data: ServiceRequestRejection, 
 @admin_router.post("/return-requests/{request_id}/start-receiving", response_model=AdminReturnRequestDetailResponse)
 def start_return_receiving(request_id: uuid.UUID, service: Returns, actor: CurrentActor,
                            data: ServiceRequestNote | None = None):
-    return service.advance_status(actor, request_id, "Approved")
+    return service.advance_status(actor, request_id, "Approved", notes=data)
 
 
 @admin_router.post("/return-requests/{request_id}/receive", response_model=AdminReturnRequestDetailResponse)
 def receive_return_goods(request_id: uuid.UUID, data: ReturnGoodsReceive, service: Returns, actor: CurrentActor):
-    return service.advance_status(actor, request_id, "Receiving")
+    return service.advance_status(actor, request_id, "Receiving", notes=data)
 
 
 @admin_router.post("/return-requests/{request_id}/inspect", response_model=AdminReturnRequestDetailResponse)

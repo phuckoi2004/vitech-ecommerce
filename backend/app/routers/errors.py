@@ -22,6 +22,7 @@ from app.services.exceptions import (
     ServiceError,
     TooManyRequestsError,
 )
+from app.services.internal_jobs import JobSelectionError
 
 # Checked in order; the first matching class wins. Unlisted subclasses fall back to 400.
 _STATUS_BY_ERROR: tuple[tuple[type[ServiceError], int], ...] = (
@@ -33,6 +34,7 @@ _STATUS_BY_ERROR: tuple[tuple[type[ServiceError], int], ...] = (
     (EmailNotVerifiedError, 403),
     (TooManyRequestsError, 429),
     (PaymentGatewayError, 502),
+    (JobSelectionError, 500),  # an internal job could not select its records: nothing was processed
     (InvalidOtpError, 400),
     (PaymentVerificationError, 400),
     (BusinessRuleError, 400),

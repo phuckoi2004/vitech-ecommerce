@@ -21,6 +21,7 @@ from app.schemas import (
     PaymentReconciliationResolve,
     PaymentReconciliationResponse,
     PaymentTransactionResponse,
+    QrPaymentResponse,
     RefundResolution,
     RefundSourceResponse,
 )
@@ -67,9 +68,10 @@ def delete_payment_method(payment_method_id: uuid.UUID, service: Payments, actor
 # ------------------------------------------------------------------ customer payments
 
 
-@router.post("/orders/{order_id}/payments/qr", response_model=PaymentTransactionResponse,
+@router.post("/orders/{order_id}/payments/qr", response_model=QrPaymentResponse,
              status_code=status.HTTP_201_CREATED)
 def create_qr_payment(order_id: uuid.UUID, service: Payments, actor: CurrentActor):
+    """Pending QR payment with its transfer details (QR image, transfer content, bank account, amount, deadline)."""
     return service.create_qr_payment(actor, order_id)
 
 

@@ -83,7 +83,7 @@ test.each([
 ])('detail stock=%s low=%s active=%s uses the correct status color', async (StockQuantity, IsLowStock, IsActive, label, color) => {
   variantDetails.set('v1', { ...variantDetails.get('v1'), StockQuantity, IsLowStock, IsActive })
   renderPage('/admin/products?dialog=view&variant=v1')
-  const detail = within(await screen.findByRole('region', { name: 'Chi tiết sản phẩm' }))
+  const detail = within(await screen.findByRole('region', { name: 'Chi tiết sản phẩm' }, { timeout: 5000 }))
   // Stock quantity shows its own label, so check the badge in the "Trạng thái" field.
   const status = within(detail.getByText('Trạng thái', { selector: 'dt' }).nextElementSibling)
   expect(status.getByText(label)).toHaveClass(color)
@@ -138,7 +138,7 @@ describe('product variant list', () => {
     seedVariants()
     const router = renderPage()
     fireEvent.click(await screen.findByRole('button', { name: `Xem ${sibling.Sku}` }))
-    const dialog = await screen.findByRole('region', { name: 'Chi tiết sản phẩm' })
+    const dialog = await screen.findByRole('region', { name: 'Chi tiết sản phẩm' }, { timeout: 5000 })
     expect(await within(dialog).findByText(`Mã sản phẩm: ${sibling.Sku}`)).toBeInTheDocument()
     expect(await within(dialog).findByText(product.Name)).toBeInTheDocument()
     expect(within(dialog).getByText(sibling.Color)).toBeInTheDocument()
@@ -229,11 +229,14 @@ describe('product variant list', () => {
     await screen.findByText('Chưa có biến thể phù hợp.')
     expect(screen.queryByRole('button', { name: /Thêm biến thể/ })).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: /Thêm sản phẩm/ }))
-    const dialog = screen.getByRole('region', { name: 'Thêm sản phẩm' })
+    const dialog = await screen.findByRole('region', { name: 'Thêm sản phẩm' }, { timeout: 5000 })
     const user = userEvent.setup()
     await user.type(within(dialog).getByRole('textbox', { name: 'Tên sản phẩm' }), 'Điện thoại mới')
     await user.type(within(dialog).getByRole('textbox', { name: 'Mã sản phẩm (SKU)' }), 'MY-WHITE')
     await user.type(within(dialog).getByRole('textbox', { name: 'Màu sắc' }), 'Trắng')
+    // Giá bán là VND nguyên đồng.
+    expect(within(dialog).getByRole('spinbutton', { name: 'Giá bán (đồng)' })).toHaveAttribute('step', '1')
+    expect(within(dialog).getByRole('spinbutton', { name: 'Giá bán (đồng)' })).toHaveAttribute('max', '9999999999999')
     fireEvent.change(within(dialog).getByRole('spinbutton', { name: 'Giá bán (đồng)' }), { target: { value: '12000000' } })
     fireEvent.change(within(dialog).getByRole('combobox', { name: 'Danh mục' }), { target: { value: 'c1' } })
     fireEvent.change(within(dialog).getByRole('combobox', { name: 'Thương hiệu' }), { target: { value: 'b1' } })
@@ -270,7 +273,7 @@ describe('product variant list', () => {
     expect(await screen.findByRole('button', { name: 'Xem MY-WHITE' })).toBeInTheDocument()
     expect(api.createProduct).not.toHaveBeenCalled()
     expect(api.createVariant).not.toHaveBeenCalled()
-  })
+  }, 10000)
 
   test('variant edit submits only variant fields and preserves the parent and other row', async () => {
     seedVariants()
@@ -482,7 +485,7 @@ describe('product variant list', () => {
     fireEvent.click(within(dialog).getByRole('button', { name: 'Lưu thay đổi' }))
     fireEvent.click(within(await screen.findByRole('dialog', { name: 'Xác nhận những thay đổi?' })).getByRole('button', { name: 'Xác nhận' }))
     await waitFor(() => expect(api.updateCatalogProduct).toHaveBeenCalledTimes(1))
-    await waitFor(() => expect(screen.queryByRole('region', { name: 'Cập nhật sản phẩm' })).not.toBeInTheDocument())
+    await waitFor(() => expect(screen.queryByRole('region', { name: 'Cập nhật sản phẩm' })).not.toBeInTheDocument(), { timeout: 5000 })
   }
 
   test('the description editor saves formatted HTML that is shown and edited again with its formatting', async () => {

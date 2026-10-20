@@ -6,12 +6,13 @@ Tài liệu sinh từ code router (`backend/app/routers`). Chạy backend rồi 
 
 - **Xác thực:** gửi `Authorization: Bearer <access_token>` (lấy từ `/auth/login`).
 - **Quyền:** `Công khai` không cần đăng nhập; `Công khai*` không cần đăng nhập nhưng Staff/Admin đăng nhập xem thêm dữ liệu ẩn (ví dụ `active_only=false`); `Đăng nhập` cần token (Service kiểm tra role và chủ sở hữu); `Staff/Admin` là mọi route `/admin/...`, Customer bị từ chối 403 trước khi vào Service.
-- **Lỗi:** body `{"detail": "<thông báo tiếng Việt>", "code": "<mã lỗi>"}`. 400 vi phạm nghiệp vụ, 401 chưa đăng nhập, 403 không có quyền, 404 không tìm thấy, 409 trùng dữ liệu, 422 dữ liệu gửi lên sai, 429 quá giới hạn, 502 lỗi cổng thanh toán.
+- **Lỗi:** body `{"detail": "<thông báo tiếng Việt>", "code": "<mã lỗi>"}`. 400 vi phạm nghiệp vụ, 401 chưa đăng nhập, 403 không có quyền, 404 không tìm thấy, 409 trùng dữ liệu, 422 dữ liệu gửi lên sai, 429 quá giới hạn, 502 lỗi cổng thanh toán. Riêng 422 (dữ liệu sai định dạng hoặc vi phạm ràng buộc của schema) có body `{"detail": [<danh sách lỗi theo trường>]}`, không có `code`; lỗi database tạm thời trả 503 `{"detail": "..."}`, cũng không có `code`.
 - **Phân trang:** `page` (≥ 1), `page_size` (1–100, thống kê tồn kho 1–200); kết quả `{Items, Total, Page, PageSize}`.
 - **Tham số `status`** là bộ lọc trạng thái (tên query `status`).
 - **Ngày giờ** gửi lên phải kèm múi giờ, ví dụ `2026-10-01T00:00:00+07:00` (thiếu múi giờ → 422). Tham số `date_from`/`date_to` của thống kê là ngày lịch Việt Nam `YYYY-MM-DD`, tính cả hai đầu. Khoảng ngày đảo ngược hoặc vượt giới hạn khi đổi sang UTC (ví dụ `date_from=0001-01-01`, `date_to=9999-12-31`) trả 400 với mã `invalid_statistics_period`.
 - **Đăng nhập tùy chọn:** route `Công khai*` kiểm tra Bearer token có giá trị; token sai/hết hạn/bị thu hồi trả 401 (frontend làm mới token hoặc gọi lại không kèm token). Không có header Authorization, header Basic hoặc Bearer rỗng được xử lý như khách chưa đăng nhập. Route bắt buộc đăng nhập vẫn trả 401 khi thiếu Bearer token hợp lệ.
 - Tên trường JSON giữ đúng tên cột (PascalCase), ví dụ `ProductVariantId`, `Quantity`.
+- **Tiền:** VND. Giá bán, phí vận chuyển và giá trị tiền của khuyến mãi gửi lên phải là số nguyên đồng; xem mục [Tiền VND nguyên đồng và tiền giảm](#tiền-vnd-nguyên-đồng-và-tiền-giảm).
 
 ## Tài khoản: sổ địa chỉ, thông báo
 
@@ -115,13 +116,27 @@ Thông báo Admin/Staff mở chi tiết phiếu nhập, bảo hành và đổi t
 | GET | `/admin/orders/{order_id}/shipment-return` | Staff/Admin |  |  | `ShipmentReturnResponse` | `get_shipment_return` |
 | POST | `/admin/orders/{order_id}/shipment-return/receive` | Staff/Admin | `ShipmentReturnReceive` |  | `ShipmentReturnResponse` | `receive_shipment_return` |
 
+### Đặt, xác nhận và hủy đơn
+
+- **`POST /orders`**: tổng tiền = tạm tính − tiền giảm của coupon + phí vận chuyển của phương thức đã chọn. Phương thức khác COD (chuyển khoản qua QR) cần tổng tiền > 0; nếu không, trả 400 `order_total_zero` và không có gì được ghi: không tạo đơn, không trừ tồn kho, lượt dùng coupon được hoàn tác. Đơn COD không bị chặn bởi quy tắc này.
+- **`POST /orders/{order_id}/cancel`** (khách hàng hủy đơn của chính mình):
+  - Đơn không tồn tại hoặc không thuộc khách hàng: 404 `order_not_found`.
+  - Chỉ hủy được đơn `Pending`; trạng thái khác trả 400 `order_not_cancellable`.
+  - Đơn đã thanh toán (`PaymentStatus` = `Paid`) trả 400 `order_paid_not_cancellable`: khách cần liên hệ cửa hàng để được hỗ trợ.
+- **`POST /admin/orders/{order_id}/status`** (Staff/Admin):
+  - Chỉ chuyển sang trạng thái kế tiếp: `Pending` → `Confirmed` → `Processing` → `Shipping` → `Delivered` → `Completed`; bước khác trả 400 `invalid_status_transition`. `CancelReason` chỉ dùng khi hủy (400 `cancel_reason_not_allowed`).
+  - Sang `Confirmed`: đơn không phải COD phải có `PaymentStatus` = `Paid`, nếu không trả 400 `order_not_paid`. Đơn chuyển khoản chưa thanh toán ở lại `Pending` cho tới khi được thanh toán hoặc bị tác vụ hết hạn QR hủy. Đơn COD được xác nhận trước khi thu tiền.
+  - Sang `Shipping`: đơn không phải COD phải `Paid` (400 `order_not_paid`), và mọi sản phẩm quản lý Serial/IMEI phải đã được gán đủ (400 `order_serials_not_assigned`).
+  - Đơn COD sang `Delivered` phải dùng `POST /admin/orders/{order_id}/confirm-cod-delivery` (400 `cod_delivery_requires_collection`).
+  - Hủy (`Cancelled`) chỉ được trước `Delivered`; sau đó trả 400 `order_not_cancellable`.
+
 ## Thanh toán và hoàn tiền
 
 | Method | Đường dẫn | Quyền | Body | Query | Trả về | Service |
 |---|---|---|---|---|---|---|
 | GET | `/payment-methods` | Công khai* |  | active_only | `list[PaymentMethodResponse]` | `list_payment_methods` |
 | GET | `/payment-methods/{payment_method_id}` | Công khai* |  |  | `PaymentMethodResponse` | `get_payment_method` |
-| POST | `/orders/{order_id}/payments/qr` | Đăng nhập |  |  | `PaymentTransactionResponse` | `create_qr_payment` |
+| POST | `/orders/{order_id}/payments/qr` | Đăng nhập |  |  | `QrPaymentResponse` | `create_qr_payment` |
 | GET | `/orders/{order_id}/payments` | Đăng nhập |  |  | `list[PaymentTransactionResponse]` | `list_order_transactions` |
 | POST | `/payments/{payment_transaction_id}/cancel` | Đăng nhập |  |  | `PaymentTransactionResponse` | `cancel_qr_payment` |
 | POST | `/admin/payment-methods` | Staff/Admin | `PaymentMethodCreate` |  | `PaymentMethodResponse` | `create_payment_method` |
@@ -136,6 +151,34 @@ Thông báo Admin/Staff mở chi tiết phiếu nhập, bảo hành và đổi t
 | POST | `/admin/refunds/{refund_transaction_id}/resolve` | Staff/Admin | `RefundResolution` |  | `AdminPaymentTransactionResponse` | `resolve_pending_refund` |
 | GET | `/admin/payment-reconciliations` | Staff/Admin |  | status, issue_type, order_id, page, page_size | `PageResponse[PaymentReconciliationResponse]` | `list_reconciliations` |
 | POST | `/admin/payment-reconciliations/{reconciliation_id}/resolve` | Staff/Admin | `PaymentReconciliationResolve` |  | `PaymentReconciliationResponse` | `resolve_reconciliation` |
+
+### Tạo yêu cầu thanh toán QR
+
+`POST /orders/{order_id}/payments/qr`: chỉ Customer, cho đơn của chính mình (role khác: 403 `permission_denied`), không có body. Trả **201** `QrPaymentResponse`, gồm các trường của `PaymentTransactionResponse` cộng thông tin chuyển khoản do server cấp. Client hiển thị nguyên văn, không suy ra từ URL trong `QrData`.
+
+| Trường | Ý nghĩa |
+|---|---|
+| `QrData` | URL ảnh QR. |
+| `TransferContent` | Nội dung chuyển khoản bắt buộc: mã thanh toán duy nhất của yêu cầu này. |
+| `Bank`, `AccountNumber` | Tài khoản nhận tiền mà cổng thanh toán đã dùng khi tạo QR (`SEPAY_ACCOUNT_NUMBER`; với ngân hàng bắt buộc tài khoản ảo như MSB là số VA); `null` nếu không có (ví dụ yêu cầu tạo trước khi server lưu thông tin này). |
+| `AccountName` | Tên chủ tài khoản nhận tiền (`SEPAY_ACCOUNT_NAME`) lưu lúc tạo QR, để khách đối chiếu; `null` nếu không cấu hình. Không nằm trong ảnh QR. |
+| `TransferAmount` | Số tiền cần chuyển, số nguyên VND, bằng `Amount` (= `TotalAmount` của đơn). |
+| `ExpiresAt` | Hạn thanh toán = `OrderedAt` + 15 phút khi đơn còn `Pending`; `null` khi đơn đã ở trạng thái khác. Đơn quá hạn chưa thanh toán bị tác vụ `/internal/orders/expire-unpaid-qr` hủy. |
+
+- Gọi lại khi đơn đã có giao dịch `Pending` kèm QR: trả lại đúng giao dịch đó, không tạo giao dịch mới.
+- Endpoint này không xác nhận thanh toán: chỉ webhook SePay đã xác thực mới chuyển đơn sang `Paid`.
+- Lỗi:
+  - 400 `payment_gateway_not_configured`: server chưa cấu hình cổng thanh toán.
+  - 404 `order_not_found`: đơn không tồn tại hoặc không thuộc khách hàng đang đăng nhập.
+  - 400 `payment_method_is_cod`: đơn thanh toán khi nhận hàng.
+  - 400 `order_not_payable`: `OrderStatus` không thuộc `Pending`/`Confirmed`/`Processing`, hoặc `PaymentStatus` không thuộc `Pending`/`Failed`.
+  - 400 `order_payment_expired`: đơn `Pending` đã quá `OrderedAt` + 15 phút.
+  - 400 `order_total_zero`: `TotalAmount` ≤ 0. Đây là chốt chặn thứ hai cho đơn cũ; đơn mới đã bị chặn từ lúc tạo.
+  - 400 `qr_amount_not_supported`: cổng SePay chỉ nhận số tiền là số nguyên VND lớn hơn 0.
+  - 409 `qr_payment_in_progress`: đơn đang có giao dịch `Pending` chưa có QR (một yêu cầu khác đang xử lý hoặc bị gián đoạn); thử lại sau, hoặc hủy giao dịch đó bằng `POST /payments/{payment_transaction_id}/cancel` rồi tạo lại.
+  - 502 `qr_payment_unavailable`: cổng thanh toán không tạo được QR; giao dịch giữ chỗ được hủy.
+  - 502 `payment_code_collision`: mã thanh toán trùng với giao dịch khác; tạo lại yêu cầu.
+  - 400 `payment_request_cancelled`: trong lúc gọi cổng, giao dịch đã bị hủy hoặc đơn không còn chờ thanh toán.
 
 ## Khuyến mãi và mã giảm giá
 
@@ -154,6 +197,22 @@ Thông báo Admin/Staff mở chi tiết phiếu nhập, bảo hành và đổi t
 | POST | `/admin/coupons` | Staff/Admin | `CouponCreate` |  | `AdminCouponResponse` | `create_coupon` |
 | PATCH | `/admin/coupons/{coupon_id}` | Staff/Admin | `CouponUpdate` |  | `AdminCouponResponse` | `update_coupon` |
 | DELETE | `/admin/coupons/{coupon_id}` | Staff/Admin |  |  | `204` | `delete_coupon` |
+
+### Tiền VND nguyên đồng và tiền giảm
+
+- Các trường tiền **gửi lên** sau đây phải là VND nguyên đồng: ≥ 0, phần nguyên tối đa 13 chữ số (tổng 15 chữ số kể cả 2 chữ số thập phân), chấp nhận `"30000"` hoặc `"30000.00"`; có phần lẻ thì trả 422.
+  - `Price` của `ProductVariantCreate`/`ProductVariantUpdate` (`POST /admin/variants`, `PATCH /admin/variants/{variant_id}`) và của `CatalogItemCreate`/`CatalogVariantWrite` (`POST /admin/catalog-items`, `PUT /admin/catalog-items/{variant_id}`; hai route này chưa có trong bảng sản phẩm ở trên).
+  - `BaseFee` của `ShippingMethodCreate`/`ShippingMethodUpdate`.
+  - `MinOrderValue`, `MaxDiscountAmount` của `PromotionCreate`/`PromotionUpdate`.
+- Trường tiền trong **response** vẫn là số thập phân 2 chữ số, để đọc được dữ liệu cũ có phần lẻ.
+- `DiscountValue` của khuyến mãi: loại `Percentage` được có phần thập phân nhưng không quá 100; loại `FixedAmount` phải nguyên đồng.
+  - Khi body gửi cả `DiscountType` và `DiscountValue` (luôn đúng với `POST /admin/promotions`), vi phạm trả 422.
+  - `PATCH /admin/promotions/{promotion_id}` được kiểm tra lại với giá trị đang lưu. Giảm cố định có phần lẻ (ví dụ chỉ gửi `DiscountValue` có phần lẻ cho khuyến mãi đang là `FixedAmount`), hoặc giảm theo phần trăm lớn hơn 100, trả 400 `invalid_discount_value`.
+  - Kiểm tra giảm cố định nguyên đồng chỉ chạy khi `PATCH` có `DiscountType` hoặc `DiscountValue`, nên khuyến mãi cũ có phần lẻ vẫn đổi được tên, mô tả hoặc trạng thái.
+- Tiền giảm của mã giảm giá (`GET /cart/coupon-preview` và khi đặt đơn):
+  - `Percentage`: cơ sở × `DiscountValue` / 100; `FixedAmount`: `DiscountValue`.
+  - Giới hạn bởi `MaxDiscountAmount` (nếu có) và không vượt giá trị cơ sở, rồi làm tròn **xuống** đến đồng.
+  - Khi đặt đơn, tiền giảm được phân bổ vào các dòng đơn theo tỷ lệ giá trị dòng, theo đơn vị một đồng (dữ liệu cũ có giá trị lẻ xu thì theo đơn vị một xu). Tổng phân bổ đúng bằng tiền giảm và không dòng nào bị giảm quá giá trị của dòng.
 
 ## Nhập hàng và kho
 
@@ -229,32 +288,78 @@ Khi nhân viên/Admin phụ trách gửi tin trả lời, Customer nhận thông
 | POST | `/warranty-requests` | Đăng nhập | `WarrantyRequestCreate` |  | `WarrantyRequestDetailResponse` | `create_warranty_request` |
 | GET | `/warranty-requests` | Đăng nhập |  | status, page, page_size | `PageResponse[WarrantyRequestResponse]` | `list_my_warranty_requests` |
 | GET | `/warranty-requests/{request_id}` | Đăng nhập |  |  | `WarrantyRequestDetailResponse` | `get_my_warranty_request` |
-| POST | `/warranty-requests/{request_id}/cancel` | Đăng nhập | `Union (tùy chọn)` |  | `WarrantyRequestDetailResponse` | `cancel_warranty_request` |
+| POST | `/warranty-requests/{request_id}/cancel` | Đăng nhập | `ServiceRequestNote` (tùy chọn, chỉ `Note`) |  | `WarrantyRequestDetailResponse` | `cancel_warranty_request` |
 | POST | `/return-requests` | Đăng nhập | `ReturnRequestCreate` |  | `ReturnRequestDetailResponse` | `create_return_request` |
 | GET | `/return-requests` | Đăng nhập |  | status, page, page_size | `PageResponse[ReturnRequestResponse]` | `list_my_return_requests` |
 | GET | `/return-requests/{request_id}` | Đăng nhập |  |  | `ReturnRequestDetailResponse` | `get_my_return_request` |
-| POST | `/return-requests/{request_id}/cancel` | Đăng nhập | `Union (tùy chọn)` |  | `ReturnRequestDetailResponse` | `cancel_return_request` |
+| POST | `/return-requests/{request_id}/cancel` | Đăng nhập | `ServiceRequestNote` (tùy chọn, chỉ `Note`) |  | `ReturnRequestDetailResponse` | `cancel_return_request` |
+| POST | `/admin/warranty-requests/{request_id}/advance` | Staff/Admin | `WarrantyProgressRequest` |  | `AdminWarrantyRequestDetailResponse` | `advance_status` |
 | GET | `/admin/warranty-requests` | Staff/Admin |  | status, eligibility_status, customer_id, assigned_staff_id, supplier_id, page, page_size | `PageResponse[AdminWarrantyRequestResponse]` | `list_warranty_requests` |
 | GET | `/admin/warranty-requests/{request_id}` | Staff/Admin |  |  | `AdminWarrantyRequestDetailResponse` | `get_warranty_request` |
-| POST | `/admin/warranty-requests/{request_id}/receive` | Staff/Admin | `Union (tùy chọn)` |  | `AdminWarrantyRequestDetailResponse` | `receive_warranty_request` |
-| POST | `/admin/warranty-requests/{request_id}/inspect` | Staff/Admin | `WarrantyEligibilityUpdate` |  | `AdminWarrantyRequestDetailResponse` | `inspect_warranty_request` |
-| POST | `/admin/warranty-requests/{request_id}/hand-over` | Staff/Admin | `WarrantyHandoverCreate` |  | `AdminWarrantyRequestDetailResponse` | `hand_over_warranty_request` |
-| POST | `/admin/warranty-requests/{request_id}/start-processing` | Staff/Admin | `Union (tùy chọn)` |  | `AdminWarrantyRequestDetailResponse` | `start_warranty_processing` |
-| POST | `/admin/warranty-requests/{request_id}/propose-result` | Staff/Admin | `WarrantyResultProposal` |  | `AdminWarrantyRequestDetailResponse` | `propose_warranty_result` |
-| POST | `/admin/warranty-requests/{request_id}/approve-result` | Staff/Admin | `Union (tùy chọn)` |  | `AdminWarrantyRequestDetailResponse` | `approve_warranty_result` |
-| POST | `/admin/warranty-requests/{request_id}/reject-result` | Staff/Admin | `WarrantyResultRejection` |  | `AdminWarrantyRequestDetailResponse` | `reject_warranty_result` |
-| POST | `/admin/warranty-requests/{request_id}/reject` | Staff/Admin | `ServiceRequestRejection` |  | `AdminWarrantyRequestDetailResponse` | `reject_warranty_request` |
-| POST | `/admin/warranty-requests/{request_id}/complete` | Staff/Admin | `Union (tùy chọn)` |  | `AdminWarrantyRequestDetailResponse` | `complete_warranty_request` |
-| GET | `/admin/return-requests` | Staff/Admin |  | status, request_type, customer_id, assigned_staff_id, page, page_size | `PageResponse[AdminReturnRequestResponse]` | `list_return_requests` |
+| POST | `/admin/warranty-requests/{request_id}/receive` | Staff/Admin | `ServiceRequestNote` (tùy chọn) |  | `AdminWarrantyRequestDetailResponse` | `receive_status` (bước `New`) |
+| POST | `/admin/warranty-requests/{request_id}/inspect` | Staff/Admin | `WarrantyEligibilityUpdate` |  | 400 `service_workflow_paused` | Tạm dừng, không gọi Service |
+| POST | `/admin/warranty-requests/{request_id}/hand-over` | Staff/Admin | `WarrantyHandoverCreate` |  | 400 `service_workflow_paused` | Tạm dừng, không gọi Service |
+| POST | `/admin/warranty-requests/{request_id}/start-processing` | Staff/Admin | `ServiceRequestNote` (tùy chọn) |  | 400 `service_workflow_paused` | Tạm dừng, không gọi Service |
+| POST | `/admin/warranty-requests/{request_id}/propose-result` | Staff/Admin | `WarrantyResultProposal` |  | 400 `service_workflow_paused` | Tạm dừng, không gọi Service |
+| POST | `/admin/warranty-requests/{request_id}/approve-result` | Staff/Admin | `ServiceRequestNote` (tùy chọn) |  | 400 `service_workflow_paused` | Tạm dừng, không gọi Service |
+| POST | `/admin/warranty-requests/{request_id}/reject-result` | Staff/Admin | `WarrantyResultRejection` |  | 400 `service_workflow_paused` | Tạm dừng, không gọi Service |
+| POST | `/admin/warranty-requests/{request_id}/reject` | Staff/Admin | `ServiceRequestRejection` |  | `AdminWarrantyRequestDetailResponse` | `reject_status` |
+| POST | `/admin/warranty-requests/{request_id}/complete` | Staff/Admin | `WarrantyCompletion` (tùy chọn) |  | 400 `service_workflow_paused` | Tạm dừng, không gọi Service |
+| GET | `/admin/return-requests` | Staff/Admin |  | status, request_type, customer_id, assigned_staff_id, pending_first, page, page_size | `PageResponse[AdminReturnRequestResponse]` | `list_return_requests` |
 | GET | `/admin/return-requests/{request_id}` | Staff/Admin |  |  | `AdminReturnRequestDetailResponse` | `get_return_request` |
-| POST | `/admin/return-requests/{request_id}/accept` | Staff/Admin | `Union (tùy chọn)` |  | `AdminReturnRequestDetailResponse` | `accept_return_request` |
-| POST | `/admin/return-requests/{request_id}/reject` | Staff/Admin | `ServiceRequestRejection` |  | `AdminReturnRequestDetailResponse` | `reject_return_request` |
-| POST | `/admin/return-requests/{request_id}/start-receiving` | Staff/Admin | `Union (tùy chọn)` |  | `AdminReturnRequestDetailResponse` | `start_return_receiving` |
-| POST | `/admin/return-requests/{request_id}/receive` | Staff/Admin | `ReturnGoodsReceive` |  | `AdminReturnRequestDetailResponse` | `receive_return_goods` |
-| POST | `/admin/return-requests/{request_id}/inspect` | Staff/Admin | `ReturnInspection` |  | `AdminReturnRequestDetailResponse` | `inspect_return_goods` |
-| POST | `/admin/return-requests/{request_id}/approve` | Staff/Admin | `ReturnApproval` |  | `AdminReturnRequestDetailResponse` | `approve_return_request` |
-| POST | `/admin/return-requests/{request_id}/refund` | Staff/Admin | `Union (tùy chọn)` |  | `AdminReturnRequestDetailResponse` | `refund_return_request` |
-| POST | `/admin/return-requests/{request_id}/confirm-refund` | Staff/Admin |  |  | `AdminReturnRequestDetailResponse` | `confirm_return_refund` |
+| POST | `/admin/return-requests/{request_id}/advance` | Staff/Admin | `ReturnProgressRequest` |  | `AdminReturnRequestDetailResponse` | `advance_status` |
+| POST | `/admin/return-requests/{request_id}/accept` | Staff/Admin | `ServiceRequestNote` (tùy chọn) |  | `AdminReturnRequestDetailResponse` | `advance_status` (Pending → Approved) |
+| POST | `/admin/return-requests/{request_id}/reject` | Staff/Admin | `ServiceRequestRejection` |  | `AdminReturnRequestDetailResponse` | `reject_status` |
+| POST | `/admin/return-requests/{request_id}/start-receiving` | Staff/Admin | `ServiceRequestNote` (tùy chọn) |  | `AdminReturnRequestDetailResponse` | `advance_status` (Approved → Receiving) |
+| POST | `/admin/return-requests/{request_id}/receive` | Staff/Admin | `ReturnGoodsReceive` (bắt buộc, tối thiểu `{}`) |  | `AdminReturnRequestDetailResponse` | `advance_status` (Receiving → Processing) |
+| POST | `/admin/return-requests/{request_id}/inspect` | Staff/Admin | `ReturnInspection` |  | 400 `service_workflow_paused` | Tạm dừng, không gọi Service |
+| POST | `/admin/return-requests/{request_id}/approve` | Staff/Admin | `ReturnApproval` |  | 400 `service_workflow_paused` | Tạm dừng, không gọi Service |
+| POST | `/admin/return-requests/{request_id}/refund` | Staff/Admin | `ReturnRefundCreate` (tùy chọn) |  | 400 `service_workflow_paused` | Tạm dừng, không gọi Service |
+| POST | `/admin/return-requests/{request_id}/confirm-refund` | Staff/Admin |  |  | 400 `service_workflow_paused` | Tạm dừng, không gọi Service |
+
+### Luồng bảo hành đang hoạt động (từ 15/10/2026)
+
+- **Chỉ cập nhật tiến trình:** mỗi bước đổi trạng thái/mốc thời gian của phiếu, ghi một dòng lịch sử và gửi thông báo cho khách. Không chuyển trạng thái serial, không nhập/xuất kho, không có thao tác tài chính; không có bước gửi trung tâm bảo hành hay người duyệt riêng.
+- **Giai đoạn** (`ExpectedStage`, suy ra từ phiếu) và tác động của mỗi lần `POST .../advance`:
+  - `New` (phiếu `New`, chưa tiếp nhận): ghi `ReceivedAt`; trạng thái vẫn `New`, giai đoạn chuyển sang `Inspecting`.
+  - `Inspecting`: trạng thái `Processing`, `EligibilityStatus` = `Eligible`.
+  - `Repairing`: bắt buộc `ResultType` (`Repaired`, `PartReplaced`, `NotRepairable`) và `ResultNote` không rỗng. Người thực hiện công bố kết quả ngay: lưu `ResultType`, `ResultNote`, `ResultProposedAt`/`ResultApprovedAt` và người thực hiện. Khách thấy kết quả từ lúc này.
+  - `Finished`: trạng thái `Completed`, ghi `CompletedAt`.
+  - Phiếu chưa có người phụ trách được gán `AssignedStaffId` là người thực hiện bước đó.
+- **`POST .../advance`** với `{"ExpectedStage": "<giai đoạn hiện tại>"}` (kèm `ResultType`, `ResultNote` ở bước `Repairing`) là route giao diện quản trị đang dùng. Route này không nhận `Note`/`InternalNote`. `ResultNote` là nội dung khách xem được và có trong thông báo gửi khách.
+- **`POST .../receive`** là bước `New` của luồng trên (`receive_status` gọi `advance_status` với `ExpectedStage` = `New`): ghi `ReceivedAt`, gán `AssignedStaffId` nếu phiếu chưa có người phụ trách, trạng thái vẫn `New`. Body tùy chọn `ServiceRequestNote`, lưu vào dòng lịch sử của bước này:
+  - `Note` khách xem được, nối vào cột `Note` dạng `<sự kiện> Ghi chú: <Note>`.
+  - `InternalNote` lưu ở cột `InternalNote` của cùng dòng, chỉ có trong response Staff/Admin; lịch sử trả cho khách không có trường này.
+  - Ghi chú được bỏ khoảng trắng đầu/cuối; chuỗi rỗng coi như không gửi. Trường ngoài `Note`/`InternalNote` bị từ chối (422).
+  - Ghi chú không đưa vào thông báo gửi khách. Route không đổi trạng thái serial. Gọi lại sau khi đã tiếp nhận trả 409 `service_request_stale`.
+- **`POST .../reject`** với `{"Reason": "...", "InternalNote": "..." (tùy chọn)}`: từ chối phiếu `New` (kể cả trước khi tiếp nhận), `HandedOver` hoặc `Processing`. Trạng thái chuyển `Rejected`, `EligibilityStatus` = `Ineligible`, `Reason` được lưu vào `EligibilityReason`, khách xem được và có trong thông báo. `InternalNote` chỉ lưu trong lịch sử cho Staff/Admin, không có trong response của khách hay thông báo.
+- **Khách hủy** (`POST /warranty-requests/{request_id}/cancel`): chỉ khi phiếu còn `New` và chưa được tiếp nhận; ngược lại trả 400 `warranty_not_cancellable`.
+- **Lỗi:**
+  - 401 khi thiếu Bearer token hợp lệ; 403 `permission_denied` khi Customer gọi route `/admin/...`.
+  - 404 `warranty_request_not_found`.
+  - 409 `service_request_stale`: giai đoạn hiện tại khác `ExpectedStage`. Gồm cả bấm lặp lại, gọi `/receive` khi đã tiếp nhận, và gọi `/advance` trên phiếu đã đóng.
+  - 400 `warranty_result_required` (bước `Repairing` thiếu `ResultType`), `result_note_required` (`ResultNote` rỗng), `warranty_result_not_applicable` (gửi `ResultType`/`ResultNote` ở bước khác), `warranty_replacement_paused` (phiếu đổi máy cũ ở bước `Finished`), `service_request_closed` (từ chối phiếu đã đóng).
+  - 422: body sai (trường lạ, `ExpectedStage`/`ResultType` ngoài danh sách, ví dụ `ProductReplaced`, `Reason` rỗng).
+- **Tạm dừng:** `inspect`, `hand-over`, `start-processing`, `propose-result`, `approve-result`, `reject-result`, `complete` luôn trả 400 `service_workflow_paused` và không thay đổi phiếu. Phần cài đặt cũ được giữ trong Service để tham khảo, chờ quyết định nghiệp vụ.
+
+### Luồng đổi/trả đang hoạt động (từ 15/10/2026)
+
+- **Chỉ cập nhật tiến trình:** mỗi bước đổi trạng thái phiếu, ghi một dòng lịch sử và gửi thông báo cho khách. Không tạo giao dịch hoàn tiền, không nhập/xuất kho, không đổi trạng thái serial. `Completed` **không** có nghĩa là đã hoàn tiền.
+- **Chuyển trạng thái** (mỗi lần tiến một bước): `Pending → Approved → Receiving → Processing → Completed`. Bước `Receiving → Processing` ghi `ReceivedAt`, bước `Processing → Completed` ghi `CompletedAt`. Phiếu chưa có người phụ trách được gán `AssignedStaffId` là người thực hiện bước đó.
+- **`POST .../advance`** với `{"ExpectedStatus": "<trạng thái hiện tại>"}` là route giao diện quản trị đang dùng. Route này không nhận ghi chú: gửi thêm trường khác trả 422.
+- **`POST .../accept`, `.../start-receiving`, `.../receive`** là các bước ứng với `ExpectedStatus` lần lượt `Pending`, `Approved`, `Receiving`, có thêm ghi chú tùy chọn:
+  - `Note`: khách xem được, nối vào dòng lịch sử dạng `<sự kiện>. Ghi chú: <Note>`.
+  - `InternalNote`: chỉ Staff/Admin thấy (trường `InternalNote` của lịch sử trong response admin), không có trong response của khách.
+  - Ghi chú không được đưa vào nội dung thông báo gửi khách.
+  - `/receive`: phải gửi body `ReturnGoodsReceive` (tối thiểu `{}`). `SerialNumber` được chấp nhận nhưng **hiện không được đối chiếu hay xử lý**: không kiểm tra khớp serial của phiếu và không đổi trạng thái serial. Việc đối chiếu serial khi nhận hàng chưa được chốt nghiệp vụ.
+- **`POST .../reject`** với `{"Reason": "..."}`: từ chối phiếu ở trạng thái còn mở (`Pending`, `Approved`, `Receiving`, `Processing`). `Reason` khách xem được, được lưu vào `DecisionReason` và có trong thông báo. `InternalNote` (tùy chọn) chỉ lưu trong lịch sử cho Staff/Admin, không có trong response của khách hay thông báo.
+- **Lỗi:**
+  - 401 khi thiếu Bearer token hợp lệ; 403 `permission_denied` khi Customer gọi (bị chặn trước khi vào Service).
+  - 404 `return_request_not_found`.
+  - 409 `service_request_stale`: trạng thái hiện tại khác trạng thái mong đợi. Gồm cả bấm lặp lại, và gọi `/accept`, `/start-receiving`, `/receive` khi phiếu đã ở bước khác hoặc đã đóng.
+  - 400 `service_request_closed`: gọi `/advance` với `ExpectedStatus` là trạng thái đã đóng (`Completed`, `Rejected`, `Cancelled`), hoặc từ chối phiếu đã đóng.
+  - 422: body sai (trường lạ, sai kiểu, `ExpectedStatus` ngoài danh sách, `Reason` rỗng).
+- **Tạm dừng:** `inspect`, `approve`, `refund`, `confirm-refund` luôn trả 400 `service_workflow_paused` và không thay đổi phiếu. Phần cài đặt tài chính/kiểm định cũ được giữ lại trong Service để tham khảo, chờ quyết định nghiệp vụ.
 
 ## Tin tức và banner
 
@@ -290,10 +395,51 @@ Khi nhân viên/Admin phụ trách gửi tin trả lời, Customer nhận thông
 ## Điểm vào máy-với-máy (không dành cho frontend)
 
 - `POST /webhooks/sepay`: webhook SePay, xác thực HMAC; trả 503 cho tới khi cấu hình `SEPAY_*`.
-- `POST /internal/orders/expire-unpaid-qr`, `POST /internal/payment-webhooks/process`: cho cron, header `X-Internal-Secret`; ẩn khỏi `/docs`.
+- `POST /internal/orders/expire-unpaid-qr` (query `limit` 1–1000, mặc định 100) và `POST /internal/payment-webhooks/process` (query `limit` 1–1000, mặc định 100; `older_than_minutes` 1–1440, mặc định 5): cho cron, header `X-Internal-Secret`; ẩn khỏi `/docs`.
+  - 200 `{"Processed", "Selected", "Skipped", "Failed"}`. Khi `Failed` > 0, trả **500 kèm cùng body**: bản ghi lỗi đã được rollback, ghi log và sẽ được chọn lại ở lần chạy sau. Cron cần coi 500 là lần chạy thất bại.
+  - 500 `job_selection_failed`: lỗi bất ngờ ở bước chọn bản ghi, chưa xử lý bản ghi nào. Lỗi database trả 503 (không có `code`).
+  - 401 khi thiếu hoặc sai secret. 503 khi server chưa cấu hình secret (`INTERNAL_CRON_SECRET` ngắn hơn 32 byte), hoặc (riêng route webhook) chưa cấu hình SePay.
 - Chi tiết: `docs/internal-endpoints.md`.
 
 ## Không mở qua API
 
 - Use case nội bộ không mở cho client: `record_ai_reply`, `notify`, `change_stock`, `apply_bank_transfer` (chỉ qua webhook SePay), `handle_payment_callback`, `create_return_refund`, `apply_coupon_to_order`, `release_coupon_usage`, `receive_purchase_lines`.
 - API Auth/hồ sơ/quản lý tài khoản của Giai đoạn 5 xem `docs/auth-spec.md`.
+
+
+---
+
+## Bổ sung hiện hành cho phần admin — 18/10/2026
+
+Phần bổ sung này ghi các quyết định mới và hợp đồng đã đối chiếu với mã nguồn ngày 18/10/2026. Giữ nguyên nội dung gốc để lưu lịch sử; khi có khác biệt ở đúng chủ đề bên dưới, áp dụng phần bổ sung thay cho quy tắc cũ tương ứng. Đây là cập nhật tài liệu, không phải lệnh thay đổi source code, chạy migration hoặc sửa CSDL thật.
+
+[2026-10-18-admin.md](updates/2026-10-18-admin.md) | [README.md](README.md)
+
+### Phiếu nhập, người tạo và người duyệt
+
+- Staff lập phiếu ở Pending, chờ Admin duyệt hoặc từ chối. Admin lập thì phiếu ở Approved ngay và có thể nhận hàng, không cần bước quyết định tự duyệt riêng.
+- Phiếu chỉ sửa khi Pending/Rejected. Sửa đầu phiếu và toàn bộ dòng hàng gửi trong một PATCH tới `/admin/purchase-orders/{id}` với `SupplierId`, `Note`, `Items`.
+- Backend khóa phiếu, kiểm tra lại trạng thái và lưu tất cả trong một transaction. Lỗi kiểm tra/ghi/commit thì hoàn tác toàn bộ. Giữ ID của dòng còn cùng ProductVariantId; thêm dòng mới, xóa dòng bị bỏ, tính lại tổng tiền ở backend. Gửi lại cùng bộ dòng không thêm trùng SKU.
+- Bỏ `Items` trong PATCH là giữ nguyên dòng hiện có; `Items=[]` hoặc null bị từ chối. Trường ngày lập, người lập, thành tiền và thực nhận không phải đầu vào được phép sửa tùy ý.
+
+### Bảo hành, đổi trả và các luồng tạm dừng
+
+**Đổi trả hiện hành:** Staff/Admin tiếp nhận hoặc từ chối, sau đó chỉ chuyển tiến độ theo thứ tự `Pending → Approved → Receiving → Processing → Completed`. Customer hủy theo điều kiện của API khách. Rejected/Cancelled/Completed là phiếu đóng; không có chuyển lùi. Từ chối cần lý do. Backend kiểm tra trạng thái đang quan sát để bấm lặp hoặc form cũ không làm nhảy nhiều giai đoạn.
+
+Luồng đổi trả hiện hành không bắt kiểm tra thiệt hại, duyệt tiền hoặc hoàn tiền để tiến bước; không tự cộng/trừ kho hay chuyển serial theo việc bấm chuyển trạng thái. Completed tại đây chỉ là hoàn tất tiến độ phiếu, không chứng nhận tiền đã được hoàn hoặc hàng đã nhập lại kho. Luồng tài chính cũ được giữ nhưng endpoint ghi theo luồng đó đang trả lỗi `service_workflow_paused`.
+
+### Lưu tin tức và banner theo trạng thái
+
+- Tạo/sửa tin tức gửi nội dung cùng Status trong một POST/PATCH tới `/admin/news` hoặc `/admin/news/{id}`. Mặc định tạo Draft; chọn Published thì đăng ngay khi lần lưu thành công. Backend tự ghi PublishedAt lần đầu, giữ khi ẩn rồi đăng lại; không nhận PublishedAt hoặc người tạo tùy ý từ client.
+- Chuyển trạng thái tin tức vẫn theo quy tắc: Draft giữ Draft hoặc sang Published; Published giữ Published hoặc sang Hidden; Hidden giữ Hidden hoặc sang Published. Không đưa bài đã đăng về Draft. Bỏ Status trong PATCH thì giữ trạng thái đang có.
+- Tạo/sửa banner gửi nội dung, khoảng hiển thị và IsActive cùng một POST/PATCH tới `/admin/banners` hoặc `/admin/banners/{id}`. Mặc định tạo true; nếu chọn ngừng thì bản ghi được tạo false ngay, không có bước tạo hoạt động rồi gửi lệnh tắt sau. Bỏ IsActive trong PATCH thì giữ cờ đang có.
+- Mỗi lần lưu thuộc một transaction: lỗi kiểm tra, ghi hoặc commit hoàn tác nội dung và trạng thái cùng nhau. Form giữ dữ liệu nhập để thử lại, không dùng cơ chế lưu một phần rồi tiếp tục đổi trạng thái.
+- Các nút đổi trạng thái riêng ở danh sách/chi tiết vẫn dùng publish/hide hoặc activate/deactivate. Form không cần gọi thêm các endpoint này sau lần lưu nội dung.
+- API công khai chỉ trả bài Published; banner phải IsActive=true và đang trong [StartDate, EndDate], mốc null là không giới hạn. Trạng thái trong CSDL quyết định khả năng hiển thị, không phải việc trình duyệt đã từng bấm một nút Đăng.
+
+### Báo cáo và lịch sử thanh toán
+
+- API báo cáo hiện có `/admin/statistics/report-options`, `/admin/statistics/reports/revenue` và `/admin/statistics/reports/orders`, dùng cho Staff/Admin theo quyền. Chúng bổ sung cho các API thống kê cũ, không xóa API cũ.
+- Hai màn hình báo cáo có lựa chọn từng tháng trong 12 tháng của năm hoặc 5 tháng gần nhất. Từng tháng hiển thị một cột, 5 tháng hiển thị 5 cột; nhãn là tháng cụ thể. Bộ lọc tác động đồng thời biểu đồ và bảng; kỳ bảng là tháng/năm, không chia tuần.
+- Tạm bỏ lọc tài khoản, lọc nhà cung cấp và xuất báo cáo trên UI. Không suy ra giá trị bằng 0 khi API báo lỗi.
+- Báo cáo doanh số theo sản phẩm dùng OrderItems.LineTotal của đơn Delivered/Completed theo DeliveredAt, có giao dịch Payment Success; không tính lặp doanh số khi một đơn có nhiều giao dịch. Báo cáo này không đồng nghĩa mọi chỉ số doanh thu thuần của StatisticsService: phí giao, hoàn tiền và giá vốn cần phân biệt theo từng API.

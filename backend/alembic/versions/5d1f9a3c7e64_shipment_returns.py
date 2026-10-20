@@ -27,7 +27,32 @@ depends_on: Union[str, Sequence[str], None] = None
 
 RETURNS = "ShipmentReturns"
 ITEMS = "ShipmentReturnItems"
-DATA_API_ROLES = "anon, authenticated"
+DATA_API_ROLES = ("anon", "authenticated")
+
+
+def revoke_from_data_api_roles(statement: str) -> None:
+    """Chạy `{statement} FROM anon, authenticated` với các role trong DATA_API_ROLES đang tồn tại.
+
+    Supabase luôn có cả hai role nên câu lệnh thực thi y như trước (bảo mật Data API không đổi). PostgreSQL thường
+    (database local) không có các role này: không có quyền nào để thu hồi, nên bỏ qua thay vì lỗi; không tạo role.
+    `statement` là SQL cố định trong file này (không có dấu nháy đơn).
+    """
+    names = ", ".join(f"'{role}'" for role in DATA_API_ROLES)
+    op.execute(
+        f"""
+        DO $$
+        DECLARE
+            grantees text;
+        BEGIN
+            SELECT string_agg(quote_ident(rolname), ', ' ORDER BY rolname) INTO grantees
+            FROM pg_catalog.pg_roles WHERE rolname IN ({names});
+            IF grantees IS NOT NULL THEN
+                EXECUTE '{statement} FROM ' || grantees;
+            END IF;
+        END
+        $$
+        """
+    )
 
 
 def upgrade() -> None:
@@ -105,7 +130,7 @@ def upgrade() -> None:
     # Viết thủ công: security hardening cho Supabase Data API (giống các bảng khác).
     for table in (RETURNS, ITEMS):
         op.execute(f'ALTER TABLE "{table}" ENABLE ROW LEVEL SECURITY')
-        op.execute(f'REVOKE ALL PRIVILEGES ON TABLE "{table}" FROM {DATA_API_ROLES}')
+        revoke_from_data_api_roles(f'REVOKE ALL PRIVILEGES ON TABLE "{table}"')
 
 
 def downgrade() -> None:

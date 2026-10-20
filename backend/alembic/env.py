@@ -1,11 +1,9 @@
-import os
 from logging.config import fileConfig
-from pathlib import Path
 
 from alembic import context
-from dotenv import load_dotenv
 from sqlalchemy import create_engine, pool
 
+from app.core.env import database_url
 from app.models import Base
 
 # this is the Alembic Config object, which provides
@@ -20,17 +18,12 @@ if config.config_file_name is not None:
 # app.models import đủ 36 model nên metadata có đầy đủ bảng.
 target_metadata = Base.metadata
 
-BASE_DIR = Path(__file__).resolve().parent.parent
-ENV_FILE = BASE_DIR / ".env"
-
-
 def get_database_url() -> str:
-    """Lấy DATABASE_URL từ backend/.env. Không ghi vào config để tránh lộ ra log."""
-    load_dotenv(ENV_FILE)
-    database_url = os.getenv("DATABASE_URL")
-    if not database_url:
-        raise RuntimeError(f"DATABASE_URL chưa được cấu hình trong {ENV_FILE}")
-    return database_url
+    """DATABASE_URL theo app.core.env (development/test: backend/.env.local, không bao giờ backend/.env).
+
+    Không ghi vào config để tránh lộ ra log.
+    """
+    return database_url()
 
 
 def run_migrations_offline() -> None:

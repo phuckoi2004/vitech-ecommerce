@@ -1,3 +1,5 @@
+import { Link } from 'react-router-dom'
+import { buttonClassName } from '../../components/shared/buttonStyles.js'
 import ErrorState from '../../components/shared/ErrorState.jsx'
 import LoadingState from '../../components/shared/LoadingState.jsx'
 import Money from '../../components/shared/Money.jsx'
@@ -5,6 +7,7 @@ import useApiData from '../../hooks/useApiData.js'
 import useCustomerRequest from '../../hooks/useCustomerRequest.js'
 import { formatDateTime } from '../../lib/format.js'
 import { notificationStatus } from '../notifications.js'
+import { orderPath } from '../routes/paths.js'
 import ProductModal from './product/ProductModal.jsx'
 
 function ResourceDetail({ target }) {
@@ -34,6 +37,8 @@ function ResourceDetail({ target }) {
       </li>)}</ul>
       <p className="notification-total">Tổng đơn hàng <Money value={data.TotalAmount} /></p>
       {data.CancelReason && <p className="shopping-text">Lý do hủy: {data.CancelReason}</p>}
+      {/* The order page shows the payment status and, while a transfer is awaited, its QR. */}
+      <p><Link className={buttonClassName({ variant: 'outline', size: 'sm' })} to={orderPath(data.OrderId)}>Mở trang đơn hàng</Link></p>
     </>}
     {history.length > 0 && <section><h3>Lịch sử cập nhật</h3><ol className="notification-history">
       {[...history].sort((a, b) => Date.parse(a.ChangedAt) - Date.parse(b.ChangedAt)).map((item, index) => <li key={item.OrderStatusHistoryId || item.ServiceRequestHistoryId || index}>

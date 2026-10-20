@@ -144,6 +144,10 @@ test.each([
   expect(state.calls.some(call => call.path === path + id)).toBe(true)
   expect(state.calls.some(call => call.path.startsWith('/admin/'))).toBe(false)
   expect(screen.queryByText(/PRIVATE-/)).not.toBeInTheDocument()
+  // Only an order links to its own page (payment status and, while awaited, the transfer QR).
+  const orderLink = within(dialog).queryByRole('link', { name: 'Mở trang đơn hàng' })
+  if (type === 'Order') expect(orderLink).toHaveAttribute('href', `/don-hang/${id}`)
+  else expect(orderLink).not.toBeInTheDocument()
 })
 
 test('a failed read action remains retryable and opens its original content after retry', async () => {

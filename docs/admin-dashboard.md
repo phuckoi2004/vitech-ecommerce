@@ -38,3 +38,25 @@ Các mục sidebar mới mở danh sách API có làm mới/phân trang, menu S�
 Chạy `npm.cmd test` và `npm.cmd run build -- --configLoader native` trong `frontend`. Test bao gồm khoảng tháng, năm nhuận, dữ liệu rỗng/thật, API lỗi/thử lại, hủy request, thông báo đã đọc, dropdown, quyền Staff, chặn URL thiếu quyền và Back/Forward.
 
 Đã kiểm tra trực quan bằng Chrome headless trên desktop (1440×1080) và mobile (viewport 390px), với dữ liệu kiểm thử trong bộ dựng tạm đã xóa. Mobile không tràn ngang toàn trang; bảng đơn cuộn ngang riêng. Không dùng tài khoản/mật khẩu thật và không ghi dữ liệu mẫu vào database.
+
+
+---
+
+## Bổ sung hiện hành cho phần admin — 18/10/2026
+
+Phần bổ sung này ghi các quyết định mới và hợp đồng đã đối chiếu với mã nguồn ngày 18/10/2026. Giữ nguyên nội dung gốc để lưu lịch sử; khi có khác biệt ở đúng chủ đề bên dưới, áp dụng phần bổ sung thay cho quy tắc cũ tương ứng. Đây là cập nhật tài liệu, không phải lệnh thay đổi source code, chạy migration hoặc sửa CSDL thật.
+
+[2026-10-18-admin.md](updates/2026-10-18-admin.md) | [README.md](README.md)
+
+### Báo cáo và lịch sử thanh toán
+
+- API báo cáo hiện có `/admin/statistics/report-options`, `/admin/statistics/reports/revenue` và `/admin/statistics/reports/orders`, dùng cho Staff/Admin theo quyền. Chúng bổ sung cho các API thống kê cũ, không xóa API cũ.
+- Hai màn hình báo cáo có lựa chọn từng tháng trong 12 tháng của năm hoặc 5 tháng gần nhất. Từng tháng hiển thị một cột, 5 tháng hiển thị 5 cột; nhãn là tháng cụ thể. Bộ lọc tác động đồng thời biểu đồ và bảng; kỳ bảng là tháng/năm, không chia tuần.
+- Tạm bỏ lọc tài khoản, lọc nhà cung cấp và xuất báo cáo trên UI. Không suy ra giá trị bằng 0 khi API báo lỗi.
+- Báo cáo doanh số theo sản phẩm dùng OrderItems.LineTotal của đơn Delivered/Completed theo DeliveredAt, có giao dịch Payment Success; không tính lặp doanh số khi một đơn có nhiều giao dịch. Báo cáo này không đồng nghĩa mọi chỉ số doanh thu thuần của StatisticsService: phí giao, hoàn tiền và giá vốn cần phân biệt theo từng API.
+
+### Đọc kết quả kiểm thử và tài liệu lịch sử
+
+Các file stage4–stage7 ghi kết quả tại thời điểm được nêu trong file; giữ nguyên số liệu và ghi chú cũ. Bộ kiểm thử đã thay đổi theo các quyết định mới, nên kết quả trước đây không chứng minh các workflow cũ còn là yêu cầu hiện hành.
+
+Các lượt kiểm thử gần nhất đã báo trong hội thoại là kiểm thử theo phạm vi thay đổi, không phải chứng nhận toàn bộ hệ thống. Đối với lần sửa lưu nguyên khối tin tức/banner: 49 kiểm thử backend và 29 frontend đạt, build thành công; backend có kiểm thử HTTP/transaction trên SQLite cô lập và các kiểm thử service, không ghi dữ liệu thử lên CSDL thật. Lint còn hai cảnh báo cũ ở AdminTable và useAdminQuery. Đây không phải kết quả chạy lại trong lần bổ sung tài liệu.

@@ -3,7 +3,7 @@
 One automatic promotion per unit; the lowest valid price wins. Invalid/missing cost
 fails closed (no automatic discount). Fixed discounts and caps apply per unit.
 """
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import Decimal, ROUND_FLOOR
 
 from sqlalchemy import and_, case, func, or_, select
 
@@ -15,10 +15,9 @@ CENT = Decimal("0.01")
 def discount_for(promotion, base):
     amount = (base * promotion.DiscountValue / 100 if promotion.DiscountType == "Percentage"
               else promotion.DiscountValue)
-    amount = amount.quantize(CENT, rounding=ROUND_HALF_UP)
     if promotion.MaxDiscountAmount is not None:
         amount = min(amount, promotion.MaxDiscountAmount)
-    return max(Decimal("0"), min(base, amount))
+    return max(Decimal("0"), min(base, amount)).quantize(Decimal("1"), rounding=ROUND_FLOOR)
 
 
 def matches_product(promotion, product):
@@ -30,10 +29,11 @@ def matches_product(promotion, product):
 def automatic_price_expression(now):
     """Correlated SQL equivalent, used BEFORE price filtering and pagination."""
     base = ProductVariant.Price
-    reduction = case((Promotion.DiscountType == "Percentage", func.round(base * Promotion.DiscountValue / 100, 2)),
+    reduction = case((Promotion.DiscountType == "Percentage", base * Promotion.DiscountValue / 100),
                      else_=Promotion.DiscountValue)
     reduction = case((and_(Promotion.MaxDiscountAmount.is_not(None), reduction > Promotion.MaxDiscountAmount),
                       Promotion.MaxDiscountAmount), else_=reduction)
+    reduction = func.floor(reduction)
     candidate = base - reduction
     product_target = select(PromotionProduct.PromotionId).where(
         PromotionProduct.PromotionId == Promotion.PromotionId).correlate(Promotion).exists()

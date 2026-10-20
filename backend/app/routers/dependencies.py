@@ -12,6 +12,7 @@ from fastapi import Depends, Query
 from sqlalchemy.orm import Session
 
 from app.core.dependencies import get_current_actor, get_optional_actor
+from app.core.storage import AvatarStorage, get_avatar_storage
 from app.database import get_db
 from app.integrations.sepay import SePayConfigError, SePayQrGateway, SePaySettings
 from app.services import STAFF_OR_ADMIN, Actor, require_role
@@ -30,6 +31,7 @@ from app.services.inventory import InventoryService
 from app.services.order import OrderService
 from app.services.payment import PaymentService
 from app.services.ports import PaymentGateway
+from app.services.product_media import ProductMediaService
 from app.services.promotion import CouponService, PromotionService
 from app.services.pricing import PricingService
 from app.services.purchasing import PurchaseOrderService, SupplierService
@@ -37,6 +39,7 @@ from app.services.returns import ReturnPolicy, ReturnService
 from app.services.review import ReviewService
 from app.services.shipping_method import ShippingMethodService
 from app.services.statistics import StatisticsService
+from app.services.statistics_report import StatisticsReportService
 from app.services.user import AddressService, NotificationService
 from app.services.warranty import WarrantyService
 from app.services.wishlist_cart import CartService, WishlistService
@@ -108,6 +111,7 @@ get_chat_service = _session_service(ChatService)
 get_warranty_service = _session_service(WarrantyService)
 get_content_service = _session_service(ContentService)
 get_statistics_service = _session_service(StatisticsService)
+get_report_service = _session_service(StatisticsReportService)
 get_address_service = _session_service(AddressService)
 get_notification_service = _session_service(NotificationService)
 
@@ -116,6 +120,12 @@ def get_payment_service(
     db: Database, gateway: Annotated[PaymentGateway | None, Depends(get_payment_gateway)]
 ) -> PaymentService:
     return PaymentService(db, gateway=gateway)
+
+
+def get_product_media_service(
+    storage: Annotated[AvatarStorage | None, Depends(get_avatar_storage)],
+) -> ProductMediaService:
+    return ProductMediaService(storage)
 
 
 def get_return_service(

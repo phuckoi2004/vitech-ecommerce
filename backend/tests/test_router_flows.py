@@ -24,6 +24,7 @@ from tests.fakes import (
     notification_service,
     order_service,
     statistics_service,
+    purchase_order_service,
 )
 
 
@@ -39,6 +40,7 @@ def flow():
         deps.get_content_service: lambda: content_service(db, session),
         deps.get_statistics_service: lambda: statistics_service(db, session),
         deps.get_notification_service: lambda: notification_service(db, session),
+        deps.get_purchase_order_service: lambda: purchase_order_service(db, session),
         get_current_actor: lambda: state["actor"],
         get_optional_actor: lambda: state["actor"],
     }
@@ -59,6 +61,31 @@ def flow():
 def ok(response, status=200):
     assert response.status_code == status, response.text
     return response.json()
+
+
+def test_purchase_owner_and_admin_deletion_are_enforced_over_http(flow):
+    _, db, f, as_user = flow
+    staff, other, admin = f.user("Staff"), f.user("Staff"), f.user("Admin")
+    supplier, variant = f.supplier(), f.variant(stock=0, cost="0")
+    po = ok(as_user(staff).post("/admin/purchase-orders", json={
+        "SupplierId": str(supplier.SupplierId), "Items": [{
+            "ProductVariantId": str(variant.ProductVariantId), "OrderedQuantity": 1, "UnitPrice": "10.00",
+        }],
+    }), 201)
+    path = "/admin/purchase-orders/" + po["PurchaseOrderId"]
+    assert as_user(other).patch(path, json={"Note": "forged"}).status_code == 403
+    assert as_user(admin).patch(path, json={"Note": "admin cannot override owner"}).status_code == 403
+    assert as_user(staff).delete(path).status_code == 403
+    assert as_user(staff).post(path + "/cancel").status_code == 404
+    assert as_user(staff).post(path + "/resubmit").status_code == 404
+    assert ok(as_user(staff).patch(path, json={"Note": "own draft"}))["Note"] == "own draft"
+    assert as_user(admin).post(path + "/decision", json={"Status": "Rejected", "RejectReason": "New purchase required"}).status_code == 200
+    assert as_user(staff).patch(path, json={"Note": "cannot reopen"}).status_code == 400
+    assert as_user(admin).post(path + "/resubmit").status_code == 404
+    rejected = ok(as_user(staff).get(path))
+    assert rejected["Status"] == "Rejected" and rejected["RejectReason"] == "New purchase required"
+    assert as_user(admin).delete(path).status_code == 204
+    assert as_user(staff).get(path).status_code == 404
 
 
 def test_chat_flow_keeps_customer_and_staff_views_apart(flow):

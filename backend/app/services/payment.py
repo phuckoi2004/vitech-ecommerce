@@ -72,6 +72,7 @@ from app.schemas import (
     PaymentMethodResponse,
     PaymentMethodUpdate,
     PaymentTransactionResponse,
+    QrPaymentResponse,
     RefundResolution,
     RefundSourceResponse,
 )
@@ -205,8 +206,10 @@ class PaymentService(BaseService):
     # Thanh toán QR
     # ==================================================================
 
-    def create_qr_payment(self, actor: Actor, order_id: uuid.UUID) -> PaymentTransactionResponse:
+    def create_qr_payment(self, actor: Actor, order_id: uuid.UUID) -> QrPaymentResponse:
         """Customer tạo yêu cầu thanh toán QR cho đơn của chính mình; số tiền = Orders.TotalAmount (server).
+
+        Trả kèm thông tin chuyển khoản (``_qr_payment_response``) để client không phải suy ra từ QR.
 
         Không gọi cổng thanh toán khi đang giữ khóa Order:
         1. Transaction 1: khóa Order, kiểm tra (chủ đơn, không COD, chờ thanh toán, chưa quá hạn 15 phút).
@@ -237,7 +240,7 @@ class PaymentService(BaseService):
             pending = self._payments(order.OrderId, status=TX_PENDING)
             ready = [t for t in pending if t.QrData]
             if ready:
-                return PaymentTransactionResponse.model_validate(ready[0])
+                return self._qr_payment_response(order, ready[0])
             if pending:
                 raise ConflictError(
                     "Yêu cầu thanh toán QR của đơn đang được xử lý; thử lại sau hoặc hủy yêu cầu đang chờ",
@@ -443,6 +446,9 @@ class PaymentService(BaseService):
           khoản mới (không ghi đè khoản trước) + đối soát DuplicatePayment/PaymentAfterCancellation.
         - Sai số tiền → đối soát AmountMismatch; giao dịch giữ nguyên, đơn KHÔNG Paid.
         - Đúng số tiền → ghi nhận thành công theo quy trình hiện có (Paid / đến muộn / trùng).
+        Tiền về muộn: thứ quyết định là đơn đã bị hủy hay chưa, không phải hạn QR. Đơn chưa hủy (kể cả đã quá 15 phút mà
+        tác vụ hết hạn chưa chạy) vẫn giữ hàng và coupon, nên được ghi nhận Paid như thường và tác vụ hết hạn bỏ qua nó.
+        Đơn đã hủy (khách, Staff/Admin, hết hạn) → Success + PaymentAfterCancellation, PaymentStatus Paid để hoàn thủ công.
         Không hoàn tiền tự động. Trả (kết quả, PaymentTransactionId liên quan). Phải chạy trong use case gọi nó.
         """
         self.require_enclosing_use_case()
@@ -602,6 +608,10 @@ class PaymentService(BaseService):
             raise BusinessRuleError("Đơn hàng không ở trạng thái chờ thanh toán", code="order_not_payable")
         if order.OrderStatus == ORDER_PENDING and qr_payment_deadline(order) <= self.now():
             raise BusinessRuleError("Đơn hàng đã quá hạn thanh toán QR (15 phút)", code="order_payment_expired")
+        # Chốt bảo vệ thứ hai (OrderService.create_order đã chặn đơn 0 đồng không phải COD): không gọi cổng thanh toán,
+        # không tạo giao dịch cho đơn 0 đồng (kể cả đơn cũ tạo trước quy tắc này).
+        if order.TotalAmount <= 0:
+            raise BusinessRuleError("Đơn hàng 0 đồng không cần thanh toán chuyển khoản", code="order_total_zero")
 
     def _abandon_qr_request(self, transaction_id: uuid.UUID) -> None:
         """Hủy giao dịch giữ chỗ khi không tạo được QR. Lỗi ở bước này: giao dịch giữ Pending (khách hủy được)."""
@@ -617,7 +627,7 @@ class PaymentService(BaseService):
         except Exception:
             logger.warning("Không hủy được giao dịch QR giữ chỗ %s; cần đối soát", transaction_id)
 
-    def _attach_qr(self, transaction_id: uuid.UUID, request: QrPaymentRequest) -> PaymentTransactionResponse:
+    def _attach_qr(self, transaction_id: uuid.UUID, request: QrPaymentRequest) -> QrPaymentResponse:
         with self.transaction():
             transaction = self.transactions.get_by_id(transaction_id)
             if transaction is None:
@@ -644,7 +654,7 @@ class PaymentService(BaseService):
             elif transaction.Status == TX_PENDING:
                 transaction.Status = TX_CANCELLED
             self.transactions.flush()
-            response = PaymentTransactionResponse.model_validate(transaction)
+            response = self._qr_payment_response(order, transaction) if still_payable else None
         if code_taken:
             raise PaymentGatewayError("Mã thanh toán bị trùng; vui lòng tạo lại yêu cầu", code="payment_code_collision")
         if not still_payable:
@@ -652,6 +662,25 @@ class PaymentService(BaseService):
                 "Yêu cầu thanh toán đã bị hủy hoặc đơn không còn chờ thanh toán", code="payment_request_cancelled"
             )
         return response
+
+    @staticmethod
+    def _qr_payment_response(order: Order, transaction: PaymentTransaction) -> QrPaymentResponse:
+        """Thông tin chuyển khoản của một yêu cầu QR đã có QR (mã cổng và QR đã lưu).
+
+        Lấy từ giao dịch đã lưu (số tiền, mã thanh toán, tài khoản cổng ghi lại lúc tạo QR) và đơn hàng (hạn thanh
+        toán), không đọc lại cấu hình hiện tại: gọi lại luôn trả đúng thông tin của QR đã cấp. Số tiền đã được kiểm
+        tra là VND nguyên đồng trước khi tạo QR (``validate_payment_amount`` của cổng).
+        """
+        details = transaction.ResponseData or {}
+        return QrPaymentResponse(
+            **PaymentTransactionResponse.model_validate(transaction).model_dump(),
+            TransferContent=transaction.GatewayTransactionCode,
+            Bank=details.get("bank"),
+            AccountNumber=details.get("account_number"),
+            AccountName=details.get("account_name"),
+            TransferAmount=int(transaction.Amount),
+            ExpiresAt=qr_payment_deadline(order) if order.OrderStatus == ORDER_PENDING else None,
+        )
 
     # ==================================================================
     # COD

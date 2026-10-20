@@ -166,7 +166,7 @@ class PurchaseOrderStatusUpdate(RequestSchema):
     """KHÔNG nối trực tiếp vào API như lệnh đặt Status phiếu nhập (đợt 5.10; hiện không Service nào dùng).
 
     Trạng thái phiếu chỉ đổi qua nghiệp vụ của PurchaseOrderService: gửi/duyệt/từ chối (PurchaseOrderDecision), nhận
-    hàng (Receiving/Completed cùng tồn kho, giá vốn, serial), hủy, đóng phiếu nhận thiếu (Closed có lý do). Đặt trực tiếp
+    hàng (Receiving/Completed cùng tồn kho, giá vốn, serial), đóng phiếu nhận thiếu (Closed có lý do). Đặt trực tiếp
     Approved/Completed/Closed sẽ bỏ qua phê duyệt, nhập kho và lịch sử. Test tests/test_status_schema_guard chặn việc
     dùng schema này ngoài app/schemas.
     """

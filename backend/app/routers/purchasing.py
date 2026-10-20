@@ -127,20 +127,16 @@ def remove_purchase_order_item(purchase_order_id: uuid.UUID, purchase_order_item
     return service.remove_item(actor, purchase_order_id, purchase_order_item_id)
 
 
-@admin_router.post("/purchase-orders/{purchase_order_id}/resubmit", response_model=PurchaseOrderDetailResponse)
-def resubmit_purchase_order(purchase_order_id: uuid.UUID, service: PurchaseOrders, actor: CurrentActor):
-    return service.resubmit_purchase_order(actor, purchase_order_id)
-
-
 @admin_router.post("/purchase-orders/{purchase_order_id}/decision", response_model=PurchaseOrderDetailResponse)
 def decide_purchase_order(purchase_order_id: uuid.UUID, data: PurchaseOrderDecision, service: PurchaseOrders,
                           actor: CurrentActor):
     return service.decide_purchase_order(actor, purchase_order_id, data)
 
 
-@admin_router.post("/purchase-orders/{purchase_order_id}/cancel", response_model=PurchaseOrderDetailResponse)
-def cancel_purchase_order(purchase_order_id: uuid.UUID, service: PurchaseOrders, actor: CurrentActor):
-    return service.cancel_purchase_order(actor, purchase_order_id)
+@admin_router.delete("/purchase-orders/{purchase_order_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_purchase_order(purchase_order_id: uuid.UUID, service: PurchaseOrders, actor: CurrentActor):
+    service.delete_purchase_order(actor, purchase_order_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @admin_router.post("/purchase-orders/{purchase_order_id}/receive", response_model=PurchaseOrderDetailResponse)
