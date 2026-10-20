@@ -29,13 +29,38 @@ depends_on: Union[str, Sequence[str], None] = None
 
 TABLE = "PaymentTransactions"
 COLUMN = "RefundOfPaymentTransactionId"
-DATA_API_ROLES = "anon, authenticated"
+DATA_API_ROLES = ("anon", "authenticated")
 SOURCE_FUNCTION = "public.check_payment_refund_source()"
 SOURCE_TRIGGER = "TR_PaymentTransactions_RefundSource"
 REFUND_SOURCE_CONSISTENT_SQL = (
     "(\"TransactionType\" = 'Refund' AND \"RefundOfPaymentTransactionId\" IS NOT NULL) OR "
     "(\"TransactionType\" <> 'Refund' AND \"RefundOfPaymentTransactionId\" IS NULL)"
 )
+
+
+def revoke_from_data_api_roles(statement: str) -> None:
+    """Chạy `{statement} FROM anon, authenticated` với các role trong DATA_API_ROLES đang tồn tại.
+
+    Supabase luôn có cả hai role nên câu lệnh thực thi y như trước (bảo mật Data API không đổi). PostgreSQL thường
+    (database local) không có các role này: không có quyền nào để thu hồi, nên bỏ qua thay vì lỗi; không tạo role.
+    `statement` là SQL cố định trong file này (không có dấu nháy đơn).
+    """
+    names = ", ".join(f"'{role}'" for role in DATA_API_ROLES)
+    op.execute(
+        f"""
+        DO $$
+        DECLARE
+            grantees text;
+        BEGIN
+            SELECT string_agg(quote_ident(rolname), ', ' ORDER BY rolname) INTO grantees
+            FROM pg_catalog.pg_roles WHERE rolname IN ({names});
+            IF grantees IS NOT NULL THEN
+                EXECUTE '{statement} FROM ' || grantees;
+            END IF;
+        END
+        $$
+        """
+    )
 
 
 def upgrade() -> None:
@@ -98,7 +123,7 @@ def upgrade() -> None:
         """
     )
     op.execute(f"REVOKE EXECUTE ON FUNCTION {SOURCE_FUNCTION} FROM PUBLIC")
-    op.execute(f"REVOKE EXECUTE ON FUNCTION {SOURCE_FUNCTION} FROM {DATA_API_ROLES}")
+    revoke_from_data_api_roles(f"REVOKE EXECUTE ON FUNCTION {SOURCE_FUNCTION}")
     op.execute(
         f'CREATE TRIGGER "{SOURCE_TRIGGER}" BEFORE INSERT OR UPDATE ON "{TABLE}" '
         f"FOR EACH ROW EXECUTE FUNCTION {SOURCE_FUNCTION}"
