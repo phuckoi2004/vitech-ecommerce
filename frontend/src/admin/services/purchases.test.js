@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
-import { addPurchaseItem, cancelPurchase, closePurchase, createPurchase, decidePurchase, getPurchaseDirectory, receivePurchase, removePurchaseItem, resubmitPurchase, updatePurchase, updatePurchaseItem } from './purchases.js'
+import { addPurchaseItem, deletePurchase, closePurchase, createPurchase, decidePurchase, getPurchaseDirectory, receivePurchase, removePurchaseItem, resubmitPurchase, updatePurchase, updatePurchaseItem } from './purchases.js'
 const api = vi.hoisted(() => ({ getAdminData: vi.fn() }))
 vi.mock('../../services/api/admin.js', () => api)
 beforeEach(() => vi.resetAllMocks())
@@ -34,11 +34,11 @@ test('all writes target the existing use-case endpoints and encode both order an
   await resubmitPurchase('access', 'po/id')
   await receivePurchase('access', 'po/id', { Items: [{ PurchaseOrderItemId: 'item/id', Quantity: 1, SerialNumbers: ['SN1'] }], Note: null })
   await closePurchase('access', 'po/id', { Reason: 'NCC giao thiếu' })
-  await cancelPurchase('access', 'po/id')
+  await deletePurchase('access', 'po/id')
   expect(fetch.mock.calls.map(([url, options]) => [url, options.method])).toEqual([
     ['/api/admin/purchase-orders', 'POST'], ['/api/admin/purchase-orders/po%2Fid', 'PATCH'],
     ['/api/admin/purchase-orders/po%2Fid/items', 'POST'], ['/api/admin/purchase-orders/po%2Fid/items/item%2Fid', 'PATCH'], ['/api/admin/purchase-orders/po%2Fid/items/item%2Fid', 'DELETE'],
-    ['/api/admin/purchase-orders/po%2Fid/decision', 'POST'], ['/api/admin/purchase-orders/po%2Fid/resubmit', 'POST'], ['/api/admin/purchase-orders/po%2Fid/receive', 'POST'], ['/api/admin/purchase-orders/po%2Fid/close', 'POST'], ['/api/admin/purchase-orders/po%2Fid/cancel', 'POST'],
+    ['/api/admin/purchase-orders/po%2Fid/decision', 'POST'], ['/api/admin/purchase-orders/po%2Fid/resubmit', 'POST'], ['/api/admin/purchase-orders/po%2Fid/receive', 'POST'], ['/api/admin/purchase-orders/po%2Fid/close', 'POST'], ['/api/admin/purchase-orders/po%2Fid', 'DELETE'],
   ])
   expect(fetch.mock.calls.every(([, options]) => options.headers.Authorization === 'Bearer access' && options.credentials === 'include')).toBe(true)
   expect(JSON.parse(fetch.mock.calls[7][1].body)).toEqual({ Items: [{ PurchaseOrderItemId: 'item/id', Quantity: 1, SerialNumbers: ['SN1'] }], Note: null })

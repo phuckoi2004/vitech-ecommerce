@@ -42,8 +42,11 @@ class SerialTrackingUsage(NamedTuple):
 class CategoryRepository(BaseRepository[Category]):
     model = Category
 
+    def get_by_id(self, obj_id: uuid.UUID) -> Category | None:
+        return self.get_one(Category.CategoryId == obj_id, Category.IsDeleted.is_(False))
+
     def get_by_slug(self, slug: str) -> Category | None:
-        return self.get_one(Category.Slug == slug)
+        return self.get_one(Category.Slug == slug, Category.IsDeleted.is_(False))
 
     def exists_by_slug(self, slug: str, exclude_id: uuid.UUID | None = None) -> bool:
         conditions = [Category.Slug == slug]
@@ -55,7 +58,7 @@ class CategoryRepository(BaseRepository[Category]):
         self, *, is_active: bool | None = None, parent_id: uuid.UUID | None = None, roots_only: bool = False
     ) -> list[Category]:
         """roots_only=True: chỉ danh mục gốc (ParentCategoryId IS NULL); parent_id: con trực tiếp."""
-        conditions = []
+        conditions = [Category.IsDeleted.is_(False)]
         if is_active is not None:
             conditions.append(Category.IsActive.is_(is_active))
         if roots_only:
@@ -70,11 +73,11 @@ class CategoryRepository(BaseRepository[Category]):
     def visible_tree_ids(self, category_id: uuid.UUID) -> list[uuid.UUID]:
         """Root and active descendants; UNION also terminates on malformed cyclic data."""
         tree = select(Category.CategoryId).where(
-            Category.CategoryId == category_id, Category.IsActive.is_(True)
+            Category.CategoryId == category_id, Category.IsActive.is_(True), Category.IsDeleted.is_(False)
         ).cte("visible_category_tree", recursive=True)
         tree = tree.union(select(Category.CategoryId).join(
             tree, Category.ParentCategoryId == tree.c.CategoryId
-        ).where(Category.IsActive.is_(True)))
+        ).where(Category.IsActive.is_(True), Category.IsDeleted.is_(False)))
         return list(self.session.scalars(select(tree.c.CategoryId)))
 
     def has_products(self, category_id: uuid.UUID) -> bool:
@@ -84,8 +87,11 @@ class CategoryRepository(BaseRepository[Category]):
 class BrandRepository(BaseRepository[Brand]):
     model = Brand
 
+    def get_by_id(self, obj_id: uuid.UUID) -> Brand | None:
+        return self.get_one(Brand.BrandId == obj_id, Brand.IsDeleted.is_(False))
+
     def get_by_slug(self, slug: str) -> Brand | None:
-        return self.get_one(Brand.Slug == slug)
+        return self.get_one(Brand.Slug == slug, Brand.IsDeleted.is_(False))
 
     def exists_by_slug(self, slug: str, exclude_id: uuid.UUID | None = None) -> bool:
         conditions = [Brand.Slug == slug]
@@ -94,7 +100,9 @@ class BrandRepository(BaseRepository[Brand]):
         return self.exists(*conditions)
 
     def list_brands(self, *, is_active: bool | None = None) -> list[Brand]:
-        conditions = [] if is_active is None else [Brand.IsActive.is_(is_active)]
+        conditions = [Brand.IsDeleted.is_(False)]
+        if is_active is not None:
+            conditions.append(Brand.IsActive.is_(is_active))
         return self.get_all(*conditions, order_by=(Brand.Name, Brand.BrandId))
 
     def has_products(self, brand_id: uuid.UUID) -> bool:

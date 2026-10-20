@@ -5,7 +5,7 @@ import PurchaseConfirmation from './PurchaseConfirmation.jsx'
 const po = { PurchaseOrderId: 'po1', PurchaseOrderCode: 'PN-API-01' }
 function props(action = 'reject', overrides = {}) { return { action, po, busy: false, error: '', permitted: true, onCancel: vi.fn(), onConfirm: vi.fn(), ...overrides } }
 
-test.each([['reject', 'Từ chối phiếu nhập PN-API-01', 'Xác nhận từ chối'], ['cancel', 'Xóa phiếu nhập?', 'Xác nhận xóa'], ['approve', 'Xác nhận phiếu nhập PN-API-01?', 'Xác nhận phiếu']])('%s confirmation uses the live code and lets Hủy dismiss without sending a write', (action, title, label) => {
+test.each([['reject', 'Từ chối phiếu nhập PN-API-01', 'Xác nhận từ chối'], ['delete', 'Xóa phiếu nhập?', 'Xác nhận xóa'], ['approve', 'Xác nhận phiếu nhập PN-API-01?', 'Xác nhận phiếu']])('%s confirmation uses the live code and lets Hủy dismiss without sending a write', (action, title, label) => {
   const values = props(action)
   render(<PurchaseConfirmation {...values} />)
   expect(screen.getByRole('dialog', { name: title })).toBeInTheDocument()
@@ -39,25 +39,25 @@ test('pending writes block cancellation through the button, Escape and the backd
   expect(screen.getByRole('button', { name: 'Hủy', exact: true })).toBeDisabled()
   expect(screen.getByRole('button', { name: 'Đang xử lý…' })).toBeDisabled()
   fireEvent.click(dialog)
-  fireEvent(dialog, new Event('cancel', { cancelable: true }))
+  fireEvent(dialog, new Event('delete', { cancelable: true }))
   fireEvent.submit(dialog.querySelector('form'))
   expect(values.onCancel).not.toHaveBeenCalled()
   expect(values.onConfirm).not.toHaveBeenCalled()
 })
 
-test('fresh uncancellable details disable confirmation and explain that receiving has already begun', () => {
-  const values = props('cancel', { permitted: false })
+test('a session without deletion permission cannot confirm deletion', () => {
+  const values = props('delete', { permitted: false })
   render(<PurchaseConfirmation {...values} />)
   expect(screen.getByRole('button', { name: 'Xác nhận xóa' })).toBeDisabled()
-  expect(screen.getByRole('alert')).toHaveTextContent('không thể hủy')
-  expect(screen.getByText(/giữ lại lịch sử/)).toBeInTheDocument()
+  expect(screen.getByRole('alert')).toHaveTextContent('Chỉ quản trị viên')
+  expect(screen.getByText(/xóa vĩnh viễn/)).toBeInTheDocument()
   fireEvent.submit(screen.getByRole('dialog').querySelector('form'))
   expect(values.onConfirm).not.toHaveBeenCalled()
 })
 
 test('failed detail reads can retry but cannot confirm a different or unloaded order', () => {
   const onRetry = vi.fn()
-  const values = props('cancel', { po: null, loadError: 'Lỗi tải phiếu.', onRetry })
+  const values = props('delete', { po: null, loadError: 'Lỗi tải phiếu.', onRetry })
   render(<PurchaseConfirmation {...values} />)
   expect(screen.getByRole('button', { name: 'Xác nhận xóa' })).toBeDisabled()
   fireEvent.click(screen.getByRole('button', { name: 'Thử lại' }))

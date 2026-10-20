@@ -6,7 +6,7 @@ from decimal import Decimal
 
 from pydantic import ValidationError
 
-from app.models import Notification, ProductSerial, PurchaseOrder, PurchaseOrderItem, StockAdjustment
+from app.models import Notification, ProductSerial, PurchaseOrder, PurchaseOrderItem, PurchaseReceipt, PurchaseReceiptItem, StockAdjustment
 from app.schemas import (
     PurchaseOrderCreate,
     PurchaseOrderDecision,
@@ -291,15 +291,68 @@ class ReceiveTest(PurchaseOrderTestBase):
             self.svc.receive_items(self.f.actor(self.staff), po.PurchaseOrderId, PurchaseOrderReceive.model_construct(Items=[]))
         self.assertEqual(ctx.exception.code, "receive_items_empty")
 
-    def test_cancel_only_before_any_receipt(self):
+    def test_admin_deletes_received_document_without_changing_stock_cost_or_serials(self):
+        self.v1.StockQuantity = 0
+        self.v1.IsSerialTracked = True
+        po, ids = self.staff_po_approved(lines=[(self.v1, 1, "50000.00")])
+        self.receive(po.PurchaseOrderId, (ids[self.v1.ProductVariantId], 1, ["SERIAL-KEEP-AFTER-DELETE"]))
+        self.assertEqual(len(self.db.rows(ProductSerial)), 1)
+        before = (self.v1.StockQuantity, self.v1.CostPrice, list(self.db.rows(ProductSerial)))
+        self.svc.delete_purchase_order(self.f.actor(self.admin), po.PurchaseOrderId)
+        self.assertIsNone(self.db.get(PurchaseOrder, po.PurchaseOrderId))
+        self.assertEqual(self.db.rows(PurchaseOrderItem), [])
+        self.assertEqual(self.db.rows(PurchaseReceipt), [])
+        self.assertEqual(self.db.rows(PurchaseReceiptItem), [])
+        self.assertEqual((self.v1.StockQuantity, self.v1.CostPrice, self.db.rows(ProductSerial)), before)
+
+    def test_staff_cannot_delete_even_own_rejected_document(self):
+        other = self.create_po()
+        self.reject(other.PurchaseOrderId)
+        with self.assertRaises(PermissionDeniedError):
+            self.svc.delete_purchase_order(self.f.actor(self.staff), other.PurchaseOrderId)
+        self.assertEqual(self.db.get(PurchaseOrder, other.PurchaseOrderId).Status, "Rejected")
+
+    def test_staff_cannot_edit_or_resubmit_someone_elses_document(self):
+        from app.schemas import PurchaseOrderUpdate
+
+        po = self.create_po()
+        other_staff = self.f.user("Staff")
+        actor = self.f.actor(other_staff)
+        item_id = self.item_ids(po.PurchaseOrderId)[self.v1.ProductVariantId]
+        operations = [
+            lambda: self.svc.update_purchase_order(actor, po.PurchaseOrderId, PurchaseOrderUpdate(Note="x")),
+            lambda: self.svc.update_item(actor, po.PurchaseOrderId, item_id, PurchaseOrderItemUpdate(UnitPrice=1)),
+            lambda: self.svc.add_item(actor, po.PurchaseOrderId, PurchaseOrderItemCreate(
+                ProductVariantId=uuid.uuid4(), OrderedQuantity=1, UnitPrice=1)),
+            lambda: self.svc.remove_item(actor, po.PurchaseOrderId, item_id),
+        ]
+        for operation in operations:
+            with self.assertRaises(PermissionDeniedError) as caught:
+                operation()
+            self.assertEqual(caught.exception.code, "purchase_order_not_owner")
+        self.reject(po.PurchaseOrderId)
+        with self.assertRaises(PermissionDeniedError):
+            self.svc.resubmit_purchase_order(actor, po.PurchaseOrderId)
+        # Admin can still edit a staff-created draft.
+        self.svc.update_purchase_order(self.f.actor(self.admin), po.PurchaseOrderId, PurchaseOrderUpdate(Note="admin"))
+        self.assertEqual(self.db.get(PurchaseOrder, po.PurchaseOrderId).Note, "admin")
+
+    def test_failed_delete_rolls_back_header_lines_and_history(self):
         po, ids = self.staff_po_approved()
         self.receive(po.PurchaseOrderId, (ids[self.v1.ProductVariantId], 1))
-        with self.assertRaises(BusinessRuleError):
-            self.svc.cancel_purchase_order(self.f.actor(self.staff), po.PurchaseOrderId)
-        other = self.create_po()
-        self.assertEqual(self.svc.cancel_purchase_order(self.f.actor(self.staff), other.PurchaseOrderId).Status, "Cancelled")
-        with self.assertRaises(BusinessRuleError):
-            self.svc.cancel_purchase_order(self.f.actor(self.staff), other.PurchaseOrderId)
+        original = self.svc.purchase_orders.delete_document
+
+        def fail_after_delete(row):
+            original(row)
+            raise RuntimeError("write failed")
+
+        self.svc.purchase_orders.delete_document = fail_after_delete
+        with self.assertRaises(RuntimeError):
+            self.svc.delete_purchase_order(self.f.actor(self.admin), po.PurchaseOrderId)
+        self.assertIsNotNone(self.db.get(PurchaseOrder, po.PurchaseOrderId))
+        self.assertEqual(len(self.db.rows(PurchaseOrderItem)), 2)
+        self.assertEqual(len(self.db.rows(PurchaseReceipt)), 1)
+        self.assertEqual(len(self.db.rows(PurchaseReceiptItem)), 1)
 
 
 class ReceiveRequiresOpeningCostTest(PurchaseOrderTestBase):
