@@ -18,6 +18,7 @@ from app.integrations.sepay import (
     SePayWebhookPayload,
     WebhookAuthenticationError,
     compute_signature,
+    find_payment_code,
     handle_sepay_webhook,
     verify_sepay_signature,
 )
@@ -121,6 +122,20 @@ class SettingsTest(unittest.TestCase):
         self.assertEqual(loaded.account_number, "0123")
         self.assertNotIn("super-secret-value", repr(loaded))
 
+    def test_main_account_number_is_optional_and_trimmed(self):
+        base = {"SEPAY_WEBHOOK_SECRET": "s", "SEPAY_ACCOUNT_NUMBER": "96800000000001"}
+        self.assertIsNone(SePaySettings.from_env(base).main_account_number)
+        loaded = SePaySettings.from_env({**base, "SEPAY_MAIN_ACCOUNT_NUMBER": " 80000000001 "})
+        self.assertEqual((loaded.account_number, loaded.main_account_number), ("96800000000001", "80000000001"))
+
+    def test_payment_code_pattern_matches_only_the_configured_shape(self):
+        pattern = settings(payment_code_prefix="VTPAY", payment_code_length=8).payment_code_pattern
+        self.assertEqual(pattern.findall("CT VTPAYAB12CD34 tu A; VTPAYAB12CD345 VTPAYab12cd34 XVTPAYAB12CD34"), ["VTPAYAB12CD34"])
+        for broken in (dict(payment_code_prefix=None), dict(payment_code_length=None), dict(payment_code_prefix="VT-1"),
+                       dict(payment_code_length=7)):
+            with self.subTest(broken=broken):
+                self.assertIsNone(settings(**broken).payment_code_pattern)
+
     def test_account_name_is_optional_and_trimmed(self):
         base = {"SEPAY_WEBHOOK_SECRET": "s", "SEPAY_ACCOUNT_NUMBER": "1"}
         self.assertIsNone(SePaySettings.from_env(base).account_name)
@@ -136,7 +151,10 @@ class SettingsTest(unittest.TestCase):
         for name in ("SEPAY_BANK", "SEPAY_QR_IMAGE_URL", "SEPAY_PAYMENT_CODE_PREFIX", "SEPAY_PAYMENT_CODE_LENGTH"):
             self.assertIn(name, str(ctx.exception))
         for bad in (dict(qr_image_url="http://qr.example.test/img"), dict(payment_code_prefix="VT-1"),
-                    dict(payment_code_length=7), dict(payment_code_length=31)):
+                    dict(payment_code_length=7), dict(payment_code_length=31),
+                    # A full QR link pasted as the base: its acc/amount/des would repeat the ones the server adds.
+                    dict(qr_image_url="https://qr.sepay.vn/img?acc=1&bank=MSB&amount=&des="),
+                    dict(qr_image_url="https://qr.sepay.vn/img?"), dict(qr_image_url="https://qr.sepay.vn/img#x")):
             with self.subTest(bad=bad), self.assertRaises(SePayConfigError):
                 settings(**bad).require_qr()
         with self.assertRaises(SePayConfigError):
@@ -152,6 +170,22 @@ class PayloadTest(unittest.TestCase):
         stored = payload.stored_response_data()
         self.assertNotIn("content", stored)
         self.assertNotIn("description", stored)
+        self.assertIsNone(stored["sub_account"])  # "" in the sample: no VA
+        va = SePayWebhookPayload.model_validate({**SAMPLE, "subAccount": "96800000000001"}).stored_response_data()
+        self.assertEqual(va["sub_account"], "96800000000001")
+
+    def test_payment_code_is_found_in_content_only_as_one_standalone_code(self):
+        pattern = settings(payment_code_prefix="VTPAY", payment_code_length=8).payment_code_pattern
+        for content, expected in (
+            ("VTPAYAB12CD34 chuyen tien", "VTPAYAB12CD34"),
+            ("MBVCB.123.VTPAYAB12CD34.CT tu NGUYEN VAN A", "VTPAYAB12CD34"),
+            ("VTPAYAB12CD34 VTPAYAB12CD34", "VTPAYAB12CD34"),  # same code twice
+            ("VTPAYAB12CD34X", None), ("XVTPAYAB12CD34", None), ("VTPAYAB12CD3 chuyen tien", None),
+            ("VTPAYAB12CD34 VTPAYZZ99ZZ99", None), ("vtpayab12cd34", None), ("", None), (None, None),
+        ):
+            with self.subTest(content=content):
+                self.assertEqual(find_payment_code(content, pattern), expected)
+        self.assertIsNone(find_payment_code("VTPAYAB12CD34", None))
 
     def test_nullable_and_empty_fields(self):
         payload = SePayWebhookPayload.model_validate({**SAMPLE, "code": None, "referenceCode": "", "description": "",
@@ -266,6 +300,19 @@ class QrGatewayTest(unittest.TestCase):
             order_code="VT000001", amount=Decimal("130000.00"))
         self.assertEqual(named.response_data["account_name"], "CONG TY VIETECH")
         self.assertEqual(set(parse_qs(urlparse(named.qr_data).query)), {"acc", "bank", "amount", "des"})
+
+    def test_msb_qr_points_at_the_va_and_carries_each_parameter_once(self):
+        msb = settings(account_number="96800000000001", main_account_number="80000000001", bank="MSB",
+                       qr_image_url="https://qr.sepay.vn/img", payment_code_length=8)
+        request = SePayQrGateway(msb).create_qr_payment(order_code="VT000001", amount=Decimal("40000.00"))
+        url = urlparse(request.qr_data)
+        self.assertEqual((url.scheme, url.netloc, url.path, request.qr_data.count("?")), ("https", "qr.sepay.vn", "/img", 1))
+        query = parse_qs(url.query)
+        self.assertEqual({key: len(values) for key, values in query.items()}, {"acc": 1, "bank": 1, "amount": 1, "des": 1})
+        self.assertEqual((query["acc"], query["bank"], query["amount"], query["des"]),
+                         (["96800000000001"], ["MSB"], ["40000"], [request.gateway_transaction_code]))
+        self.assertRegex(request.gateway_transaction_code, r"^VTPAY[A-Z0-9]{8}$")
+        self.assertEqual(request.response_data["account_number"], "96800000000001")  # what the customer is shown
 
     def test_amount_must_be_whole_vnd(self):
         gateway = SePayQrGateway(settings())

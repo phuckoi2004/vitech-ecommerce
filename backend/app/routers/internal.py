@@ -38,7 +38,7 @@ def get_payment_webhook_service(db: Database) -> PaymentWebhookService:
         settings = SePaySettings.from_env()
     except SePayConfigError:
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "Webhook thanh toán chưa được cấu hình") from None
-    return PaymentWebhookService(db, account_number=settings.account_number)
+    return PaymentWebhookService.from_settings(db, settings)
 
 
 router = APIRouter(prefix="/internal", tags=["Nội bộ"], include_in_schema=False,

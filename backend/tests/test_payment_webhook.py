@@ -12,6 +12,7 @@ from app.integrations.sepay import SePayQrGateway, SePaySettings, SePayWebhookPa
 from app.models import Notification, PaymentReconciliation, PaymentTransaction, PaymentWebhookEvent
 from app.services import BusinessRuleError
 from app.services.payment import BankTransfer
+from app.services.payment_webhook import PaymentWebhookService
 
 from tests.fakes import NOW, FakeSession, Factory, InMemoryDB, payment_webhook_service, resolve_refund
 
@@ -19,10 +20,11 @@ ACCOUNT = "0123456789"
 CODE = "VTPAYABCDEFGHJK"
 
 
-def payload(sepay_id, amount, *, code=CODE, transfer_type="in", account=ACCOUNT):
+def payload(sepay_id, amount, *, code=CODE, transfer_type="in", account=ACCOUNT, sub_account="", content=None):
     raw = {
         "id": sepay_id, "gateway": "Vietcombank", "transactionDate": "2026-10-09 15:00:00", "accountNumber": account,
-        "subAccount": "", "code": code, "content": f"{code} NGUYEN VAN A chuyen tien", "transferType": transfer_type,
+        "subAccount": sub_account, "code": code,
+        "content": f"{code} NGUYEN VAN A chuyen tien" if content is None else content, "transferType": transfer_type,
         "description": "NGUYEN VAN A chuyen tien", "transferAmount": amount, "accumulated": 0, "referenceCode": "FT1",
     }
     return SePayWebhookPayload.model_validate(raw), raw
@@ -158,6 +160,89 @@ class MatchingTest(WebhookTestBase):
         refs = {n.ReferenceType for n in self.staff_alerts()}
         self.assertEqual(refs, {"PaymentWebhookEvent"})
 
+    def test_overpayment_is_reconciled_and_not_paid(self):
+        self.assertEqual(self.receive(1101, 140000), "amount_mismatch")
+        self.assertEqual((self.tx.Status, self.order.PaymentStatus, self.order.OrderStatus), ("Pending", "Pending", "Pending"))
+        [record] = self.reconciliations("AmountMismatch")
+        self.assertEqual((record.ExpectedAmount, record.ReceivedAmount), (Decimal("130000.00"), Decimal("140000")))
+
+    def test_dashboard_test_delivery_changes_nothing(self):
+        """SePay "Gửi thử": id 0, a test account and code; acknowledged, stored, ignored. The order keeps waiting."""
+        outcome = self.receive(0, 10000, account="0000000000", code="SEPAYTEST", content="SEPAYTEST chuyen tien")
+        self.assertEqual(outcome, "ignored_other_account")
+        self.assertEqual((self.tx.Status, self.order.PaymentStatus, self.order.OrderStatus), ("Pending", "Pending", "Pending"))
+        self.assertEqual((self.reconciliations(), [e.Status for e in self.events()]), ([], ["Ignored"]))
+
+
+VA = "96800000000001"
+MAIN = "80000000001"
+
+
+class VirtualAccountTest(WebhookTestBase):
+    """Official VA (MSB: "No main account, must use VA"): the QR points at the VA, SePay reports it in subAccount."""
+
+    def use(self, **kwargs):
+        self.svc = payment_webhook_service(self.db, self.session, account_number=VA, **kwargs)
+
+    def test_transfer_into_the_configured_va_is_paid(self):
+        self.use()
+        self.assertEqual(self.receive(5001, 130000, account=MAIN, sub_account=VA), "paid")
+        self.assertEqual((self.tx.Status, self.order.PaymentStatus, self.order.OrderStatus), ("Success", "Paid", "Pending"))
+        self.assertEqual(self.tx.ResponseData["sub_account"], VA)
+
+    def test_transfer_into_the_main_account_or_another_va_is_ignored(self):
+        self.use()
+        for sepay_id, sub_account in ((5002, ""), (5003, None), (5004, "96800000000002")):
+            with self.subTest(sub_account=sub_account):
+                self.assertEqual(self.receive(sepay_id, 130000, account=MAIN, sub_account=sub_account),
+                                 "ignored_other_account")
+        self.assertEqual((self.tx.Status, self.order.PaymentStatus, self.reconciliations()), ("Pending", "Pending", []))
+
+    def test_main_account_check_when_configured(self):
+        self.use(main_account_number=MAIN)
+        self.assertEqual(self.receive(5005, 130000, account="1234567890", sub_account=VA), "ignored_other_account")
+        self.assertEqual(self.order.PaymentStatus, "Pending")
+        self.assertEqual(self.receive(5006, 130000, account=MAIN, sub_account=VA), "paid")
+
+    def test_va_payment_still_needs_the_exact_code_and_amount(self):
+        self.use()
+        self.assertEqual(self.receive(5007, 130000, account=MAIN, sub_account=VA, code="VTPAYUNKNOWN00"), "unmatched")
+        self.assertEqual(self.receive(5008, 129999, account=MAIN, sub_account=VA), "amount_mismatch")
+        self.assertEqual((self.tx.Status, self.order.PaymentStatus), ("Pending", "Pending"))
+
+
+class CodeFromContentTest(WebhookTestBase):
+    """SePay sends code = null when its payment code structure does not match; the content is read strictly."""
+
+    def use(self):
+        settings = SePaySettings(webhook_secret="x", account_number=ACCOUNT, payment_code_prefix="VTPAY", payment_code_length=10)
+        self.svc = payment_webhook_service(self.db, self.session, payment_code_pattern=settings.payment_code_pattern)
+
+    def test_standalone_code_in_content_is_used_when_sepay_sends_none(self):
+        self.use()
+        self.assertEqual(self.receive(6001, 130000, code=None, content=f"MBVCB.123456.{CODE}.CT tu NGUYEN VAN A"), "paid")
+        self.assertEqual(self.order.PaymentStatus, "Paid")
+
+    def test_glued_partial_or_ambiguous_codes_are_not_guessed(self):
+        self.use()
+        self.f.payment(self.f.order(self.customer, self.qr, total="130000.00"), status="Pending", gateway_code="VTPAYZZZZZZZZZZ")
+        for sepay_id, content in ((6002, f"{CODE}X chuyen tien"), (6003, f"X{CODE} chuyen tien"),
+                                  (6004, f"{CODE[:-1]} chuyen tien"), (6005, f"{CODE} VTPAYZZZZZZZZZZ"),
+                                  (6006, CODE.lower())):
+            with self.subTest(content=content):
+                self.assertEqual(self.receive(sepay_id, 130000, code=None, content=content), "unmatched")
+        self.assertTrue(all(t.Status == "Pending" for t in self.db.rows(PaymentTransaction)))
+
+    def test_sepay_code_wins_over_content(self):
+        self.use()
+        self.assertEqual(self.receive(6007, 130000, code="VTPAYUNKNOWN00", content=f"{CODE} chuyen tien"), "unmatched")
+        self.assertEqual(self.order.PaymentStatus, "Pending")
+
+    def test_without_qr_settings_nothing_is_read_from_content(self):
+        # The default service of WebhookTestBase has no payment code pattern.
+        self.assertEqual(self.receive(6008, 130000, code=None, content=f"{CODE} chuyen tien"), "unmatched")
+        self.assertEqual(self.order.PaymentStatus, "Pending")
+
 
 class DurabilityTest(WebhookTestBase):
     def test_processing_failure_keeps_event_for_retry(self):
@@ -234,6 +319,53 @@ class EndToEndTest(WebhookTestBase):
             body, headers, settings_loader=self.settings, now=lambda: 1700000000,
             process=process or (lambda p, raw, cfg: self.svc.receive_sepay(p, raw)),
         )
+
+    def test_signed_va_webhook_with_null_code_uses_the_service_built_from_settings(self):
+        msb = SePaySettings(webhook_secret="test-secret-not-real", account_number=VA, main_account_number=MAIN, bank="MSB",
+                            qr_image_url="https://qr.sepay.vn/img", payment_code_prefix="VTPAY", payment_code_length=10)
+        built = PaymentWebhookService.from_settings(self.session, msb)
+        self.assertEqual((built.account_number, built.main_account_number, built.payment_code_pattern.pattern),
+                         (VA, MAIN, msb.payment_code_pattern.pattern))
+        self.svc = payment_webhook_service(self.db, self.session, account_number=built.account_number,
+                                           main_account_number=built.main_account_number,
+                                           payment_code_pattern=built.payment_code_pattern)
+        _, raw = payload(7001, 130000, account=MAIN, sub_account=VA, code=None, content=f"{CODE} chuyen tien")
+        self.settings = lambda: msb
+        with self.assertLogs("app.integrations.sepay", level="INFO"):
+            self.assertEqual(self.deliver(json.dumps(raw).encode()), (200, {"success": True}))
+        self.assertEqual((self.order.PaymentStatus, self.events()[0].ProcessingNote), ("Paid", "paid"))
+
+    def test_bad_signature_changes_nothing(self):
+        _, raw = payload(7002, 130000)
+        body = json.dumps(raw).encode()
+        signature = compute_signature("another-secret", "1700000000", body)
+        headers = {"X-SePay-Signature": signature, "X-SePay-Timestamp": "1700000000"}
+        with self.assertLogs("app.integrations.sepay", level="WARNING") as logs:
+            result = handle_sepay_webhook(body, headers, settings_loader=self.settings, now=lambda: 1700000000,
+                                          process=lambda p, raw_payload, cfg: self.svc.receive_sepay(p, raw_payload))
+        self.assertEqual(result, (401, {"success": False}))
+        self.assertEqual((self.events(), self.order.PaymentStatus), ([], "Pending"))
+        self.assertIn("invalid_signature", " ".join(logs.output))
+        self.assertNotIn(signature.removeprefix("sha256="), " ".join(logs.output))
+
+    def test_each_milestone_is_logged_with_timings_and_without_secrets_or_personal_data(self):
+        _, raw = payload(7003, 130000)
+        body = json.dumps(raw, ensure_ascii=False).encode()
+        signature = compute_signature("test-secret-not-real", "1700000000", body)
+        with self.assertLogs("app", level="INFO") as logs:
+            self.assertEqual(self.deliver(body), (200, {"success": True}))
+        text = "\n".join(logs.output)
+        milestones = ("nhận request", "chữ ký hợp lệ", "giao dịch ngân hàng lúc", "tới backend sau",
+                      "đã lưu bền vững", "tài khoản nhận khớp", "đối chiếu mã và số tiền 130000",
+                      "paid; đã commit vào database", "trả 200 sau")
+        positions = [text.find(milestone) for milestone in milestones]
+        self.assertTrue(all(position >= 0 for position in positions), dict(zip(milestones, positions)))
+        self.assertEqual(positions, sorted(positions))  # in the order they happen
+        self.assertRegex(text, r"trả 200 sau \d+ ms")
+        for private in ("test-secret-not-real", signature.removeprefix("sha256="), "NGUYEN VAN A", ACCOUNT, CODE):
+            self.assertNotIn(private, text)
+        self.assertIn(f"…{CODE[-4:]}", text)  # the payment code only masked
+        self.assertEqual(self.order.PaymentStatus, "Paid")
 
     def test_signed_webhook_marks_order_paid_and_acknowledges(self):
         _, raw = payload(1001, 130000)

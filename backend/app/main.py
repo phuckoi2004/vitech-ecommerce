@@ -1,4 +1,5 @@
 import logging
+import time
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
@@ -35,6 +36,28 @@ from .services.exceptions import ServiceError
 from .services.internal_jobs import database_error_code
 
 logger = logging.getLogger(__name__)
+
+
+def configure_app_logging() -> None:
+    """Log INFO của các module app.* (webhook thanh toán, tác vụ nội bộ) ra stderr kèm thời điểm UTC tới mili giây.
+
+    Uvicorn chỉ cấu hình logger của nó; không có handler thì INFO của app.* bị bỏ và WARNING in ra không có thời điểm.
+    Log vẫn lan lên root (propagate) để pytest caplog nhận được; root không có handler nên không in hai lần.
+    """
+    app_logger = logging.getLogger("app")
+    if any(getattr(handler, "vietech_app_handler", False) for handler in app_logger.handlers):
+        return
+    handler = logging.StreamHandler()
+    formatter = logging.Formatter("%(asctime)s.%(msecs)03dZ %(levelname)s %(name)s: %(message)s", "%Y-%m-%dT%H:%M:%S")
+    formatter.converter = time.gmtime
+    handler.setFormatter(formatter)
+    handler.vietech_app_handler = True
+    app_logger.addHandler(handler)
+    if app_logger.level == logging.NOTSET:
+        app_logger.setLevel(logging.INFO)
+
+
+configure_app_logging()
 
 
 @asynccontextmanager
