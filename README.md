@@ -226,7 +226,8 @@ VieTech/
 │   ├── alembic.ini
 │   ├── tests/
 │   ├── .env                      # bí mật, bị .gitignore, không commit
-│   ├── auth.env.example          # mẫu backend/.env: database, Auth/SMTP/Redis, Storage, SePay
+│   ├── .env.local                # tùy chọn, bị .gitignore: database local riêng của từng máy
+│   ├── .env.example              # mẫu backend/.env: database, Auth/SMTP/Redis, Storage, SePay
 │   ├── requirements.txt
 │   └── requirements-dev.txt
 │
@@ -270,7 +271,10 @@ Quy định bảo mật:
 
 - Không hard-code database credentials trong source code.
 - Không commit `backend/.env` hoặc các file chứa bí mật.
-- `backend/auth.env.example` chỉ chứa giá trị mẫu và không được chứa credentials thật.
+- `backend/.env.example` chỉ chứa giá trị mẫu và không được chứa credentials thật.
+- `DATABASE_URL` trong `backend/.env` là database chung của nhóm. Máy nào muốn dùng database local riêng thì tạo
+  `backend/.env.local` có `DATABASE_URL` của database đó; khi có file này (với `APP_ENV` development/test), backend
+  và Alembic chỉ dùng database trong `.env.local`, không bao giờ quay về database của `.env` (`app/core/env.py`).
 - Không in hoặc tiết lộ thông tin kết nối trong log, response API hoặc báo cáo.
 - Chỉ kết nối database thực tế khi được yêu cầu hoặc cho phép.
 
