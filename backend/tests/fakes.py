@@ -119,6 +119,8 @@ def _apply_server_defaults(obj) -> None:
             value = expr == "true"
         elif expr == "0":
             value = Decimal("0") if isinstance(column.type, Numeric) else 0
+        elif expr.startswith("'") and expr.endswith("'"):
+            value = expr[1:-1]
         else:
             raise AssertionError(f"Server default chưa hỗ trợ trong fake: {expr}")
         setattr(obj, attr.key, value)

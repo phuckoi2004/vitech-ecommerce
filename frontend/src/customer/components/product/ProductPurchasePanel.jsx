@@ -1,18 +1,12 @@
 import Button from '../../../components/shared/Button.jsx'
 import Money from '../../../components/shared/Money.jsx'
+import { formatDiscountPercent } from '../../../lib/format.js'
 import ConsultationButton from '../ConsultationButton.jsx'
+import PublicCoupons from '../PublicCoupons.jsx'
 import { productColorSwatch } from '../../../lib/product-colors.js'
 import { canPurchase, colorLabel, variantPrice, versionLabel } from '../../../lib/product-detail.js'
 
-// Display-only examples requested by the user; these never change a price, coupon or order.
-const DEMO_OFFERS = [
-  'Thu cũ lên đời: trợ giá đến 5 triệu đồng.',
-  'Hỗ trợ trả góp 0% theo chương trình áp dụng.',
-  'Ưu đãi thanh toán đến 2 triệu đồng tùy phương thức.',
-  'Miễn phí giao hàng và hỗ trợ cài đặt cơ bản.',
-]
-
-export default function ProductPurchasePanel({ variants, variant, onSelect, busy, notice, ready, onCart, onBuy, onConsult }) {
+export default function ProductPurchasePanel({ productId, variants, variant, onSelect, busy, notice, ready, onCart, onBuy, onConsult }) {
   const versions = [...new Set(variants.map(versionLabel))]
   const colors = [...new Set(variants.filter((item) => item.Color?.trim()).map(colorLabel))]
   const selectedVersion = variant ? versionLabel(variant) : ''
@@ -28,7 +22,13 @@ export default function ProductPurchasePanel({ variants, variant, onSelect, busy
   }
 
   return <section className="pd-card pd-purchase" aria-label="Thông tin mua hàng">
-    <p className="pd-price">{variantPrice(variant) !== null ? <Money value={variant.Price} /> : <span className="pd-price-pending">Đang cập nhật giá</span>}</p>
+    <div className="pd-price-block">
+      <p className="pd-price">{variantPrice(variant) !== null ? <Money value={variantPrice(variant)} /> : <span className="pd-price-pending">Đang cập nhật giá</span>}</p>
+      {Number(variant?.OriginalPrice) > variantPrice(variant) && <div className="pd-price-details">
+        <p className="pd-original-row"><span className="sr-only">Giá niêm yết </span><del><Money value={variant.OriginalPrice} /></del><strong><span className="sr-only">Giảm </span>-{formatDiscountPercent(variant.DiscountPercent)}</strong></p>
+        <p className="pd-price-saving">Tiết kiệm <Money value={variant.DiscountAmount} /></p>
+      </div>}
+    </div>
     <div className="pd-option-group"><h2>Phiên bản</h2>
       {versions.length ? <div className="pd-options" role="group" aria-label="Chọn phiên bản">
         {versions.map((version) => <button type="button" key={version} className="pd-option" disabled={!!busy}
@@ -58,10 +58,7 @@ export default function ProductPurchasePanel({ variants, variant, onSelect, busy
       {!variant ? 'Chưa có phiên bản để đặt mua' : Number(variant.StockQuantity) <= 0 ? 'Hết hàng'
         : variantPrice(variant) === null ? 'Chưa có giá bán cho phiên bản này' : `Còn ${variant.StockQuantity} sản phẩm`}
     </p>
-    <div className="pd-promotion"><div className="pd-promotion-heading"><h2>Ưu đãi khi mua hàng</h2><span className="pd-demo-badge">Nội dung demo</span></div>
-      <ul>{DEMO_OFFERS.map((offer) => <li key={offer}>{offer}</li>)}</ul>
-      <p className="pd-demo-note">Nội dung mẫu theo Figma; chưa áp dụng vào đơn hàng.</p>
-    </div>
+    {productId && <PublicCoupons key={variant?.ProductVariantId ?? productId} productId={productId} variant={variant} compact />}
     <Button className="pd-buy" disabled={disabled || !purchasable} loading={busy === 'buy'} onClick={onBuy}>MUA NGAY</Button>
     <div className="pd-cta-row grid grid-cols-2 gap-2.5 max-[380px]:grid-cols-1">
       <Button variant="outline" className="pd-add" disabled={disabled || !purchasable} loading={busy === 'cart'} onClick={onCart}>Thêm vào giỏ hàng</Button>

@@ -19,13 +19,34 @@ from app.schemas import (
 )
 from app.services.promotion import CouponService, PromotionService
 
-from .dependencies import CurrentActor, InternalOnly, Page, PageSize, get_coupon_service, get_promotion_service
+from .dependencies import CurrentActor, InternalOnly, OptionalActor, Page, PageSize, get_coupon_service, get_promotion_service, get_pricing_service
+from app.schemas.pricing import CategoryOfferResponse, PricingQuoteRequest, PricingQuoteResponse, PublicCouponResponse
+from app.services.pricing import PricingService
 
 router = APIRouter(tags=["Khuyến mãi"])
 admin_router = APIRouter(prefix="/admin", tags=["Quản lý khuyến mãi"], dependencies=[InternalOnly])
 
 Promotions = Annotated[PromotionService, Depends(get_promotion_service)]
 Coupons = Annotated[CouponService, Depends(get_coupon_service)]
+Pricing = Annotated[PricingService, Depends(get_pricing_service)]
+
+
+@router.get("/pricing/category-offers", response_model=list[CategoryOfferResponse])
+def category_offers(service: Pricing):
+    """Automatic discounts available now for each active root category."""
+    return service.category_offers()
+
+
+@router.get("/coupons", response_model=list[PublicCouponResponse])
+def public_coupons(service: Pricing, product_id: uuid.UUID | None = None):
+    """Public codes with remaining redemptions. Reading/copying never reserves a use."""
+    return service.public_coupons(product_id=product_id)
+
+
+@router.post("/pricing/quote", response_model=PricingQuoteResponse)
+def quote_prices(data: PricingQuoteRequest, service: Pricing, actor: OptionalActor):
+    """Standalone preview, independent of cart, payment and order creation."""
+    return service.quote(data.Items, coupon_code=data.CouponCode, actor=actor)
 
 
 @router.get("/cart/coupon-preview", response_model=CouponPreviewResponse)
@@ -53,6 +74,11 @@ def get_promotion(promotion_id: uuid.UUID, service: Promotions, actor: CurrentAc
 @admin_router.post("/promotions", response_model=AdminPromotionDetailResponse, status_code=status.HTTP_201_CREATED)
 def create_promotion(data: PromotionCreate, service: Promotions, actor: CurrentActor):
     return service.create_promotion(actor, data)
+
+
+@admin_router.post("/promotions/pricing-preview")
+def preview_automatic_prices(data: PromotionCreate, service: Promotions, actor: CurrentActor):
+    return service.preview_automatic(actor, data)
 
 
 @admin_router.patch("/promotions/{promotion_id}", response_model=AdminPromotionDetailResponse)

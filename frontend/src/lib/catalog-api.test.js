@@ -15,6 +15,13 @@ const product = {
 }
 
 describe('toProductCard', () => {
+  test('discount pairs the original and sale prices of the same cheapest variant', () => {
+    const card = toProductCard({ ...product, Variants: [
+      { Price: '35000000', SalePrice: '33000000', OriginalPrice: '35000000', DiscountPercent: '5.71' },
+      { Price: '34000000', SalePrice: '32000000', OriginalPrice: '34000000', DiscountPercent: '5.88' },
+    ] })
+    expect(card).toMatchObject({ price: 32000000, originalPrice: 34000000, discountPercent: 5.88 })
+  })
   test('lowest variant price, default image first, stock from any variant', () => {
     expect(toProductCard(product)).toEqual({
       id: 'p1', name: 'iPhone 18 Pro Max', slug: 'iphone-18-pro-max', brandId: 'b1',

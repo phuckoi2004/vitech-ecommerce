@@ -22,7 +22,7 @@ import uuid
 from collections.abc import Callable
 from datetime import datetime
 from typing import Any
-from urllib.parse import urlparse
+from urllib.parse import unquote, urlparse
 
 from sqlalchemy.orm import Session
 
@@ -181,9 +181,60 @@ class ContentService(BaseService):
 
     # ================================================================== Banner: công khai
 
-    def list_display_banners(self) -> list[BannerResponse]:
-        """Banner đang hiển thị (không cần đăng nhập): IsActive và trong khung [StartDate, EndDate]."""
-        return [BannerResponse.model_validate(b) for b in self.banners.list_displayable(self.now())]
+    def list_display_banners(self, *, category_id: uuid.UUID | None = None) -> list[BannerResponse]:
+        """Banner đang hiển thị (không cần đăng nhập): IsActive và trong khung [StartDate, EndDate].
+
+        With ``category_id`` (a product list page) only banners for that category are kept, judged by where they
+        link: the category itself first, then its sub-categories or a product in them, then a parent category.
+        Banners that link to no category or product (news, coupon codes) follow; banners for other categories are left
+        out. Order within each group stays by DisplayOrder.
+        """
+        banners = self.banners.list_displayable(self.now())
+        if category_id is not None:
+            banners = self._banners_for_category(banners, category_id)
+        return [BannerResponse.model_validate(b) for b in banners]
+
+    def _banners_for_category(self, banners: list[Banner], category_id: uuid.UUID) -> list[Banner]:
+        from app.repositories import CategoryRepository, ProductRepository
+
+        categories = {c.CategoryId: c for c in CategoryRepository(self.session).list_categories()}
+        by_slug = {c.Slug: c.CategoryId for c in categories.values()}
+        products = ProductRepository(self.session)
+        ancestors: list[uuid.UUID] = []
+        node = categories.get(category_id)
+        while node is not None and node.ParentCategoryId and node.ParentCategoryId not in ancestors:
+            ancestors.append(node.ParentCategoryId)
+            node = categories.get(node.ParentCategoryId)
+        below = {category_id}
+        for _ in range(len(categories)):
+            grown = below | {c.CategoryId for c in categories.values() if c.ParentCategoryId in below}
+            if grown == below:
+                break
+            below = grown
+
+        def target(link: str | None) -> tuple[uuid.UUID | None, bool]:
+            """The category a banner links to, and whether it links to a single product in it."""
+            if not link or not link.startswith("/"):
+                return None, False
+            parts = [unquote(part) for part in urlparse(link).path.split("/") if part]
+            if len(parts) < 2:
+                return None, False
+            if parts[0] == "danh-muc":
+                return by_slug.get(parts[1]), False
+            if parts[0] == "san-pham":
+                product = products.get_by_slug(parts[1])
+                return (product.CategoryId if product is not None and not product.IsDeleted else None), True
+            return None, False
+
+        ranked = []
+        for position, banner in enumerate(banners):
+            aimed, product = target(banner.LinkUrl)
+            # A parent category's banner suits this page too; a single product of the parent may not be in it.
+            rank = (3 if aimed is None else 0 if aimed == category_id and not product else 1 if aimed in below
+                    else 2 if aimed in ancestors and not product else None)
+            if rank is not None:
+                ranked.append((rank, position, banner))
+        return [banner for _, _, banner in sorted(ranked, key=lambda item: item[:2])]
 
     # ================================================================== Banner: Admin
 

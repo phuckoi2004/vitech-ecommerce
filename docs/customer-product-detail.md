@@ -6,7 +6,7 @@ Thiết kế tham chiếu: [Figma — Product Detail Content, node 139:361](http
 ## Phạm vi và quyết định
 
 - Sửa trang khách tại `/san-pham/:slug`, dùng Header/Footer, AuthProvider và API client hiện có.
-- Ưu đãi thu cũ/trả góp trong Figma được giữ dưới dạng **nội dung demo**, có ghi chú trong khung ưu đãi. Theo yêu cầu cập nhật, đã xóa nhóm cam kết đổi trả 30 ngày/bảo hành chính hãng/hỗ trợ kỹ thuật, ghi chú phía dưới nhóm này, nút Yêu thích trên trang sản phẩm và ghi chú VN/A/giao nhanh bên dưới ảnh. Không sửa chính sách backend, giá hay đơn hàng.
+- Không có ưu đãi thu cũ hay trả góp: dự án chỉ thanh toán COD và chuyển khoản QR, nên khung ưu đãi demo trong Figma không được đưa lên trang. Theo yêu cầu cập nhật, đã xóa nhóm cam kết đổi trả 30 ngày/bảo hành chính hãng/hỗ trợ kỹ thuật, ghi chú phía dưới nhóm này, nút Yêu thích trên trang sản phẩm và ghi chú VN/A/giao nhanh bên dưới ảnh. Không sửa chính sách backend, giá hay đơn hàng.
 - Bảo hành bao nhiêu tháng lấy từ `WarrantyMonths` của sản phẩm. Backend đổi trả hiện có mặc định 7 ngày và có thể cấu hình; nội dung demo 30 ngày không đổi thiết lập đó.
 - **Mua ngay** thêm 1 sản phẩm theo SKU đã chọn rồi mở `/gio-hang`. Chưa thêm checkout, chưa gọi `POST /orders` hay tạo giao dịch thanh toán.
 - Backend, database, migration, quyền, `.env`, trang Admin và Staff giữ nguyên. Các thay đổi trang chủ/banner đã có trước nhiệm vụ được giữ.
@@ -39,9 +39,9 @@ Thiết kế tham chiếu: [Figma — Product Detail Content, node 139:361](http
 
 API ảnh chỉ liên kết `ProductId`, chưa liên kết màu/biến thể. Vì vậy đổi màu vẫn dùng bộ ảnh chung của sản phẩm; chưa thể đổi bộ ảnh theo màu bằng dữ liệu hiện tại.
 
-API sản phẩm chưa có giá gốc/giá giảm dành cho card; coupon thuộc giỏ/đặt hàng. Không thêm badge giảm 20% hoặc giá gạch ngang giả từ Figma. API cũng chưa có trường highlights riêng, nội dung lợi ích riêng hay series; giao diện lấy từ thông số thật và không suy đoán thông số iPhone mẫu.
+API sản phẩm bổ sung `OriginalPrice`, `SalePrice`, `DiscountAmount`, `DiscountPercent` và chương trình áp dụng cho từng biến thể. Card lấy giá gốc và giá sau giảm của cùng biến thể có giá sau giảm thấp nhất; không tự tạo giá tham chiếu. Trang chi tiết đổi giá theo phiên bản/màu. Giá vốn không xuất hiện trong API khách. Xem [quy tắc giá ưu đãi](customer-pricing-promotions.md).
 
-Không có mock sản phẩm trong giao diện chạy bình thường. Nội dung ưu đãi demo tách thành `DEMO_OFFERS` trong component, không dùng để tính tiền. Dữ liệu iPhone mẫu và ảnh Figma chỉ nằm ở runner kiểm thử trong `output/product-detail/`, không được import vào trang sản phẩm hoặc trang chủ.
+Không có mock sản phẩm trong giao diện chạy bình thường. Mục ưu đãi demo được thay bằng coupon công khai từ `GET /coupons`. Nút xem thử gọi `POST /pricing/quote`, chưa tạo đơn, không trừ lượt mã. Dữ liệu iPhone mẫu và ảnh Figma chỉ nằm ở runner kiểm thử trong `output/product-detail/`.
 
 ## Các file
 

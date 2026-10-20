@@ -23,7 +23,7 @@ export default function PromotionsPage() {
   function change(key, value) { setParams((previous) => { const next = new URLSearchParams(previous); if (value) next.set(key, value); else next.delete(key); next.delete('page'); return next }, { replace: true }) }
   function open(mode, id) { setParams((previous) => { const next = new URLSearchParams(previous); next.delete('dialog'); next.delete('promotion'); if (mode) { next.set('dialog', mode); if (id) next.set('promotion', id) } return next }) }
   const columns = [
-    { key: 'Name', label: 'Tên chương trình', className: 'w-[25%]', render: (value) => <span className="break-words">{value}</span> },
+    { key: 'Name', label: 'Tên chương trình', className: 'w-[25%]', render: (value, row) => <span className="break-words">{value}<small className="mt-1 block text-admin-muted">{row.ApplyMode === 'Automatic' ? 'Giảm trực tiếp · mỗi sản phẩm' : 'Dùng mã giảm giá'}</small></span> },
     { key: 'DiscountType', label: 'Loại giảm', className: 'w-[10%]', render: (value) => PROMOTION_TYPES[value] ?? value },
     { key: 'DiscountValue', label: 'Giá trị', className: 'w-[9%]', render: (_, row) => promotionValue(row) },
     { key: 'MinOrderValue', label: 'Đơn tối thiểu', className: 'w-[11.5%]', render: promotionMoney },

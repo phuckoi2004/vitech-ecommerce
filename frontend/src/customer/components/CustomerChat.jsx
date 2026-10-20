@@ -5,15 +5,20 @@ import { StaffChat } from '../pages/ChatPage.jsx'
 import { CHAT_PATH } from '../routes/paths.js'
 import './CustomerChat.css'
 
+// Round speech bubble with three dots.
 function ChatIcon() {
-  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
-    <path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5H5l-3 2v-10a8.5 8.5 0 0 1 17-2" /><path d="M7 11h9M7 15h6" />
+  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" aria-hidden="true">
+    <path d="M12 3.5c4.7 0 8.5 3.4 8.5 7.6s-3.8 7.6-8.5 7.6c-1.1 0-2.2-.2-3.2-.5L4 20l1.3-3.9c-1.1-1.3-1.8-3-1.8-5 0-4.2 3.8-7.6 8.5-7.6z" />
+    <circle cx="8.3" cy="11.2" r="1" fill="currentColor" stroke="none" /><circle cx="12" cy="11.2" r="1" fill="currentColor" stroke="none" />
+    <circle cx="15.7" cy="11.2" r="1" fill="currentColor" stroke="none" />
   </svg>
 }
 
+// A large and a small four-pointed sparkle.
 function AiIcon() {
   return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" aria-hidden="true">
-    <path d="m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5zM20 2v4M18 4h4" />
+    <path d="M10 6.5c.6 3.6 2.4 5.9 6.5 7.5-4.1 1.6-5.9 3.9-6.5 7.5-.6-3.6-2.4-5.9-6.5-7.5 4.1-1.6 5.9-3.9 6.5-7.5z" />
+    <path d="M18 2.5c.3 1.5 1 2.2 2.5 2.5-1.5.3-2.2 1-2.5 2.5-.3-1.5-1-2.2-2.5-2.5 1.5-.3 2.2-1 2.5-2.5z" />
   </svg>
 }
 

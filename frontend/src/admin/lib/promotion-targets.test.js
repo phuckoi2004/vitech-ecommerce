@@ -1,5 +1,21 @@
 import { expect, test } from 'vitest'
-import { ALL_PROMOTION_CATEGORIES, SAVED_PROMOTION_SCOPE, initialPromotionTargets, promotionTargetBody } from './promotion-targets.js'
+import { ALL_PROMOTION_CATEGORIES, SAVED_PROMOTION_SCOPE, initialPromotionTargets, promotionCategoryOptions, promotionTargetBody, promotionTopCategories } from './promotion-targets.js'
+
+test('a parent category covers its sub-categories, where the products actually are', () => {
+  const tree = [{ CategoryId: 'phones' }, { CategoryId: 'battery', ParentCategoryId: 'phones' }, { CategoryId: 'iphone', ParentCategoryId: 'phones' }, { CategoryId: 'laptops' }]
+  const items = [{ ProductId: 'p1', CategoryId: 'battery' }, { ProductId: 'p2', CategoryId: 'iphone' }, { ProductId: 'p3', CategoryId: 'laptops' }]
+  const body = promotionTargetBody(choice('phones'), items, tree)
+  expect(body).toEqual({ ProductIds: [], CategoryIds: ['phones', 'battery', 'iphone'] })
+  expect(promotionTargetBody(choice('battery'), items, tree)).toEqual({ ProductIds: [], CategoryIds: ['battery'] })
+  expect(promotionTargetBody(choice('phones', false, ['p1', 'p2']), items, tree)).toEqual({ ProductIds: ['p1', 'p2'], CategoryIds: [] })
+  expect(() => promotionTargetBody(choice('phones', false, ['p3']), items, tree)).toThrow('không thuộc danh mục hiện tại')
+
+  const saved = { Products: [], Categories: body.CategoryIds.map((CategoryId) => ({ CategoryId })) }
+  expect(initialPromotionTargets(saved, items, tree)).toMatchObject({ categoryId: 'phones', allProducts: true })
+  expect(promotionTopCategories(body.CategoryIds, tree)).toEqual(['phones'])
+  expect(initialPromotionTargets({ Products: [{ ProductId: 'p1' }, { ProductId: 'p2' }], Categories: [] }, items, tree)).toMatchObject({ categoryId: 'phones', allProducts: false })
+  expect(promotionCategoryOptions(tree).map(({ category, depth }) => `${depth}:${category.CategoryId}`)).toEqual(['0:phones', '1:battery', '1:iphone', '0:laptops'])
+})
 
 const products = [{ ProductId: 'p1', CategoryId: 'phones' }, { ProductId: 'p2', Category: { CategoryId: 'phones' } }, { ProductId: 'p3', CategoryId: 'laptops' }]
 const categories = [{ CategoryId: 'phones' }, { CategoryId: 'laptops' }, { CategoryId: 'empty' }]

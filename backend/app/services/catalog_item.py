@@ -70,9 +70,12 @@ class CatalogItemService(BaseService):
 
     @staticmethod
     def _variant_values(data):
-        return {**data.model_dump(include={"Sku", "Color", "Storage", "Price", "MinStockLevel",
-                                          "IsSerialTracked", "IsActive"}),
-                "VariantName": " · ".join(filter(None, [data.Color, data.Storage]))}
+        values = {**data.model_dump(include={"Sku", "Color", "Storage", "Price", "CompareAtPrice", "MinStockLevel",
+                                             "IsSerialTracked", "IsActive"}),
+                  "VariantName": " · ".join(filter(None, [data.Color, data.Storage]))}
+        if "CompareAtPrice" not in data.model_fields_set:
+            values.pop("CompareAtPrice", None)
+        return values
 
     def _replace_images(self, product_id, images):
         current = sorted(self.images.list_by_product(product_id), key=lambda image: image.DisplayOrder)

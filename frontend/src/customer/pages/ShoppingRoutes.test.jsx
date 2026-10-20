@@ -38,6 +38,7 @@ function mockApi({ existingConversation = null, messages = [], history = [], new
       result = categoryRecords.find((item) => endpoint.endsWith('/' + item.Slug))
     else if (endpoint === '/brands/slug/apple') result = { BrandId: 'b1', Name: 'Apple', Slug: 'apple' }
     else if (endpoint === '/products') result = { Items: [product], Total: 1, Page: 1, PageSize: 20 }
+    else if (endpoint === '/products/filters') result = { Categories: [], Brands: [{ BrandId: 'b1', Name: 'Apple', Slug: 'apple', ProductCount: 1 }] }
     else if (endpoint === '/products/p1' || endpoint === '/products/slug/dien-thoai-mau') result = product
     else if (endpoint === '/products/p1/reviews') result = { Items: [], Total: 0, Page: Number(url.searchParams.get('page')), PageSize: Number(url.searchParams.get('page_size')) }
     else if (endpoint === '/cart/items') result = { Items: [], SelectedQuantity: 0, SelectedSubtotal: '0.00' }
@@ -83,27 +84,15 @@ function renderAt(url, auth = makeAuth(), { strict = false } = {}) {
 
 afterEach(() => vi.unstubAllGlobals())
 
-test('price filter combines with brand and keyword, resets pagination and can be cleared', async () => {
+test('old filter links to the search page keep only what it still offers: keyword, category and sort', async () => {
   const calls = mockApi()
-  const router = renderAt('/danh-muc/dien-thoai?brand=b1&q=mau&page=3&price=5-10')
-  const prices = await screen.findByRole('combobox', { name: 'Khoảng giá' })
-  expect(prices).toHaveValue('5-10')
-  await waitFor(() => expect(calls.filter((call) => call.endpoint === '/products').at(-1).query).toMatchObject({
-    category_id: 'root', brand_id: 'b1', keyword: 'mau', page: '3', min_price: '5000000', max_price: '9999999.99',
-  }))
-  fireEvent.change(prices, { target: { value: 'from-20' } })
-  await waitFor(() => expect(calls.filter((call) => call.endpoint === '/products').at(-1).query).toMatchObject({
-    brand_id: 'b1', keyword: 'mau', page: '1', min_price: '20000000',
-  }))
-  expect(new URLSearchParams(router.state.location.search).has('page')).toBe(false)
-  expect(calls.filter((call) => call.endpoint === '/products').at(-1).query).not.toHaveProperty('max_price')
-  fireEvent.change(prices, { target: { value: '' } })
-  await waitFor(() => expect(calls.filter((call) => call.endpoint === '/products').at(-1).query).not.toHaveProperty('min_price'))
-  expect(calls.filter((call) => call.endpoint === '/products').at(-1).query).toMatchObject({ brand_id: 'b1', keyword: 'mau' })
+  renderAt('/tim-kiem?brand=b1&q=mau&page=3&price=5-10&sort=price_asc')
+  expect(await screen.findByRole('heading', { name: product.Name })).toBeInTheDocument()
+  expect(calls.filter((call) => call.endpoint === '/products')[0].query).toEqual({ keyword: 'mau', sort: 'price_asc', page: '1', page_size: '20' })
 })
 
 test.each([
-  ['/tim-kiem?q=iphone', 'Kết quả tìm kiếm: iphone'],
+  ['/tim-kiem?q=iphone', "Kết quả tìm kiếm cho: 'iphone'"],
   ['/danh-muc/dien-thoai', 'Điện thoại'],
   ['/thuong-hieu/apple', 'Apple'],
 ])('catalog destination %s renders real results instead of 404', async (url, heading) => {
@@ -144,8 +133,10 @@ test('a direct child category visit shows sibling groups, its criteria and a lin
   renderAt('/danh-muc/dien-thoai-pin-trau')
   const navigation = await screen.findByRole('navigation', { name: 'Nhóm điện thoại' })
   expect(within(navigation).getByRole('link', { name: 'Điện thoại pin trâu' })).toHaveAttribute('aria-current', 'page')
-  expect(screen.getByText('Pin từ 6.000 mAh.')).toBeInTheDocument()
-  await userEvent.click(screen.getByRole('link', { name: 'Tất cả điện thoại' }))
+  const intro = screen.getByRole('region', { name: 'Thông tin về điện thoại pin trâu' })
+  expect(intro).toHaveTextContent('Pin từ 6.000 mAh.')
+  const breadcrumb = screen.getByRole('navigation', { name: 'Đường dẫn danh mục' })
+  await userEvent.click(within(breadcrumb).getByRole('link', { name: 'Điện thoại' }))
   expect(await screen.findByRole('heading', { level: 1, name: 'Điện thoại' })).toBeInTheDocument()
   await waitFor(() => expect(calls.filter((call) => call.endpoint === '/products').at(-1).query.category_id).toBe('root'))
 })

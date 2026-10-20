@@ -1,5 +1,14 @@
 import { describe, expect, test } from 'vitest'
-import { formatCompactCount, formatDate, formatDateTime, formatMoney, formatRating } from './format.js'
+import { formatCompactCount, formatDate, formatDateTime, formatDiscountPercent, formatMoney, formatRating } from './format.js'
+
+describe('formatDiscountPercent', () => {
+  test.each([
+    ['12.82', '13%'], ['5.49', '5%'], ['10', '10%'], [0.3, '1%'], [99.7, '99%'], [100, '100%'],
+    [0, ''], [null, ''], ['abc', ''],
+  ])('%s → %s', (value, expected) => {
+    expect(formatDiscountPercent(value)).toBe(expected)
+  })
+})
 
 describe('formatCompactCount and formatRating', () => {
   test.each([

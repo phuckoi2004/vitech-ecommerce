@@ -51,6 +51,7 @@ from app.services.catalog import (
     ProductService,
     ProductVariantService,
 )
+from app.schemas.catalog_filters import CategoryFiltersResponse, SearchFiltersResponse, SearchSuggestionsResponse
 from app.schemas.catalog_item import CatalogItemCreate, CatalogItemResponse, CatalogProductWrite, CatalogVariantWrite
 from app.services.catalog_item import CatalogItemService
 
@@ -140,6 +141,12 @@ def get_category(category_id: uuid.UUID, service: Categories, actor: OptionalAct
     return service.get_category(category_id, actor=actor, active_only=active_only)
 
 
+@router.get("/categories/{category_id}/filters", response_model=CategoryFiltersResponse)
+def get_category_filters(category_id: uuid.UUID, service: Products):
+    """Brands, price ranges and specification criteria with products on sale in the category and its children."""
+    return service.category_filters(category_id)
+
+
 @admin_router.post("/categories", response_model=CategoryResponse, status_code=status.HTTP_201_CREATED)
 def create_category(data: CategoryCreate, service: Categories, actor: CurrentActor):
     return service.create_category(actor, data)
@@ -198,11 +205,35 @@ def search_products(service: Products, keyword: str | None = None, category_id: 
                     brand_id: uuid.UUID | None = None, include_descendants: bool = False,
                     min_price: Annotated[Decimal | None, Query(ge=0, max_digits=15, decimal_places=2)] = None,
                     max_price: Annotated[Decimal | None, Query(ge=0, max_digits=15, decimal_places=2)] = None,
+                    sort: Literal["newest", "relevance", "popular", "best_selling", "price_asc", "price_desc", "discount"] | None = None,
+                    in_stock: bool = False, new_arrivals: bool = False,
+                    spec: Annotated[list[str] | None, Query()] = None,
                     page: Page = 1, page_size: PageSize = 20):
+    """``spec`` (repeatable) takes ``<Key>:<Value>`` pairs from GET /categories/{id}/filters and needs category_id.
+    Without ``sort``, a keyword search lists the most relevant first and anything else the newest first."""
     return service.search_products(keyword=keyword, category_id=category_id, brand_id=brand_id,
                                    include_descendants=include_descendants,
                                    min_price=min_price, max_price=max_price,
+                                   sort=sort, in_stock=in_stock, new_arrivals=new_arrivals, specs=spec,
                                    page=page, page_size=page_size)
+
+
+@router.get("/products/filters", response_model=SearchFiltersResponse)
+def get_search_filters(service: Products, keyword: str | None = None, category_id: uuid.UUID | None = None,
+                       brand_id: uuid.UUID | None = None,
+                       min_price: Annotated[Decimal | None, Query(ge=0, max_digits=15, decimal_places=2)] = None,
+                       max_price: Annotated[Decimal | None, Query(ge=0, max_digits=15, decimal_places=2)] = None,
+                       in_stock: bool = False):
+    """Root categories and brands, with product counts, of what GET /products finds for the same filters.
+    Each group ignores its own filter; ``category_id`` includes its visible children."""
+    return service.search_filters(keyword=keyword, category_id=category_id, brand_id=brand_id,
+                                  min_price=min_price, max_price=max_price, in_stock=in_stock)
+
+
+@router.get("/products/suggestions", response_model=SearchSuggestionsResponse)
+def get_search_suggestions(service: Products, keyword: str | None = None):
+    """Category pages and products to offer under the search box while the customer types."""
+    return service.search_suggestions(keyword)
 
 
 @router.get("/products/slug/{slug}", response_model=ProductDetailResponse)

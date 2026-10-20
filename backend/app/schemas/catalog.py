@@ -201,7 +201,7 @@ class ProductVariantCreate(RequestSchema):
     (Opening) và điều chỉnh kho (InventoryService).
     """
 
-    NULLABLE_FIELDS = frozenset({"Color", "Storage"})
+    NULLABLE_FIELDS = frozenset({"Color", "Storage", "CompareAtPrice"})
 
     ProductId: uuid.UUID
     Sku: varchar(50)
@@ -209,6 +209,7 @@ class ProductVariantCreate(RequestSchema):
     Color: varchar(50) | None = None
     Storage: varchar(50) | None = None
     Price: Money
+    CompareAtPrice: Money | None = None
     MinStockLevel: NonNegativeInt | None = None
     IsActive: bool | None = None
     IsSerialTracked: bool | None = None
@@ -217,13 +218,14 @@ class ProductVariantCreate(RequestSchema):
 class ProductVariantUpdate(RequestSchema):
     """PATCH. Không sửa StockQuantity/CostPrice tại đây (xem ProductVariantCreate)."""
 
-    NULLABLE_FIELDS = frozenset({"Color", "Storage"})
+    NULLABLE_FIELDS = frozenset({"Color", "Storage", "CompareAtPrice"})
 
     Sku: varchar(50) | None = None
     VariantName: varchar(255) | None = None
     Color: varchar(50) | None = None
     Storage: varchar(50) | None = None
     Price: Money | None = None
+    CompareAtPrice: Money | None = None
     MinStockLevel: NonNegativeInt | None = None
     IsActive: bool | None = None
     IsSerialTracked: bool | None = None
@@ -239,6 +241,15 @@ class ProductVariantResponse(ResponseSchema):
     Color: str | None
     Storage: str | None
     Price: Money
+    CompareAtPrice: Money | None = None
+    # Additive fields: Price keeps its original meaning for existing consumers.
+    OriginalPrice: Money | None = None
+    SalePrice: Money | None = None
+    DiscountAmount: Money = Decimal("0")
+    DiscountPercent: Decimal = Field(default=Decimal("0"), ge=0, le=100)
+    AppliedPromotionId: uuid.UUID | None = None
+    PromotionName: str | None = None
+    PromotionEndsAt: datetime | None = None
     StockQuantity: NonNegativeInt
     IsActive: bool
 

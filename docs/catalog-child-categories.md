@@ -35,9 +35,9 @@ Danh sách để kiểm tra bằng Excel:
 
 ## Hiển thị phía khách
 
-Trang `/danh-muc/<slug>` có các ô nhóm bo góc, ảnh đại diện tùy chọn và liên kết vào nhóm. Nhóm đang xem được đánh dấu; có thể chuyển sang nhóm khác hoặc trở lại danh mục cha. Chuyển nhóm xóa phân trang và bộ lọc cũ để không làm danh sách trống do điều kiện từ trang trước.
+Từ ngày 19/10/2026 trang `/danh-muc/<slug>` theo thiết kế [Danh sách sản phẩm](customer-category-listing.md): các nhóm con là khối “Chọn theo nhu cầu” (ô chữ theo Figma, không còn ảnh đại diện). Nhóm đang xem được đánh dấu; đường dẫn đầu trang trở lại danh mục cha. Chuyển nhóm xóa bộ lọc cũ để không làm danh sách trống do điều kiện từ trang trước.
 
-Trang danh mục cha vẫn tìm cả sản phẩm của các danh mục con bằng `include_descendants=true`. Các ô nhóm trên màn hình nhỏ cuộn ngang trong khung. Menu cạnh banner trang chủ tiếp tục hiển thị thương hiệu và khoảng giá theo yêu cầu trước; không thêm danh mục con vào menu đó.
+Trang danh mục cha vẫn tìm cả sản phẩm của các danh mục con bằng `include_descendants=true`. Menu cạnh banner trang chủ tiếp tục hiển thị thương hiệu và khoảng giá theo yêu cầu trước; không thêm danh mục con vào menu đó.
 
 ## Mô tả và nguồn
 

@@ -36,10 +36,13 @@ Thông báo Admin/Staff mở chi tiết phiếu nhập, bảo hành và đổi t
 | GET | `/categories` | Công khai* |  | active_only, parent_id, roots_only | `list[CategoryResponse]` | `list_categories` |
 | GET | `/categories/slug/{slug}` | Công khai* |  | active_only | `CategoryResponse` | `get_category_by_slug` |
 | GET | `/categories/{category_id}` | Công khai* |  | active_only | `CategoryResponse` | `get_category` |
+| GET | `/categories/{category_id}/filters` | Công khai |  |  | `CategoryFiltersResponse` | `category_filters` |
 | GET | `/brands` | Công khai* |  | active_only | `list[BrandResponse]` | `list_brands` |
 | GET | `/brands/slug/{slug}` | Công khai* |  | active_only | `BrandResponse` | `get_brand_by_slug` |
 | GET | `/brands/{brand_id}` | Công khai* |  | active_only | `BrandResponse` | `get_brand` |
-| GET | `/products` | Công khai |  | keyword, category_id, brand_id, include_descendants, min_price, max_price, page, page_size | `PageResponse[ProductSummary]` | `search_products` |
+| GET | `/products` | Công khai |  | keyword ([cách so khớp](customer-search.md)), category_id, brand_id, include_descendants, min_price, max_price, sort, in_stock, new_arrivals, spec (lặp lại, cần category_id), page, page_size | `PageResponse[ProductSummary]` | `search_products` |
+| GET | `/products/suggestions` | Công khai |  | keyword | `SearchSuggestionsResponse` ([gợi ý dưới ô tìm kiếm](customer-search.md)) | `search_suggestions` |
+| GET | `/products/filters` | Công khai |  | keyword, category_id (gồm danh mục con), brand_id, min_price, max_price, in_stock | `SearchFiltersResponse` ([danh mục gốc và hãng có trong kết quả](customer-search.md)) | `search_filters` |
 | GET | `/products/slug/{slug}` | Công khai |  |  | `ProductDetailResponse` | `get_product_detail_by_slug` |
 | GET | `/products/{product_id}` | Công khai |  |  | `ProductDetailResponse` | `get_product_detail` |
 | GET | `/products/{product_id}/images` | Công khai |  |  | `list[ProductImageResponse]` | `list_images` |
@@ -260,7 +263,7 @@ Khi nhân viên/Admin phụ trách gửi tin trả lời, Customer nhận thông
 | GET | `/news` | Công khai |  | page, page_size | `PageResponse[NewsArticleSummary]` | `list_published_articles` |
 | GET | `/news/{slug}` | Công khai |  |  | `NewsArticleResponse` | `get_published_article` |
 | POST | `/news/{slug}/views` | Công khai |  |  | `NewsArticleViewResponse` (`ViewCount`) | `record_article_view` |
-| GET | `/banners` | Công khai |  |  | `list[BannerResponse]` | `list_display_banners` |
+| GET | `/banners` | Công khai |  | category_id (trang danh sách: chỉ banner của danh mục đó, theo đường dẫn banner) | `list[BannerResponse]` | `list_display_banners` |
 | GET | `/admin/news` | Staff/Admin |  | status, page, page_size | `PageResponse[AdminNewsArticleSummary]` | `admin_list_articles` |
 | GET | `/admin/news/{article_id}` | Staff/Admin |  |  | `AdminNewsArticleResponse` | `admin_get_article` |
 | POST | `/admin/news` | Staff/Admin | `NewsArticleCreate` |  | `AdminNewsArticleResponse` | `create_article` |

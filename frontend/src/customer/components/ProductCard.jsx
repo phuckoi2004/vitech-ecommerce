@@ -4,7 +4,7 @@ import useAuth from '../../auth/useAuth.js'
 import Money from '../../components/shared/Money.jsx'
 import useCustomerRequest from '../../hooks/useCustomerRequest.js'
 import useCustomerSession from '../../hooks/useCustomerSession.js'
-import { formatCompactCount, formatRating } from '../../lib/format.js'
+import { formatCompactCount, formatDiscountPercent, formatRating } from '../../lib/format.js'
 import useWishlistProduct, { updateWishlistProduct } from '../hooks/useWishlistProduct.js'
 import { LOGIN_PATH, productPath } from '../routes/paths.js'
 import LoginPromptDialog from './LoginPromptDialog.jsx'
@@ -13,10 +13,11 @@ import wishlistHeartActive from '../../assets/storefront/wishlist-heart-active.s
 import './ProductCard.css'
 
 // Product card from toProductCard() (lib/catalog-api.js): image, name, lowest variant price, rating, sold count.
-// There is no crossed-out price or discount badge: catalog prices carry no discount, coupons apply at checkout.
+// Original/sale prices always come from the same lowest-priced visible variant.
 export default function ProductCard({ product, headingLevel = 3, wishlistLayout = false, children }) {
   const Heading = `h${headingLevel}`
   const rated = product.reviewCount > 0
+  const discounted = !product.unavailable && product.originalPrice > product.price
   const { ready, user } = useCustomerSession()
   const { session } = useAuth()
   const send = useCustomerRequest()
@@ -68,11 +69,17 @@ export default function ProductCard({ product, headingLevel = 3, wishlistLayout 
           : !product.inStock && <span className="pcard-badge">Hết hàng</span>}
       </div>
       <Heading className="pcard-name">{product.name}</Heading>
-      <p className="pcard-price">
-        {product.price === null
-          ? <span className="pcard-noprice">Đang cập nhật giá</span>
-          : <Money value={product.price} />}
-      </p>
+      <div className="pcard-pricing">
+        <p className="pcard-price">
+          {product.price === null
+            ? <span className="pcard-noprice">Đang cập nhật giá</span>
+            : <Money value={product.price} />}
+        </p>
+        {discounted && <p className="pcard-original">
+          <span className="sr-only">Giá niêm yết </span><del><Money value={product.originalPrice} /></del>
+          <span className="pcard-discount"><span className="sr-only">Giảm </span>-{formatDiscountPercent(product.discountPercent)}</span>
+        </p>}
+      </div>
       <p className="pcard-meta">
         {rated && <span><span className="sr-only">Đánh giá </span><span aria-hidden="true">★ </span>{formatRating(product.rating)}</span>}
         {rated && product.sold > 0 && <span aria-hidden="true"> • </span>}

@@ -7,6 +7,7 @@ import HomePage from '../pages/HomePage.jsx'
 import LoginPage from '../pages/LoginPage.jsx'
 import RegisterPage from '../pages/RegisterPage.jsx'
 import CatalogPage from '../pages/CatalogPage.jsx'
+import CategoryPage from '../pages/CategoryPage.jsx'
 import ProductPage from '../pages/ProductPage.jsx'
 import NewsPage from '../pages/NewsPage.jsx'
 import ChatPage from '../pages/ChatPage.jsx'
@@ -26,7 +27,7 @@ export const customerRoutes = [
       { path: HOME_PATH, element: <HomePage /> },
       { path: ACCOUNT_PATH, element: <RequireCustomer><AccountPage /></RequireCustomer> },
       { path: SEARCH_PATH, element: <CatalogPage /> },
-      { path: '/danh-muc/:slug', element: <CatalogPage kind="category" /> },
+      { path: '/danh-muc/:slug', element: <CategoryPage /> },
       { path: '/thuong-hieu/:slug', element: <CatalogPage kind="brand" /> },
       { path: '/san-pham/:slug', element: <ProductPage /> },
       { path: NEWS_PATH, element: <NewsPage /> },

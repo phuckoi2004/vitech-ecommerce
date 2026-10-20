@@ -37,11 +37,11 @@
   margin: 0 auto;
 }
 
-.shop-logo { display: inline-flex; align-items: center; flex-shrink: 0; gap: 24px; margin-left: 5px; border-radius: 8px; }
+.shop-logo { display: inline-flex; align-items: center; flex-shrink: 0; gap: 4px; margin-left: 5px; border-radius: 8px; }
 .shop-logo:focus-visible { outline: 3px solid var(--color-brand-300); outline-offset: 4px; }
 .shop-logo img { display: block; object-fit: contain; }
-.shop-logo-mark { width: 136px; height: 83px; }
-.shop-logo-wordmark { width: 189px; height: 49px; }
+.shop-logo-mark { width: 112px; height: 68px; }
+.shop-logo-wordmark { width: 160px; height: 41px; }
 
 .shop-search {
   display: flex;
@@ -166,9 +166,9 @@
 /* Narrower screens: entry texts are visually hidden but stay as accessible names. */
 @media (max-width: 1240px) {
   .shop-header-inner { gap: 20px; }
-  .shop-logo { gap: 16px; margin-left: 0; }
-  .shop-logo-mark { width: 88px; height: auto; }
-  .shop-logo-wordmark { width: 122px; height: auto; }
+  .shop-logo { gap: 3px; margin-left: 0; }
+  .shop-logo-mark { width: 74px; height: auto; }
+  .shop-logo-wordmark { width: 104px; height: auto; }
   .shop-actions { gap: 8px; }
   .shop-action-text {
     position: absolute;
@@ -183,9 +183,9 @@
 /* Two rows: logo and icons, then the full-width search bar. */
 @media (max-width: 860px) {
   .shop-header-inner { flex-wrap: wrap; gap: 8px 12px; min-height: 0; padding: 10px 0 12px; }
-  .shop-logo { gap: 12px; }
-  .shop-logo-mark { width: 64px; }
-  .shop-logo-wordmark { width: 90px; }
+  .shop-logo { gap: 2px; }
+  .shop-logo-mark { width: 54px; }
+  .shop-logo-wordmark { width: 77px; }
   .shop-search { flex: 1 0 100%; order: 3; height: 46px; }
   .shop-action { justify-content: center; padding: 8px; }
   .shop-action-icon { width: 22px; height: 22px; }
@@ -196,9 +196,9 @@
 
 @media (max-width: 600px) {
   .shop-header-inner { width: calc(100% - 32px); }
-  .shop-logo { gap: 10px; }
-  .shop-logo-mark { width: 49px; }
-  .shop-logo-wordmark { width: 69px; }
+  .shop-logo { gap: 2px; }
+  .shop-logo-mark { width: 42px; }
+  .shop-logo-wordmark { width: 59px; }
   .shop-actions { gap: 2px; }
   .shop-main { min-height: 280px; }
   .shop-footer-inner { grid-template-columns: 1fr; width: calc(100% - 32px); }
@@ -209,7 +209,7 @@
 
 @media (max-width: 380px) {
   .shop-header-inner { column-gap: 8px; }
-  .shop-logo { gap: 8px; }
-  .shop-logo-mark { width: 36px; }
-  .shop-logo-wordmark { width: 50px; }
+  .shop-logo { gap: 2px; }
+  .shop-logo-mark { width: 31px; }
+  .shop-logo-wordmark { width: 43px; }
 }
