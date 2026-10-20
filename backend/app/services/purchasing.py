@@ -1,12 +1,13 @@
 """Purchasing services: nhà cung cấp, phiếu nhập hàng và nhận hàng.
 
 Nguồn nghiệp vụ: docs/business-requirements.md mục 1, 2, 8, 17 và quyết định đã chốt:
-- Quyền (Actor do Router dựng từ JWT đã xác thực): Staff/Admin lập, sửa, gửi lại, hủy phiếu và nhận hàng
+- Quyền (Actor do Router dựng từ JWT đã xác thực): Staff/Admin lập và nhận hàng; Staff chỉ sửa/gửi lại phiếu của mình.
+  Chỉ Admin xóa chứng từ (mọi trạng thái); không có thao tác tự hủy phiếu.
   (business-requirements 8.2: cả Staff và Admin được lập phiếu); chỉ Admin duyệt/từ chối.
 - Phiếu Staff lập → Pending (chờ duyệt, thông báo Admin) → một Admin KHÁC người lập duyệt (Approved) hoặc
   từ chối (Rejected, bắt buộc lý do không rỗng); phiếu Rejected được sửa và gửi lại (→ Pending).
 - Phiếu Admin lập không cần bước duyệt: tạo ở trạng thái Approved (DecidedByUserId/DecidedAt để trống vì không
-  có quyết định duyệt), nhận hàng được ngay; muốn sửa thì hủy và lập lại (chỉ sửa ở Pending/Rejected).
+  có quyết định duyệt), nhận hàng được ngay; chỉ sửa ở Pending/Rejected.
 - Người lập không được ra quyết định (duyệt/từ chối) trên phiếu của chính mình.
 - Tồn kho chỉ tăng khi nhận hàng, theo số lượng thực nhận (không theo số lượng đặt, không tăng khi duyệt).
 - Nhận hàng một phần/nhiều lần: Approved/Receiving → Receiving; nhận đủ mọi dòng → Completed.
@@ -75,7 +76,6 @@ PO_CLOSED = "Closed"
 
 EDITABLE_STATUSES = (PO_PENDING, PO_REJECTED)
 RECEIVABLE_STATUSES = (PO_APPROVED, PO_RECEIVING)
-CANCELLABLE_STATUSES = (PO_PENDING, PO_REJECTED, PO_APPROVED)
 ADMIN_ROLE = ADMIN
 PO_NOTIFICATION_TYPE = "PurchaseOrder"
 
@@ -246,7 +246,7 @@ class PurchaseOrderService(BaseService):
     ) -> PurchaseOrderDetailResponse:
         require_role(actor, *STAFF_OR_ADMIN)
         with self.transaction():
-            po = self._lock_editable(purchase_order_id)
+            po = self._lock_editable(purchase_order_id, actor)
             values = data.model_dump(exclude_unset=True, exclude={"Items"})
             if "SupplierId" in values and values["SupplierId"] != po.SupplierId:
                 self._ensure_supplier(values["SupplierId"])
@@ -261,7 +261,7 @@ class PurchaseOrderService(BaseService):
     ) -> PurchaseOrderDetailResponse:
         require_role(actor, *STAFF_OR_ADMIN)
         with self.transaction():
-            po = self._lock_editable(purchase_order_id)
+            po = self._lock_editable(purchase_order_id, actor)
             existing = [i.ProductVariantId for i in self.items.list_by_purchase_order(po.PurchaseOrderId)]
             self._ensure_distinct_variants([*existing, data.ProductVariantId])
             self._add_item(po, data)
@@ -278,7 +278,7 @@ class PurchaseOrderService(BaseService):
         """Sửa số lượng đặt / đơn giá / ghi chú khi phiếu còn Pending/Rejected. ReceivedQuantity chỉ đổi qua nhận hàng."""
         require_role(actor, *STAFF_OR_ADMIN)
         with self.transaction():
-            po = self._lock_editable(purchase_order_id)
+            po = self._lock_editable(purchase_order_id, actor)
             item = self._get_item(po, purchase_order_item_id)
             values = data.model_dump(exclude_unset=True)
             if "ReceivedQuantity" in values:
@@ -294,7 +294,7 @@ class PurchaseOrderService(BaseService):
     ) -> PurchaseOrderDetailResponse:
         require_role(actor, *STAFF_OR_ADMIN)
         with self.transaction():
-            po = self._lock_editable(purchase_order_id)
+            po = self._lock_editable(purchase_order_id, actor)
             item = self._get_item(po, purchase_order_item_id)
             if len(self.items.list_by_purchase_order(po.PurchaseOrderId)) <= 1:
                 raise BusinessRuleError("Phiếu nhập phải có ít nhất một sản phẩm", code="purchase_order_empty")
@@ -308,6 +308,7 @@ class PurchaseOrderService(BaseService):
         require_role(actor, *STAFF_OR_ADMIN)
         with self.transaction():
             po = self._lock(purchase_order_id)
+            self._require_draft_owner(actor, po)
             if po.Status != PO_REJECTED:
                 raise BusinessRuleError("Chỉ gửi lại phiếu đã bị từ chối", code="invalid_purchase_order_status")
             po.Status = PO_PENDING
@@ -320,7 +321,7 @@ class PurchaseOrderService(BaseService):
             )
             return self._detail(po)
 
-    # ------------------------------------------------------------------ duyệt / hủy
+    # ------------------------------------------------------------------ duyệt / xóa
 
     def decide_purchase_order(
         self, actor: Actor, purchase_order_id: uuid.UUID, data: PurchaseOrderDecision
@@ -356,17 +357,12 @@ class PurchaseOrderService(BaseService):
             self._notify(po.CreatedByUserId, po, title, content)
             return self._detail(po)
 
-    def cancel_purchase_order(self, actor: Actor, purchase_order_id: uuid.UUID) -> PurchaseOrderDetailResponse:
-        """Hủy phiếu Pending/Rejected/Approved chưa nhận hàng."""
-        require_role(actor, *STAFF_OR_ADMIN)
+    def delete_purchase_order(self, actor: Actor, purchase_order_id: uuid.UUID) -> None:
+        """Admin deletes any purchase document and its receipt history, preserving physical inventory."""
+        require_role(actor, *ADMIN_ONLY)
         with self.transaction():
             po = self._lock(purchase_order_id)
-            if po.Status not in CANCELLABLE_STATUSES:
-                raise BusinessRuleError(f"Không thể hủy phiếu ở trạng thái {po.Status}", code="invalid_purchase_order_status")
-            if any(i.ReceivedQuantity > 0 for i in self.items.list_by_purchase_order(po.PurchaseOrderId)):
-                raise BusinessRuleError("Phiếu đã nhận hàng, không thể hủy", code="purchase_order_has_receipts")
-            po.Status = PO_CANCELLED
-            return self._detail(po)
+            self.purchase_orders.delete_document(po)
 
     # ------------------------------------------------------------------ nhận hàng
 
@@ -490,8 +486,14 @@ class PurchaseOrderService(BaseService):
             raise NotFoundError("Không tìm thấy phiếu nhập", code="purchase_order_not_found")
         return po
 
-    def _lock_editable(self, purchase_order_id: uuid.UUID) -> PurchaseOrder:
+    @staticmethod
+    def _require_draft_owner(actor: Actor, po: PurchaseOrder) -> None:
+        if actor.role != ADMIN and po.CreatedByUserId != actor.user_id:
+            raise PermissionDeniedError("Chỉ được sửa phiếu nhập do mình tạo", code="purchase_order_not_owner")
+
+    def _lock_editable(self, purchase_order_id: uuid.UUID, actor: Actor) -> PurchaseOrder:
         po = self._lock(purchase_order_id)
+        self._require_draft_owner(actor, po)
         if po.Status not in EDITABLE_STATUSES:
             raise BusinessRuleError(
                 f"Chỉ sửa phiếu đang chờ duyệt hoặc bị từ chối (hiện tại: {po.Status})", code="purchase_order_not_editable"

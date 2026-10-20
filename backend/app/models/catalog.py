@@ -53,6 +53,7 @@ class Category(Base):
     Description: Mapped[str | None] = mapped_column(Text, nullable=True)
     DisplayOrder: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
     IsActive: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("true"))
+    IsDeleted: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("false"))
 
     parent: Mapped[Category | None] = relationship(
         back_populates="children", foreign_keys=[ParentCategoryId], remote_side=[CategoryId]
@@ -82,6 +83,7 @@ class Brand(Base):
     Description: Mapped[str | None] = mapped_column(Text, nullable=True)
     LogoUrl: Mapped[str | None] = mapped_column(String(500), nullable=True)
     IsActive: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("true"))
+    IsDeleted: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("false"))
 
     products: Mapped[list[Product]] = relationship(
         back_populates="brand", foreign_keys="Product.BrandId", passive_deletes="all"

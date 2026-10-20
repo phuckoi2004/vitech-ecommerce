@@ -102,9 +102,12 @@ def test_422_validation(api, admin):
 
 def test_business_rules_catalog_integrity(api, admin):
     shop = api.seed.variant(stock=5)
-    expect(api.client.delete(f"/admin/categories/{shop['category_id']}", headers=admin.headers), 400,
-           "category_has_products")
-    expect(api.client.delete(f"/admin/brands/{shop['brand_id']}", headers=admin.headers), 400, "brand_has_products")
+    expect(api.client.delete(f"/admin/categories/{shop['category_id']}", headers=admin.headers), 204)
+    expect(api.client.delete(f"/admin/brands/{shop['brand_id']}", headers=admin.headers), 204)
+    expect(api.client.get(f"/categories/{shop['category_id']}", headers=admin.headers,
+                          params={"active_only": False}), 404)
+    expect(api.client.get(f"/brands/{shop['brand_id']}", headers=admin.headers,
+                          params={"active_only": False}), 404)
     # Serial tracking can only change while the variant has no stock.
     expect(api.client.patch(f"/admin/variants/{shop['variant_id']}", headers=admin.headers,
                             json={"IsSerialTracked": True}), 400, "serial_tracking_change_requires_zero_stock")

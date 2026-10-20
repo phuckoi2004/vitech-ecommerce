@@ -6,7 +6,7 @@ import PurchaseActionModal from '../components/PurchaseActionModal.jsx'
 import PurchaseDialog from '../components/PurchaseDialogs.jsx'
 import { PurchaseButton, PurchaseStatus } from '../components/PurchaseUi.jsx'
 import usePurchaseDetail from '../hooks/usePurchaseDetail.js'
-import { PURCHASE_STATUSES, purchaseCancellable, purchaseEditable, purchaseListSearch, purchaseReceivable, variantLabel } from '../lib/purchases.js'
+import { PURCHASE_STATUSES, purchaseDeletable, purchaseEditable, purchaseListSearch, purchaseReceivable, variantLabel } from '../lib/purchases.js'
 
 const DESCRIPTIONS = {
   Pending: 'Phiếu đang chờ quản trị viên xác nhận', Approved: 'Phiếu đã được xác nhận, có thể nhận hàng vào kho',
@@ -30,8 +30,8 @@ export default function PurchaseDetailPage() {
   const { auth, can, detail, po, suppliers, variants, users, names, receipts, showHistory, busy, error, notice, setError, refresh } = workflow
   const canDecide = Boolean(po && can('update') && auth.user.Role === 'Admin' && po.Status === 'Pending' && po.CreatedByUserId !== auth.user.UserId)
   const allowed = {
-    edit: can('update'), cancel: can('delete') && po && purchaseCancellable(po), approve: canDecide, reject: canDecide,
-    resubmit: can('update') && po?.Status === 'Rejected', receive: can('update') && po && purchaseReceivable(po), close: can('update') && auth.user.Role === 'Admin' && po?.Status === 'Receiving',
+    edit: can('update') && purchaseEditable(po, auth.user), delete: can('delete') && purchaseDeletable(po, auth.user), approve: canDecide, reject: canDecide,
+    resubmit: can('update') && po?.Status === 'Rejected' && purchaseEditable(po, auth.user), receive: can('update') && po && purchaseReceivable(po), close: can('update') && auth.user.Role === 'Admin' && po?.Status === 'Receiving',
   }
   function choose(value) {
     if (busy) return
@@ -55,7 +55,7 @@ export default function PurchaseDetailPage() {
     { key: 'LineTotal', label: 'Thành tiền', className: 'w-[14.18%]', render: formatMoney },
     { key: 'Note', label: 'Ghi chú', className: 'w-[27.31%]', render: (note) => <span className="break-words whitespace-pre-wrap">{note || '—'}</span> },
   ]
-  if (action === 'edit' && can('update')) return <Navigate replace to={'/admin/purchases/' + encodeURIComponent(purchaseId) + '/edit' + purchaseListSearch(params)} />
+  if (action === 'edit' && allowed.edit) return <Navigate replace to={'/admin/purchases/' + encodeURIComponent(purchaseId) + '/edit' + purchaseListSearch(params)} />
   return <section aria-label="Chi tiết phiếu nhập" className="-mt-1 flex min-w-0 flex-col gap-3.5">
     <div className="flex items-center gap-0"><div className="mr-auto"><h2 className="m-0 text-xl leading-6 font-bold">{po ? 'Phiếu nhập ' + po.PurchaseOrderCode : 'Chi tiết phiếu nhập'}</h2>{po && <p className="mt-[3px] mb-0 text-[11px] leading-[13px] text-admin-muted">{DESCRIPTIONS[po.Status] ?? PURCHASE_STATUSES[po.Status]}</p>}</div>{po && <PurchaseStatus status={po.Status} />}<PurchaseButton secondary className="shrink-0" disabled={busy} onClick={() => navigate('/admin/purchases' + purchaseListSearch(params))}>← Danh sách phiếu nhập</PurchaseButton></div>
     {notice && <p role="status" className="m-0 rounded-[9px] bg-green-50 p-3 text-xs text-green-700">{notice}</p>}
@@ -77,8 +77,8 @@ export default function PurchaseDetailPage() {
         <AdminTable columns={columns} rows={po.Items} rowKey="PurchaseOrderItemId" label="Sản phẩm trong phiếu nhập" emptyText="Phiếu nhập chưa có sản phẩm." className="table-fixed [&_th]:h-[52px]! [&_th]:border-b-0! [&_th]:pr-[7px]! [&_th]:pl-[9px]! [&_th]:text-[9px]! [&_th]:font-semibold! [&_td]:h-[52px]! [&_td]:pr-[7px]! [&_td]:pl-[9px]! [&_td]:text-[10px]! [&_td]:leading-[normal] [&_tr:last-child_td]:border-b-0" />
       </section>
       <div role="group" aria-label="Thao tác phiếu nhập" className="flex justify-end gap-0">
-        {can('delete') && purchaseCancellable(po) && po.Status !== 'Pending' && <PurchaseButton secondary disabled={busy} onClick={() => choose('cancel')}>Hủy phiếu</PurchaseButton>}
-        {can('update') && <PurchaseButton secondary disabled={busy || !purchaseEditable(po)} title={!purchaseEditable(po) ? 'Chỉ sửa phiếu chờ xác nhận hoặc bị từ chối' : undefined} onClick={() => choose('edit')}>Sửa phiếu</PurchaseButton>}
+        {allowed.delete && <PurchaseButton secondary className="border-admin-red! text-admin-red!" disabled={busy} onClick={() => choose('delete')}>Xóa phiếu</PurchaseButton>}
+        {can('update') && <PurchaseButton secondary disabled={busy || !purchaseEditable(po, auth.user)} title={!purchaseEditable(po, auth.user) ? 'Chỉ sửa phiếu chờ xác nhận hoặc bị từ chối' : undefined} onClick={() => choose('edit')}>Sửa phiếu</PurchaseButton>}
         {canDecide && <><PurchaseButton secondary className="border-admin-red! enabled:hover:bg-red-50!" disabled={busy} onClick={() => choose('reject')}><span className="text-admin-red">Từ chối</span></PurchaseButton><PurchaseButton disabled={busy} onClick={() => choose('approve')}>Xác nhận phiếu</PurchaseButton></>}
         {allowed.resubmit && <PurchaseButton disabled={busy} onClick={() => choose('resubmit')}>Gửi lại để duyệt</PurchaseButton>}
         {allowed.close && <PurchaseButton secondary disabled={busy} onClick={() => choose('close')}>Đóng phiếu nhận thiếu</PurchaseButton>}
@@ -88,7 +88,7 @@ export default function PurchaseDetailPage() {
         {receipts.loading ? <LoadingState label="Đang tải lịch sử nhận hàng…" /> : receipts.error ? <ErrorState message={receipts.error} onRetry={receipts.refresh} /> : receipts.data?.length ? <ol className="m-0 flex list-none flex-col gap-3 p-0">{receipts.data.map((receipt) => <li key={receipt.PurchaseReceiptId} className="border-b border-admin-border pb-3 text-[11px] last:border-0 last:pb-0"><p className="m-0 font-semibold">{formatDateTime(receipt.ReceivedAt)} — {receipt.Items.reduce((sum, item) => sum + item.Quantity, 0)} sản phẩm</p>{receipt.Items.map((item) => { const variant = byId.get(po.Items.find((line) => line.PurchaseOrderItemId === item.PurchaseOrderItemId)?.ProductVariantId); return <p key={item.PurchaseOrderItemId} className="mt-1 mb-0 break-words text-admin-muted">{variant ? variantLabel(variant) : 'ID dòng: ' + item.PurchaseOrderItemId}: {item.Quantity} × {formatMoney(item.UnitPrice)}</p> })}{receipt.Note && <p className="mt-1 mb-0 break-words whitespace-pre-wrap">{receipt.Note}</p>}</li>)}</ol> : <p className="m-0 text-xs text-admin-muted">Chưa có lần nhận hàng nào.</p>}
       </section>}
     </>}
-    {po && allowed[action] && ['edit', 'cancel'].includes(action) && <PurchaseDialog key={action + '-' + purchaseId} mode={action} purchaseId={purchaseId} suppliers={suppliers} variants={variants} creatorNames={names} onClose={() => choose('')} onChanged={refresh} onDone={(message) => { refresh(message); choose('') }} />}
+    {po && allowed[action] && ['edit', 'delete'].includes(action) && <PurchaseDialog key={action + '-' + purchaseId} mode={action} purchaseId={purchaseId} suppliers={suppliers} variants={variants} creatorNames={names} onClose={() => choose('')} onChanged={refresh} onDone={(message) => navigate('/admin/purchases' + purchaseListSearch(params), { replace: true, state: { purchaseNotice: message } })} />}
     {po && allowed[action] && ['approve', 'reject', 'resubmit', 'close', 'receive'].includes(action) && <PurchaseActionModal key={action + '-' + purchaseId} action={action} workflow={workflow} permitted={Boolean(allowed[action])} onClose={() => choose('')} />}
   </section>
 }

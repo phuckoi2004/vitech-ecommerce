@@ -799,6 +799,19 @@ class FakeSupplierRepo(FakeRepo):
 class FakePurchaseOrderRepo(FakeRepo):
     model = PurchaseOrder
 
+    def delete_document(self, po):
+        receipt_ids = {r.PurchaseReceiptId for r in self.db.rows(PurchaseReceipt)
+                       if r.PurchaseOrderId == po.PurchaseOrderId}
+        for model, predicate in (
+            (PurchaseReceiptItem, lambda row: row.PurchaseReceiptId in receipt_ids),
+            (PurchaseReceipt, lambda row: row.PurchaseReceiptId in receipt_ids),
+            (PurchaseOrderItem, lambda row: row.PurchaseOrderId == po.PurchaseOrderId),
+        ):
+            for row in list(self.db.rows(model)):
+                if predicate(row):
+                    self.db.remove(row)
+        self.db.remove(po)
+
     def exists_by_code(self, code):
         return bool(self._rows(lambda p: p.PurchaseOrderCode == code))
 

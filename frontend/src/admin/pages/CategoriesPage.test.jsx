@@ -183,19 +183,20 @@ test('delete requires explicit confirmation, cancel does not write and filters r
   expect(router.state.location.search).toBe('?status=hidden')
 })
 
-test('backend deletion restrictions are displayed and hiding is a separate deliberate action', async () => {
+test('failed soft deletion keeps the dialog and retry does not silently hide the category', async () => {
   categories = [category]
-  api.deleteCategory.mockRejectedValueOnce(Object.assign(new Error('Danh mục còn sản phẩm'), { code: 'category_has_products' }))
+  api.deleteCategory.mockRejectedValueOnce(new Error('Không thể lưu thay đổi'))
   renderPage()
   fireEvent.click(await screen.findByRole('button', { name: 'Xóa Nhóm thiết bị' }))
   const dialog = await screen.findByRole('dialog', { name: 'Xóa danh mục' })
   await within(dialog).findByText(category.Name)
   fireEvent.click(within(dialog).getByRole('button', { name: 'Xác nhận xóa' }))
-  expect(await within(dialog).findByRole('alert')).toHaveTextContent('Danh mục còn sản phẩm')
+  expect(await within(dialog).findByRole('alert')).toHaveTextContent('Không thể lưu thay đổi')
   expect(api.updateCategory).not.toHaveBeenCalled()
-  fireEvent.click(within(dialog).getByRole('button', { name: 'Ẩn danh mục' }))
-  await waitFor(() => expect(api.updateCategory).toHaveBeenCalledWith('access-for-test', category.CategoryId, { IsActive: false }))
-  await screen.findByText('Đã ẩn danh mục.')
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Xác nhận xóa' }))
+  await screen.findByText('Đã xóa danh mục.')
+  expect(api.deleteCategory).toHaveBeenCalledTimes(2)
+  expect(api.updateCategory).not.toHaveBeenCalled()
 })
 
 test('view-only Staff cannot write or open write forms from direct URLs', async () => {

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Navigate, useNavigate, useSearchParams } from 'react-router-dom'
+import { Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { ErrorState, Pagination } from '../../components/shared/index.js'
 import useInternalAuth from '../../hooks/useInternalAuth.js'
 import { formatDate, formatMoney } from '../../lib/format.js'
@@ -10,7 +10,7 @@ import { PRODUCT_CONTROL } from '../components/ProductUi.jsx'
 import { PurchaseButton, PurchaseStatus } from '../components/PurchaseUi.jsx'
 import { SupplierAction } from '../components/SupplierUi.jsx'
 import { useAdminLoad } from '../hooks/useAdminQuery.js'
-import { filterPurchases, PURCHASE_PAGE_SIZE, PURCHASE_TABS, purchaseCancellable, purchaseCsv, purchaseEditable, purchaseFilters, purchaseListSearch, purchaseQuantity } from '../lib/purchases.js'
+import { filterPurchases, PURCHASE_PAGE_SIZE, PURCHASE_TABS, purchaseDeletable, purchaseCsv, purchaseEditable, purchaseFilters, purchaseListSearch, purchaseQuantity } from '../lib/purchases.js'
 import { getPurchaseDirectory, getPurchaseVariants, purchaseReadBatch } from '../services/purchases.js'
 import { getSupplierDirectory } from '../services/suppliers.js'
 
@@ -39,6 +39,7 @@ function PurchaseFilters({ filter, suppliers, variants, supplierDisabled, produc
 export default function PurchasesPage() {
   const auth = useInternalAuth()
   const navigate = useNavigate()
+  const location = useLocation()
   const [params, setParams] = useSearchParams()
   const filter = purchaseFilters(params)
   const list = useAdminLoad(getPurchaseDirectory)
@@ -64,7 +65,7 @@ export default function PurchasesPage() {
     return Object.fromEntries(ids.map((id, index) => [id, users[index]?.FullName ?? null]))
   }, [creatorIds])
   const creators = useAdminLoad(readCreators, auth.user.Role === 'Admin' && auth.permissions.includes('users:read') && auth.permissions.includes('users:manage') && creatorIds !== '[]')
-  const [notice, setNotice] = useState('')
+  const [notice, setNotice] = useState(location.state?.purchaseNotice ?? '')
   const supplierRows = suppliers.data ?? []
   const variantRows = variants.data ?? []
   const names = Object.fromEntries(supplierRows.map((row) => [row.SupplierId, row.Name]))
@@ -101,10 +102,10 @@ export default function PurchasesPage() {
     { key: 'quantity', label: 'Tổng SL', className: 'w-[6.21%]', render: (_, row) => purchaseQuantity(row) },
     { key: 'TotalAmount', label: 'Tổng tiền', className: 'w-[11.52%]', render: formatMoney },
     { key: 'Status', label: 'Trạng thái', className: 'w-[10.64%]', render: (value) => <PurchaseStatus status={value} /> },
-    { key: 'actions', label: 'Thao tác', className: 'w-[24.21%]', render: (_, row) => <div className="flex items-center gap-[3px]"><SupplierAction kind="view" name={row.PurchaseOrderCode} onClick={() => open('view', row.PurchaseOrderId)} />{can('update') && <SupplierAction kind="edit" name={row.PurchaseOrderCode} disabled={!purchaseEditable(row)} disabledTitle="Chỉ sửa phiếu chờ xác nhận hoặc bị từ chối" onClick={() => open('edit', row.PurchaseOrderId)} />}{can('delete') && <SupplierAction kind="delete" name={row.PurchaseOrderCode} disabled={!purchaseCancellable(row)} disabledTitle="Phiếu đã nhận hàng hoặc đã kết thúc không thể hủy" onClick={() => open('cancel', row.PurchaseOrderId)} />}</div> },
+    { key: 'actions', label: 'Thao tác', className: 'w-[24.21%]', render: (_, row) => <div className="flex items-center gap-[3px]"><SupplierAction kind="view" name={row.PurchaseOrderCode} onClick={() => open('view', row.PurchaseOrderId)} />{can('update') && <SupplierAction kind="edit" name={row.PurchaseOrderCode} disabled={!purchaseEditable(row, auth.user)} disabledTitle="Chỉ sửa phiếu chờ xác nhận hoặc bị từ chối" onClick={() => open('edit', row.PurchaseOrderId)} />}{can('delete') && auth.user.Role === 'Admin' && <SupplierAction kind="delete" name={row.PurchaseOrderCode} disabled={!purchaseDeletable(row, auth.user)} onClick={() => open('delete', row.PurchaseOrderId)} />}</div> },
   ]
   const mode = params.get('dialog'), id = params.get('purchase')
-  const permitted = mode === 'new' ? can('create') : mode === 'edit' ? can('update') : mode === 'cancel' ? can('delete') : mode === 'view'
+  const permitted = mode === 'new' ? can('create') : mode === 'edit' ? can('update') : mode === 'delete' ? can('delete') && auth.user.Role === 'Admin' : mode === 'view'
   if (permitted && mode === 'new') return <Navigate replace to={'/admin/purchases/new' + purchaseListSearch(params)} />
   if (permitted && mode === 'edit' && id) return <Navigate replace to={'/admin/purchases/' + encodeURIComponent(id) + '/edit' + purchaseListSearch(params)} />
   return <section aria-label="Quản lý nhập hàng" className="-mt-1 flex min-w-0 flex-col gap-3.5">

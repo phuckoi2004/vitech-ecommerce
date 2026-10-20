@@ -193,19 +193,20 @@ test('delete requires explicit confirmation, cancel does not write and filters r
   expect(router.state.location.search).toBe('?status=hidden')
 })
 
-test('backend deletion restrictions are displayed and hiding is a separate deliberate action', async () => {
+test('failed soft deletion keeps the dialog and retry does not silently hide the brand', async () => {
   brands = [brand]
-  api.deleteBrand.mockRejectedValueOnce(Object.assign(new Error('Thương hiệu còn sản phẩm'), { code: 'brand_has_products' }))
+  api.deleteBrand.mockRejectedValueOnce(new Error('Không thể lưu thay đổi'))
   renderPage()
   fireEvent.click(await screen.findByRole('button', { name: 'Xóa Hãng thiết bị' }))
   const dialog = await screen.findByRole('dialog', { name: 'Xóa thương hiệu' })
   await within(dialog).findByText(brand.Name)
   fireEvent.click(within(dialog).getByRole('button', { name: 'Xác nhận xóa' }))
-  expect(await within(dialog).findByRole('alert')).toHaveTextContent('Thương hiệu còn sản phẩm')
+  expect(await within(dialog).findByRole('alert')).toHaveTextContent('Không thể lưu thay đổi')
   expect(api.updateBrand).not.toHaveBeenCalled()
-  fireEvent.click(within(dialog).getByRole('button', { name: 'Ẩn thương hiệu' }))
-  await waitFor(() => expect(api.updateBrand).toHaveBeenCalledWith('access-for-test', brand.BrandId, { IsActive: false }))
-  await screen.findByText('Đã ẩn thương hiệu.')
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Xác nhận xóa' }))
+  await screen.findByText('Đã xóa thương hiệu.')
+  expect(api.deleteBrand).toHaveBeenCalledTimes(2)
+  expect(api.updateBrand).not.toHaveBeenCalled()
 })
 
 test('view-only Staff cannot write or open write forms from direct URLs', async () => {

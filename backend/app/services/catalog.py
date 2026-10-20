@@ -170,22 +170,18 @@ class CategoryService(BaseService):
             values = data.model_dump(exclude_unset=True)
             if "Slug" in values:
                 self._ensure_slug_unique(values["Slug"], exclude_id=category_id)
-            if values.get("ParentCategoryId") is not None:
+            if values.get("ParentCategoryId") is not None and values["ParentCategoryId"] != category.ParentCategoryId:
                 self._ensure_valid_parent(category_id, values["ParentCategoryId"])
             self.categories.update(category, values)
             self.categories.flush()
             return CategoryResponse.model_validate(category)
 
     def delete_category(self, actor: Actor, category_id: uuid.UUID) -> None:
-        """Xóa danh mục không còn danh mục con và sản phẩm (FK RESTRICT). Muốn ẩn thì cập nhật IsActive = false."""
+        """Remove from every directory, retaining foreign keys and product/history records."""
         require_role(actor, *ADMIN_ONLY)
         with self.transaction():
             category = self._get(category_id)
-            if self.categories.has_children(category_id):
-                raise BusinessRuleError("Danh mục còn danh mục con", code="category_has_children")
-            if self.categories.has_products(category_id):
-                raise BusinessRuleError("Danh mục còn sản phẩm", code="category_has_products")
-            self.categories.delete(category)
+            self.categories.update(category, {"IsDeleted": True, "IsActive": False})
 
     def _get(self, category_id: uuid.UUID, *, active_only: bool = False) -> Category:
         category = self.categories.get_by_id(category_id)
@@ -254,13 +250,11 @@ class BrandService(BaseService):
             return BrandResponse.model_validate(brand)
 
     def delete_brand(self, actor: Actor, brand_id: uuid.UUID) -> None:
-        """Xóa thương hiệu không còn sản phẩm (FK RESTRICT). Muốn ẩn thì cập nhật IsActive = false."""
+        """Soft delete independently of IsActive; retain product references."""
         require_role(actor, *ADMIN_ONLY)
         with self.transaction():
             brand = self._get(brand_id)
-            if self.brands.has_products(brand_id):
-                raise BusinessRuleError("Thương hiệu còn sản phẩm", code="brand_has_products")
-            self.brands.delete(brand)
+            self.brands.update(brand, {"IsDeleted": True, "IsActive": False})
 
     def _get(self, brand_id: uuid.UUID):
         brand = self.brands.get_by_id(brand_id)

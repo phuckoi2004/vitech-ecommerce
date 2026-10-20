@@ -72,7 +72,7 @@ class AccountTests(unittest.TestCase):
         self.assertLessEqual(ROLE_PERMISSIONS["Staff"], ROLE_PERMISSIONS["Admin"])
         for role in ("Staff", "Admin"):
             for permission in ("chat:create", "chat:view", "purchases:view", "purchases:create",
-                               "purchases:update", "purchases:delete", "purchase_history:view",
+                               "purchases:update", "purchase_history:view",
                                "suppliers:view", "orders:update", "payment_methods:view",
                                "revenue_reports:view", "order_reports:view"):
                 self.assertTrue(has_permission(role, permission), (role, permission))
@@ -80,7 +80,7 @@ class AccountTests(unittest.TestCase):
         for permission in ("products:create", "promotions:view", "suppliers:create",
                            "payment_methods:update", "inventory:update", "users:manage",
                            "refunds:update", "refunds:delete", "reviews:view", "reviews:delete",
-                           "news:view", "news:create", "banners:view", "banners:create"):
+                           "news:view", "news:create", "banners:view", "banners:create", "purchases:delete"):
             self.assertFalse(has_permission("Staff", permission), permission)
             self.assertTrue(has_permission("Admin", permission), permission)
         # Staff performs refunds (view/create); exports are Admin-only (decision 09/10/2026).

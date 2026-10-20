@@ -921,3 +921,49 @@ Chỉ Admin; chỉ đọc (không đổi trạng thái đơn/thanh toán/tồn k
 | Giá vốn (COGS) | Σ `OrderItems.UnitCost` × `Quantity` (snapshot lúc đặt hàng) của các đơn ghi nhận doanh thu; `UnitCost = 0` = thiếu giá vốn → không trả tổng. Chưa trừ giá vốn hàng trả lại; không tính lợi nhuận. |
 | Sản phẩm bán chạy | Nhóm `OrderItems` của các đơn ghi nhận doanh thu theo biến thể: Σ `Quantity`, Σ `LineTotal`. Số đã trả lại = Σ `ReturnRequests.Quantity` (Return, `Completed`) — chỉ tham khảo, không đổi thứ hạng. |
 | Tồn kho | `ProductVariants.StockQuantity` (tồn khả dụng) của biến thể chưa xóa; serial theo `ProductSerials.Status` (Available/Reserved/Sold/Warranty/Returned/WrittenOff). Hàng không serial không có dữ liệu riêng cho đang giữ/trả về/hỏng; `Returned` không tách hàng hỏng. |
+
+
+---
+
+## Bổ sung hiện hành cho phần admin — 18/10/2026
+
+Phần bổ sung này ghi các quyết định mới và hợp đồng đã đối chiếu với mã nguồn ngày 18/10/2026. Giữ nguyên nội dung gốc để lưu lịch sử; khi có khác biệt ở đúng chủ đề bên dưới, áp dụng phần bổ sung thay cho quy tắc cũ tương ứng. Đây là cập nhật tài liệu, không phải lệnh thay đổi source code, chạy migration hoặc sửa CSDL thật.
+
+[2026-10-18-admin.md](updates/2026-10-18-admin.md) | [README.md](README.md)
+
+### Product, Variant và lựa chọn ảnh
+
+- Mỗi biến thể có thể chọn nhiều ảnh từ bộ ảnh Product và một ảnh đại diện. Ảnh vẫn thuộc ProductImages; không có bảng ProductVariantImages hay cột ProductVariantId mới trong ProductImages.
+- Liên kết lựa chọn ảnh và biến thể mặc định nằm trong JSON hiện có: `Products.Specifications._vietech_variant_media`. Backend quản lý vùng này, giữ khi sửa thông số và không trả nó như thông số kỹ thuật công khai. Không nhập vùng riêng này bằng ô JSON thông số.
+- Tạo Product mới xác định biến thể đầu tiên là mặc định. Với dữ liệu cũ chưa có cấu hình, backend dùng lựa chọn ổn định cho đến khi được chỉ định rõ; không khẳng định đó là biến thể tạo sớm nhất trong lịch sử.
+- API catalog admin có `VariantImages`, `VariantImageUrls`, `DefaultImageUrl`, `IsDefaultVariant`; API chi tiết Product công khai có `DefaultVariantId` và bản đồ `VariantImages`. Có dữ liệu trong API không có nghĩa UI khách hiện đã đổi bộ ảnh theo màu: phần frontend khách cần được kiểm tra riêng khi triển khai.
+- Các chỗ nhập ảnh admin dùng file local, upload qua backend lên Supabase Storage rồi nhận URL để lưu. Bộ soạn mô tả sản phẩm cũng dùng upload local; không có ô nhập URL ảnh ngoài. Hyperlink và link đích của banner vẫn là các trường liên kết hợp lệ.
+
+### Phiếu nhập, người tạo và người duyệt
+
+- Staff lập phiếu ở Pending, chờ Admin duyệt hoặc từ chối. Admin lập thì phiếu ở Approved ngay và có thể nhận hàng, không cần bước quyết định tự duyệt riêng.
+- Phiếu chỉ sửa khi Pending/Rejected. Sửa đầu phiếu và toàn bộ dòng hàng gửi trong một PATCH tới `/admin/purchase-orders/{id}` với `SupplierId`, `Note`, `Items`.
+- Backend khóa phiếu, kiểm tra lại trạng thái và lưu tất cả trong một transaction. Lỗi kiểm tra/ghi/commit thì hoàn tác toàn bộ. Giữ ID của dòng còn cùng ProductVariantId; thêm dòng mới, xóa dòng bị bỏ, tính lại tổng tiền ở backend. Gửi lại cùng bộ dòng không thêm trùng SKU.
+- Bỏ `Items` trong PATCH là giữ nguyên dòng hiện có; `Items=[]` hoặc null bị từ chối. Trường ngày lập, người lập, thành tiền và thực nhận không phải đầu vào được phép sửa tùy ý.
+
+### Bảo hành, đổi trả và các luồng tạm dừng
+
+**Đổi trả hiện hành:** Staff/Admin tiếp nhận hoặc từ chối, sau đó chỉ chuyển tiến độ theo thứ tự `Pending → Approved → Receiving → Processing → Completed`. Customer hủy theo điều kiện của API khách. Rejected/Cancelled/Completed là phiếu đóng; không có chuyển lùi. Từ chối cần lý do. Backend kiểm tra trạng thái đang quan sát để bấm lặp hoặc form cũ không làm nhảy nhiều giai đoạn.
+
+Luồng đổi trả hiện hành không bắt kiểm tra thiệt hại, duyệt tiền hoặc hoàn tiền để tiến bước; không tự cộng/trừ kho hay chuyển serial theo việc bấm chuyển trạng thái. Completed tại đây chỉ là hoàn tất tiến độ phiếu, không chứng nhận tiền đã được hoàn hoặc hàng đã nhập lại kho. Luồng tài chính cũ được giữ nhưng endpoint ghi theo luồng đó đang trả lỗi `service_workflow_paused`.
+
+### Lưu tin tức và banner theo trạng thái
+
+- Tạo/sửa tin tức gửi nội dung cùng Status trong một POST/PATCH tới `/admin/news` hoặc `/admin/news/{id}`. Mặc định tạo Draft; chọn Published thì đăng ngay khi lần lưu thành công. Backend tự ghi PublishedAt lần đầu, giữ khi ẩn rồi đăng lại; không nhận PublishedAt hoặc người tạo tùy ý từ client.
+- Chuyển trạng thái tin tức vẫn theo quy tắc: Draft giữ Draft hoặc sang Published; Published giữ Published hoặc sang Hidden; Hidden giữ Hidden hoặc sang Published. Không đưa bài đã đăng về Draft. Bỏ Status trong PATCH thì giữ trạng thái đang có.
+- Tạo/sửa banner gửi nội dung, khoảng hiển thị và IsActive cùng một POST/PATCH tới `/admin/banners` hoặc `/admin/banners/{id}`. Mặc định tạo true; nếu chọn ngừng thì bản ghi được tạo false ngay, không có bước tạo hoạt động rồi gửi lệnh tắt sau. Bỏ IsActive trong PATCH thì giữ cờ đang có.
+- Mỗi lần lưu thuộc một transaction: lỗi kiểm tra, ghi hoặc commit hoàn tác nội dung và trạng thái cùng nhau. Form giữ dữ liệu nhập để thử lại, không dùng cơ chế lưu một phần rồi tiếp tục đổi trạng thái.
+- Các nút đổi trạng thái riêng ở danh sách/chi tiết vẫn dùng publish/hide hoặc activate/deactivate. Form không cần gọi thêm các endpoint này sau lần lưu nội dung.
+- API công khai chỉ trả bài Published; banner phải IsActive=true và đang trong [StartDate, EndDate], mốc null là không giới hạn. Trạng thái trong CSDL quyết định khả năng hiển thị, không phải việc trình duyệt đã từng bấm một nút Đăng.
+
+### Promotion và Coupon
+
+- Promotion là chương trình mẹ giữ điều kiện giảm, phạm vi Product/Category và thời gian. Coupon giữ Code, Name, PromotionId, UsageLimit, UsedCount và các dấu vết tạo; không tách điều kiện giảm độc lập khỏi mẹ.
+- Sửa thông tin và phạm vi chương trình dùng cùng PATCH, một transaction. Lỗi ở bất kỳ phần nào hoàn tác cả thông tin lẫn phạm vi. Endpoint targets cũ vẫn có thể tồn tại cho tương thích, không phải hai bước form bắt buộc.
+- Promotion ở Scheduled/Active được đánh giá theo giờ server; Draft/Cancelled vẫn là quyết định quản trị. Tại EndDate còn trong khoảng, sau EndDate là hết hạn.
+- Coupon có bốn trạng thái API: Active (Đang áp dụng), Upcoming (Chưa bắt đầu), Exhausted (Hết lượt), Ended (Hết chương trình). Hết/hủy chương trình mẹ được ưu tiên trước hết lượt. IsActive chỉ true khi Active; không còn công tắc tạm ngừng riêng mã.

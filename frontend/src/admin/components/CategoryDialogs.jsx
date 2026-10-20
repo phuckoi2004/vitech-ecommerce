@@ -78,22 +78,20 @@ function CategoryDelete({ category, onBusy, onClose, onDone }) {
   const auth = useInternalAuth()
   const [busy, setBusy] = useState(false)
   const [failure, setFailure] = useState(null)
-  const blocked = ['category_has_children', 'category_has_products'].includes(failure?.code)
-  async function remove(hide = false) {
+  async function remove() {
     if (busy) return
     setBusy(true); onBusy(true); setFailure(null)
     try {
-      await auth.withAccessToken((token) => hide ? updateCategory(token, category.CategoryId, { IsActive: false }) : deleteCategory(token, category.CategoryId))
-      onDone(hide ? 'Đã ẩn danh mục.' : 'Đã xóa danh mục.')
+      await auth.withAccessToken((token) => deleteCategory(token, category.CategoryId))
+      onDone('Đã xóa danh mục.')
     } catch (error) { setFailure(error) }
     finally { setBusy(false); onBusy(false) }
   }
   return <>
     <CategoryError message={failure?.message} />
     <p>Bạn muốn xóa danh mục <strong className="break-words">{category.Name}</strong>?</p>
-    <p className="mt-3 text-xs leading-relaxed text-admin-muted">Chỉ xóa được danh mục không còn danh mục con và sản phẩm liên quan. Nếu muốn tạm ngừng hiển thị, hãy đổi trạng thái thành “Đã ẩn”.</p>
+    <p className="mt-3 text-xs leading-relaxed text-admin-muted">Danh mục sẽ bị xóa mềm và không còn xuất hiện với khách hàng, nhân viên hay quản trị viên. Dữ liệu và các liên kết sản phẩm được giữ trong hệ thống. Nếu chỉ muốn khách không thấy, hãy chọn “Đã ẩn” trong phần sửa.</p>
     <div className="mt-6 flex justify-end gap-2"><ProductButton secondary disabled={busy} onClick={onClose}>Hủy</ProductButton>
-      {blocked && category.IsActive && auth.permissions.includes('categories:update') && <ProductButton secondary disabled={busy} onClick={() => remove(true)}>Ẩn danh mục</ProductButton>}
       <ProductButton loading={busy} className="border-admin-red! bg-admin-red! enabled:hover:bg-admin-red/90!" onClick={() => remove()}>Xác nhận xóa</ProductButton>
     </div>
   </>

@@ -26,6 +26,13 @@ function fillLine(index, id, quantity, price) {
   fireEvent.change(screen.getByRole('spinbutton', { name: 'Số lượng đặt dòng ' + index }), { target: { value: String(quantity) } })
   fireEvent.change(screen.getByRole('spinbutton', { name: 'Đơn giá nhập dòng ' + index }), { target: { value: String(price) } })
 }
+
+test('Staff cannot edit another creators draft through a direct form URL', async () => {
+  renderPage('/admin/purchases/po1/edit', permissions, 'Staff')
+  await screen.findByText(/Phiếu hiện tại không còn được phép sửa/)
+  expect(screen.queryByRole('combobox', { name: 'Sản phẩm / biến thể dòng 1' })).not.toBeInTheDocument()
+  expect(api.updatePurchase).not.toHaveBeenCalled()
+})
 beforeEach(() => {
   vi.resetAllMocks(); po = structuredClone(base); suppliers = [{ SupplierId: 's1', Name: 'NCC hoạt động', IsActive: true }, { SupplierId: 'hidden', Name: 'NCC ẩn', IsActive: false }]
   api.getAdminData.mockImplementation(async (_, path) => {

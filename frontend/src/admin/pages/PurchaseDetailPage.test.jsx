@@ -5,7 +5,7 @@ import { AuthContext } from '../../auth/context.js'
 import { makeAuth } from '../../test/auth.js'
 import { adminRoutes } from '../routes/index.jsx'
 
-const api = vi.hoisted(() => ({ getAdminData: vi.fn(), decidePurchase: vi.fn(), updatePurchase: vi.fn(), updatePurchaseItem: vi.fn(), receivePurchase: vi.fn(), resubmitPurchase: vi.fn(), closePurchase: vi.fn(), cancelPurchase: vi.fn() }))
+const api = vi.hoisted(() => ({ getAdminData: vi.fn(), decidePurchase: vi.fn(), updatePurchase: vi.fn(), updatePurchaseItem: vi.fn(), receivePurchase: vi.fn(), resubmitPurchase: vi.fn(), closePurchase: vi.fn(), deletePurchase: vi.fn() }))
 vi.mock('../../services/api/admin.js', () => ({ getAdminData: api.getAdminData }))
 vi.mock('../services/purchases.js', async (original) => ({ ...await original(), ...Object.fromEntries(Object.entries(api).filter(([key]) => key !== 'getAdminData')) }))
 
@@ -48,7 +48,7 @@ beforeEach(() => {
   api.updatePurchaseItem.mockImplementation(async (_, __, itemId, body) => save({ Items: po.Items.map((item) => item.PurchaseOrderItemId === itemId ? { ...item, ...body } : item) }))
   api.resubmitPurchase.mockImplementation(async () => save({ Status: 'Pending', DecidedByUserId: null, DecidedAt: null, RejectReason: null }))
   api.closePurchase.mockImplementation(async (_, __, body) => save({ Status: 'Closed', CloseReason: body.Reason, ClosedByUserId: 'Admin-id', ClosedAt: '2026-10-14T06:00:00Z' }))
-  api.cancelPurchase.mockImplementation(async () => save({ Status: 'Cancelled' }))
+  api.deletePurchase.mockImplementation(async () => save({ Status: 'Cancelled' }))
   api.receivePurchase.mockImplementation(async (_, __, body) => {
     const Items = po.Items.map((item) => ({ ...item, ReceivedQuantity: item.ReceivedQuantity + (body.Items.find((line) => line.PurchaseOrderItemId === item.PurchaseOrderItemId)?.Quantity ?? 0) }))
     receipts.push({ PurchaseReceiptId: 'receipt1', ReceivedAt: '2026-10-14T06:00:00Z', Note: 'Biên nhận thật', Items: body.Items.map((item) => ({ ...item, UnitPrice: '1500000.00' })) })
@@ -237,7 +237,7 @@ test('closed shortage keeps the actual quantities and records the reason; Staff 
 })
 
 test('Staff can resubmit a rejected order but cannot close a partially received order', async () => {
-  po.Status = 'Rejected'; po.RejectReason = 'Sai giá'
+  po.Status = 'Rejected'; po.RejectReason = 'Sai giá'; po.CreatedByUserId = 'Staff-id'
   const router = renderPage('/admin/purchases/po1', permissions, 'Staff')
   fireEvent.click(await screen.findByRole('button', { name: 'Gửi lại để duyệt' }))
   fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Xác nhận', exact: true }))

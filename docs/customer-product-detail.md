@@ -82,3 +82,20 @@ Kết quả test và ảnh chụp desktop/mobile nằm ở `output/product-detai
 Ảnh đối chiếu Figma: `output/product-detail/product-content-1440.png`; ảnh mobile: `product-390.png` và `product-320.png`. Ảnh API thật: `live-product-desktop.png`, `live-product-mobile.png`. Báo cáo JSON: `browser-report.json`, `live-api-browser-report.json`, `frontend-tests-final.json`.
 
 Cập nhật phần đặc điểm nổi bật: lint các file sửa và build đạt, 27 test liên quan đạt. Đọc lại Samsung Galaxy S26 qua API localhost thật cho năm nhóm: màn hình 6.3 inch/Dynamic AMOLED 2X/120 Hz; Exynos 2600/RAM 12GB; camera sau 50 MP/trước 12MP; bộ nhớ 256GB theo biến thể; pin 4300 mAh/sạc 25 W. Đây là dữ liệu Admin đã nhập, không bổ sung thông số mẫu hoặc sửa database. Báo cáo: `output/product-highlights/live-api-report.json`.
+
+
+---
+
+## Bổ sung hiện hành cho phần admin — 18/10/2026
+
+Phần bổ sung này ghi các quyết định mới và hợp đồng đã đối chiếu với mã nguồn ngày 18/10/2026. Giữ nguyên nội dung gốc để lưu lịch sử; khi có khác biệt ở đúng chủ đề bên dưới, áp dụng phần bổ sung thay cho quy tắc cũ tương ứng. Đây là cập nhật tài liệu, không phải lệnh thay đổi source code, chạy migration hoặc sửa CSDL thật.
+
+[2026-10-18-admin.md](updates/2026-10-18-admin.md) | [README.md](README.md)
+
+### Product, Variant và lựa chọn ảnh
+
+- Mỗi biến thể có thể chọn nhiều ảnh từ bộ ảnh Product và một ảnh đại diện. Ảnh vẫn thuộc ProductImages; không có bảng ProductVariantImages hay cột ProductVariantId mới trong ProductImages.
+- Liên kết lựa chọn ảnh và biến thể mặc định nằm trong JSON hiện có: `Products.Specifications._vietech_variant_media`. Backend quản lý vùng này, giữ khi sửa thông số và không trả nó như thông số kỹ thuật công khai. Không nhập vùng riêng này bằng ô JSON thông số.
+- Tạo Product mới xác định biến thể đầu tiên là mặc định. Với dữ liệu cũ chưa có cấu hình, backend dùng lựa chọn ổn định cho đến khi được chỉ định rõ; không khẳng định đó là biến thể tạo sớm nhất trong lịch sử.
+- API catalog admin có `VariantImages`, `VariantImageUrls`, `DefaultImageUrl`, `IsDefaultVariant`; API chi tiết Product công khai có `DefaultVariantId` và bản đồ `VariantImages`. Có dữ liệu trong API không có nghĩa UI khách hiện đã đổi bộ ảnh theo màu: phần frontend khách cần được kiểm tra riêng khi triển khai.
+- Các chỗ nhập ảnh admin dùng file local, upload qua backend lên Supabase Storage rồi nhận URL để lưu. Bộ soạn mô tả sản phẩm cũng dùng upload local; không có ô nhập URL ảnh ngoài. Hyperlink và link đích của banner vẫn là các trường liên kết hợp lệ.
