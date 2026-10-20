@@ -226,7 +226,8 @@ VieTech/
 │   ├── alembic.ini
 │   ├── tests/
 │   ├── .env                      # bí mật, bị .gitignore, không commit
-│   ├── auth.env.example          # mẫu backend/.env: database, Auth/SMTP/Redis, Storage, SePay
+│   ├── .env.local                # tùy chọn, bị .gitignore: database local riêng của từng máy
+│   ├── .env.example              # mẫu backend/.env: database, Auth/SMTP/Redis, Storage, SePay
 │   ├── requirements.txt
 │   └── requirements-dev.txt
 │
@@ -270,7 +271,10 @@ Quy định bảo mật:
 
 - Không hard-code database credentials trong source code.
 - Không commit `backend/.env` hoặc các file chứa bí mật.
-- `backend/auth.env.example` chỉ chứa giá trị mẫu và không được chứa credentials thật.
+- `backend/.env.example` chỉ chứa giá trị mẫu và không được chứa credentials thật.
+- `DATABASE_URL` trong `backend/.env` là database chung của nhóm. Máy nào muốn dùng database local riêng thì tạo
+  `backend/.env.local` có `DATABASE_URL` của database đó; khi có file này (với `APP_ENV` development/test), backend
+  và Alembic chỉ dùng database trong `.env.local`, không bao giờ quay về database của `.env` (`app/core/env.py`).
 - Không in hoặc tiết lộ thông tin kết nối trong log, response API hoặc báo cáo.
 - Chỉ kết nối database thực tế khi được yêu cầu hoặc cho phép.
 
@@ -624,12 +628,28 @@ nghiệp vụ đầy đủ tiếp tục được triển khai ở giai đoạn t
 - Integration test trên PostgreSQL thật (`tests/test_postgres_integration.py`, `tests/test_postgres_concurrency.py`)
   chỉ chạy khi bật cờ, dùng một
   database **riêng cho test** (`TEST_DATABASE_URL` trong `backend/.env`, ví dụ project Supabase staging đã chạy
-  `alembic upgrade head`). Test xóa sạch dữ liệu database đó trước và sau khi chạy, và từ chối chạy nếu
-  `TEST_DATABASE_URL` trùng database của `DATABASE_URL`:
+  `alembic upgrade head`). Test xóa sạch dữ liệu database đó trước và sau khi chạy. Trước khi tạo kết nối, khóa
+  lượt chạy hoặc xóa dữ liệu, `tests/postgres_safety.py` (`require_test_database_target`) kiểm tra cấu hình:
+  - Khi `TEST_DATABASE_URL` là Supabase, phải khai báo thêm `TEST_DATABASE_PROJECT_REF` (biến môi trường hoặc
+    `backend/.env`): project ref 20 ký tự chữ thường/số của project test. Đây không phải bí mật; không ghi URL hay
+    mật khẩu vào biến này.
+  - Từ chối nếu thiếu hoặc sai định dạng ref, ref không khớp project của `TEST_DATABASE_URL`, ref hoặc URL thuộc
+    project Production được bảo vệ (`PROTECTED_PROJECT_REFS`), hoặc `TEST_DATABASE_URL` cùng project/database với
+    `DATABASE_URL` (cùng project Supabase là bị từ chối dù tên database khác).
+  - Supabase phải dùng session mode cổng 5432 (pooler cổng 6543 bị từ chối). URL chỉ được có tham số kết nối trong
+    danh sách cho phép (ví dụ `sslmode`, `connect_timeout`, `application_name`); `options` và tham số lạ bị từ chối.
+  - Từ chối khi đang đặt một trong các biến libpq `PGHOST`, `PGHOSTADDR`, `PGPORT`, `PGDATABASE`, `PGUSER`,
+    `PGOPTIONS`, `PGSERVICE`, `PGSERVICEFILE`.
+  - Ngoài Supabase chỉ chấp nhận PostgreSQL cục bộ (localhost/loopback), khi đó không đặt `TEST_DATABASE_PROJECT_REF`.
+  - Đây là kiểm tra cấu hình (URL nói gì), không xác nhận được server thực sự trả lời. Thông báo lỗi chỉ nêu tên
+    biến và lý do, không in URL, host, tài khoản hay mật khẩu.
+
+  Chạy (khi chưa có ref trong `backend/.env`, đặt tạm trong phiên terminal):
 
   ```powershell
+  $env:TEST_DATABASE_PROJECT_REF = "<project-ref-cua-project-test>"
   $env:RUN_POSTGRES_TESTS = "1"; ..\.venv\Scripts\python.exe -m pytest tests\test_postgres_integration.py tests\test_postgres_concurrency.py -v
-  Remove-Item Env:RUN_POSTGRES_TESTS
+  Remove-Item Env:RUN_POSTGRES_TESTS, Env:TEST_DATABASE_PROJECT_REF
   ```
 
 - Kiểm thử API giai đoạn 7 (`tests/api/`, 13 domain): gọi API qua `TestClient` với đăng nhập JWT thật trên cùng

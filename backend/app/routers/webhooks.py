@@ -25,7 +25,7 @@ def _process_with_database_session(payload: SePayWebhookPayload, raw: dict[str, 
 
     session = SessionLocal()
     try:
-        return PaymentWebhookService(session, account_number=settings.account_number).receive_sepay(payload, raw)
+        return PaymentWebhookService.from_settings(session, settings).receive_sepay(payload, raw)
     finally:
         session.close()
 

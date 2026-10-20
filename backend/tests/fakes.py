@@ -1544,10 +1544,12 @@ def payment_service(db, session, gateway=None) -> PaymentService:
     return svc
 
 
-def payment_webhook_service(db, session, *, account_number="0123456789", gateway=None):
+def payment_webhook_service(db, session, *, account_number="0123456789", gateway=None, main_account_number=None,
+                            payment_code_pattern=None):
     from app.services.payment_webhook import PaymentWebhookService
 
-    svc = PaymentWebhookService(session, account_number=account_number, clock=fixed_clock)
+    svc = PaymentWebhookService(session, account_number=account_number, main_account_number=main_account_number,
+                                payment_code_pattern=payment_code_pattern, clock=fixed_clock)
     svc.events = FakeWebhookEventRepo(db)
     svc.payments = payment_service(db, session, gateway=gateway)
     return svc

@@ -12,6 +12,10 @@ export const WISHLIST_PATH = '/yeu-thich'
 export const NOTIFICATIONS_PATH = '/thong-bao'
 export const NEWS_PATH = '/tin-tuc'
 export const CHAT_PATH = '/tu-van'
+// Order confirmation, opened from the cart ("/thanh-toan" is the payment policy page).
+export const CHECKOUT_PATH = '/dat-hang'
+// A placed order of the signed-in customer: `${ORDERS_PATH}/:orderId`.
+export const ORDERS_PATH = '/don-hang'
 
 export const INFO_PATHS = {
   about: '/gioi-thieu',
@@ -31,3 +35,4 @@ export const productPath = (slug) => `/san-pham/${encodeURIComponent(slug)}`
 export const categoryPath = (slug) => `/danh-muc/${encodeURIComponent(slug)}`
 export const brandPath = (slug) => `/thuong-hieu/${encodeURIComponent(slug)}`
 export const newsPath = (slug) => `${NEWS_PATH}/${encodeURIComponent(slug)}`
+export const orderPath = (orderId) => `${ORDERS_PATH}/${encodeURIComponent(orderId)}`

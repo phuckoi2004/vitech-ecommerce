@@ -28,9 +28,9 @@ SERVICE_PROVIDERS = [value for name, value in vars(deps).items()
 BUSINESS_MODULES = ("catalog", "wishlist_cart", "orders", "payments", "promotions", "purchasing", "reviews",
                     "chat", "service_requests", "content", "statistics")
 STAGE5_ACCOUNT_PATHS = ("/auth", "/users/me/avatar", "/users/me/default-address", "/admin/users")
-# This endpoint streams raw bytes to a storage helper instead of an injected
-# business service. Its upload contract is covered in test_product_media.py.
-RAW_UPLOAD_PATHS = {"/admin/product-image-uploads"}
+# Legacy repair-centre, independent-approval and return-finance endpoints paused for business consultation
+# (app/routers/service_requests.py: paused_service_workflow). They answer service_workflow_paused and never reach a
+# Service; listed explicitly so no other route can be exempted silently.
 PAUSED_WORKFLOW_PATHS = {
     f"/admin/{resource}/{{request_id}}/{action}"
     for resource, actions in (
@@ -65,6 +65,10 @@ def business_routes():
                 if name == "users" and (route.path.startswith(STAGE5_ACCOUNT_PATHS) or route.path == "/users/me"):
                     continue
                 yield route
+
+
+def is_paused(route):
+    return "paused_service_workflow()" in inspect.getsource(route.endpoint)
 
 
 def expected_method(route):
@@ -127,10 +131,8 @@ def call(client, route, *, json=None):
 def test_every_business_service_method_is_reachable_through_one_route():
     routes = list(business_routes())
     assert len(routes) > 180
-    assert {route.path for route in routes} >= RAW_UPLOAD_PATHS | PAUSED_WORKFLOW_PATHS
+    assert {route.path for route in routes if is_paused(route)} == PAUSED_WORKFLOW_PATHS
     for route in routes:
-        if route.path in RAW_UPLOAD_PATHS:
-            continue
         expected_method(route)  # Active endpoints delegate; paused endpoints cannot call a service.
 
 
@@ -138,7 +140,7 @@ def test_routes_without_required_body_call_their_service_method(harness):
     client, recorder, _ = harness
     checked = 0
     for route in business_routes():
-        if has_required_body(route) or route.path in RAW_UPLOAD_PATHS:
+        if has_required_body(route):
             continue
         recorder.calls.clear()
         response = call(client, route)
@@ -260,10 +262,10 @@ def test_optional_note_bodies_may_be_omitted(harness):
     request_id = uuid.uuid4()
     assert client.post(f"/admin/warranty-requests/{request_id}/receive").status_code == 404
     name, args, _ = recorder.calls[-1]
-    assert name == "advance_status" and args[1] == request_id and args[2].ExpectedStage == "New"
-    # The legacy receive endpoint now only advances the stage; a note body is accepted but ignored.
+    assert name == "receive_status" and args[1] == request_id and args[2] is None
+    # The receive step (New -> Inspecting in WarrantyService.receive_status) keeps an optional step note.
     client.post(f"/admin/warranty-requests/{request_id}/receive", json={"Note": "Đã nhận máy"})
-    assert recorder.calls[-1][0] == "advance_status" and recorder.calls[-1][1][2].ExpectedStage == "New"
+    assert recorder.calls[-1][0] == "receive_status" and recorder.calls[-1][1][2].Note == "Đã nhận máy"
 
 
 def test_page_size_is_bounded(harness):

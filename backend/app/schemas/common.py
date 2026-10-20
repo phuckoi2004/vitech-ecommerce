@@ -9,7 +9,7 @@ Quy ước:
 from decimal import Decimal
 from typing import Annotated, Any, ClassVar, Generic, Literal, TypeVar
 
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
+from pydantic import AfterValidator, BaseModel, ConfigDict, Field, StringConstraints, model_validator
 
 # ---------------------------------------------------------------------------
 # Kiểu dữ liệu dùng chung
@@ -17,6 +17,17 @@ from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_vali
 
 # numeric(15,2) với CHECK >= 0 (mọi cột tiền trong schema đều có CHECK >= 0).
 Money = Annotated[Decimal, Field(ge=0, max_digits=15, decimal_places=2)]
+
+
+def _whole_vnd(value: Decimal) -> Decimal:
+    if value != value.to_integral_value():
+        raise ValueError("Số tiền phải là VND nguyên đồng (không có phần lẻ)")
+    return value
+
+
+# Tiền nhập vào phía bán (giá bán, phí vận chuyển, giá trị tiền của khuyến mãi): VND nguyên đồng, ví dụ "30000" hoặc
+# "30000.00". Schema response vẫn dùng Money để đọc được dữ liệu cũ có phần lẻ.
+VndAmount = Annotated[Decimal, Field(ge=0, max_digits=15, decimal_places=2), AfterValidator(_whole_vnd)]
 NonNegativeInt = Annotated[int, Field(ge=0)]
 PositiveInt = Annotated[int, Field(gt=0)]
 
@@ -124,6 +135,13 @@ class PageResponse(ResponseSchema, Generic[T]):
 
 
 class InternalJobResponse(ResponseSchema):
-    """Kết quả một lần chạy tác vụ nội bộ (cron): số bản ghi đã xử lý."""
+    """Kết quả một lần chạy tác vụ nội bộ (cron).
+
+    Processed: số bản ghi đã xử lý; Selected: số bản ghi được chọn; Skipped: không còn đủ điều kiện khi khóa;
+    Failed: lỗi (đã rollback, ghi log, chọn lại ở lần chạy sau). Failed > 0 thì endpoint trả HTTP 500 kèm số liệu này.
+    """
 
     Processed: NonNegativeInt
+    Selected: NonNegativeInt
+    Skipped: NonNegativeInt
+    Failed: NonNegativeInt

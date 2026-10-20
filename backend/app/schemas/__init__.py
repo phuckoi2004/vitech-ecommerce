@@ -107,6 +107,7 @@ from .payment import (
     PaymentReconciliationResponse,
     PaymentTransactionResponse,
     OrderRefundCreate,
+    QrPaymentResponse,
     RefundResolution,
     RefundSourceResponse,
 )
@@ -309,6 +310,7 @@ __all__ = [
     "PaymentMethodUpdate",
     "PaymentTransactionResponse",
     "OrderRefundCreate",
+    "QrPaymentResponse",
     "RefundResolution",
     "RefundSourceResponse",
     "AdminCouponResponse",

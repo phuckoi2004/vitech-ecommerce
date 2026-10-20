@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useLocation, useSearchParams } from 'react-router-dom'
 import { getSupportInbox, getSupportPage } from '../services/support.js'
 import useSupportPoll from '../hooks/useSupportPoll.js'
@@ -10,6 +10,19 @@ import './SupportPage.css'
 
 export default function SupportPage() {
   const [params, setParams] = useSearchParams()
+  // The router applies a navigation before React renders it, so `params` can be older than the URL
+  // this page last asked for. Until that URL is rendered, the effects below must not write: a URL
+  // built from older params would replace the newer navigation (e.g. a tab chosen while a page past
+  // the last one is being clamped).
+  const requestedSearch = useRef(null)
+  const search = params.toString()
+  useEffect(() => { if (requestedSearch.current === search) requestedSearch.current = null }, [search])
+  const changeParams = useCallback((change, options) => {
+    const next = new URLSearchParams(params)
+    change(next)
+    if (next.toString() !== search) requestedSearch.current = next.toString()
+    setParams(next, options)
+  }, [params, search, setParams])
   const location = useLocation()
   const { user } = useInternalAuth()
   const tabs = [['waiting', 'Đang chờ'], ['active', 'Đang hỗ trợ'], ['closed', 'Đã kết thúc'], ...(user.Role === 'Admin' ? [['all', 'Tất cả hội thoại']] : [])]
@@ -37,22 +50,18 @@ export default function SupportPage() {
   const selected = params.get('conversation') || rows[0]?.ConversationId
   const lastPage = state.data ? Math.max(1, Math.ceil((state.data[tab]?.Total ?? 0) / 100)) : null
   useEffect(() => {
-    if (lastPage !== null && page > lastPage) setParams((previous) => {
-      const next = new URLSearchParams(previous)
+    if (lastPage !== null && page > lastPage && requestedSearch.current === null) changeParams((next) => {
       if (lastPage === 1) next.delete('page')
       else next.set('page', String(lastPage))
-      return next
     }, { replace: true })
-  }, [lastPage, page, setParams])
+  }, [lastPage, page, changeParams])
   function refresh() { state.refresh(); setReload((value) => value + 1) }
   function navigate(values) {
-    setParams((previous) => {
-      const next = new URLSearchParams(previous)
+    changeParams((next) => {
       for (const [key, value] of Object.entries(values)) {
         if (value) next.set(key, value)
         else next.delete(key)
       }
-      return next
     })
   }
   return <section aria-label="Trung tâm hỗ trợ" className="-my-1 flex min-w-0 flex-col gap-3.5 font-admin text-admin-text">

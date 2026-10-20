@@ -38,6 +38,8 @@ Giới hạn coupon hiện tại là `UsageLimit`/`UsedCount` tổng. Lịch s�
 
 Chỉ dùng `TEST_DATABASE_URL` trỏ đến database test riêng đã migrate. Fixture kiểm tra đích tách biệt trước khi tạo test engine và xóa dữ liệu trong database test trước/sau mỗi module. Chạy theo thứ tự, không chạy nhiều worker hoặc nhiều bộ test đồng thời trên cùng database test.
 
+Với database test trên Supabase, khai báo thêm `TEST_DATABASE_PROJECT_REF` (project ref của project test, không phải bí mật) trong biến môi trường hoặc `backend/.env`. `require_test_database_target` (`tests/postgres_safety.py`) từ chối trước khi mở kết nối nếu ref thiếu, sai định dạng hoặc không khớp `TEST_DATABASE_URL`; nếu ref hoặc URL thuộc project Production được bảo vệ; nếu cùng project với `DATABASE_URL` (kể cả khác tên database); nếu Supabase không dùng session mode cổng 5432; nếu URL có tham số ngoài danh sách cho phép (ví dụ `options`); hoặc nếu đang đặt biến libpq `PGHOST`, `PGHOSTADDR`, `PGPORT`, `PGDATABASE`, `PGUSER`, `PGOPTIONS`, `PGSERVICE`, `PGSERVICEFILE`. Ngoài Supabase chỉ chấp nhận PostgreSQL cục bộ (loopback), không kèm ref. Chi tiết tại `README.md` mục 9.4.
+
 Từ thư mục `backend`:
 
 ```powershell

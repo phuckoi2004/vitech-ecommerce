@@ -8,9 +8,9 @@ import OrdersPage from './OrdersPage.jsx'
 import OrderDetailPage from './OrderDetailPage.jsx'
 
 const api = vi.hoisted(() => ({ getAdminData: vi.fn(), updateOrderStatus: vi.fn(), confirmCodDelivery: vi.fn(), updateOrderNote: vi.fn(), assignOrderSerials: vi.fn(), releaseOrderSerial: vi.fn() }))
-vi.mock('../../services/api/admin.js', () => ({ getAdminData: api.getAdminData,
-  getDashboardStock: async () => ({ Items: [], Total: 0 }), getRevenueSeries: async () => [],
-}))
+// The breadcrumb test lands on the dashboard, which loads stock and revenue through these two reads.
+const dashboard = vi.hoisted(() => ({ getDashboardStock: vi.fn(), getRevenueSeries: vi.fn() }))
+vi.mock('../../services/api/admin.js', () => ({ getAdminData: api.getAdminData, ...dashboard }))
 vi.mock('../services/orders.js', () => api)
 
 const permissions = ['admin.portal', 'orders:view', 'orders:update']
@@ -35,8 +35,11 @@ beforeEach(() => {
   orders = []
   method = { PaymentMethodId: 'pm1', Code: 'COD', Name: 'Thanh toán khi nhận hàng', IsActive: false }
   serialItems = [{ OrderItemId: 'item1', ProductVariantId: 'v1', Sku: 'PHONE-DEN', Quantity: 1, IsSerialTracked: true, SerialNumbers: [] }]
+  dashboard.getDashboardStock.mockResolvedValue({ Items: [], Total: 0 })
+  dashboard.getRevenueSeries.mockImplementation(async (_, months) => months.map((month) => ({ month, data: { NetRevenue: '0.00', OrderCount: 0 }, error: '' })))
   api.getAdminData.mockImplementation(async (_, path, query) => {
     if (path === '/users/me/notifications/unread-count') return { Count: 0 }
+    if (path === '/admin/statistics/orders') return { TotalOrders: orders.length, ByStatus: {} }
     if (path === '/admin/orders') {
       const filtered = orders.filter((order) => (!query.order_code || order.OrderCode.includes(query.order_code)) && (!query.order_status || order.OrderStatus === query.order_status))
       return { Items: filtered.slice((query.page - 1) * query.page_size, query.page * query.page_size), Total: filtered.length, Page: query.page, PageSize: query.page_size }
@@ -218,6 +221,36 @@ test('an unpaid online payment cannot ship even after serial requirements are sa
   expect(within(dialog).getByRole('button', { name: 'Chuyển đang giao', exact: true })).toBeDisabled()
   fireEvent.submit(dialog.querySelector('#order-status-form'))
   expect(api.updateOrderStatus).not.toHaveBeenCalled()
+})
+
+test('an unpaid transfer order cannot be confirmed from the quick action; the dialog says why', async () => {
+  method = { ...method, Code: 'SEPAY', Name: 'Chuyển khoản' }
+  orders = [{ ...base }]
+  renderPage('/admin/orders?order=o1&action=advance')
+  const dialog = await screen.findByRole('dialog')
+  await within(dialog).findByText('Đơn thanh toán chuyển khoản chỉ được xác nhận sau khi khách đã thanh toán (hiện tại: Chưa thanh toán).')
+  expect(within(dialog).getByRole('button', { name: 'Xác nhận đơn', exact: true })).toBeDisabled()
+  fireEvent.submit(dialog.querySelector('#order-status-form'))
+  expect(api.updateOrderStatus).not.toHaveBeenCalled()
+
+  // Back on the details, the confirm action itself is disabled and points to the reason.
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Quay lại chi tiết' }))
+  const action = within(dialog).getByRole('button', { name: 'Xác nhận đơn', exact: true })
+  expect(action).toBeDisabled()
+  expect(action).toHaveAccessibleDescription('Đơn thanh toán chuyển khoản chỉ được xác nhận sau khi khách đã thanh toán (hiện tại: Chưa thanh toán).')
+  expect(within(dialog).getByRole('button', { name: 'Hủy đơn hàng' })).toBeEnabled()
+})
+
+test('a paid transfer order is confirmed from the quick action as before', async () => {
+  method = { ...method, Code: 'SEPAY', Name: 'Chuyển khoản' }
+  orders = [{ ...base, PaymentStatus: 'Paid' }]
+  renderPage('/admin/orders?order=o1&action=advance')
+  const dialog = await screen.findByRole('dialog')
+  const confirm = within(dialog).getByRole('button', { name: 'Xác nhận đơn', exact: true })
+  await waitFor(() => expect(confirm).toBeEnabled())
+  expect(within(dialog).queryByText(/chỉ được xác nhận sau khi khách đã thanh toán/)).not.toBeInTheDocument()
+  fireEvent.click(confirm)
+  await waitFor(() => expect(api.updateOrderStatus).toHaveBeenCalledWith('access-for-test', 'o1', { OrderStatus: 'Confirmed', Note: null }))
 })
 
 test('COD delivery requires explicit collection and uses the collection endpoint without a client amount', async () => {

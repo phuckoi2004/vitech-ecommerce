@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import useInternalAuth from '../../hooks/useInternalAuth.js'
 import useAdminQuery from './useAdminQuery.js'
-import { canCancelOrder, ORDER_NEXT, orderStatusLabel, parseSerialNumbers } from '../lib/orders.js'
+import { canCancelOrder, ORDER_NEXT, orderStatusLabel, parseSerialNumbers, PAYMENT_LABELS } from '../lib/orders.js'
 import { assignOrderSerials, confirmCodDelivery, updateOrderStatus } from '../services/orders.js'
 
 // Shared by the full detail page and quick actions: one set of payment, serial and status rules.
@@ -26,9 +26,17 @@ export default function useOrderWorkflow(orderId, initialAction, onDone) {
   const next = order ? ORDER_NEXT[order.OrderStatus] : null
   const cod = payment.data?.Code === 'COD'
   const codDelivery = order?.OrderStatus === 'Shipping' && cod
+  // A transfer (non-COD) order is confirmed only once paid (backend OrderService: order_not_paid); COD before collection.
+  const awaitingPayment = Boolean(order?.OrderStatus === 'Pending' && payment.data && !cod && order.PaymentStatus !== 'Paid')
   const serialItems = Array.isArray(serials.data) ? serials.data : []
   let blocked = ''
-  if (order && ['Processing', 'Shipping'].includes(order.OrderStatus)) {
+  if (order?.OrderStatus === 'Pending') {
+    if (payment.loading || !payment.data) blocked = 'Cần tải được phương thức thanh toán trước khi xác nhận đơn.'
+    else if (awaitingPayment) {
+      blocked = 'Đơn thanh toán chuyển khoản chỉ được xác nhận sau khi khách đã thanh toán (hiện tại: '
+        + (PAYMENT_LABELS[order.PaymentStatus] ?? order.PaymentStatus) + ').'
+    }
+  } else if (order && ['Processing', 'Shipping'].includes(order.OrderStatus)) {
     if (payment.loading || !payment.data) blocked = 'Cần tải được phương thức thanh toán trước khi chuyển trạng thái.'
     else if (order.OrderStatus === 'Processing') {
       if (serials.loading || !Array.isArray(serials.data)) blocked = 'Cần tải được danh sách Serial/IMEI trước khi giao hàng.'
@@ -78,5 +86,5 @@ export default function useOrderWorkflow(orderId, initialAction, onDone) {
   }
 
   function choose(action) { setIntent(action); setError(''); setNote(''); setReason(''); setCollected(false) }
-  return { detail, order, payment, needsSerials, serials, intent, note, reason, collected, busy, error, notice, canUpdate, next, codDelivery, serialItems, blocked, write, submitStatus, assign, choose, setNote, setReason, setCollected, setNotice }
+  return { detail, order, payment, needsSerials, serials, intent, note, reason, collected, busy, error, notice, canUpdate, next, codDelivery, awaitingPayment, serialItems, blocked, write, submitStatus, assign, choose, setNote, setReason, setCollected, setNotice }
 }
