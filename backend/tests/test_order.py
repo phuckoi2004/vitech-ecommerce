@@ -57,6 +57,11 @@ class CreateOrderTest(OrderTestBase):
         self.assertEqual(self.db.rows(CartItem), [])
         self.assertIn(("ProductVariant", variant.ProductVariantId), self.db.locks)
         self.assertEqual(self.session.commits, 1)
+        for user in (self.staff, self.admin):
+            [alert] = self.f.notifications_for(user)
+            self.assertEqual((alert.Title, alert.ReferenceType, alert.ReferenceId), ("Đơn hàng mới", "Order", order.OrderId))
+            self.assertIn(order.OrderCode, alert.Content)
+            self.assertIn("230.000đ", alert.Content)
 
     def test_insufficient_stock_rolls_back_everything(self):
         variant = self.f.variant(stock=1)
@@ -87,6 +92,28 @@ class CreateOrderTest(OrderTestBase):
         self.assertEqual(sum(i.DiscountAmount for i in order.Items), order.DiscountAmount)
         self.assertEqual(order.TotalAmount, Decimal("210000.00"))
         self.assertEqual(coupon.UsedCount, 1)
+
+    def test_each_account_uses_a_coupon_once_and_a_cancelled_order_gives_it_back(self):
+        coupon = self.f.coupon(self.admin)
+        variant = self.f.variant(stock=5)
+        carts = {user.UserId: self.f.cart_with(user) for user in (self.customer, self.other)}
+
+        def order(user):
+            item = self.db.add(CartItem(CartId=carts[user.UserId].CartId, ProductVariantId=variant.ProductVariantId,
+                                        Quantity=1, UnitPrice=variant.Price))
+            item.product_variant = variant
+            return self.svc.create_order(self.f.actor(user), self.order_input(CouponCode="SALE10"))
+
+        first = order(self.customer)
+        with self.assertRaises(BusinessRuleError) as ctx:
+            order(self.customer)
+        self.assertEqual(ctx.exception.code, "coupon_customer_limit")
+        self.assertEqual((coupon.UsedCount, variant.StockQuantity, len(self.db.rows(Order))), (1, 4, 1))
+        # Another customer still can; cancelling gives the first customer the code back.
+        order(self.other)
+        self.svc.cancel_customer_order(self.f.actor(self.customer), first.OrderId, OrderCancelRequest())
+        order(self.customer)
+        self.assertEqual(coupon.UsedCount, 2)
 
     def test_exhausted_coupon_rolls_back_order_and_stock(self):
         coupon = self.f.coupon(self.admin, usage_limit=1, used=1)
@@ -130,6 +157,10 @@ class OwnershipAndCancelTest(OrderTestBase):
     def test_cancel_restores_stock_and_coupon_exactly_once(self):
         cancelled = self.svc.cancel_customer_order(self.f.actor(self.customer), self.order.OrderId, OrderCancelRequest(CancelReason="Đổi ý"))
         self.assertEqual((cancelled.OrderStatus, cancelled.PaymentStatus), ("Cancelled", "Cancelled"))
+        for user in (self.staff, self.admin):
+            alert = self.f.notifications_for(user)[-1]
+            self.assertEqual(alert.Title, "Khách hủy đơn")
+            self.assertIn("Lý do: Đổi ý", alert.Content)
         self.assertEqual((self.variant.StockQuantity, self.coupon.UsedCount), (5, 0))
         with self.assertRaises(BusinessRuleError) as ctx:
             self.svc.cancel_customer_order(self.f.actor(self.customer), self.order.OrderId, OrderCancelRequest())
@@ -285,6 +316,41 @@ class RolePermissionTest(OrderTestBase):
         self.f.order(self.other, self.qr)
         page = self.svc.list_customer_orders(self.f.actor(self.customer))
         self.assertEqual([o.OrderId for o in page.Items], [mine.OrderId])
+
+
+class CustomerOrderHistoryTest(OrderTestBase):
+    def test_filters_several_statuses_and_lists_order_lines(self):
+        variant = self.f.variant(stock=5)
+        confirmed = self.f.order(self.customer, self.qr, status="Confirmed", lines=((variant, 2),))
+        processing = self.f.order(self.customer, self.qr, status="Processing", lines=((variant, 1),))
+        self.f.order(self.customer, self.qr, status="Shipping", lines=((variant, 1),))
+        page = self.svc.search_customer_orders(self.f.actor(self.customer), order_status=["Confirmed", "Processing"])
+        self.assertEqual(({o.OrderId for o in page.Items}, page.Total), ({confirmed.OrderId, processing.OrderId}, 2))
+        line = next(o for o in page.Items if o.OrderId == confirmed.OrderId).Items[0]
+        self.assertEqual((line.ProductName, line.Quantity, line.ProductId, line.ProductSlug),
+                         (variant.product.Name, 2, variant.ProductId, variant.product.Slug))
+
+    def test_product_filter_keeps_orders_with_that_product(self):
+        phone, case = self.f.variant(stock=5), self.f.variant(stock=5)
+        with_phone = self.f.order(self.customer, self.qr, status="Delivered", lines=((phone, 1), (case, 1)))
+        self.f.order(self.customer, self.qr, status="Completed", lines=((case, 1),))
+        page = self.svc.search_customer_orders(self.f.actor(self.customer), order_status=["Delivered", "Completed"],
+                                               product_id=phone.ProductId)
+        self.assertEqual(([o.OrderId for o in page.Items], page.Total), ([with_phone.OrderId], 1))
+
+    def test_order_detail_lines_name_their_product(self):
+        variant = self.f.variant(stock=5)
+        order = self.f.order(self.customer, self.qr, lines=((variant, 1),))
+        detail = self.svc.get_order(self.f.actor(self.customer), order.OrderId)
+        self.assertEqual(detail.Items[0].ProductId, variant.ProductId)
+
+    def test_single_status_still_filters_and_unknown_status_is_rejected(self):
+        shipping = self.f.order(self.customer, self.qr, status="Shipping")
+        self.f.order(self.customer, self.qr, status="Pending")
+        page = self.svc.search_customer_orders(self.f.actor(self.customer), order_status="Shipping")
+        self.assertEqual([o.OrderId for o in page.Items], [shipping.OrderId])
+        with self.assertRaises(BusinessRuleError):
+            self.svc.search_customer_orders(self.f.actor(self.customer), order_status=["Shipping", "Unknown"])
 
 
 class SerialReservationTest(OrderTestBase):

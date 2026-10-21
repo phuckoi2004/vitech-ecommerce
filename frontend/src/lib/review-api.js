@@ -28,9 +28,14 @@ export function canEditReview(review, userId, now = Date.now()) {
     && now < createdAt + REVIEW_EDIT_WINDOW_MS
 }
 
+// Orders the customer has received can be reviewed (ReviewService REVIEWABLE_ORDER_STATUSES).
+export const REVIEWABLE_ORDER_STATUSES = ['Delivered', 'Completed']
+
+// The lines of `order` that are `product`. The line's ProductId says it; without it (older answers) the product's
+// variants do, inactive ones included, so a purchase stays reviewable when its variant stops selling.
 export function reviewableOrderItems(order, product) {
-  if (order?.OrderStatus !== 'Delivered') return []
-  // Include inactive variants too: a previous purchase remains reviewable when that variant stops selling.
+  if (!REVIEWABLE_ORDER_STATUSES.includes(order?.OrderStatus)) return []
   const variantIds = new Set((product.Variants ?? []).map((item) => item.ProductVariantId))
-  return (order.Items ?? []).filter((item) => variantIds.has(item.ProductVariantId))
+  return (order.Items ?? []).filter((item) => (item.ProductId
+    ? item.ProductId === product.ProductId : variantIds.has(item.ProductVariantId)))
 }

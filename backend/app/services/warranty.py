@@ -49,6 +49,7 @@ from datetime import datetime
 
 from sqlalchemy.orm import Session
 
+from app.core.status_labels import WARRANTY_STATUS_LABELS, status_label
 from app.models import Order, OrderItem, ProductSerial, WarrantyRequest
 from app.models.service_request import RETURN_OPEN_STATUSES
 from app.repositories import (
@@ -205,6 +206,8 @@ class WarrantyService(BaseService):
                 self._history(request, actor.user_id, None, NEW, f"Khách hàng gửi yêu cầu bảo hành. {checked}")
                 self._notify_customer(request, "Đã nhận yêu cầu bảo hành",
                                       f"Yêu cầu {request.RequestCode} đã được ghi nhận và chờ tiếp nhận sản phẩm.")
+                self._notify_operators(request, "Yêu cầu bảo hành mới",
+                                       f"Khách hàng gửi yêu cầu {request.RequestCode}; chờ tiếp nhận sản phẩm.")
             return self._customer_detail(request)
 
     def cancel_warranty_request(
@@ -578,7 +581,7 @@ class WarrantyService(BaseService):
             request, item = self._lock(request_id)
             old = request.Status
             if old not in (NEW, HANDED_OVER, PROCESSING):
-                raise BusinessRuleError(f"Yêu cầu đang ở trạng thái {old}, không thể từ chối",
+                raise BusinessRuleError(f"Yêu cầu đang ở trạng thái {status_label(old, WARRANTY_STATUS_LABELS)}, không thể từ chối",
                                         code="invalid_warranty_transition")
             if request.ReceivedAt is None:
                 raise BusinessRuleError("Chưa tiếp nhận sản phẩm; yêu cầu chưa vào quá trình xử lý",
@@ -709,7 +712,7 @@ class WarrantyService(BaseService):
     def _require_status(request: WarrantyRequest, expected: str) -> None:
         if request.Status != expected:
             raise BusinessRuleError(
-                f"Yêu cầu đang ở trạng thái {request.Status}, không thực hiện được bước này (cần {expected})",
+                f"Yêu cầu đang ở trạng thái {status_label(request.Status, WARRANTY_STATUS_LABELS)}, không thực hiện được bước này (cần {status_label(expected, WARRANTY_STATUS_LABELS)})",
                 code="invalid_warranty_transition",
             )
 
@@ -811,6 +814,14 @@ class WarrantyService(BaseService):
         self.notifications.notify(request.CustomerId, title=title, content=content,
                                   notification_type=WARRANTY_NOTIFICATION_TYPE, reference_type=REFERENCE_TYPE,
                                   reference_id=request.WarrantyRequestId)
+
+    def _notify_operators(self, request: WarrantyRequest, title: str, content: str) -> None:
+        """Thông báo cho mọi Staff/Admin đang hoạt động (yêu cầu chưa có người phụ trách)."""
+        for role in STAFF_OR_ADMIN:
+            for user in self.users.list_users(role=role, account_status="Active"):
+                self.notifications.notify(user.UserId, title=title, content=content,
+                                          notification_type=WARRANTY_NOTIFICATION_TYPE, reference_type=REFERENCE_TYPE,
+                                          reference_id=request.WarrantyRequestId)
 
     def _notify_staff(self, request: WarrantyRequest, title: str, content: str) -> None:
         if request.AssignedStaffId is not None:

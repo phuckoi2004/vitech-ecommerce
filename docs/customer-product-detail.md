@@ -41,7 +41,7 @@ API ảnh chỉ liên kết `ProductId`, chưa liên kết màu/biến thể. V�
 
 API sản phẩm bổ sung `OriginalPrice`, `SalePrice`, `DiscountAmount`, `DiscountPercent` và chương trình áp dụng cho từng biến thể. Card lấy giá gốc và giá sau giảm của cùng biến thể có giá sau giảm thấp nhất; không tự tạo giá tham chiếu. Trang chi tiết đổi giá theo phiên bản/màu. Giá vốn không xuất hiện trong API khách. Xem [quy tắc giá ưu đãi](customer-pricing-promotions.md).
 
-Không có mock sản phẩm trong giao diện chạy bình thường. Mục ưu đãi demo được thay bằng coupon công khai từ `GET /coupons`. Nút xem thử gọi `POST /pricing/quote`, chưa tạo đơn, không trừ lượt mã. Dữ liệu iPhone mẫu và ảnh Figma chỉ nằm ở runner kiểm thử trong `output/product-detail/`.
+Không có mock sản phẩm trong giao diện chạy bình thường. Từ 20/10/2026 trang chi tiết không hiện mã giảm giá; khách chọn mã công khai (`GET /coupons`) ở mục **Áp dụng mã giảm giá** của giỏ hàng, nơi mã được kiểm tra trên đúng các dòng đang chọn. Dữ liệu iPhone mẫu và ảnh Figma chỉ nằm ở runner kiểm thử trong `output/product-detail/`.
 
 ## Các file
 

@@ -119,7 +119,7 @@ test('the full route renders Figma sections, live breadcrumb and active orders m
 test('different variants remain separate product rows; history contains only events actually returned', async () => {
   renderPage()
   const table = await screen.findByRole('table')
-  expect(within(table).getAllByRole('columnheader').map((cell) => cell.textContent)).toEqual(['Sản phẩm', 'SL', 'Đơn giá', 'Thành tiền'])
+  expect(within(table).getAllByRole('columnheader').map((cell) => cell.textContent)).toEqual(['Sản phẩm', 'SL', 'Đơn giá', 'Thành tiền', 'Lãi'])
   expect(within(table).getAllByRole('row')).toHaveLength(3)
   expect(within(table).getByText('SKU: PHONE-DEN')).toBeInTheDocument()
   expect(within(table).getByText('SKU: PHONE-TRANG')).toBeInTheDocument()
@@ -129,11 +129,49 @@ test('different variants remain separate product rows; history contains only eve
   expect(screen.queryByText(/Hệ thống thông báo đơn mới/)).not.toBeInTheDocument()
 })
 
+test('each line and the order show the profit after every discount, from the import price captured when sold', async () => {
+  order.Items = [{ ...order.Items[0], UnitCost: '700000.00', Quantity: 2, LineTotal: '1900000.00', DiscountAmount: '100000.00' }, order.Items[1]]
+  renderPage()
+  const table = await screen.findByRole('table')
+  const [first, second] = within(table).getAllByRole('row').slice(1)
+  expect(first).toHaveTextContent('Giá nhập: 700.000')
+  expect(first.lastElementChild).toHaveTextContent('500.000') // 1 900 000 − 2 × 700 000
+  expect(second.lastElementChild).toHaveTextContent('Chưa có giá nhập')
+  const profit = screen.getByLabelText('Lãi của đơn hàng')
+  expect(profit).toHaveTextContent('Tiền hàng thực thu')
+  expect(profit).toHaveTextContent('2.900.000')
+  expect(profit).toHaveTextContent('Tổng giá nhập (có sản phẩm chưa có giá nhập)')
+  expect(profit).toHaveTextContent('Lãi gộp dự kiến')
+  expect(within(profit).getAllByText('Chưa đủ dữ liệu')).toHaveLength(2)
+  expect(profit).not.toHaveTextContent('1.500.000')
+  expect(profit).not.toHaveTextContent('%')
+})
+
+test('delivered orders with complete snapshots show the actual sum and margin', async () => {
+  order.OrderStatus = 'Delivered'
+  order.Items = order.Items.map((item) => ({ ...item, UnitCost: '700000.00' }))
+  renderPage()
+  const profit = await screen.findByLabelText('Lãi của đơn hàng')
+  expect(profit).toHaveTextContent('1.400.000')
+  expect(profit).toHaveTextContent('600.000')
+  expect(profit).toHaveTextContent('30%')
+  expect(profit).not.toHaveTextContent('Chưa đủ dữ liệu')
+})
+
+test('the in-page back button restores a report location instead of the order list', async () => {
+  const search = '?period=month&month=2026-09&brand_id=b1&sort=profit_asc&page=2&detail=p1'
+  const router = renderPage({ pathname: '/admin/orders/o1', state: { reportOrigin: { search } } })
+  await screen.findByLabelText('Lãi của đơn hàng')
+  fireEvent.click(screen.getByRole('button', { name: '← Quay lại báo cáo' }))
+  expect(router.state.location.pathname).toBe('/admin/reports')
+  expect(router.state.location.search).toBe(search)
+})
+
 test('empty product and history arrays keep the table headers without inventing records', async () => {
   order.Items = []; order.StatusHistories = []
   renderPage()
   await screen.findByText('Đơn hàng chưa có sản phẩm.')
-  expect(screen.getAllByRole('columnheader')).toHaveLength(4)
+  expect(screen.getAllByRole('columnheader')).toHaveLength(5)
   expect(screen.getByText('Chưa có lịch sử trạng thái.')).toBeInTheDocument()
   expect(screen.getByRole('region', { name: 'Lịch sử trạng thái' }).querySelectorAll('img')).toHaveLength(0)
   expect(screen.queryByText('iPhone 17 Pro Max 256GB')).not.toBeInTheDocument()

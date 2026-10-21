@@ -1,5 +1,7 @@
 # Tổng quan quản trị — cấu trúc frontend Stage 8.2
 
+**Cập nhật 21/10/2026:** Tổng quan và Báo cáo đã thay đổi theo [thiết kế báo cáo hiện hành](admin-reporting-redesign.md). Phần bên dưới giữ mô tả các giai đoạn trước; dùng tài liệu mới cho định nghĩa doanh số, giá nhập, lãi gộp, kỳ so sánh và API báo cáo.
+
 Trang `/admin` triển khai frame Figma `196:2` bằng Tailwind, sử dụng React Router, AuthProvider, API client và các component dùng chung của bản frontend hiện tại. Sidebar/header, bốn ô thống kê, biểu đồ doanh thu, bảng đơn mới, cảnh báo tồn kho và chuông thông báo đều hoạt động. Không sửa luồng đăng nhập hoặc backend trong thay đổi này.
 
 ## Tháng và dữ liệu thật

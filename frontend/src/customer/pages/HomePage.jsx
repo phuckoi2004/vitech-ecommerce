@@ -6,7 +6,6 @@ import CategoryShowcase from '../components/home/CategoryShowcase.jsx'
 import HeroSection from '../components/home/HeroSection.jsx'
 import { BrandSection, NewsSection } from '../components/home/NewsAndBrands.jsx'
 import FeaturedProducts from '../components/home/FeaturedProducts.jsx'
-import PublicCoupons from '../components/PublicCoupons.jsx'
 import { pairHomeCategories, selectHomeCategories } from '../components/home/categories.js'
 import { PolicySection, TrustBar } from '../components/home/StaticSections.jsx'
 import './HomePage.css'
@@ -31,7 +30,6 @@ export default function HomePage() {
     <HeroSection categories={categories} brandPool={brands} />
     <TrustBar />
     <CategoryShortcuts categories={{ ...categories, data: shortcuts }} />
-    <PublicCoupons />
     <FeaturedProducts />
     {showcase.map((group) => <CategoryShowcase key={group[0].CategoryId} categories={group} brandPool={brands} />)}
     <NewsSection />

@@ -5,82 +5,80 @@ import LoadingState from '../../../components/shared/LoadingState.jsx'
 import useApiData from '../../../hooks/useApiData.js'
 import useCustomerRequest from '../../../hooks/useCustomerRequest.js'
 import useCustomerSession from '../../../hooks/useCustomerSession.js'
-import { formatDate } from '../../../lib/format.js'
-import { canEditReview, reviewableOrderItems } from '../../../lib/review-api.js'
-import { StarIcon } from './ReviewStars.jsx'
+import { variantImages } from '../../../lib/product-detail.js'
+import { canEditReview, REVIEWABLE_ORDER_STATUSES, reviewableOrderItems } from '../../../lib/review-api.js'
+import { normalizeImageUrl } from '../../../lib/rich-text.js'
+import StoreImage from '../StoreImage.jsx'
 
-const ORDER_PAGE_SIZE = 10
+const ORDER_PAGE_SIZE = 50
 const RATING_LABELS = ['Chọn số sao', 'Rất không hài lòng', 'Không hài lòng', 'Bình thường', 'Hài lòng', 'Rất hài lòng']
 
-function PurchasedItemPicker({ product, selectedItemId, onSelect, blockedItems, disabled }) {
-  const { user } = useCustomerSession()
-  const send = useCustomerRequest()
-  const [page, setPage] = useState(1)
-  const [selectedOrderId, setSelectedOrderId] = useState('')
-  const id = useId()
-  const orders = useApiData(`review-orders:${user.UserId}:${page}`, (signal) =>
-    send('/orders', { query: { order_status: 'Delivered', page, page_size: ORDER_PAGE_SIZE }, signal }))
-  const orderId = selectedOrderId || orders.data?.Items[0]?.OrderId
-  const detail = useApiData(orderId ? `review-order:${user.UserId}:${orderId}` : null, (signal) =>
-    send(`/orders/${encodeURIComponent(orderId)}`, { signal }))
-  const items = reviewableOrderItems(detail.data, product)
-  const pages = Math.max(1, Math.ceil((orders.data?.Total || 0) / ORDER_PAGE_SIZE))
-
-  function changePage(next) {
-    setPage(next); setSelectedOrderId(''); onSelect('')
+// A review belongs to the product it is written on; the API ties it to one purchased line (OrderItemId), which the
+// customer does not pick. It is the newest line of this product, in a received order, without a review yet; the line
+// in `preferredOrderId` (the order the customer came from) first. Reads the received orders holding the product page
+// by page until one is found. `purchased` tells "every purchase is reviewed" from "never received this product".
+async function findPurchase(send, product, preferredOrderId, blockedItems, signal) {
+  let purchased = false
+  let newest = null
+  for (let page = 1; ; page += 1) {
+    const orders = await send('/orders', { query: { order_status: REVIEWABLE_ORDER_STATUSES, product_id: product.ProductId,
+      page, page_size: ORDER_PAGE_SIZE }, signal })
+    for (const order of orders.Items) {
+      for (const item of reviewableOrderItems(order, product)) {
+        purchased = true
+        if (item.ReviewId || blockedItems.includes(item.OrderItemId)) continue
+        if (order.OrderId === preferredOrderId) return { line: { order, item }, purchased }
+        newest ??= { order, item }
+      }
+    }
+    if ((newest && !preferredOrderId) || page * ORDER_PAGE_SIZE >= orders.Total) return { line: newest, purchased }
   }
+}
 
-  if (orders.loading) return <LoadingState label="Đang tải đơn hàng đã giao…" />
-  if (orders.error) return <ErrorState message={orders.error} onRetry={orders.reload} />
-  if (!orders.data?.Items.length) return <p className="pr-form-hint">Bạn chưa có đơn hàng đã giao để đánh giá. Bạn chỉ có thể đánh giá sản phẩm đã mua trong đơn đang ở trạng thái đã giao.</p>
-
-  return <div className="pr-purchase-picker">
-    <label htmlFor={`${id}-order`}>Đơn hàng đã giao</label>
-    <select id={`${id}-order`} value={orderId} disabled={disabled} onChange={(event) => {
-      setSelectedOrderId(event.target.value); onSelect('')
-    }}>
-      {orders.data.Items.map((order) => <option key={order.OrderId} value={order.OrderId}>
-        {order.OrderCode} · {formatDate(order.OrderedAt)}
-      </option>)}
-    </select>
-    {pages > 1 && <nav className="pr-pagination" aria-label="Trang đơn hàng đã giao">
-      <Button size="sm" variant="outline" disabled={disabled || page <= 1} onClick={() => changePage(page - 1)}>Đơn trước</Button>
-      <span>Trang {page} / {pages}</span>
-      <Button size="sm" variant="outline" disabled={disabled || page >= pages} onClick={() => changePage(page + 1)}>Đơn tiếp</Button>
-    </nav>}
-    {detail.loading ? <LoadingState label="Đang kiểm tra sản phẩm đã mua…" />
-      : detail.error ? <ErrorState message={detail.error} onRetry={detail.reload} />
-        : !items.length ? <p className="pr-form-hint">Đơn này không có sản phẩm đang xem hoặc không còn ở trạng thái đã giao. Vui lòng chọn đơn khác.</p>
-          : <>
-            <label htmlFor={`${id}-item`}>Sản phẩm đã mua trong đơn</label>
-            <select id={`${id}-item`} value={selectedItemId} required disabled={disabled} onChange={(event) => onSelect(event.target.value)}>
-              <option value="">Chọn phiên bản đã mua</option>
-              {items.map((item) => <option key={item.OrderItemId} value={item.OrderItemId} disabled={blockedItems.includes(item.OrderItemId)}>
-                {item.ProductName} · {item.VariantInfo || 'Phiên bản tiêu chuẩn'}{blockedItems.includes(item.OrderItemId) ? ' · Đã đánh giá' : ''}
-              </option>)}
-            </select>
-          </>}
+function ReviewProduct({ product, review, purchase }) {
+  const line = purchase.data?.line
+  const image = variantImages(product, line?.item.ProductVariantId)[0]
+  return <div className="pr-form-product">
+    <div className="pr-form-product-image"><StoreImage src={normalizeImageUrl(image?.ImageUrl)} alt={product.Name}
+      fallback={<span>Ảnh</span>} /></div>
+    <div className="pr-form-product-copy">
+      <strong>{line?.item.ProductName || product.Name}</strong>
+      {line ? <p>Đơn hàng {line.order.OrderCode || line.order.OrderId} • Đã nhận hàng
+        {line.item.VariantInfo ? ` · ${line.item.VariantInfo}` : ''}</p>
+        : <p>{review ? 'Đánh giá của bạn • Đã mua hàng' : 'Sản phẩm bạn muốn đánh giá'}</p>}
+    </div>
   </div>
 }
 
-export default function ReviewComposer({ product, review, reviewedItemIds = [], onSaved, onCancel, onBusyChange }) {
+function PurchaseStatus({ purchase }) {
+  if (purchase.loading) return <LoadingState label="Đang kiểm tra sản phẩm bạn đã mua…" />
+  if (purchase.error) return <ErrorState message={purchase.error} onRetry={purchase.reload} />
+  if (purchase.data?.line || purchase.data?.purchased) return null
+  return <p className="pr-form-hint">Bạn chưa có đơn hàng đã giao nào có sản phẩm này. Bạn có thể đánh giá sau khi nhận được hàng.</p>
+}
+
+export default function ReviewComposer({ product, review, initialOrderId, reviewedItemIds = [], onSaved, onCancel, onBusyChange }) {
   const { user } = useCustomerSession()
   const send = useCustomerRequest()
   const id = useId()
-  const [itemId, setItemId] = useState('')
   const [rating, setRating] = useState(review?.Rating ?? 0)
+  const [hoverRating, setHoverRating] = useState(null)
   const [content, setContent] = useState(review?.Content ?? '')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [blockedItems, setBlockedItems] = useState(reviewedItemIds)
   const pending = useRef(false)
+  // A new review only: the purchase it is for. A line refused as already reviewed is skipped on the next read.
+  const purchase = useApiData(review ? null : `review-purchase:${user.UserId}:${product.ProductId}:${initialOrderId ?? ''}:${blockedItems.join(',')}`,
+    (signal) => findPurchase(send, product, initialOrderId, blockedItems, signal))
+  const itemId = purchase.data?.line?.item.OrderItemId ?? ''
 
   async function submit(event) {
     event.preventDefault()
     if (pending.current) return
     setError('')
     if (review && !canEditReview(review, user.UserId)) return setError('Đã quá thời hạn 7 ngày để chỉnh sửa đánh giá.')
-    if (!review && (!itemId || blockedItems.includes(itemId))) return setError('Vui lòng chọn phiên bản đã mua chưa được đánh giá.')
+    if (!review && !itemId) return setError('Bạn chỉ có thể đánh giá sản phẩm đã mua và đã nhận hàng.')
     if (!rating) return setError('Vui lòng chọn số sao từ 1 đến 5.')
     if (!content.trim()) return setError('Nội dung đánh giá không được để trống.')
     pending.current = true; setBusy(true)
@@ -94,10 +92,8 @@ export default function ReviewComposer({ product, review, reviewedItemIds = [], 
       onSaved({ review: result, orderItemId: review ? null : itemId })
     } catch (failure) {
       setError(failure.message || 'Không thể gửi đánh giá. Vui lòng thử lại.')
-      // ReviewResponse intentionally has no OrderItemId. The server is the authority for older duplicates.
-      if (!review && failure.code === 'review_exists') {
-        setBlockedItems((items) => [...items, itemId]); setItemId('')
-      }
+      // Reviewed meanwhile (another tab): the next purchase without a review is looked up.
+      if (!review && failure.code === 'review_exists') setBlockedItems((items) => [...items, itemId])
     } finally {
       pending.current = false; setBusy(false)
       onBusyChange?.(false)
@@ -105,26 +101,32 @@ export default function ReviewComposer({ product, review, reviewedItemIds = [], 
   }
 
   return <form className="pr-form" onSubmit={submit}>
-    <p className="pr-form-hint">{review ? 'Bạn được sửa số sao và nội dung trong 7 ngày kể từ khi gửi đánh giá.'
-      : 'Mỗi sản phẩm trong đơn đã giao được đánh giá một lần. Bạn có thể sửa số sao và nội dung trong 7 ngày sau khi gửi.'}</p>
-    {!review && <PurchasedItemPicker product={product} selectedItemId={itemId} onSelect={setItemId} blockedItems={blockedItems} disabled={busy} />}
+    <ReviewProduct product={product} review={review} purchase={purchase} />
+    {!review && <PurchaseStatus purchase={purchase} />}
     <fieldset disabled={busy} className="pr-rating-picker">
-      <legend>Bạn đánh giá sản phẩm bao nhiêu sao?</legend>
-      <div className="pr-rating-options">
-        {[1, 2, 3, 4, 5].map((star) => <label key={star} className={star <= rating ? 'is-selected' : ''}>
-          <input type="radio" name={`${id}-rating`} value={star} checked={star === rating} onChange={() => setRating(star)} aria-label={`${star} sao`} />
-          <StarIcon filled={star <= rating} />
+      <legend>Mức đánh giá</legend>
+      <div className="pr-rating-options" onMouseLeave={() => setHoverRating(null)}>
+        {[1, 2, 3, 4, 5].map((star) => <label key={star} className={star <= (hoverRating ?? rating) ? 'is-selected' : ''}
+          onMouseEnter={() => { if (!busy) setHoverRating(star) }}>
+          <input type="radio" name={`${id}-rating`} value={star} checked={star === rating}
+            onChange={() => { setRating(star); setHoverRating(null) }} aria-label={`${star} sao`} />
+          <span aria-hidden="true">{star <= (hoverRating ?? rating) ? '★' : '☆'}</span>
         </label>)}
       </div>
-      <span className="pr-rating-caption" aria-live="polite">{RATING_LABELS[rating]}</span>
+      <span className="sr-only" aria-live="polite">{RATING_LABELS[rating]}</span>
     </fieldset>
-    <label htmlFor={`${id}-content`}>Nội dung đánh giá</label>
+    <label htmlFor={`${id}-content`}>Nhận xét của bạn</label>
     <textarea id={`${id}-content`} value={content} onChange={(event) => setContent(event.target.value)}
-      placeholder="Chia sẻ trải nghiệm sử dụng sản phẩm của bạn…" rows="5" required disabled={busy} />
+      placeholder="Chia sẻ trải nghiệm của bạn về sản phẩm..." rows="5" required disabled={busy} aria-describedby={`${id}-notice`} />
+    <div className="pr-form-notice" id={`${id}-notice`}>
+      <span aria-hidden="true">ⓘ</span>
+      <p>{review ? 'Bạn có thể thay đổi số sao và nội dung đánh giá trong 7 ngày kể từ khi gửi.'
+        : 'Chỉ sản phẩm đã mua và giao thành công mới có thể đánh giá.'}</p>
+    </div>
     {error && <p className="pd-notice" role="alert">{error}</p>}
     <div className="pr-form-actions">
       <Button variant="outline" disabled={busy} onClick={onCancel}>Hủy</Button>
-      <Button type="submit" loading={busy} disabled={!review && !itemId}>{review ? 'Lưu thay đổi' : 'Gửi đánh giá'}</Button>
+      <Button type="submit" loading={busy} disabled={!review && !itemId}>{review ? 'Cập nhật đánh giá' : 'Gửi đánh giá'}</Button>
     </div>
   </form>
 }

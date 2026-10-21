@@ -26,6 +26,7 @@ beforeEach(() => {
     if (path === '/users/me/notifications/unread-count') return { Count: 0 }
     if (path === '/admin/conversations/unassigned') return page(conversations.filter((row) => row.Status === 'Open' && !row.AssignedStaffId))
     if (path === '/admin/conversations/assigned') return page(conversations.filter((row) => row.Status === (query?.status || 'Open') && row.AssignedStaffId === actorId))
+    if (path === '/admin/conversations/active') return page(conversations.filter((row) => row.Status === 'Open' && row.Mode === 'Staff' && row.AssignedStaffId))
     if (path === '/admin/conversations') return page(conversations.filter(row => !query?.status || row.Status === query.status))
     const row = conversations.find((row) => path === '/admin/conversations/' + row.ConversationId + '/summary')
     if (row) return structuredClone(row)
@@ -54,7 +55,7 @@ test('waiting screen uses real counts and messages, omitting the unwanted instru
   expect(screen.queryByText(/Admin cần tiếp nhận/)).not.toBeInTheDocument()
   expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
   expect(api.claimSupportConversation).not.toHaveBeenCalled()
-  expect(api.getAdminData).toHaveBeenCalledWith('access-for-test', '/admin/conversations/assigned', { status: 'Open', page: 1, page_size: 100 }, expect.any(AbortSignal))
+  expect(api.getAdminData).toHaveBeenCalledWith('access-for-test', '/admin/conversations/active', { page: 1, page_size: 100 }, expect.any(AbortSignal))
 })
 
 test('empty inbox preserves workspace and zero counts without demonstration records', async () => {
@@ -67,21 +68,41 @@ test('empty inbox preserves workspace and zero counts without demonstration reco
   expect(screen.queryByRole('button', { name: 'Tiếp nhận cuộc trò chuyện' })).not.toBeInTheDocument()
 })
 
-test.each([['Admin', 0], ['Staff', 2]])('the active badge and list belong to the signed-in %s account', async (role, expected) => {
-  conversations = [
-    { ...initial, ConversationId: 'c1', AssignedStaffId: 'Staff-id' },
-    { ...initial, ConversationId: 'c2', CustomerName: 'Khách thứ hai', AssignedStaffId: 'Staff-id' },
-    { ...initial, ConversationId: 'c3', CustomerName: 'Khách của nhân viên khác', AssignedStaffId: 'another-staff' },
-    { ...initial, ConversationId: 'c4', CustomerName: 'Khách đã kết thúc', AssignedStaffId: 'Staff-id', Status: 'Closed' },
-  ]
-  open('/admin/support?tab=active', role)
-  expect(await screen.findByRole('tab', { name: 'Đang hỗ trợ ' + expected })).toHaveAttribute('aria-selected', 'true')
+const helped = () => [
+  { ...initial, ConversationId: 'c1', AssignedStaffId: 'Staff-id', AssignedStaffName: 'Trần Hỗ Trợ' },
+  { ...initial, ConversationId: 'c2', CustomerName: 'Khách thứ hai', AssignedStaffId: 'Staff-id', AssignedStaffName: 'Trần Hỗ Trợ' },
+  { ...initial, ConversationId: 'c3', CustomerName: 'Khách của nhân viên khác', AssignedStaffId: 'another-staff', AssignedStaffName: 'Lê Nhân Viên' },
+  { ...initial, ConversationId: 'c4', CustomerName: 'Khách đã kết thúc', AssignedStaffId: 'Staff-id', AssignedStaffName: 'Trần Hỗ Trợ', Status: 'Closed' },
+  { ...initial, ConversationId: 'c5', CustomerName: 'Khách đang chờ' },
+]
+
+test('staff see only the chats they are helping in the active tab', async () => {
+  conversations = helped()
+  open('/admin/support?tab=active', 'Staff')
+  expect(await screen.findByRole('tab', { name: 'Đang hỗ trợ 2' })).toHaveAttribute('aria-selected', 'true')
   const list = within(screen.getByRole('complementary', { name: 'Danh sách cuộc trò chuyện' }))
-  expect(list.queryAllByRole('button', { name: /Mở cuộc trò chuyện/ })).toHaveLength(expected)
+  expect(list.queryAllByRole('button', { name: /Mở cuộc trò chuyện/ })).toHaveLength(2)
+  expect(list.getAllByText('Bạn')).toHaveLength(2)
   expect(list.queryByText('Khách của nhân viên khác')).not.toBeInTheDocument()
   expect(list.queryByText('Khách đã kết thúc')).not.toBeInTheDocument()
-  if (role === 'Admin') expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
-  else expect(await screen.findByRole('textbox', { name: 'Tin nhắn trả lời' })).toBeInTheDocument()
+  expect(await screen.findByRole('textbox', { name: 'Tin nhắn trả lời' })).toBeInTheDocument()
+})
+
+test('admins see every customer being helped and who is helping each one', async () => {
+  conversations = helped()
+  open('/admin/support?tab=active', 'Admin')
+  expect(await screen.findByRole('tab', { name: 'Đang hỗ trợ 3' })).toHaveAttribute('aria-selected', 'true')
+  const list = within(screen.getByRole('complementary', { name: 'Danh sách cuộc trò chuyện' }))
+  expect(list.getByRole('heading', { name: 'Khách hàng đang được hỗ trợ' })).toBeInTheDocument()
+  const other = list.getByRole('button', { name: 'Mở cuộc trò chuyện với Khách của nhân viên khác' })
+  expect(other).toHaveTextContent('Người hỗ trợ: Lê Nhân Viên')
+  expect(list.getByRole('button', { name: 'Mở cuộc trò chuyện với Khách thứ hai' })).toHaveTextContent('Người hỗ trợ: Trần Hỗ Trợ')
+  expect(list.queryByText('Khách đã kết thúc')).not.toBeInTheDocument()
+  expect(list.queryByText('Khách đang chờ')).not.toBeInTheDocument()
+  fireEvent.click(other)
+  expect(await screen.findByText('Khách hàng • an@example.com • Người hỗ trợ: Lê Nhân Viên')).toBeInTheDocument()
+  expect(screen.getByText('Cuộc trò chuyện đang do Lê Nhân Viên phụ trách.')).toBeInTheDocument()
+  expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
 })
 
 test('staff claims then replies through existing endpoints; repeated clicks cannot duplicate writes', async () => {
@@ -212,7 +233,7 @@ test('closing needs confirmation and prevents additional replies after server cl
   expect(api.closeSupportConversation).not.toHaveBeenCalled()
   fireEvent.click(screen.getByRole('button', { name: 'Kết thúc hỗ trợ' }))
   fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Xác nhận kết thúc' }))
-  await screen.findByText('Bạn chưa có cuộc trò chuyện đang hỗ trợ.')
+  await screen.findByText('Chưa có khách hàng nào đang được hỗ trợ.')
   expect(api.closeSupportConversation).toHaveBeenCalledExactlyOnceWith('access-for-test', 'c1')
   expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
 })
@@ -369,7 +390,7 @@ test('switching tab while a page past the last one is being clamped keeps the ch
   const router = open('/admin/support?page=3')
   // Page 3 of 2 is on screen and has not been clamped yet.
   expect(await clickBeforeEffects(router, () => screen.queryByText('Trang 3 / 2') && screen.getByRole('tab', { name: /^Đang hỗ trợ/ }))).toBe('?page=3')
-  expect(await screen.findByText('Bạn chưa có cuộc trò chuyện đang hỗ trợ.')).toBeInTheDocument()
+  expect(await screen.findByText('Chưa có khách hàng nào đang được hỗ trợ.')).toBeInTheDocument()
   await waitFor(() => expect(router.state.location.search).toBe('?tab=active'))
   expect(screen.getByRole('tab', { name: /^Đang hỗ trợ/ })).toHaveAttribute('aria-selected', 'true')
 })

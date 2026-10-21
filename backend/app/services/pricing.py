@@ -8,6 +8,7 @@ from sqlalchemy.orm import joinedload, selectinload
 
 from app.core.product_pricing import CENT, automatic_price_expression, discount_for, matches_product
 from app.models import Category, Coupon, Order, Product, ProductVariant, Promotion
+from app.repositories import PromotionRepository
 from app.schemas.pricing import CategoryOfferResponse, PricedItem, PricingQuoteResponse, PublicCouponResponse
 from .actor import Actor, CUSTOMER_ONLY, require_role
 from .base import BaseService
@@ -80,20 +81,7 @@ class PricingService(BaseService):
         ) for root in roots]
 
     def automatic_promotions(self, *, product=None):
-        now = self.now()
-        stmt = select(Promotion).where(
-            Promotion.ApplyMode == "Automatic", Promotion.Status.in_(("Scheduled", "Active")),
-            Promotion.StartDate <= now, Promotion.EndDate >= now,
-        )
-        if product is not None:
-            from sqlalchemy import and_, or_
-            from app.models import PromotionProduct, PromotionCategory
-            stmt = stmt.where(or_(
-                and_(~Promotion.promotion_products.any(), ~Promotion.promotion_categories.any()),
-                Promotion.promotion_products.any(PromotionProduct.ProductId == product.ProductId),
-                Promotion.promotion_categories.any(PromotionCategory.CategoryId == product.CategoryId)))
-        return list(self.session.scalars(stmt.options(
-            selectinload(Promotion.promotion_products), selectinload(Promotion.promotion_categories))))
+        return PromotionRepository(self.session).list_automatic(self.now(), product=product)
 
     def public_coupons(self, *, product_id=None):
         now = self.now()

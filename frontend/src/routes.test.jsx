@@ -240,7 +240,9 @@ describe('internal menu', () => {
     for (const name of ['Tài khoản', 'Đánh giá', 'Tin tức & Banner']) expect(menu.queryByRole('button', { name })).not.toBeInTheDocument()
     for (const name of ['Sản phẩm', 'Đơn hàng', 'Nhập hàng', 'Nhà cung cấp', 'Đổi trả', 'Bảo hành', 'Báo cáo thống kê', 'Hỗ trợ khách hàng', 'Thanh toán']) expect(menu.getByRole('button', { name })).toBeInTheDocument()
     expect(menu.queryByRole('button', { name: 'Kho hàng' })).not.toBeInTheDocument()
-    expect(screen.getByRole('article', { name: 'Tổng đơn hàng' })).toBeInTheDocument()
+    expect(screen.getByRole('article', { name: 'Lãi gộp' })).toBeInTheDocument()
+    expect(screen.queryByRole('article', { name: 'Số đơn đã giao' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('article', { name: 'Số đơn hủy' })).not.toBeInTheDocument()
   })
 
   test('resource tabs follow URL history and do not leak when switching sidebar sections', async () => {

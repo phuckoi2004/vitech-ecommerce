@@ -1,8 +1,8 @@
 """Opt-in coupon workflows over HTTP/JWT and a protected, migrated PostgreSQL test database.
 
 The shared pg fixture truncates the dedicated test database before/after this module.
-No payment gateway, webhook or cron endpoint is used. UsageLimit is global; usage
-per customer is derived from Orders, since there is no separate per-user quota.
+No payment gateway, webhook or cron endpoint is used. UsageLimit is global; each account
+uses a code once, derived from its Orders that are not Cancelled.
 """
 
 import uuid
@@ -184,12 +184,18 @@ def test_coupon_global_limit_across_customers_rolls_back_and_released_use_can_be
     assert_usage(pg, coupon, 1, by_customer={first_customer["id"]: 1, second_customer["id"]: 0})
     assert stock(pg, item) == 5
 
-    # Retry consumes the cart preserved by the failed checkout; there is no independent per-user quota.
-    retry = ok(pg.client.post("/orders", headers=first_headers, json=payload), 201)
-    assert retry["OrderId"] != first_order["OrderId"]
-    assert_usage(pg, coupon, 2, by_customer={first_customer["id"]: 2, second_customer["id"]: 0})
+    # Each account uses a code once: the first customer still has an order with it.
+    assert_error(pg.client.get("/cart/coupon-preview", headers=first_headers, params={"code": coupon["Code"]}),
+                 400, "coupon_customer_limit")
+    assert_error(pg.client.post("/orders", headers=first_headers, json=payload), 400, "coupon_customer_limit")
+    assert_usage(pg, coupon, 1)
+    assert stock(pg, item) == 5
+    # The second customer's order was cancelled, which gives their use back.
+    retry = checkout(second_headers)
+    assert retry["OrderId"] != second_order["OrderId"]
+    assert_usage(pg, coupon, 2, by_customer={first_customer["id"]: 1, second_customer["id"]: 1})
     assert pg.scalar('SELECT count(*) FROM "Orders" WHERE "CouponId" = :id', id=coupon["CouponId"]) == 3
     assert pg.scalar('SELECT count(*) FROM "Orders" WHERE "CouponId" = :coupon AND "CustomerId" = :owner',
-                     coupon=coupon["CouponId"], owner=second_customer["id"]) == 1  # cancellation history retained
+                     coupon=coupon["CouponId"], owner=second_customer["id"]) == 2  # cancellation history retained
     assert stock(pg, item) == 4
-    assert ok(pg.client.get("/cart", headers=first_headers))["Items"] == []
+    assert len(ok(pg.client.get("/cart", headers=first_headers))["Items"]) == 1

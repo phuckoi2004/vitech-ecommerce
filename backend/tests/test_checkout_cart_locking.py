@@ -18,7 +18,9 @@ from app.repositories import CartRepository, ProductVariantRepository
 from app.schemas import CartItemCreate, CartItemUpdate
 from app.services import BusinessRuleError, CartService, NotFoundError
 
-from tests.fakes import FakeCartItemRepo, FakeCartRepo, FakeSession, FakeVariantRepo, fixed_clock, order_service
+from tests.fakes import (
+    FakeCartItemRepo, FakeCartRepo, FakePromotionRepo, FakeSession, FakeVariantRepo, fixed_clock, order_service,
+)
 from tests.test_locking import RecordingSession, sql
 from tests.test_order import OrderTestBase
 
@@ -28,6 +30,7 @@ def cart_service(db, session):
     service.carts = FakeCartRepo(db)
     service.items = FakeCartItemRepo(db)
     service.variants = FakeVariantRepo(db)
+    service.promotions = FakePromotionRepo(db)
     return service
 
 
@@ -161,7 +164,7 @@ class CartIdentityRefreshTest(unittest.TestCase):
             table.to_metadata(metadata)
         metadata.tables["Products"].c.Specifications.type = JSON()
         metadata.create_all(self.engine, tables=[metadata.tables[name] for name in (
-            "Products", "ProductVariants", "Carts", "CartItems")])
+            "Products", "ProductVariants", "Carts", "CartItems", "Promotions", "PromotionProducts", "PromotionCategories")])
         with Session(self.engine) as seed:
             seed.add_all((self.product, self.variant, self.cart, self.item))
             seed.commit()

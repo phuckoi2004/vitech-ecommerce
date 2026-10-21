@@ -2,6 +2,8 @@
 
 Phạm vi ngày 19/10/2026: triển khai phần sản phẩm, quản trị khuyến mãi và xem thử giá cho khách. Thành viên khác đang làm giỏ hàng, thanh toán, tạo đơn nên các file nghiệp vụ đó chưa được sửa. Giá ưu đãi trên trang sản phẩm và API xem thử đã hoạt động; giỏ/đơn cũ vẫn cần nối bộ tính giá mới trước khi thử mua hàng theo giá ưu đãi.
 
+**Cập nhật 20/10/2026:** giỏ hàng, `/cart/coupon-preview` và tạo đơn đã tính theo giá sau giảm trực tiếp (dùng chung `variant_price` qua `PromotionRepository.list_automatic`), lưu đơn theo bảng ánh xạ ở mục dưới. Luồng tạo đơn vẫn dùng `CouponService.apply_coupon_to_order` (không gọi `reserve_order_quote`); từ 21/10/2026 nó và `/cart/coupon-preview` áp thêm hai quy tắc: mỗi tài khoản dùng mỗi mã một lần (`coupon_customer_limit`, đơn đã hủy trả lại lượt) và coupon không được làm dòng được giảm thấp hơn giá vốn hoặc áp cho dòng chưa có giá vốn (`coupon_price_floor`). Mã giảm 100 % hay giảm quá tiền hàng vì vậy bị từ chối. Mã công khai không còn hiện ở trang chủ và trang chi tiết; khách chọn trong hộp **Áp dụng mã giảm giá** của giỏ hàng.
+
 Đã [đồng bộ cặp giá niêm yết/giá bán và giảm giá vốn mẫu ngày 19/10/2026](retail-list-and-sample-cost-2026-10-19.md) theo yêu cầu tiếp theo. Bản [rà giá trước đó](market-pricing-2026-10-19.md) và ví dụ lúc seed ghi nhận các bước cũ, không thay thế bảng giá mới nhất.
 
 ## CSDL và quy tắc
@@ -20,7 +22,7 @@ Phạm vi ngày 19/10/2026: triển khai phần sản phẩm, quản trị khuy�
 
 ## Quản trị và trang khách
 
-Trong Quản lý khuyến mãi, chọn **Cách áp dụng**. Automatic tự đặt đơn tối thiểu bằng 0; bấm **Xem giá và lãi dự kiến** để xem SKU, vốn, giá sau giảm và lãi gộp mỗi chiếc của chương trình đang nhập (chưa tính coupon). Đây là thao tác chỉ đọc, không lưu chương trình. Chương trình đang Active vẫn khóa điều kiện và phạm vi như trước. Form mã giảm giá chỉ chọn chương trình Coupon.
+Trong Quản lý khuyến mãi, chọn **Cách áp dụng**. Automatic tự đặt đơn tối thiểu bằng 0. (Bảng "Xem giá và lãi dự kiến" đã bỏ ngày 21/10/2026: không tính được mã giảm giá vì mã áp theo đơn; khi lưu, hệ thống vẫn chặn chương trình làm giá dưới giá nhập.) Chương trình đang Active vẫn khóa điều kiện và phạm vi như trước. Form mã giảm giá chỉ chọn chương trình Coupon.
 
 Trang chủ, danh sách, trang chi tiết, sản phẩm tương tự và yêu thích hiện giá ưu đãi theo dữ liệu API. Bộ lọc giá công khai dùng giá sau giảm trong SQL trước phân trang. Badge phần trăm hiển thị tối đa hai chữ số thập phân; số tiền giảm bằng tiền là nguồn tính giá, không tính ngược từ badge làm tròn.
 
@@ -28,7 +30,7 @@ Bốn ô quảng bá trên trang chủ theo [Figma Category Promos, node 917:170
 
 Tên và liên kết của bốn ô lấy từ danh mục có thật: ưu tiên Điện thoại, Laptop, Phụ kiện, Gia dụng thông minh; nếu thiếu thì dùng danh mục gốc kế tiếp theo thứ tự hiển thị. CSDL thử hiện chưa có Phụ kiện/Gia dụng thông minh nên hai ô sau là Máy tính bảng/Tai nghe. Không thêm danh mục rỗng hoặc hardcode mức 30%, 50%, 5 triệu của bản thiết kế. Không có ưu đãi hiện “Khám phá sản phẩm”; không có sản phẩm còn hàng hiện “Sắp có hàng”. Lỗi tải ưu đãi vẫn giữ liên kết danh mục với lời mời mua sắm chung. Dữ liệu được đọc lại mỗi 30 giây và khi cửa sổ được focus.
 
-Trang chủ và trang chi tiết có mã công khai, điều kiện, hạn dùng, lượt còn và nút sao chép. Danh sách đọc lại mỗi 30 giây hoặc khi quay lại cửa sổ. Ở chi tiết sản phẩm, **Xem thử giá sau mã** tính cho 1 chiếc của đúng biến thể đang chọn, không tạo giỏ/đơn và không giữ lượt mã. Khách chưa đăng nhập vẫn xem thử được; khi đăng nhập kiểm tra thêm lịch sử mã của tài khoản.
+Mã công khai (điều kiện, hạn dùng, lượt còn) hiện trong hộp **Nhập hoặc chọn mã khuyến mãi** của giỏ hàng. Mã chưa đạt đơn tối thiểu của các dòng đang chọn ghi số tiền còn thiếu và không chọn được; chọn mã thì kiểm tra bằng `/cart/coupon-preview` trên đúng các dòng đang chọn. Trang chủ và trang chi tiết không còn khối mã ưu đãi (bỏ từ 20/10/2026).
 
 ## API cho thành viên làm giỏ hàng/đặt hàng
 

@@ -71,7 +71,7 @@ function ProductDetails({ product }) {
     </header>
     <div className="pd-main-grid grid grid-cols-1 items-start gap-5 min-[1000px]:grid-cols-[520fr_750fr]">
       <ProductGallery key={variant?.ProductVariantId} product={product} variant={variant} />
-      <ProductPurchasePanel productId={product.ProductId} variants={variants} variant={variant} onSelect={select} busy={busy} notice={notice} ready={ready}
+      <ProductPurchasePanel variants={variants} variant={variant} onSelect={select} busy={busy} notice={notice} ready={ready}
         onCart={() => act('cart')} onBuy={() => act('buy')}
         onConsult={consult} />
     </div>

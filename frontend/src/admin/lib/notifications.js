@@ -2,6 +2,7 @@ import { safeNext } from '../../auth/session.js'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const REFERENCES = {
+  Order: ['orders:view', '/admin/orders/'],
   PurchaseOrder: ['purchases:view', '/admin/purchases/'],
   WarrantyRequest: ['warranties:view', '/admin/warranties/'],
   ReturnRequest: ['returns:view', '/admin/returns/'],

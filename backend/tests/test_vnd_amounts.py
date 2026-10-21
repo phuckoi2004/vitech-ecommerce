@@ -276,42 +276,41 @@ class OrderMoneyTest(unittest.TestCase):
         self.assertTrue(all(share == share.to_integral_value() for share in shares))
         self.assertTrue(all(item.LineTotal == item.UnitPrice * item.Quantity - item.DiscountAmount for item in order.Items))
 
-    def test_fixed_amount_above_subtotal_leaves_the_shipping_fee(self):
-        coupon = self.f.coupon(self.admin, value="10")
-        coupon.promotion.DiscountType, coupon.promotion.DiscountValue = "FixedAmount", Decimal("500000")
-        variant = self.f.variant(stock=5, price="100000")
+    def test_coupon_below_cost_is_refused_before_anything_is_kept(self):
+        coupon = self.f.coupon(self.admin)
+        variant = self.f.variant(stock=5, price="100000", cost="70000")
         self.f.cart_with(self.customer, (variant, 1))
-        order = self.place(coupon="SALE10")
-        self.assertEqual((order.DiscountAmount, order.TotalAmount), (Decimal("100000"), Decimal("30000")))
+        # Giảm quá tiền hàng; giảm 100 %; giảm 31 % (còn 69 000 < vốn 70 000).
+        for kind, value in (("FixedAmount", "500000"), ("Percentage", "100"), ("Percentage", "31")):
+            with self.subTest(kind=kind, value=value):
+                coupon.promotion.DiscountType, coupon.promotion.DiscountValue = kind, Decimal(value)
+                with self.assertRaises(BusinessRuleError) as ctx:
+                    self.place(coupon="SALE10", method=self.cod)
+                self.assertEqual(ctx.exception.code, "coupon_price_floor")
+                self.assertEqual(self.db.rows(Order), [])
+                self.assertEqual((variant.StockQuantity, coupon.UsedCount), (5, 0))
+                self.assertEqual(len(self.db.rows(CartItem)), 1)
+        coupon.promotion.DiscountValue = Decimal("30")  # còn đúng giá vốn: được
+        self.assertEqual(self.place(coupon="SALE10", method=self.cod).DiscountAmount, Decimal("30000"))
 
     def test_zero_total_transfer_order_is_refused_before_anything_is_kept(self):
-        coupon = self.f.coupon(self.admin, value="100")
-        variant = self.f.variant(stock=5, price="100000")
-        self.f.cart_with(self.customer, (variant, 1))
-        with self.assertRaises(BusinessRuleError) as ctx:
-            self.place(coupon="SALE10", fee="0")
-        self.assertEqual(ctx.exception.code, "order_total_zero")
-        self.assertIn("COD", ctx.exception.message)
-        self.assertEqual(self.db.rows(Order), [])
-        self.assertEqual((variant.StockQuantity, coupon.UsedCount), (5, 0))
-        self.assertEqual(len(self.db.rows(CartItem)), 1)
-        self.assertEqual(self.db.rows(PaymentTransaction), [])
-
-    def test_zero_total_without_coupon_is_refused_too(self):
         variant = self.f.variant(stock=5, price="0")
         self.f.cart_with(self.customer, (variant, 1))
         with self.assertRaises(BusinessRuleError) as ctx:
             self.place(fee="0")
         self.assertEqual(ctx.exception.code, "order_total_zero")
+        self.assertIn("COD", ctx.exception.message)
         self.assertEqual(self.db.rows(Order), [])
+        self.assertEqual(variant.StockQuantity, 5)
+        self.assertEqual(len(self.db.rows(CartItem)), 1)
+        self.assertEqual(self.db.rows(PaymentTransaction), [])
 
     def test_cod_keeps_its_current_rules_for_zero_totals(self):
-        coupon = self.f.coupon(self.admin, value="100")
-        variant = self.f.variant(stock=5, price="100000")
+        variant = self.f.variant(stock=5, price="0")
         self.f.cart_with(self.customer, (variant, 1))
-        order = self.place(coupon="SALE10", fee="0", method=self.cod)
+        order = self.place(fee="0", method=self.cod)
         self.assertEqual((order.TotalAmount, order.PaymentStatus), (Decimal("0"), "Pending"))
-        self.assertEqual((variant.StockQuantity, coupon.UsedCount), (4, 1))
+        self.assertEqual(variant.StockQuantity, 4)
 
     def test_transfer_order_with_a_positive_total_is_unchanged(self):
         variant = self.f.variant(stock=5, price="100000")

@@ -90,7 +90,8 @@ def sample_url(route):
     for param in route.dependant.query_params:
         if param.field_info.is_required():
             annotation = param.field_info.annotation
-            query[param.alias] = "2026-10-01" if annotation is date else "x"
+            query[param.alias] = ("2026-10-01" if annotation is date
+                                  else str(uuid.uuid4()) if annotation is uuid.UUID else "x")
     return path, query
 
 

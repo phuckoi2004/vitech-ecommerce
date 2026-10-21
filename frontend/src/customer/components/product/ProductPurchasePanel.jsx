@@ -2,11 +2,10 @@ import Button from '../../../components/shared/Button.jsx'
 import Money from '../../../components/shared/Money.jsx'
 import { formatDiscountPercent } from '../../../lib/format.js'
 import ConsultationButton from '../ConsultationButton.jsx'
-import PublicCoupons from '../PublicCoupons.jsx'
 import { productColorSwatch } from '../../../lib/product-colors.js'
 import { canPurchase, colorLabel, variantPrice, versionLabel } from '../../../lib/product-detail.js'
 
-export default function ProductPurchasePanel({ productId, variants, variant, onSelect, busy, notice, ready, onCart, onBuy, onConsult }) {
+export default function ProductPurchasePanel({ variants, variant, onSelect, busy, notice, ready, onCart, onBuy, onConsult }) {
   const versions = [...new Set(variants.map(versionLabel))]
   const colors = [...new Set(variants.filter((item) => item.Color?.trim()).map(colorLabel))]
   const selectedVersion = variant ? versionLabel(variant) : ''
@@ -58,7 +57,6 @@ export default function ProductPurchasePanel({ productId, variants, variant, onS
       {!variant ? 'Chưa có phiên bản để đặt mua' : Number(variant.StockQuantity) <= 0 ? 'Hết hàng'
         : variantPrice(variant) === null ? 'Chưa có giá bán cho phiên bản này' : `Còn ${variant.StockQuantity} sản phẩm`}
     </p>
-    {productId && <PublicCoupons key={variant?.ProductVariantId ?? productId} productId={productId} variant={variant} compact />}
     <Button className="pd-buy" disabled={disabled || !purchasable} loading={busy === 'buy'} onClick={onBuy}>MUA NGAY</Button>
     <div className="pd-cta-row grid grid-cols-2 gap-2.5 max-[380px]:grid-cols-1">
       <Button variant="outline" className="pd-add" disabled={disabled || !purchasable} loading={busy === 'cart'} onClick={onCart}>Thêm vào giỏ hàng</Button>

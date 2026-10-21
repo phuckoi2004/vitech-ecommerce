@@ -19,6 +19,17 @@ test('inbox reads the waiting queue and only the signed-in operator’s open ass
   expect(next.searchParams.get('status')).toBe('Open')
 })
 
+test('admins read every customer being helped instead of only their own chats', async () => {
+  const fetch = vi.fn(async () => new Response(JSON.stringify({ Items: [], Total: 0, Page: 1, PageSize: 100 })))
+  vi.stubGlobal('fetch', fetch)
+  const signal = new AbortController().signal
+  await getSupportInbox('token', signal, 'Admin')
+  await getSupportPage('token', 'active', 2, signal, 'Admin')
+  const urls = fetch.mock.calls.map(([url]) => new URL(url, 'http://localhost'))
+  expect(urls.map((url) => url.pathname)).toEqual(['/api/admin/conversations/unassigned', '/api/admin/conversations/active', '/api/admin/conversations/active'])
+  expect(urls[2].searchParams.get('page')).toBe('2')
+})
+
 test('chat writes use server-assigned identities and never send client ownership/status fields', async () => {
   const fetch = vi.fn(async () => new Response(JSON.stringify({})))
   vi.stubGlobal('fetch', fetch)

@@ -1,4 +1,4 @@
-"""Schemas kết quả thống kê quản trị (đợt 5.6). Chỉ dữ liệu tổng hợp; không có thông tin cá nhân khách hàng.
+"""Schemas tổng hợp và chi tiết báo cáo quản trị, dành cho Staff/Admin.
 
 Khoảng thời gian: DateFrom/DateTo là ngày lịch Việt Nam, tính cả hai ngày; truy vấn dùng khoảng nửa mở
 [StartsAt, EndsBefore) theo UTC (gồm StartsAt, không gồm EndsBefore = 00:00 ngày sau DateTo giờ Việt Nam).
@@ -7,6 +7,7 @@ Khoảng thời gian: DateFrom/DateTo là ngày lịch Việt Nam, tính cả ha
 import uuid
 from datetime import date, datetime
 from decimal import Decimal
+from typing import Literal
 
 from .common import ResponseSchema
 
@@ -38,7 +39,13 @@ class ReportSummary(ResponseSchema):
     TotalOrders: int = 0
     DeliveredOrders: int = 0
     CancelledOrders: int = 0
+    InProgressOrders: int = 0
     Revenue: Decimal = Decimal('0')
+    Quantity: int = 0
+    Cost: Decimal | None = Decimal('0')
+    Profit: Decimal | None = Decimal('0')
+    Margin: Decimal | None = None
+    LinesMissingCost: int = 0
     AverageOrderValue: Decimal = Decimal('0')
     PeakRevenue: Decimal = Decimal('0')
 
@@ -58,6 +65,84 @@ class SalesReportItem(ResponseSchema):
     CategoryName: str
     BrandName: str
     Revenue: Decimal
+    Quantity: int = 0
+    Cost: Decimal | None = None
+    Profit: Decimal | None = None
+    Margin: Decimal | None = None
+    LinesMissingCost: int = 0
+
+
+class SalesReportLine(ResponseSchema):
+    Key: str
+    OrderId: uuid.UUID
+    OrderCode: str
+    DeliveredAt: datetime
+    ProductId: uuid.UUID
+    ProductName: str
+    VariantInfo: str
+    Sku: str
+    UnitPrice: Decimal
+    UnitCost: Decimal | None
+    Quantity: int
+    Discount: Decimal
+    Revenue: Decimal
+    Cost: Decimal | None
+    Profit: Decimal | None
+
+
+class SalesLinesResponse(ResponseSchema):
+    Period: StatisticsPeriod
+    Items: list[SalesReportLine]
+    Total: int
+    Page: int
+    PageSize: int
+
+
+class CancellationReason(ResponseSchema):
+    Reason: str
+    TotalOrders: int
+
+
+class CancelledOrderItem(ResponseSchema):
+    OrderId: uuid.UUID
+    OrderCode: str
+    OrderedAt: datetime
+    CustomerName: str
+    TotalAmount: Decimal
+    CancelReason: str | None
+
+
+class CancelledOrdersResponse(ResponseSchema):
+    Period: StatisticsPeriod
+    Items: list[CancelledOrderItem]
+    Total: int
+    Page: int
+    PageSize: int
+
+
+class DeliveredOrderItem(ResponseSchema):
+    OrderId: uuid.UUID
+    OrderCode: str
+    OrderedAt: datetime
+    DeliveredAt: datetime | None
+    CustomerName: str
+    TotalAmount: Decimal
+    OrderStatus: Literal['Delivered', 'Completed']
+
+
+class DeliveredOrdersResponse(ResponseSchema):
+    Period: StatisticsPeriod
+    Items: list[DeliveredOrderItem]
+    Total: int
+    Page: int
+    PageSize: int
+
+
+class DashboardWorkload(ResponseSchema):
+    PendingOrders: int
+    WaitingChats: int
+    PendingReturns: int
+    NewWarranties: int
 
 
 class OrderReportItem(ResponseSchema):
@@ -67,6 +152,7 @@ class OrderReportItem(ResponseSchema):
     TotalOrders: int
     DeliveredOrders: int
     CancelledOrders: int
+    InProgressOrders: int = 0
 
 
 class SalesReportResponse(ResponseSchema):
@@ -74,6 +160,7 @@ class SalesReportResponse(ResponseSchema):
     Summary: ReportSummary
     Chart: list[ReportPoint]
     Items: list[SalesReportItem]
+    TopProducts: list[SalesReportItem] = []
     Total: int
     Page: int
     PageSize: int
@@ -84,6 +171,7 @@ class OrderReportResponse(ResponseSchema):
     Summary: ReportSummary
     Chart: list[ReportPoint]
     Items: list[OrderReportItem]
+    CancellationReasons: list[CancellationReason] = []
     Total: int
     Page: int
     PageSize: int

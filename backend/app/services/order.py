@@ -2,6 +2,8 @@
 
 Nguồn nghiệp vụ: docs/business-requirements.md mục 5 (Coupon), 6 (Đặt hàng), 7 (Xử lý đơn), 17 (Transaction).
 Quyết định đã chốt:
+- Giá bán = giá sau chương trình giảm trực tiếp (Automatic) đang chạy, như trang sản phẩm/giỏ hàng; coupon tính trên
+  giá đó. OrderItems.UnitPrice là giá trước giảm, DiscountAmount gồm giảm trực tiếp và phần coupon của dòng.
 - Coupon chỉ giảm trên các dòng thuộc Product/Category được gán cho Promotion (Promotion không gán
   gì = toàn đơn); tiền giảm phân bổ theo tỷ lệ vào OrderItems.DiscountAmount.
 - Customer chỉ tự hủy khi đơn Pending.
@@ -37,13 +39,14 @@ thao tác của Customer kiểm tra quyền sở hữu đơn.
 import secrets
 import string
 import uuid
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from decimal import Decimal
 
 from sqlalchemy.orm import Session
 
+from app.core.status_labels import ORDER_STATUS_LABELS, PAYMENT_STATUS_LABELS, status_label
 from app.models import Order, OrderItem, Product, ProductVariant, User
 from app.models.order import ORDER_STATUSES
 from app.models.shipment import SHIPMENT_RETURN_AWAITING, SHIPMENT_RETURN_RECEIVED, SHIPMENT_RETURN_STATUSES
@@ -62,6 +65,7 @@ from app.repositories import (
     ShipmentReturnItemRepository,
     ShipmentReturnRepository,
     ProductVariantRepository,
+    PromotionRepository,
     ShippingMethodRepository,
     UserRepository,
 )
@@ -69,6 +73,7 @@ from app.schemas import (
     AdminOrderDetailResponse,
     AdminOrderResponse,
     AdminOrderStatusHistoryResponse,
+    CustomerOrderSummary,
     OrderAdminUpdate,
     OrderCancelRequest,
     OrderCreate,
@@ -76,7 +81,6 @@ from app.schemas import (
     OrderItemResponse,
     OrderStatusHistoryResponse,
     OrderStatusUpdate,
-    OrderSummary,
     PageResponse,
     ShipmentReturnReceive,
     ShipmentReturnResponse,
@@ -89,6 +93,7 @@ from .base import BaseService, utc_now
 from .catalog import ProductVariantService, is_variant_sellable, normalize_serial_number
 from .exceptions import BusinessRuleError, NotFoundError
 from .internal_jobs import JobRun, run_job
+from .pricing import variant_price
 from .promotion import CouponService, money as _money
 from .user import NotificationService
 from .warranty_period import delivery_warranty_period, vietnam_date
@@ -158,13 +163,22 @@ def order_item_cogs(item: OrderItem) -> Decimal:
 
 @dataclass
 class _Line:
+    """unit_price: giá trước giảm trực tiếp; automatic: tiền giảm trực tiếp cả dòng; gross: tiền hàng sau giảm trực
+    tiếp (cơ sở tính coupon); discount: phần coupon phân bổ cho dòng."""
+
     cart_item_id: uuid.UUID
     variant: ProductVariant
     quantity: int
     unit_price: Decimal
     unit_cost: Decimal
     gross: Decimal
+    automatic: Decimal = Decimal("0")
     discount: Decimal = Decimal("0")
+
+    @property
+    def cost(self) -> Decimal:
+        """Giá vốn cả dòng: coupon không được giảm dòng xuống dưới mức này."""
+        return self.unit_cost * self.quantity
 
     @property
     def product_id(self) -> uuid.UUID:
@@ -194,6 +208,7 @@ class OrderService(BaseService):
         self.shipping_methods = ShippingMethodRepository(session)
         self.payment_methods = PaymentMethodRepository(session)
         self.payment_transactions = PaymentTransactionRepository(session)
+        self.promotions = PromotionRepository(session)
         self.coupon_service = CouponService(session, clock=clock)
         self.variant_service = ProductVariantService(session, clock=clock)
         self.notifications = NotificationService(session, clock=clock)
@@ -233,12 +248,15 @@ class OrderService(BaseService):
                 for v in self.variants.get_many_by_ids_for_update({i.ProductVariantId for i in selected})
             }
             lines = self._build_lines(selected, locked)
+            # Tiền hàng sau giảm trực tiếp: cơ sở xét đơn tối thiểu và tính coupon.
             subtotal = sum((line.gross for line in lines), Decimal("0"))
+            automatic = sum((line.automatic for line in lines), Decimal("0"))
 
             coupon = None
             discount = Decimal("0")
             if data.CouponCode:
-                coupon, discount = self.coupon_service.apply_coupon_to_order(data.CouponCode, lines, subtotal)
+                coupon, discount = self.coupon_service.apply_coupon_to_order(
+                    data.CouponCode, lines, subtotal, customer_id=customer.UserId)
 
             shipping_fee = shipping.BaseFee
             total = subtotal - discount + shipping_fee
@@ -258,9 +276,11 @@ class OrderService(BaseService):
                     "ShippingMethodId": shipping.ShippingMethodId,
                     "PaymentMethodId": payment.PaymentMethodId,
                     "CouponId": coupon.CouponId if coupon else None,
-                    "Subtotal": subtotal,
+                    # Subtotal theo giá trước giảm; DiscountAmount gồm giảm trực tiếp và coupon
+                    # (docs/customer-pricing-promotions.md). TotalAmount = Subtotal − DiscountAmount + ShippingFee.
+                    "Subtotal": subtotal + automatic,
                     "ShippingFee": shipping_fee,
-                    "DiscountAmount": discount,
+                    "DiscountAmount": automatic + discount,
                     "TotalAmount": total,
                     "OrderStatus": ORDER_PENDING,
                     "PaymentStatus": PAYMENT_PENDING,
@@ -285,7 +305,7 @@ class OrderService(BaseService):
                         "Quantity": line.quantity,
                         "UnitPrice": line.unit_price,
                         "UnitCost": line.unit_cost,
-                        "DiscountAmount": line.discount,
+                        "DiscountAmount": line.automatic + line.discount,
                         "LineTotal": line.gross - line.discount,
                     }
                 )
@@ -302,6 +322,9 @@ class OrderService(BaseService):
                 reference_type="Order",
                 reference_id=order.OrderId,
             )
+            total = f"{order.TotalAmount:,.0f}".replace(",", ".")
+            self._notify_staff(order, "Đơn hàng mới",
+                               f"Đơn hàng {order.OrderCode} vừa được đặt, tổng {total}đ ({payment.Name}); chờ xác nhận.")
             self.orders.flush()
             return OrderDetailResponse.model_validate(self.orders.get_detail(order.OrderId))
 
@@ -317,7 +340,9 @@ class OrderService(BaseService):
             raise NotFoundError("Không tìm thấy đơn hàng", code="order_not_found")
         return OrderDetailResponse.model_validate(order)
 
-    def list_customer_orders(self, actor: Actor, *, page: int = 1, page_size: int = 20) -> PageResponse[OrderSummary]:
+    def list_customer_orders(
+        self, actor: Actor, *, page: int = 1, page_size: int = 20
+    ) -> PageResponse[CustomerOrderSummary]:
         return self.search_customer_orders(actor, page=page, page_size=page_size)
 
     def search_customer_orders(
@@ -325,26 +350,31 @@ class OrderService(BaseService):
         actor: Actor,
         *,
         order_code: str | None = None,
-        order_status: str | None = None,
+        order_status: str | Sequence[str] | None = None,
         ordered_from: datetime | None = None,
         ordered_to: datetime | None = None,
+        product_id: uuid.UUID | None = None,
         page: int = 1,
         page_size: int = 20,
-    ) -> PageResponse[OrderSummary]:
-        """Lịch sử đơn của khách hàng; lọc theo mã đơn, trạng thái, khoảng thời gian [from, to)."""
+    ) -> PageResponse[CustomerOrderSummary]:
+        """Lịch sử đơn của khách hàng kèm các dòng đơn; lọc theo mã đơn, một hoặc nhiều trạng thái (tab "Đang xử lý" =
+        Confirmed + Processing), khoảng thời gian [from, to) và sản phẩm có trong đơn (form đánh giá)."""
         require_role(actor, *CUSTOMER_ONLY)
-        self._check_status_value(order_status)
+        statuses = [order_status] if isinstance(order_status, str) else list(order_status or ())
+        for value in statuses:
+            self._check_status_value(value)
         offset, limit = self._page_args(page, page_size)
         filters = {
             "customer_id": actor.user_id,
-            "order_status": order_status,
+            "order_status": statuses or None,
             "ordered_from": ordered_from,
             "ordered_to": ordered_to,
             "order_code_contains": order_code.strip() if order_code and order_code.strip() else None,
+            "product_id": product_id,
         }
-        orders = self.orders.list_orders(**filters, offset=offset, limit=limit)
-        return PageResponse[OrderSummary](
-            Items=[OrderSummary.model_validate(o) for o in orders],
+        orders = self.orders.list_orders(**filters, offset=offset, limit=limit, with_items=True)
+        return PageResponse[CustomerOrderSummary](
+            Items=[CustomerOrderSummary.model_validate(o) for o in orders],
             Total=self.orders.count_orders(**filters),
             Page=page,
             PageSize=page_size,
@@ -378,7 +408,7 @@ class OrderService(BaseService):
                 raise NotFoundError("Không tìm thấy đơn hàng", code="order_not_found")
             if order.OrderStatus not in CUSTOMER_CANCELLABLE:
                 raise BusinessRuleError(
-                    f"Không thể hủy đơn ở trạng thái {order.OrderStatus}", code="order_not_cancellable"
+                    f"Không thể hủy đơn ở trạng thái {status_label(order.OrderStatus, ORDER_STATUS_LABELS)}", code="order_not_cancellable"
                 )
             if order.PaymentStatus == PAYMENT_PAID:
                 raise BusinessRuleError(
@@ -386,6 +416,8 @@ class OrderService(BaseService):
                     code="order_paid_not_cancellable",
                 )
             self._cancel(order, changed_by=actor.user_id, reason=data.CancelReason, note=None)
+            self._notify_staff(order, "Khách hủy đơn", f"Khách hàng đã hủy đơn hàng {order.OrderCode}."
+                               + (f" Lý do: {data.CancelReason}" if data.CancelReason else ""))
             self.orders.flush()
             return OrderDetailResponse.model_validate(self.orders.get_detail(order_id))
 
@@ -464,12 +496,12 @@ class OrderService(BaseService):
             current, target = order.OrderStatus, data.OrderStatus
             if target == ORDER_CANCELLED:
                 if current not in STAFF_CANCELLABLE:
-                    raise BusinessRuleError(f"Không thể hủy đơn ở trạng thái {current}", code="order_not_cancellable")
+                    raise BusinessRuleError(f"Không thể hủy đơn ở trạng thái {status_label(current, ORDER_STATUS_LABELS)}", code="order_not_cancellable")
                 self._cancel(order, changed_by=actor.user_id, reason=data.CancelReason, note=data.Note)
             else:
                 if NEXT_STATUS.get(current) != target:
                     raise BusinessRuleError(
-                        f"Không thể chuyển trạng thái từ {current} sang {target}", code="invalid_status_transition"
+                        f"Không thể chuyển trạng thái từ {status_label(current, ORDER_STATUS_LABELS)} sang {status_label(target, ORDER_STATUS_LABELS)}", code="invalid_status_transition"
                     )
                 if data.CancelReason is not None:
                     raise BusinessRuleError("CancelReason chỉ dùng khi hủy đơn", code="cancel_reason_not_allowed")
@@ -501,12 +533,12 @@ class OrderService(BaseService):
                 raise BusinessRuleError("Đơn không thanh toán khi nhận hàng (COD)", code="payment_method_not_cod")
             if order.OrderStatus != ORDER_SHIPPING:
                 raise BusinessRuleError(
-                    f"Chỉ xác nhận giao COD cho đơn đang giao (hiện tại: {order.OrderStatus})",
+                    f"Chỉ xác nhận giao COD cho đơn đang giao (hiện tại: {status_label(order.OrderStatus, ORDER_STATUS_LABELS)})",
                     code="invalid_status_transition",
                 )
             if order.PaymentStatus != PAYMENT_PENDING:
                 raise BusinessRuleError(
-                    f"Trạng thái thanh toán không hợp lệ để ghi nhận thu COD: {order.PaymentStatus}",
+                    f"Trạng thái thanh toán không hợp lệ để ghi nhận thu COD: {status_label(order.PaymentStatus, PAYMENT_STATUS_LABELS)}",
                     code="cod_payment_not_pending",
                 )
             now = self.now()
@@ -655,7 +687,7 @@ class OrderService(BaseService):
         """Staff/Admin xem hồ sơ hàng chờ quay về (AwaitingReturn) / đã nhận lại (Received)."""
         require_role(actor, *STAFF_OR_ADMIN)
         if status is not None and status not in SHIPMENT_RETURN_STATUSES:
-            raise BusinessRuleError(f"Trạng thái hồ sơ không hợp lệ: {status}", code="invalid_shipment_return_status")
+            raise BusinessRuleError("Trạng thái hồ sơ không hợp lệ", code="invalid_shipment_return_status")
         offset, limit = self._page_args(page, page_size)
         items = self.shipment_returns.list_returns(status=status, offset=offset, limit=limit)
         return PageResponse[ShipmentReturnResponse](
@@ -849,9 +881,14 @@ class OrderService(BaseService):
         }
 
     def _build_lines(self, selected: list, locked: dict[uuid.UUID, ProductVariant]) -> list[_Line]:
-        """Kiểm tra lại sản phẩm còn bán và tồn kho (trên dòng đã khóa); giá/giá vốn lấy ở server."""
+        """Kiểm tra lại sản phẩm còn bán và tồn kho (trên dòng đã khóa); giá/giá vốn lấy ở server.
+
+        Giá bán sau chương trình giảm trực tiếp đang chạy, cùng quy tắc với trang sản phẩm và giỏ hàng.
+        """
         unavailable, short = [], []
         lines = []
+        now = self.now()
+        promotions = self.promotions.list_automatic(now)
         for item in selected:
             variant = locked.get(item.ProductVariantId)
             if not is_variant_sellable(variant):
@@ -860,14 +897,16 @@ class OrderService(BaseService):
             if item.Quantity > variant.StockQuantity:
                 short.append(str(item.ProductVariantId))
                 continue
+            price = variant_price(variant, promotions, now)
             lines.append(
                 _Line(
                     cart_item_id=item.CartItemId,
                     variant=variant,
                     quantity=item.Quantity,
-                    unit_price=variant.Price,
+                    unit_price=price["OriginalPrice"],
                     unit_cost=variant.CostPrice,
-                    gross=_money(variant.Price * item.Quantity),
+                    gross=_money(price["SalePrice"] * item.Quantity),
+                    automatic=_money(price["DiscountAmount"] * item.Quantity),
                 )
             )
         if unavailable:
@@ -966,12 +1005,17 @@ class OrderService(BaseService):
 
     def _notify_staff_refund_needed(self, order: Order) -> None:
         """Đơn đã thanh toán bị hủy: báo Staff/Admin đang hoạt động xử lý hoàn tiền (chưa coi là đã hoàn)."""
+        self._notify_staff(order, "Cần hoàn tiền",
+                           f"Đơn hàng {order.OrderCode} đã hủy khi đã thanh toán; cần xử lý hoàn tiền.")
+
+    def _notify_staff(self, order: Order, title: str, content: str) -> None:
+        """Thông báo về một đơn hàng cho mọi Staff/Admin đang hoạt động."""
         for role in STAFF_ROLES:
             for user in self.users.list_users(role=role, account_status="Active"):
                 self.notifications.notify(
                     user.UserId,
-                    title="Cần hoàn tiền",
-                    content=f"Đơn hàng {order.OrderCode} đã hủy khi đã thanh toán; cần xử lý hoàn tiền.",
+                    title=title,
+                    content=content,
                     notification_type=ORDER_NOTIFICATION_TYPE,
                     reference_type="Order",
                     reference_id=order.OrderId,
@@ -1109,7 +1153,7 @@ class OrderService(BaseService):
         self.notifications.notify(
             order.CustomerId,
             title="Cập nhật đơn hàng",
-            content=f"Đơn hàng {order.OrderCode} chuyển sang trạng thái {order.OrderStatus}.",
+            content=f"Đơn hàng {order.OrderCode} chuyển sang trạng thái {status_label(order.OrderStatus, ORDER_STATUS_LABELS)}.",
             notification_type=ORDER_NOTIFICATION_TYPE,
             reference_type="Order",
             reference_id=order.OrderId,
@@ -1118,7 +1162,7 @@ class OrderService(BaseService):
     @staticmethod
     def _check_status_value(order_status: str | None) -> None:
         if order_status is not None and order_status not in ORDER_STATUSES:
-            raise BusinessRuleError(f"OrderStatus không hợp lệ: {order_status}", code="invalid_order_status")
+            raise BusinessRuleError("Trạng thái đơn hàng không hợp lệ", code="invalid_order_status")
 
 
 def _variant_info(variant: ProductVariant) -> str:

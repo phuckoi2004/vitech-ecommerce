@@ -41,7 +41,6 @@ function mockApi({ detail = product, productStatus = 200, cartStatus = 200, rela
       status = relatedStatus
       result = status === 200 ? { Items: [product, { ProductId: 'p2' }], Total: 2 } : { detail: 'Không tải được sản phẩm tương tự' }
     } else if (endpoint === '/products/p2') result = { ...product, ProductId: 'p2', Slug: 'san-pham-khac', Name: 'Sản phẩm khác' }
-    else if (endpoint === '/coupons') result = []
     else if (endpoint === '/products/p1/reviews') result = { Items: [], Total: 0, Page: Number(url.searchParams.get('page')), PageSize: Number(url.searchParams.get('page_size')) }
     else if (endpoint === '/cart/items' && method === 'POST') {
       if (holdCart) await addGate
@@ -93,15 +92,17 @@ test.each([
   expect(within(nav).getByText(product.Name)).toHaveAttribute('aria-current', 'page')
 })
 
-test('real product metadata and public offers replace demo content', async () => {
-  mockApi(); renderProduct()
+test('real product metadata replaces demo content and coupons are left to the cart', async () => {
+  const { calls } = mockApi(); renderProduct()
   expect(await screen.findByRole('heading', { level: 1, name: product.Name })).toBeInTheDocument()
   const crumbs = screen.getByRole('navigation', { name: 'Đường dẫn sản phẩm' })
   expect(await within(crumbs).findByRole('link', { name: 'Điện thoại' })).toHaveAttribute('href', '/danh-muc/dien-thoai')
   expect(within(crumbs).getByRole('link', { name: 'Apple' })).toHaveAttribute('href', `/danh-muc/dien-thoai?brand=${product.BrandId ?? product.Brand.BrandId}`)
   expect(screen.queryByText(/Mã SP:/)).not.toBeInTheDocument()
   expect(screen.queryByText('Nội dung demo')).not.toBeInTheDocument()
-  expect(screen.getByRole('heading', { name: 'Mã ưu đãi dành cho bạn' })).toBeInTheDocument()
+  // Coupons are chosen in the cart ("Áp dụng mã giảm giá"), not on the product page.
+  expect(screen.queryByRole('heading', { name: 'Mã ưu đãi dành cho bạn' })).not.toBeInTheDocument()
+  expect(calls.some((call) => call.endpoint === '/coupons')).toBe(false)
   expect(screen.queryByText(/A20 Pro/)).not.toBeInTheDocument()
   expect(screen.queryByText(/Giảm 20%/)).not.toBeInTheDocument()
 })

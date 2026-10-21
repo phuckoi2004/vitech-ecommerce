@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import useInternalAuth from '../../hooks/useInternalAuth.js'
 import useAdminQuery from './useAdminQuery.js'
-import { canCancelOrder, ORDER_NEXT, orderStatusLabel, parseSerialNumbers, PAYMENT_LABELS } from '../lib/orders.js'
+import { canCancelOrder, ORDER_NEXT, orderStatusLabel, parseSerialNumbers, paymentStatusLabel } from '../lib/orders.js'
 import { assignOrderSerials, confirmCodDelivery, updateOrderStatus } from '../services/orders.js'
 
 // Shared by the full detail page and quick actions: one set of payment, serial and status rules.
@@ -34,7 +34,7 @@ export default function useOrderWorkflow(orderId, initialAction, onDone) {
     if (payment.loading || !payment.data) blocked = 'Cần tải được phương thức thanh toán trước khi xác nhận đơn.'
     else if (awaitingPayment) {
       blocked = 'Đơn thanh toán chuyển khoản chỉ được xác nhận sau khi khách đã thanh toán (hiện tại: '
-        + (PAYMENT_LABELS[order.PaymentStatus] ?? order.PaymentStatus) + ').'
+        + paymentStatusLabel(order.PaymentStatus) + ').'
     }
   } else if (order && ['Processing', 'Shipping'].includes(order.OrderStatus)) {
     if (payment.loading || !payment.data) blocked = 'Cần tải được phương thức thanh toán trước khi chuyển trạng thái.'

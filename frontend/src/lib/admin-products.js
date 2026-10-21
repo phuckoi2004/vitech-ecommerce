@@ -1,3 +1,5 @@
+import { formatStatus } from './status-labels.js'
+
 export const PRODUCT_STATUSES = [['Draft', 'Bản nháp'], ['Active', 'Đang bán'], ['Inactive', 'Tạm ẩn'], ['Discontinued', 'Ngừng kinh doanh']]
 export const PRICE_RANGES = [
   ['under-5m', 'Dưới 5 triệu', undefined, '4999999.99'],
@@ -24,7 +26,7 @@ export function productQuery(params) {
 }
 
 export function productStatus(product) {
-  if (product.Status !== 'Active') return [PRODUCT_STATUSES.find(([key]) => key === product.Status)?.[1] ?? product.Status, 'bg-admin-soft text-admin-muted']
+  if (product.Status !== 'Active') return [PRODUCT_STATUSES.find(([key]) => key === product.Status)?.[1] ?? formatStatus(product.Status), 'bg-admin-soft text-admin-muted']
   if (product.IsActive === false) return ['Tạm ẩn', 'bg-admin-soft text-admin-muted']
   if (product.StockQuantity === 0) return ['Hết hàng', 'bg-admin-red/10 text-admin-red']
   if (product.IsLowStock) return ['Sắp hết', 'bg-amber-500/12 text-amber-600']

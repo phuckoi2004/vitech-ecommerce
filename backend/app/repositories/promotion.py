@@ -59,6 +59,23 @@ class PromotionRepository(BaseRepository[Promotion]):
             stmt = stmt.where(Promotion.Status == status)
         return list(self.session.scalars(stmt.order_by(Promotion.StartDate.desc(), Promotion.PromotionId)))
 
+    def list_automatic(self, now, *, product=None) -> list[Promotion]:
+        """Chương trình giảm trực tiếp (Automatic) đang trong thời hạn, kèm phạm vi sản phẩm/danh mục.
+
+        ``product``: chỉ các chương trình có thể áp cho sản phẩm đó (không gán phạm vi = mọi sản phẩm).
+        """
+        stmt = select(Promotion).where(
+            Promotion.ApplyMode == "Automatic", Promotion.Status.in_(("Scheduled", "Active")),
+            Promotion.StartDate <= now, Promotion.EndDate >= now,
+        )
+        if product is not None:
+            stmt = stmt.where(or_(
+                ~Promotion.promotion_products.any() & ~Promotion.promotion_categories.any(),
+                Promotion.promotion_products.any(PromotionProduct.ProductId == product.ProductId),
+                Promotion.promotion_categories.any(PromotionCategory.CategoryId == product.CategoryId)))
+        return list(self.session.scalars(stmt.options(
+            selectinload(Promotion.promotion_products), selectinload(Promotion.promotion_categories))))
+
     def list_by_categories(self, category_ids: Collection[uuid.UUID], *, status: str | None = None) -> list[Promotion]:
         """Promotions gắn với một trong các danh mục (qua PromotionCategories)."""
         if not category_ids:

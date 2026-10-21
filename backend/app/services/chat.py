@@ -141,6 +141,14 @@ class ChatService(BaseService):
         return self._page(assigned_staff_id=actor.user_id, status=status, page=page, page_size=page_size,
                           schema=AdminConversationResponse)
 
+    def list_active_conversations(
+        self, actor: Actor, *, page: int = 1, page_size: int = 20
+    ) -> PageResponse[AdminConversationResponse]:
+        """Khách đang được hỗ trợ (hội thoại Staff đang Open, đã có người nhận) của mọi nhân viên; chỉ Admin."""
+        require_role(actor, "Admin")
+        return self._page(status=STATUS_OPEN, mode=MODE_STAFF, assigned=True, page=page, page_size=page_size,
+                          schema=AdminConversationResponse)
+
     def admin_list_conversations(
         self,
         actor: Actor,
@@ -392,10 +400,12 @@ class ChatService(BaseService):
         context = self.conversations.get_support_context([c.ConversationId for c in conversations])
         responses = []
         for conversation in conversations:
-            name, email, last_message, unread_count = context.get(conversation.ConversationId, (None, None, None, 0))
+            name, email, last_message, unread_count, staff_name = context.get(
+                conversation.ConversationId, (None, None, None, 0, None))
             responses.append(schema.model_validate(conversation).model_copy(update={
                 "CustomerName": name,
                 "CustomerEmail": email,
+                "AssignedStaffName": staff_name,
                 "LastMessage": AdminMessageResponse.model_validate(last_message) if last_message is not None else None,
                 "UnreadCount": unread_count,
             }))

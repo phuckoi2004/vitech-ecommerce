@@ -4,7 +4,7 @@ import { StrictMode } from 'react'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { AuthContext } from '../../auth/context.js'
-import { formatDateTime, formatMoney } from '../../lib/format.js'
+import { formatDate, formatDateTime, formatMoney } from '../../lib/format.js'
 import { appRoutes } from '../../routes.jsx'
 import { makeAuth } from '../../test/auth.js'
 
@@ -116,8 +116,8 @@ describe('order page: COD', () => {
     expect(summaryValue('Tổng thanh toán')).toHaveTextContent(vnd(313000))
     expect(summaryValue('Trạng thái đơn hàng')).toHaveTextContent('Chờ xác nhận')
     expect(summaryValue('Phương thức thanh toán')).toHaveTextContent('Thanh toán khi nhận hàng (COD)')
-    expect(summaryValue('Trạng thái thanh toán')).toHaveTextContent('Thanh toán khi nhận hàng')
-    expect(screen.getByText(/khi nhận hàng\. VieTech sẽ liên hệ/)).toBeInTheDocument()
+    expect(summaryValue('Trạng thái thanh toán')).toHaveTextContent('Chưa thanh toán')
+    expect(screen.getByText(/Bạn sẽ thanh toán.*khi nhận hàng\. VieTech sẽ liên hệ/)).toBeInTheDocument()
     expect(screen.queryByText('Đã thanh toán')).not.toBeInTheDocument()
 
     await advance(15000)
@@ -228,7 +228,8 @@ describe('order page: SePay QR', () => {
     renderAt('/don-hang/o1')
     expect(await screen.findByText(/đã nhận được thanh toán/)).toBeInTheDocument()
     expect(server.qrRequests()).toHaveLength(0)
-    expect(screen.queryByRole('button', { name: 'Huỷ đơn hàng' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Hủy đơn' })).toBeDisabled()
+    expect(screen.getByText(/đã được thanh toán nên không thể tự huỷ/)).toBeInTheDocument()
   })
 
   test('a method missing from the list uses the Code the confirmation page passed; without one nothing is guessed', async () => {
@@ -364,7 +365,7 @@ describe('order page: waiting for the transfer', () => {
     expect(screen.getByText('Đơn hàng đã bị huỷ. Lý do: Hết hạn thanh toán QR (15 phút)')).toBeInTheDocument()
     expect(summaryValue('Trạng thái đơn hàng')).toHaveTextContent('Đã huỷ')
     expect(screen.queryByText('VTPAY12345678')).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Huỷ đơn hàng' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Hủy đơn' })).not.toBeInTheDocument()
     await advance(15000)
     expect(server.reads()).toBe(2)
   })
@@ -412,7 +413,7 @@ describe('order page: cancelling', () => {
     renderAt('/don-hang/o1')
     await screen.findByText('VTPAY12345678')
 
-    await user.click(screen.getByRole('button', { name: 'Huỷ đơn hàng' }))
+    await user.click(screen.getByRole('button', { name: 'Hủy đơn' }))
     const confirm = screen.getByRole('group', { name: 'Xác nhận huỷ đơn hàng' })
     expect(within(confirm).getByText('Huỷ đơn hàng VT261016ABC123? Thao tác này không thể hoàn tác.')).toBeInTheDocument()
     expect(within(confirm).getByText(/Nếu bạn đã chuyển khoản, đừng huỷ đơn/)).toBeInTheDocument()
@@ -420,7 +421,7 @@ describe('order page: cancelling', () => {
     expect(screen.queryByRole('group', { name: 'Xác nhận huỷ đơn hàng' })).not.toBeInTheDocument()
     expect(server.cancels()).toHaveLength(0)
 
-    await user.click(screen.getByRole('button', { name: 'Huỷ đơn hàng' }))
+    await user.click(screen.getByRole('button', { name: 'Hủy đơn' }))
     await user.click(screen.getByRole('button', { name: 'Xác nhận huỷ' }))
     expect(screen.getByRole('button', { name: 'Đang huỷ…' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Không huỷ' })).toBeDisabled()
@@ -429,7 +430,7 @@ describe('order page: cancelling', () => {
     finish({ status: 200, body: CANCELLED })
     expect(await screen.findByText('Đơn hàng đã bị huỷ.')).toBeInTheDocument()
     expect(screen.queryByText('VTPAY12345678')).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Huỷ đơn hàng' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Hủy đơn' })).not.toBeInTheDocument()
     expect(server.cancels()).toHaveLength(1)
   })
 
@@ -442,7 +443,7 @@ describe('order page: cancelling', () => {
     renderAt('/don-hang/o1')
     await screen.findByText(/VieTech sẽ liên hệ/)
 
-    await user.click(screen.getByRole('button', { name: 'Huỷ đơn hàng' }))
+    await user.click(screen.getByRole('button', { name: 'Hủy đơn' }))
     expect(screen.queryByText(/đừng huỷ đơn/)).not.toBeInTheDocument() // COD: no transfer warning
     await user.click(screen.getByRole('button', { name: 'Xác nhận huỷ' }))
     await vi.waitFor(() => expect(server.reads()).toBe(2))
@@ -461,10 +462,10 @@ describe('order page: a payment landing while cancelling', () => {
     renderAt('/don-hang/o1')
     await screen.findByText('VTPAY12345678')
 
-    await user.click(screen.getByRole('button', { name: 'Huỷ đơn hàng' }))
+    await user.click(screen.getByRole('button', { name: 'Hủy đơn' }))
     await user.click(screen.getByRole('button', { name: 'Xác nhận huỷ' }))
     expect(await screen.findByText('VieTech đã nhận được thanh toán cho đơn hàng này. Cảm ơn bạn!')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Huỷ đơn hàng' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Hủy đơn' })).toBeDisabled()
     expect(screen.queryByText('Đơn hàng đã bị huỷ.')).not.toBeInTheDocument()
     expect(server.cancels()).toHaveLength(1)
   })
@@ -478,7 +479,7 @@ describe('order page: a payment landing while cancelling', () => {
     renderAt('/don-hang/o1')
     await screen.findByText(/VieTech sẽ liên hệ/)
 
-    await user.click(screen.getByRole('button', { name: 'Huỷ đơn hàng' }))
+    await user.click(screen.getByRole('button', { name: 'Hủy đơn' }))
     await user.click(screen.getByRole('button', { name: 'Xác nhận huỷ' }))
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'Đơn hàng đã được thanh toán nên không thể tự huỷ. Vui lòng liên hệ VieTech để được hỗ trợ.')
@@ -499,7 +500,7 @@ describe('order page: cancelled after being paid', () => {
     expect(screen.queryByText(THANKS)).not.toBeInTheDocument()
     expect(screen.queryByText(/Đã hoàn tiền|đã được hoàn/)).not.toBeInTheDocument()
     expect(summaryValue('Trạng thái thanh toán')).toHaveTextContent('Đã ghi nhận thanh toán')
-    expect(screen.queryByRole('button', { name: 'Huỷ đơn hàng' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Hủy đơn' })).not.toBeInTheDocument()
     // Nothing is written: no QR, no cancel, no refund call.
     expect(server.calls.filter((call) => call.method !== 'GET')).toEqual([])
   })
@@ -572,7 +573,7 @@ describe('order page: outcome and details', () => {
   })
 
   test('the order details show the lines, the amounts that make up the total and the delivery, as the server sent them', async () => {
-    const item = { OrderItemId: 'i1', ProductVariantId: 'v1', ProductName: 'Laptop VieTech Pro 14', Sku: 'LT-14',
+    const item = { OrderItemId: 'i1', ProductVariantId: 'v1', ProductId: 'p1', ProductName: 'Laptop VieTech Pro 14', Sku: 'LT-14',
       VariantInfo: 'Màu: Bạc', WarrantyMonths: 12, Quantity: 2, UnitPrice: '166666.50', DiscountAmount: '49999.00', LineTotal: '283334.00' }
     mockApi({ 'GET /orders/o1': { body: { ...COD_ORDER, Items: [item], CustomerNote: 'Giao giờ hành chính' } } })
     renderAt('/don-hang/o1')
@@ -580,17 +581,48 @@ describe('order page: outcome and details', () => {
     const details = await screen.findByRole('region', { name: 'Thông tin đơn hàng' })
     const line = within(within(details).getByRole('list', { name: 'Sản phẩm trong đơn hàng' })).getByRole('listitem')
     expect(line).toHaveTextContent('Laptop VieTech Pro 14')
-    expect(line).toHaveTextContent('Màu: Bạc')
-    expect(line).toHaveTextContent('x2')
+    expect(line).toHaveTextContent('Phiên bản: Màu: Bạc')
+    expect(line).toHaveTextContent('Số lượng: 2')
     expect(line).toHaveTextContent(vnd(283334))
+    expect(within(details).getByText('2 sản phẩm trong đơn hàng')).toBeInTheDocument()
     const value = (label) => within(details).getByText(label).nextElementSibling
     expect(value('Tạm tính')).toHaveTextContent(vnd(333333))
     expect(value('Phí vận chuyển')).toHaveTextContent(vnd(30000))
     expect(value('Giảm giá')).toHaveTextContent(`−${vnd(49999)}`)
-    expect(value('Tổng cộng')).toHaveTextContent(vnd(313334))
-    expect(value('Người nhận')).toHaveTextContent('Nguyễn Văn B · 0987654321')
+    expect(value('Tổng thanh toán')).toHaveTextContent(vnd(313334))
+    expect(value('Người nhận')).toHaveTextContent('Nguyễn Văn B0987654321 • customer@example.com')
     expect(value('Địa chỉ giao hàng')).toHaveTextContent(ORDER.ShippingAddress)
     expect(value('Ghi chú')).toHaveTextContent('Giao giờ hành chính')
+  })
+
+  test('the status card shows the step reached and the history newest first; a cancelled order shows no steps', async () => {
+    const history = (id, NewStatus, ChangedAt, Note = null) => ({ OrderStatusHistoryId: id, OldStatus: null, NewStatus, Note, ChangedAt })
+    const shipping = { ...COD_ORDER, OrderStatus: 'Shipping', ShippedAt: '2026-10-17T02:00:00Z', StatusHistories: [
+      history('h1', 'Pending', '2026-10-16T03:00:00Z'), history('h3', 'Shipping', '2026-10-17T02:00:00Z', 'Giao qua GHN')] }
+    mockApi({ 'GET /orders/o1': { body: shipping } })
+    renderAt('/don-hang/o1')
+
+    expect(await screen.findByText('Bước 3/4')).toBeInTheDocument()
+    const steps = screen.getByRole('list', { name: 'Các bước xử lý đơn hàng' })
+    expect(within(steps).getByText('Đang giao').closest('li')).toHaveAttribute('aria-current', 'step')
+    expect(summaryValue('Trạng thái đơn hàng')).toHaveTextContent('Đang vận chuyển')
+    expect(screen.getByText(/Đơn hàng đang trên đường giao/)).toBeInTheDocument()
+    const log = within(screen.getByRole('region', { name: 'Lịch sử cập nhật đơn hàng' })).getAllByRole('listitem')
+    expect(log.map((entry) => entry.textContent)).toEqual([
+      `Đang vận chuyểnGiao qua GHN${formatDate('2026-10-17T02:00:00Z')}`,
+      `Chờ xác nhậnHệ thống tiếp nhận đơn hàng thành công.${formatDate('2026-10-16T03:00:00Z')}`,
+    ])
+    expect(screen.getByRole('button', { name: 'Hủy đơn' })).toBeDisabled()
+    expect(screen.getByText('Đơn đang vận chuyển, nên chức năng hủy đơn không khả dụng ở trạng thái này.')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Chat hỗ trợ' })).toHaveAttribute('href', '/tu-van')
+    expect(screen.getByRole('link', { name: 'Về lịch sử mua hàng' })).toHaveAttribute('href', '/tai-khoan?section=orders')
+    cleanup()
+
+    mockApi({ 'GET /orders/o1': { body: { ...COD_ORDER, OrderStatus: 'Cancelled', PaymentStatus: 'Cancelled' } } })
+    renderAt('/don-hang/o1')
+    expect(await screen.findByText('Đơn hàng đã bị huỷ.')).toBeInTheDocument()
+    expect(screen.queryByRole('list', { name: 'Các bước xử lý đơn hàng' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Hủy đơn' })).not.toBeInTheDocument()
   })
 })
 

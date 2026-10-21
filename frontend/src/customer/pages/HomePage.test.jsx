@@ -56,7 +56,6 @@ function mockApi(overrides = {}) {
       CategoryId: item.CategoryId, AvailableProductCount: item.CategoryId === 'c-phone' ? 1 : 0,
       MaxDiscountAmount: '0', MaxDiscountPercent: '0',
     })))
-    if (path === '/coupons') return json([])
     if (path === '/payment-methods' || path === '/shipping-methods') return json([])
     if (path === '/banners') return json([])
     if (path === '/news') return json({ Items: [{ NewsArticleId: 'n1', Title: 'Chọn điện thoại năm 2026', Slug: 'chon-dien-thoai', Summary: 'Gợi ý theo nhu cầu.', ThumbnailUrl: null, Status: 'Published', PublishedAt: null }], Total: 1, Page: 1, PageSize: 3 })
@@ -154,6 +153,9 @@ describe('catalog sections', () => {
     // The 10 latest articles in a scrolling row, and a way to all of them.
     expect(calls.filter((call) => call.startsWith('/news'))).toEqual(['/news?page=1&page_size=10'])
     expect(screen.getByRole('link', { name: 'Xem tất cả tin tức' })).toHaveAttribute('href', '/tin-tuc')
+    // Coupons are offered where they are applied, in the cart; the home page does not list them.
+    expect(screen.queryByRole('region', { name: 'Mã ưu đãi công khai' })).not.toBeInTheDocument()
+    expect(calls.some((call) => call.startsWith('/coupons'))).toBe(false)
     const brands = screen.getByRole('region', { name: 'Thương hiệu nổi bật' })
     expect(within(brands).getByRole('link', { name: 'Samsung' })).toHaveAttribute('href', '/thuong-hieu/samsung')
 

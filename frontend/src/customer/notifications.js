@@ -1,4 +1,5 @@
 import { safeNext } from '../auth/session.js'
+import { formatStatus } from '../lib/status-labels.js'
 import { CHAT_PATH, HOME_PATH, INFO_PATHS, NEWS_PATH, SEARCH_PATH, CART_PATH, WISHLIST_PATH, NOTIFICATIONS_PATH, ACCOUNT_PATH } from './routes/paths.js'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -24,10 +25,10 @@ export function customerNotificationTarget(item) {
 }
 
 export function notificationStatus(value) {
-  return ({ Pending: 'Đang chờ', New: 'Mới', Confirmed: 'Đã xác nhận', Processing: 'Đang xử lý', Shipping: 'Đang giao',
+  return formatStatus(value, { Pending: 'Đang chờ', New: 'Mới', Confirmed: 'Đã xác nhận', Processing: 'Đang xử lý', Shipping: 'Đang giao',
     Delivered: 'Đã giao', Completed: 'Hoàn tất', Cancelled: 'Đã hủy', Paid: 'Đã thanh toán', Refunded: 'Đã hoàn tiền',
     Failed: 'Thất bại', Approved: 'Đã tiếp nhận', Receiving: 'Đang tiếp nhận', Inspecting: 'Đang kiểm tra',
     HandedOver: 'Đã bàn giao bảo hành', Rejected: 'Đã từ chối', Eligible: 'Đủ điều kiện', Ineligible: 'Không đủ điều kiện',
     Repaired: 'Đã sửa chữa', ProductReplaced: 'Đổi máy', PartReplaced: 'Thay linh kiện', NotRepairable: 'Không thể sửa chữa',
-  })[value] ?? value ?? '—'
+  })
 }

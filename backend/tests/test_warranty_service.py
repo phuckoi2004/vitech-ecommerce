@@ -547,7 +547,10 @@ class ResultApprovalTest(WarrantyTestBase):
     def test_proposal_notifies_admins_and_approval_notifies_staff(self):
         rid = self.to_processing()
         self.propose(rid)
-        self.assertEqual([n.Title for n in self.f.notifications_for(self.admin)], ["Kết quả bảo hành chờ duyệt"])
+        # Every operator hears about the new request; only admins are asked to approve the proposal.
+        self.assertEqual([n.Title for n in self.f.notifications_for(self.admin)],
+                         ["Yêu cầu bảo hành mới", "Kết quả bảo hành chờ duyệt"])
+        self.assertEqual([n.Title for n in self.f.notifications_for(self.staff)][:1], ["Yêu cầu bảo hành mới"])
         self.approve(rid)
         self.assertEqual(self.f.notifications_for(self.staff)[-1].Title, "Kết quả bảo hành đã được duyệt")
         last = self.histories(rid)[-1]

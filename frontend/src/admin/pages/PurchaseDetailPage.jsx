@@ -1,6 +1,7 @@
 import { Navigate, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { ErrorState, LoadingState } from '../../components/shared/index.js'
 import { formatDateTime, formatMoney } from '../../lib/format.js'
+import { formatStatus } from '../../lib/status-labels.js'
 import AdminTable from '../components/AdminTable.jsx'
 import PurchaseActionModal from '../components/PurchaseActionModal.jsx'
 import PurchaseDialog from '../components/PurchaseDialogs.jsx'
@@ -69,7 +70,7 @@ export default function PurchaseDetailPage() {
           <Info label="Mã phiếu">{po.PurchaseOrderCode}</Info><Info label="Nhà cung cấp">{suppliers.data?.find((supplier) => supplier.SupplierId === po.SupplierId)?.Name ?? (suppliers.loading ? 'Đang tải…' : '—')}</Info><Info label="Người tạo">{po.CreatedByName ?? account(po.CreatedByUserId)}</Info><Info label="Ngày lập phiếu">{formatDateTime(po.CreatedAt)}</Info><Info label="Ghi chú">{po.Note || '—'}</Info>
         </dl></section>
         <section aria-label="Xử lý của quản trị viên" className={CARD}><h3 className={TITLE}>Xử lý của quản trị viên</h3><dl className="mt-[9px] mb-0 flex flex-col gap-[9px]">
-          <Info label="Trạng thái">{PURCHASE_STATUSES[po.Status] ?? po.Status}</Info><Info label="Người duyệt">{approver}</Info>{po.RejectReason && <Info label="Người từ chối">{po.DecidedByName ?? account(po.DecidedByUserId)}</Info>}<Info label="Thời điểm xử lý">{formatDateTime(po.DecidedAt ?? (automaticApproval ? po.CreatedAt : null))}</Info><Info label="Lý do từ chối">{po.RejectReason || '—'}</Info><Info label="Tổng tiền">{formatMoney(po.TotalAmount)}</Info>
+          <Info label="Trạng thái">{formatStatus(po.Status, PURCHASE_STATUSES)}</Info><Info label="Người duyệt">{approver}</Info>{po.RejectReason && <Info label="Người từ chối">{po.DecidedByName ?? account(po.DecidedByUserId)}</Info>}<Info label="Thời điểm xử lý">{formatDateTime(po.DecidedAt ?? (automaticApproval ? po.CreatedAt : null))}</Info><Info label="Lý do từ chối">{po.RejectReason || '—'}</Info><Info label="Tổng tiền">{formatMoney(po.TotalAmount)}</Info>
           {po.Status === 'Closed' && <><Info label="Người đóng phiếu">{account(po.ClosedByUserId)}</Info><Info label="Thời điểm đóng">{formatDateTime(po.ClosedAt)}</Info><Info label="Lý do đóng phiếu">{po.CloseReason || '—'}</Info></>}
         </dl></section>
       </div>

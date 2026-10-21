@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import Button from '../../../components/shared/Button.jsx'
 import ErrorState from '../../../components/shared/ErrorState.jsx'
 import LoadingState from '../../../components/shared/LoadingState.jsx'
@@ -55,9 +56,22 @@ export default function ProductReviews({ product, onRequireLogin, onSummaryChang
   const [reviewedItemIds, setReviewedItemIds] = useState([])
   const [notice, setNotice] = useState('')
   const [image, setImage] = useState(null)
+  // `?review=<order>` (from the order history or an order page) opens the form on that order once signed in.
+  const [params] = useSearchParams()
+  const requestedOrderId = params.get('review')
+  const [requestHandled, setRequestHandled] = useState(false)
+  if (requestedOrderId && !requestHandled && ready) {
+    setRequestHandled(true)
+    if (user) setComposer({ review: null, orderId: requestedOrderId })
+  }
   const reviews = useProductReviewList(product.ProductId, ratingFilter, page, version)
   const summary = useApiData(`review-summary:${product.ProductId}:${version}`, (signal) =>
     getProductReviewSummary(product.ProductId, { signal }))
+  // Opened at …#product-reviews (the order history's "Đánh giá sản phẩm"): the router does not scroll to a hash.
+  useEffect(() => {
+    if (window.location.hash === '#product-reviews') document.getElementById('product-reviews')?.scrollIntoView?.({ block: 'start' })
+  }, [])
+
   const count = summary.data?.count ?? product.ReviewCount ?? 0
   const rating = summary.data?.rating ?? (Number(product.AverageRating) || 0)
   const items = reviews.data?.Items ?? []
@@ -66,6 +80,12 @@ export default function ProductReviews({ product, onRequireLogin, onSummaryChang
   useEffect(() => {
     if (summary.data) onSummaryChange?.(summary.data)
   }, [summary.data, onSummaryChange])
+
+  useEffect(() => {
+    if (!notice) return
+    const timer = window.setTimeout(() => setNotice(''), 3000)
+    return () => window.clearTimeout(timer)
+  }, [notice])
 
   function writeReview() {
     if (!ready) return
@@ -104,7 +124,7 @@ export default function ProductReviews({ product, onRequireLogin, onSummaryChang
             </button>)}
       </div>
       <div className="pr-invitation"><strong>Bạn đã mua sản phẩm này?</strong>
-        <p>Khách hàng đã đăng nhập và sản phẩm đã được giao thành công mới có thể gửi đánh giá.</p>
+        <p>Bạn có thể đánh giá sau khi nhận hàng: bấm "Viết đánh giá" ở đây, hoặc "Đánh giá sản phẩm" trong lịch sử mua hàng.</p>
         <span className="pr-purchased" aria-label="Điều kiện đánh giá: đã mua hàng">✓ Đã mua hàng</span>
       </div>
     </div>
@@ -125,10 +145,10 @@ export default function ProductReviews({ product, onRequireLogin, onSummaryChang
     </div>}
     {hasMore && !reviews.error && <Button className="pr-load-more" variant="outline" loading={reviews.loading}
       onClick={() => setPage(page + 1)}>Xem thêm đánh giá</Button>}
-    <ProductModal open={!!composer && !!user} title={composer?.review ? 'Chỉnh sửa đánh giá' : `Đánh giá ${product.Name}`}
+    <ProductModal open={!!composer && !!user} title={composer?.review ? 'Sửa đánh giá' : 'Viết đánh giá'}
       className="pr-composer-modal" onClose={() => { if (!composerBusy) setComposer(null) }}>
       {composer && user && <ReviewComposer key={`${user.UserId}:${composer.review?.ReviewId ?? 'new'}`} product={product}
-        review={composer.review} reviewedItemIds={reviewedItemIds} onSaved={saved} onBusyChange={setComposerBusy} onCancel={() => setComposer(null)} />}
+        review={composer.review} initialOrderId={composer.orderId} reviewedItemIds={reviewedItemIds} onSaved={saved} onBusyChange={setComposerBusy} onCancel={() => setComposer(null)} />}
     </ProductModal>
     <ProductModal open={!!image} title="Ảnh đánh giá sản phẩm" onClose={() => setImage(null)}>
       {image && <img className="pr-expanded-image" src={image} alt="Ảnh trải nghiệm sản phẩm của khách hàng" />}

@@ -12,8 +12,10 @@ export function createOrder(accessToken, payload) {
   return request('/orders', { method: 'POST', body: payload, accessToken })
 }
 
-// PageResponse[OrderSummary] ({Items, Total, Page, PageSize}) of the customer's orders, newest first (OrderedAt).
-// `query`: page, page_size, order_code, order_status, ordered_from, ordered_to.
+// PageResponse[CustomerOrderSummary] ({Items, Total, Page, PageSize}) of the customer's orders, newest first
+// (OrderedAt); each order has Items ({OrderItemId, ProductName, VariantInfo, Quantity, ProductSlug}).
+// `query`: page, page_size, order_code, order_status (one value or an array: any of them), ordered_from, ordered_to
+// (with a time zone; the range is [from, to)).
 export function listMyOrders(accessToken, query = {}, { signal } = {}) {
   return request('/orders', { query, accessToken, signal })
 }

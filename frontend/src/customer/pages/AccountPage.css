@@ -133,11 +133,96 @@
 
 .cacc-loading { display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 320px; color: #6b768a; font-size: 14px; }
 .cacc-loading .spinner { color: #d53239; }
+.cacc-loading.is-compact { min-height: 200px; }
+
+/* Order history (Figma "Lịch sử mua hàng"): status tabs, search row, one card per order. */
+.cacc-order-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 18px; }
+.cacc-order-tab {
+  min-height: 34px;
+  padding: 6px 14px;
+  border: 0;
+  border-radius: 8px;
+  color: #4f5b70;
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 160ms, color 160ms;
+}
+
+.cacc-order-tab:hover { color: #17243d; background: #f6f8fc; }
+.cacc-order-tab.is-active { color: #d53239; background: #fff1f1; font-weight: 600; }
+.cacc-order-tab:focus-visible { outline: 3px solid #df7b80; outline-offset: 2px; }
+
+.cacc-order-filters {
+  display: grid;
+  grid-template-columns: minmax(0, 270px) minmax(0, 220px) minmax(0, 220px) auto;
+  gap: 12px;
+  align-items: end;
+  margin-top: 18px;
+}
+
+.cacc-order-filters .cacc-button { min-width: 120px; }
+.cacc-order-filters-error { grid-column: 1 / -1; margin: 0; }
+
+.cacc-orders { display: flex; flex-direction: column; gap: 18px; margin: 18px 0 0; padding: 0; list-style: none; }
+.cacc-order {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 110px;
+  padding: 16px 18px;
+  border-radius: 12px;
+  background: #f6f8fc;
+}
+
+.cacc-order-info { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.cacc-order-info p { margin: 0; }
+.cacc-order-code { color: #17243d; font-size: 14px; font-weight: 700; }
+.cacc-order-items { overflow: hidden; color: #17243d; font-size: 14px; text-overflow: ellipsis; white-space: nowrap; }
+.cacc-order-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; color: #6b768a; font-size: 12px; }
+.cacc-order-meta > span + span { padding-left: 12px; border-left: 1px solid #c9d0dc; }
+.cacc-order-status { color: #17243d; font-weight: 600; }
+.cacc-order-status[data-status="Delivered"], .cacc-order-status[data-status="Completed"] { color: #2a805b; }
+.cacc-order-status[data-status="Cancelled"] { color: #b9313b; }
+
+.cacc-order-actions { display: flex; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; gap: 12px; }
+.cacc-order-actions .cacc-button { min-width: 130px; text-decoration: none; }
+
+/* Several products to review: pick one from a small list under the button. */
+.cacc-order-review { position: relative; }
+.cacc-order-review summary { list-style: none; }
+.cacc-order-review summary::-webkit-details-marker { display: none; }
+.cacc-order-review ul {
+  position: absolute;
+  z-index: 5;
+  top: calc(100% + 6px);
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  width: max-content;
+  min-width: 100%;
+  max-width: 300px;
+  margin: 0;
+  padding: 6px;
+  border: 1px solid #e6e9f0;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 12px 30px rgb(23 36 61 / 14%);
+  list-style: none;
+}
+
+.cacc-order-review a { display: block; padding: 9px 12px; border-radius: 8px; color: #17243d; font-size: 13px; text-decoration: none; }
+.cacc-order-review a:hover { color: #d53239; background: #fff5f5; }
+.cacc-order-retry { margin-top: 12px; }
+.cacc-order-pages { margin-top: 22px; }
 
 @media (max-width: 860px) {
   .cacc-body { grid-template-columns: minmax(0, 1fr); }
   .cacc-menu { flex-direction: row; overflow-x: auto; }
   .cacc-menu-item { flex-shrink: 0; }
+  .cacc-order-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 600px) {
@@ -145,4 +230,15 @@
   .cacc-panel { padding: 20px 16px 22px; }
   .cacc-profile, .cacc-fields { grid-template-columns: minmax(0, 1fr); }
   .cacc-actions .cacc-button { flex: 1; }
+  .cacc-order-tabs { flex-wrap: nowrap; overflow-x: auto; }
+  .cacc-order-tab { flex-shrink: 0; }
+  .cacc-order-filters { grid-template-columns: minmax(0, 1fr); }
+  .cacc-order { flex-direction: column; align-items: stretch; }
+  .cacc-order-items { white-space: normal; }
+  .cacc-order-meta { flex-direction: column; align-items: flex-start; }
+  .cacc-order-meta > span + span { padding-left: 0; border-left: 0; }
+  /* Equal columns: flex-basis 0 would still add the link's padding, not the <details> wrapper's. */
+  .cacc-order-actions { display: grid; grid-auto-columns: minmax(0, 1fr); grid-auto-flow: column; }
+  .cacc-order-actions .cacc-button { min-width: 0; }
+  .cacc-order-review summary { width: 100%; }
 }

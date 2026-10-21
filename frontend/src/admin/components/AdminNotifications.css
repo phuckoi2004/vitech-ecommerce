@@ -1,0 +1,8 @@
+.admin-notifications-page { min-width: 0; padding: 24px; border: 1px solid var(--color-admin-border); border-radius: 16px; background: var(--color-surface); color: var(--color-admin-text); }
+.admin-notifications-page > header h2 { font-size: 22px; }
+.admin-notifications-page [aria-pressed='true'] { border-color: var(--color-admin-muted); font-weight: 600; }
+.admin-notification-list { display: flex; flex-direction: column; gap: 12px; margin: 16px 0; padding: 0; list-style: none; }
+.admin-notification-row { min-width: 0; padding: 18px; border: 1px solid var(--color-admin-border); border-radius: 12px; background: var(--color-surface); overflow-wrap: anywhere; }
+.admin-notification-row > a { text-decoration: none; }
+.admin-notification-row > a:hover h3 { text-decoration: underline; }
+@media (max-width: 600px) { .admin-notifications-page { padding: 16px; } .admin-notification-row { padding: 14px; } }

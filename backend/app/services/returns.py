@@ -55,6 +55,7 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
+from app.core.status_labels import RETURN_STATUS_LABELS, TRANSACTION_STATUS_LABELS, status_label
 from app.models import Order, OrderItem, ProductSerial, ReturnRequest
 from app.models.service_request import RETURN_REQUEST_TYPES
 from app.repositories import (
@@ -281,6 +282,8 @@ class ReturnService(BaseService):
                           f"Khách hàng gửi yêu cầu {_TYPE_LABELS[request_type]} ({quantity} sản phẩm).")
             self._notify_customer(request, "Đã nhận yêu cầu đổi/trả",
                                   f"Yêu cầu {request.RequestCode} đã được ghi nhận và chờ xem xét.")
+            self._notify_operators(request, f"Yêu cầu {_TYPE_LABELS[request_type]} mới",
+                                   f"Khách hàng gửi yêu cầu {request.RequestCode} ({quantity} sản phẩm); chờ xem xét.")
             return self._customer_detail(request)
 
     def cancel_return_request(
@@ -450,7 +453,7 @@ class ReturnService(BaseService):
             elif old in REJECTABLE_BEFORE_RECEIPT:
                 event = f"Từ chối yêu cầu. Lý do: {reason}"
             else:
-                raise BusinessRuleError(f"Yêu cầu đang ở trạng thái {old}, không thể từ chối",
+                raise BusinessRuleError(f"Yêu cầu đang ở trạng thái {status_label(old, RETURN_STATUS_LABELS)}, không thể từ chối",
                                         code="invalid_return_transition")
             request.Status = REJECTED
             request.DecisionReason = reason
@@ -622,14 +625,14 @@ class ReturnService(BaseService):
             if request.RefundPaymentTransactionId is not None:
                 linked = self.transactions.get_by_id_for_update(request.RefundPaymentTransactionId)
                 if linked is not None and linked.Status in REFUND_ACTIVE_STATUSES:
-                    raise ConflictError(f"Yêu cầu đã có giao dịch hoàn tiền ({linked.Status})", code="return_refund_exists")
+                    raise ConflictError(f"Yêu cầu đã có giao dịch hoàn tiền ({status_label(linked.Status, TRANSACTION_STATUS_LABELS)})", code="return_refund_exists")
             refund, dispatch = self.payments.create_return_refund(
                 order, request.CompensationAmount, values.get("PaymentTransactionId"), created_by=actor.user_id)
             request.RefundPaymentTransactionId = refund.PaymentTransactionId
             waiting = "" if dispatch is not None else (
                 " Hoàn trực tiếp không qua cổng: chờ Admin khác người tạo xác nhận kèm bằng chứng.")
             self._history(request, actor.user_id, PROCESSING, PROCESSING, f"Đang hoàn tiền {refund.Amount}.",
-                          internal_note=(f"Giao dịch Refund {refund.PaymentTransactionId} ({refund.Status}), khoản nguồn "
+                          internal_note=(f"Giao dịch hoàn tiền {refund.PaymentTransactionId} ({status_label(refund.Status, TRANSACTION_STATUS_LABELS)}), khoản nguồn "
                                          f"{refund.RefundOfPaymentTransactionId}.{waiting}"))
         if dispatch is not None:
             try:
@@ -645,7 +648,7 @@ class ReturnService(BaseService):
                 self._note_refund_outcome(actor, request_id, "Cổng chưa xác nhận hoàn tiền (Pending); chờ đối soát "
                                           "hoặc xác nhận chuyển khoản thủ công.")
             else:
-                self._note_refund_outcome(actor, request_id, f"Cổng trả kết quả hoàn tiền {result.Status}; "
+                self._note_refund_outcome(actor, request_id, f"Cổng trả kết quả hoàn tiền {status_label(result.Status, TRANSACTION_STATUS_LABELS)}; "
                                           "có thể tạo lại giao dịch hoàn tiền.")
         return self.get_return_request(actor, request_id)
 
@@ -666,7 +669,7 @@ class ReturnService(BaseService):
                     code="return_refund_pending",
                 )
             if refund.Status != TX_SUCCESS:
-                raise BusinessRuleError(f"Giao dịch hoàn tiền không thành công ({refund.Status}); có thể tạo lại giao dịch",
+                raise BusinessRuleError(f"Giao dịch hoàn tiền không thành công ({status_label(refund.Status, TRANSACTION_STATUS_LABELS)}); có thể tạo lại giao dịch",
                                         code="return_refund_failed")
             self._complete(request, actor.user_id, "Hoàn tất: giao dịch hoàn tiền đã thành công.")
             return self._admin_detail(request)
@@ -816,7 +819,7 @@ class ReturnService(BaseService):
     def _require_status(request: ReturnRequest, expected: str) -> None:
         if request.Status != expected:
             raise BusinessRuleError(
-                f"Yêu cầu đang ở trạng thái {request.Status}, không thực hiện được bước này (cần {expected})",
+                f"Yêu cầu đang ở trạng thái {status_label(request.Status, RETURN_STATUS_LABELS)}, không thực hiện được bước này (cần {status_label(expected, RETURN_STATUS_LABELS)})",
                 code="invalid_return_transition",
             )
 
@@ -842,6 +845,14 @@ class ReturnService(BaseService):
         self.notifications.notify(request.CustomerId, title=title, content=content,
                                   notification_type=RETURN_NOTIFICATION_TYPE, reference_type=REFERENCE_TYPE,
                                   reference_id=request.ReturnRequestId)
+
+    def _notify_operators(self, request: ReturnRequest, title: str, content: str) -> None:
+        """Thông báo cho mọi Staff/Admin đang hoạt động."""
+        for role in STAFF_OR_ADMIN:
+            for user in self.users.list_users(role=role, account_status="Active"):
+                self.notifications.notify(user.UserId, title=title, content=content,
+                                          notification_type=RETURN_NOTIFICATION_TYPE, reference_type=REFERENCE_TYPE,
+                                          reference_id=request.ReturnRequestId)
 
     def _customer_detail(self, request: ReturnRequest) -> ReturnRequestDetailResponse:
         self.requests.flush()

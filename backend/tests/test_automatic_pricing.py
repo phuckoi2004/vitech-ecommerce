@@ -232,20 +232,15 @@ def test_one_use_per_account_uses_order_history_and_allows_cancelled_order(prici
         assert PricingService(session).quote(items, coupon_code="TEST300", actor=actor).CouponDiscount == 300000
 
 
-def test_admin_profit_preview_is_read_only_and_unknown_cost_fails_closed(pricing_shop):
+def test_unknown_cost_fails_closed(pricing_shop):
     s = pricing_shop
     now = s["now"]["value"]
-    body = dict(Name="Xem thử", ApplyMode="Automatic", DiscountType="FixedAmount", DiscountValue="2000000",
+    body = dict(Name="Thiếu giá nhập", ApplyMode="Automatic", DiscountType="FixedAmount", DiscountValue="2000000",
                 MinOrderValue="0", StartDate=now.isoformat(), EndDate=(now + timedelta(days=1)).isoformat(),
                 Status="Active", ProductIds=[str(s["variant"].ProductId)])
-    data = ok(s["client"].post("/admin/promotions/pricing-preview", json=body))
-    assert Decimal(str(data["Items"][0]["EstimatedGrossProfit"])) == 2000000
     with Session(s["engine"]) as session:
-        assert session.scalar(select(Promotion.PromotionId).limit(1)) is None
         row = session.get(ProductVariant, s["variant"].ProductVariantId)
         row.CostPrice = 0; session.commit()
-    data = ok(s["client"].post("/admin/promotions/pricing-preview", json=body))
-    assert data["Items"][0]["IsValid"] is False and data["Items"][0]["EstimatedGrossProfit"] is None
     assert s["client"].post("/admin/promotions", json=body).status_code == 400
     assert preview(s).status_code == 400
 

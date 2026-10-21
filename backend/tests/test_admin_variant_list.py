@@ -144,6 +144,25 @@ def test_stock_filter_uses_each_variants_stock_and_threshold(catalog):
     assert all(row["StockQuantity"] == 0 and not row["IsLowStock"] for row in out["Items"])
 
 
+def test_dashboard_stock_links_share_the_active_product_list_scope(catalog):
+    client, session, products, _ = catalog
+    add_variant(session, products[1], sku="EMPTY-ACTIVE", stock=0)
+    add_variant(session, products[1], sku="HIDDEN-EMPTY", stock=0, IsActive=False)
+    add_variant(session, products[1], sku="DELETED-EMPTY", stock=0, IsDeleted=True)
+    hidden_parent = add_variant(session, products[0], sku="PARENT-DELETED", stock=0)
+    products[0].IsDeleted = True
+    session.commit()
+    def read(stock):
+        response = client.get("/admin/variants", params={"status": "Active", "stock": stock})
+        assert response.status_code == 200
+        return response.json()
+    low, empty = read('low_stock'), read('out_of_stock')
+    assert 'EMPTY-ACTIVE' in {row['Sku'] for row in empty['Items']}
+    assert all(row['StockQuantity'] > 0 and row['IsLowStock'] for row in low['Items'])
+    assert all(row['StockQuantity'] == 0 for row in empty['Items'])
+    assert not {'HIDDEN-EMPTY', 'DELETED-EMPTY', hidden_parent.Sku} & {row['Sku'] for row in low['Items'] + empty['Items']}
+
+
 def test_category_and_brand_filters_do_not_include_unrelated_variants(catalog):
     client, session, products, _ = catalog
     category = Category(Name="Other", Slug="other")

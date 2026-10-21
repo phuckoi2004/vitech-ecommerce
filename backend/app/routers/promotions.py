@@ -76,9 +76,6 @@ def create_promotion(data: PromotionCreate, service: Promotions, actor: CurrentA
     return service.create_promotion(actor, data)
 
 
-@admin_router.post("/promotions/pricing-preview")
-def preview_automatic_prices(data: PromotionCreate, service: Promotions, actor: CurrentActor):
-    return service.preview_automatic(actor, data)
 
 
 @admin_router.patch("/promotions/{promotion_id}", response_model=AdminPromotionDetailResponse)

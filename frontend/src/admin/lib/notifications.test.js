@@ -16,6 +16,7 @@ test('other notification links retain existing internal navigation and reject ex
 })
 
 test.each([
+  ['Order', 'orders:view', 'orders'],
   ['PurchaseOrder', 'purchases:view', 'purchases'],
   ['WarrantyRequest', 'warranties:view', 'warranties'],
   ['ReturnRequest', 'returns:view', 'returns'],
