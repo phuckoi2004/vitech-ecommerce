@@ -12,7 +12,8 @@ from sqlalchemy.pool import StaticPool
 
 from app.core.dependencies import get_current_actor
 from app.models import (Base, Brand, Category, Conversation, Order, OrderItem, PaymentTransaction,
-    Product, ProductVariant, ReturnRequest, User, WarrantyRequest)
+    Product, ProductVariant, PurchaseOrder, PurchaseOrderItem, PurchaseReceipt, PurchaseReceiptItem,
+    Supplier, StockAdjustment, ReturnRequest, User, WarrantyRequest)
 from app.routers.errors import service_error_handler
 from app.routers.statistics import admin_router, get_report_service
 from app.services import Actor, ServiceError
@@ -25,7 +26,8 @@ def reports(request):
     engine = create_engine('sqlite+pysqlite:///:memory:', poolclass=StaticPool, connect_args={'check_same_thread': False})
     metadata = MetaData()
     models = (User, Category, Brand, Product, ProductVariant, Order, OrderItem, PaymentTransaction,
-              Conversation, ReturnRequest, WarrantyRequest)
+              Conversation, ReturnRequest, WarrantyRequest, Supplier, PurchaseOrder, PurchaseOrderItem,
+              PurchaseReceipt, PurchaseReceiptItem, StockAdjustment)
     for table in Base.metadata.tables.values():
         table.to_metadata(metadata)
     metadata.tables['Products'].c.Specifications.type = JSON()
@@ -211,7 +213,7 @@ def test_staff_admin_options_are_minimal_and_keep_historical_products(reports):
         response = client.get('/admin/statistics/report-options')
         assert response.status_code == 200
         data = response.json()
-        assert set(data) == {'Categories', 'Brands', 'Products'}
+        assert set(data) == {'Categories', 'Brands', 'Products', 'Suppliers'}
         historical = next(row for row in data['Products'] if row['Id'] == str(first.ProductId))
         assert set(historical) == {'Id', 'Name', 'CategoryId', 'BrandId'}
         assert fetch(client, 'revenue')['Summary']['TotalOrders'] == 2
@@ -306,6 +308,8 @@ def test_new_report_endpoints_validate_and_reject_customers(reports):
     path = '/admin/statistics/reports/revenue/lines'
     assert client.get(path, params=PERIOD).status_code == 422
     assert client.get(path, params={**PERIOD, 'product_id': 'bad'}).status_code == 422
+    assert client.get(path, params={**PERIOD, 'product_id': str(first.ProductId), 'variant_id': 'bad'}).status_code == 422
+    assert client.get('/admin/statistics/reports/revenue', params={**PERIOD, 'group_by': 'bad'}).status_code == 422
     assert client.get('/admin/statistics/reports/revenue', params={**PERIOD, 'sort': 'unsafe'}).status_code == 422
     current['actor'] = actors[0]
     assert client.get(path, params={**PERIOD, 'product_id': str(first.ProductId)}).status_code == 403

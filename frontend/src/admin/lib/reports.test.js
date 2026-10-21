@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest'
-import { defaultReportFilters, reportFilters, reportPeriod, reportQuery, reportRate } from './reports.js'
+import { defaultReportFilters, reportFilters, reportPeriod, reportQuery, reportRate, reportSearch } from './reports.js'
 const now = new Date('2026-10-21T05:00:00Z')
 test('current month is month-to-date; completed and leap months remain complete', () => {
   expect(reportPeriod(defaultReportFilters(now), now)).toEqual({ date_from: '2026-10-01', date_to: '2026-10-21' })
@@ -24,5 +24,15 @@ test('deep links preserve filters but exclude unsupported query fields', () => {
   expect(reportQuery({ ...filter, supplier_id: 'ignored' }, now)).toEqual({ date_from: '2025-12-01', date_to: '2025-12-31', brand_id: 'b1' })
   expect(reportRate(0, 0)).toBe('0%')
   expect(reportRate(1, 3)).toBe('33,3%')
+})
+
+test('supplier filters apply only to purchase reports and round-trip in their URLs', () => {
+  const filter = reportFilters(new URLSearchParams('tab=purchases&month=2026-09&supplier_id=s1&product_id=p1'), now)
+  expect(reportQuery(filter, now, 'purchases')).toEqual({ date_from: '2026-09-01', date_to: '2026-09-30', supplier_id: 's1', product_id: 'p1' })
+  expect(reportSearch(filter, 'purchases').get('supplier_id')).toBe('s1')
+  for (const tab of ['revenue', 'orders']) {
+    expect(reportQuery(filter, now, tab)).not.toHaveProperty('supplier_id')
+    expect(reportSearch(filter, tab).has('supplier_id')).toBe(false)
+  }
 })
 

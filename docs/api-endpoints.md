@@ -404,6 +404,9 @@ Khi nhân viên/Admin phụ trách gửi tin trả lời, Customer nhận thông
 | GET | `/admin/statistics/cogs` | Staff/Admin |  | date_from, date_to | `CogsStatisticsResponse` | `cogs_statistics` |
 | GET | `/admin/statistics/top-products` | Staff/Admin |  | date_from, date_to, rank_by, limit | `list[TopProductResponse]` | `top_products` |
 | GET | `/admin/statistics/inventory` | Staff/Admin |  | page, page_size | `InventoryStatisticsResponse` | `inventory_statistics` |
+| GET | `/admin/statistics/reports/purchases` | Staff/Admin |  | date_from, date_to, supplier_id, category_id, brand_id, product_id, page, page_size | `PurchaseReportResponse` | `purchases` |
+
+Báo cáo nhập hàng lọc kỳ theo ngày tạo phiếu GMT+7, đếm mỗi phiếu một lần. Tổng số lượng/giá trị bỏ phiếu hủy, từ chối; giá trị là tiền đặt hàng, số lượng đã nhận là lũy kế hiện tại của các phiếu tạo trong kỳ. `/admin/statistics/report-options` bổ sung `Suppliers: [{Id, Name}]`, có cả nhà cung cấp ngừng hoạt động.
 
 ## Điểm vào máy-với-máy (không dành cho frontend)
 
@@ -453,6 +456,6 @@ Luồng đổi trả hiện hành không bắt kiểm tra thiệt hại, duyệt
 ### Báo cáo và lịch sử thanh toán
 
 - API báo cáo hiện có `/admin/statistics/report-options`, `/admin/statistics/reports/revenue` và `/admin/statistics/reports/orders`, dùng cho Staff/Admin theo quyền. Chúng bổ sung cho các API thống kê cũ, không xóa API cũ.
-- Hai màn hình báo cáo có lựa chọn từng tháng trong 12 tháng của năm hoặc 5 tháng gần nhất. Từng tháng hiển thị một cột, 5 tháng hiển thị 5 cột; nhãn là tháng cụ thể. Bộ lọc tác động đồng thời biểu đồ và bảng; kỳ bảng là tháng/năm, không chia tuần.
-- Tạm bỏ lọc tài khoản, lọc nhà cung cấp và xuất báo cáo trên UI. Không suy ra giá trị bằng 0 khi API báo lỗi.
+- Hai màn hình báo cáo có lựa chọn từng tháng trong 12 tháng của năm hoặc 6 tháng gần nhất. Từng tháng hiển thị một cột, 6 tháng hiển thị 6 cột; nhãn là tháng cụ thể. Bộ lọc tác động đồng thời biểu đồ và bảng; kỳ bảng là tháng/năm, không chia tuần.
+- Cập nhật 21/10/2026: tab Đơn nhập hàng dùng `/admin/statistics/reports/purchases`, bổ sung lọc nhà cung cấp kết hợp thời gian/danh mục/thương hiệu/sản phẩm. Xem cách tính hiện hành trong [admin-reporting-redesign.md](admin-reporting-redesign.md). Chưa có lọc tài khoản và xuất báo cáo; không suy ra giá trị bằng 0 khi API báo lỗi.
 - Báo cáo doanh số theo sản phẩm dùng OrderItems.LineTotal của đơn Delivered/Completed theo DeliveredAt, có giao dịch Payment Success; không tính lặp doanh số khi một đơn có nhiều giao dịch. Báo cáo này không đồng nghĩa mọi chỉ số doanh thu thuần của StatisticsService: phí giao, hoàn tiền và giá vốn cần phân biệt theo từng API.

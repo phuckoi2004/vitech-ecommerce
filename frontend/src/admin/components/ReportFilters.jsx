@@ -2,10 +2,11 @@ import { useId, useState } from 'react'
 import { defaultReportFilters, reportPeriod, reportPeriods } from '../lib/reports.js'
 
 const control = 'h-[42px] w-full min-w-0 rounded-lg border border-admin-border bg-white px-3 text-sm text-admin-text disabled:opacity-50'
-export default function ReportFilters({ value, options = {}, loading, error, onApply }) {
+export default function ReportFilters({ value, options = {}, loading, error, onApply, tab = 'revenue' }) {
   const [draft, setDraft] = useState(value), [validation, setValidation] = useState('')
   const [mobileOpen, setMobileOpen] = useState(false), fieldsId = useId()
-  const active = ['category_id', 'brand_id', 'product_id'].filter((key) => value[key]).length
+  const fields = [...(tab === 'purchases' ? [['supplier_id', 'Nhà cung cấp', 'Suppliers']] : []), ['category_id', 'Danh mục', 'Categories'], ['brand_id', 'Thương hiệu', 'Brands'], ['product_id', 'Sản phẩm', 'Products']]
+  const active = fields.filter(([key]) => value[key]).length
   const change = (key, next) => { setValidation(''); setDraft((previous) => ({ ...previous, [key]: next, ...(['category_id', 'brand_id'].includes(key) ? { product_id: '' } : {}) })) }
   const field = 'flex min-w-0 flex-col gap-1.5 text-[13px] font-medium text-admin-muted'
   function submit(event) {
@@ -23,8 +24,8 @@ export default function ReportFilters({ value, options = {}, loading, error, onA
       {draft.period === 'custom' && <>{[['date_from', 'Từ ngày'], ['date_to', 'Đến ngày']].map(([key, label]) => <label key={key} className={field}>{label}<input className={control} type="date" required value={draft[key]} onChange={(event) => change(key, event.target.value)} /></label>)}</>}
       <div className="ml-auto flex items-center justify-end gap-2 self-end max-[600px]:ml-0"><button type="button" className="report-button" onClick={() => { const empty = defaultReportFilters(); setDraft(empty); setValidation(''); onApply(empty) }}>Xóa lọc</button><button type="submit" className="report-button report-button-primary">Áp dụng</button></div>
     </div>
-    <div className="mt-4 grid grid-cols-3 gap-3 max-[600px]:grid-cols-1">
-      {[['category_id', 'Danh mục', 'Categories'], ['brand_id', 'Thương hiệu', 'Brands'], ['product_id', 'Sản phẩm', 'Products']].map(([key, label, source]) => <label key={key} className={field}>{label}<select className={control} value={draft[key]} disabled={loading || !!error} onChange={(event) => change(key, event.target.value)}><option value="">Tất cả</option>{(options[source] ?? []).filter((item) => source !== 'Products' || ((!draft.category_id || item.CategoryId === draft.category_id) && (!draft.brand_id || item.BrandId === draft.brand_id))).map((item) => <option key={item.Id} value={item.Id}>{item.Name}</option>)}</select></label>)}
+    <div className={'mt-4 grid gap-3 max-[600px]:grid-cols-1 ' + (tab === 'purchases' ? 'grid-cols-4 max-[1000px]:grid-cols-2' : 'grid-cols-3')}>
+      {fields.map(([key, label, source]) => <label key={key} className={field}>{label}<select className={control} value={draft[key] ?? ''} disabled={loading || !!error} onChange={(event) => change(key, event.target.value)}><option value="">Tất cả</option>{(options[source] ?? []).filter((item) => source !== 'Products' || ((!draft.category_id || item.CategoryId === draft.category_id) && (!draft.brand_id || item.BrandId === draft.brand_id))).map((item) => <option key={item.Id} value={item.Id}>{item.Name}</option>)}</select></label>)}
     </div>
     {(validation || error) && <p role="alert" className="mt-3 mb-0 text-sm text-admin-red">{validation || 'Không tải được danh sách bộ lọc: ' + error}</p>}
     </div>

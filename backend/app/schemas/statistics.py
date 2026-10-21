@@ -33,6 +33,53 @@ class ReportOptionsResponse(ResponseSchema):
     Categories: list[ReportOption]
     Brands: list[ReportOption]
     Products: list[ReportProductOption]
+    Suppliers: list[ReportOption] = []
+
+
+class PurchaseReportSummary(ResponseSchema):
+    TotalOrders: int = 0
+    InProgressOrders: int = 0
+    CompletedOrders: int = 0
+    ClosedOrders: int = 0
+    CancelledOrders: int = 0
+    RejectedOrders: int = 0
+    OrderedQuantity: int = 0
+    ReceivedQuantity: int = 0
+    OrderedAmount: Decimal = Decimal('0')
+
+
+class PurchaseReportPoint(PurchaseReportSummary):
+    DateFrom: date
+    DateTo: date
+    Label: str
+
+
+class PurchaseReportItem(ResponseSchema):
+    PurchaseOrderId: uuid.UUID
+    PurchaseOrderCode: str
+    CreatedAt: datetime
+    SupplierId: uuid.UUID
+    SupplierName: str
+    Status: Literal['Pending', 'Approved', 'Receiving', 'Completed', 'Closed', 'Cancelled', 'Rejected']
+    OrderedQuantity: int
+    ReceivedQuantity: int
+    OrderedAmount: Decimal
+
+
+class PurchaseSupplierSummary(PurchaseReportSummary):
+    SupplierId: uuid.UUID
+    SupplierName: str
+
+
+class PurchaseReportResponse(ResponseSchema):
+    Period: StatisticsPeriod
+    Summary: PurchaseReportSummary
+    Chart: list[PurchaseReportPoint]
+    Items: list[PurchaseReportItem]
+    Suppliers: list[PurchaseSupplierSummary]
+    Total: int
+    Page: int
+    PageSize: int
 
 
 class ReportSummary(ResponseSchema):
@@ -61,11 +108,16 @@ class SalesReportItem(ResponseSchema):
     DateFrom: date
     DateTo: date
     ProductId: uuid.UUID
+    ProductVariantId: uuid.UUID | None = None
+    VariantName: str | None = None
+    Sku: str | None = None
     ProductName: str
     CategoryName: str
     BrandName: str
     Revenue: Decimal
     Quantity: int = 0
+    ReceivedQuantity: int = 0
+    StockQuantity: int = 0
     Cost: Decimal | None = None
     Profit: Decimal | None = None
     Margin: Decimal | None = None

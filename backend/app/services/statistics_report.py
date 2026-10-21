@@ -3,6 +3,8 @@ from datetime import date, timedelta
 from decimal import Decimal, ROUND_HALF_UP
 
 from app.repositories.statistics_report import StatisticsReportRepository
+from app.repositories.purchase_report import PurchaseReportRepository
+from app.schemas.statistics import PurchaseReportResponse, PurchaseReportPoint, PurchaseReportSummary
 from app.schemas.statistics import (CancellationReason, CancelledOrderItem, CancelledOrdersResponse,
     DeliveredOrderItem, DeliveredOrdersResponse,
     DashboardWorkload, OrderReportItem, OrderReportResponse,
@@ -58,6 +60,21 @@ class StatisticsReportService(BaseService):
         require_role(actor, *STAFF_OR_ADMIN)
         return DashboardWorkload(**self.reports.workload())
 
+    def purchases(self, actor, date_from, date_to, *, supplier_id=None, category_id=None,
+                  brand_id=None, product_id=None, page=1, page_size=10):
+        period, start, end = self._period(actor, date_from, date_to)
+        offset, limit = self._page_args(page, page_size)
+        buckets = report_buckets(date_from, date_to)
+        intervals = [statistics_period(first, last) for first, last, _ in buckets]
+        summary, raw, suppliers, items = PurchaseReportRepository(self.session).report(
+            start, end, intervals, offset=offset, limit=limit, supplier_id=supplier_id,
+            category_id=category_id, brand_id=brand_id, product_id=product_id)
+        values = {row['Bucket']: {key: value for key, value in row.items() if key != 'Bucket'} for row in raw}
+        chart = [PurchaseReportPoint(DateFrom=first, DateTo=last, Label=label, **values.get(index, {}))
+                 for index, (first, last, label) in enumerate(buckets)]
+        return PurchaseReportResponse(Period=period, Summary=PurchaseReportSummary(**summary), Chart=chart,
+            Items=items, Suppliers=suppliers, Total=summary['TotalOrders'], Page=page, PageSize=page_size)
+
     @staticmethod
     def _period(actor, date_from, date_to):
         require_role(actor, *STAFF_OR_ADMIN)
@@ -67,10 +84,12 @@ class StatisticsReportService(BaseService):
         return StatisticsPeriod(DateFrom=date_from, DateTo=date_to, StartsAt=start, EndsBefore=end), start, end
 
     def report(self, actor, kind, date_from, date_to, *, category_id=None, brand_id=None,
-               product_id=None, page=1, page_size=10, sort='revenue_desc'):
+               product_id=None, page=1, page_size=10, sort='revenue_desc', group_by='product'):
         period, start, end = self._period(actor, date_from, date_to)
         if kind not in ('revenue', 'orders'):
             raise BusinessRuleError('Loại báo cáo không hợp lệ', code='invalid_report_type')
+        if group_by not in ('product', 'variant'):
+            raise BusinessRuleError('Cách gộp báo cáo không hợp lệ', code='invalid_report_group')
         if sort not in SORTS:
             raise BusinessRuleError('Cách sắp xếp không hợp lệ', code='invalid_report_sort')
         offset, limit = self._page_args(page, page_size)
@@ -112,13 +131,22 @@ class StatisticsReportService(BaseService):
                 Items=rows[offset:offset + limit], Total=len(rows), Page=page, PageSize=page_size,
                 CancellationReasons=[CancellationReason(**row) for row in self.reports.cancellation_reasons(start, end, **filters)])
 
+        by_variant = group_by == 'variant'
+        rows, total = self.reports.sales_details(start, end, offset=offset, limit=limit, sort=sort, by_variant=by_variant, **filters)
+        top_rows = self.reports.top_products(start, end, **filters)
+        quantities = self.reports.product_quantities(
+            {row['ProductVariantId'] for row in rows} if by_variant else {row['ProductId'] for row in [*rows, *top_rows]},
+            start, end, by_variant=by_variant)
+        top_quantities = self.reports.product_quantities({row['ProductId'] for row in top_rows}, start, end) if by_variant else quantities
         def product(row):
-            return SalesReportItem(Key=str(row['ProductId']), DateFrom=date_from, DateTo=date_to,
+            variant_id = row.get('ProductVariantId')
+            counts = quantities.get(variant_id, {}) if variant_id else top_quantities.get(row['ProductId'], {})
+            return SalesReportItem(Key=str(variant_id or row['ProductId']), DateFrom=date_from, DateTo=date_to,
                 ProductId=row['ProductId'], ProductName=row['ProductName'], CategoryName=row['CategoryName'],
-                BrandName=row['BrandName'], **sales_amounts(row))
-        rows, total = self.reports.sales_details(start, end, offset=offset, limit=limit, sort=sort, **filters)
+                BrandName=row['BrandName'], ProductVariantId=variant_id, VariantName=row.get('VariantName'),
+                Sku=row.get('Sku'), **sales_amounts(row), **counts)
         return SalesReportResponse(Period=period, Summary=summary, Chart=chart,
-            Items=[product(row) for row in rows], TopProducts=[product(row) for row in self.reports.top_products(start, end, **filters)],
+            Items=[product(row) for row in rows], TopProducts=[product(row) for row in top_rows],
             Total=total, Page=page, PageSize=page_size)
 
     def cancelled_orders(self, actor, date_from, date_to, *, category_id=None, brand_id=None,
@@ -139,11 +167,11 @@ class StatisticsReportService(BaseService):
         return DeliveredOrdersResponse(Period=period, Items=[DeliveredOrderItem(**row) for row in rows],
             Total=total, Page=page, PageSize=page_size)
 
-    def lines(self, actor, date_from, date_to, *, product_id, category_id=None, brand_id=None, page=1, page_size=10):
+    def lines(self, actor, date_from, date_to, *, product_id, category_id=None, brand_id=None, page=1, page_size=10, variant_id=None):
         period, start, end = self._period(actor, date_from, date_to)
         offset, limit = self._page_args(page, page_size)
         rows, total = self.reports.sales_lines(start, end, offset=offset, limit=limit,
-            product_id=product_id, category_id=category_id, brand_id=brand_id)
+            product_id=product_id, category_id=category_id, brand_id=brand_id, variant_id=variant_id)
         items = []
         for row in rows:
             cost = row['UnitCost'] * row['Quantity'] if row['UnitCost'] > 0 else None

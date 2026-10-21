@@ -3,6 +3,7 @@ import { ErrorState, LoadingState } from '../../components/shared/index.js'
 import { formatMoney } from '../../lib/format.js'
 
 const ORDER_SERIES = [{ key: 'InProgressOrders', label: 'Đang xử lý', color: '#f59e0b' }, { key: 'DeliveredOrders', label: 'Đã giao', color: '#16a34a' }, { key: 'CancelledOrders', label: 'Đã hủy', color: '#e11d2e' }]
+const PURCHASE_SERIES = [{ key: 'InProgressOrders', label: 'Đang xử lý', color: '#f59e0b' }, { key: 'CompletedOrders', label: 'Đã nhận đủ', color: '#16a34a' }, { key: 'ClosedOrders', label: 'Đóng phiếu thiếu', color: '#7c3aed' }, { key: 'CancelledOrders', label: 'Đã hủy', color: '#e11d2e' }, { key: 'RejectedOrders', label: 'Từ chối', color: '#60708a' }]
 function chartMoney(value) {
   const abs = Math.abs(value), unit = abs >= 1e9 ? 1e9 : abs >= 1e6 ? 1e6 : abs >= 1e3 ? 1e3 : 1
   return (value / unit).toLocaleString('vi-VN', { maximumFractionDigits: 1 }) + (unit === 1e9 ? ' tỷ' : unit === 1e6 ? ' tr' : unit === 1e3 ? ' nghìn' : '')
@@ -18,7 +19,8 @@ export default function ReportChart({ tab = 'revenue', points = [], loading, err
     observer?.observe(element)
     return () => observer?.disconnect()
   }, [loading, error])
-  const revenue = tab === 'revenue', title = givenTitle ?? (revenue ? 'Doanh số và lãi gộp theo thời gian' : 'Đơn đặt theo trạng thái hiện tại')
+  const revenue = tab === 'revenue', purchases = tab === 'purchases', orderSeries = purchases ? PURCHASE_SERIES : ORDER_SERIES
+  const title = givenTitle ?? (revenue ? 'Doanh số và lãi gộp theo thời gian' : purchases ? 'Đơn nhập theo trạng thái hiện tại' : 'Đơn đặt theo trạng thái hiện tại')
   const hasData = points.some((p) => Number(p.TotalOrders) > 0 || Number(p.Revenue) !== 0 && p.Revenue != null)
   const values = points.flatMap((p) => revenue ? [Number(p.Revenue) || 0, Number(p.Profit) || 0] : [Number(p.TotalOrders) || 0])
   const magnitude = Math.max(1, ...values.map(Math.abs)), step = 10 ** Math.floor(Math.log10(magnitude))
@@ -36,7 +38,7 @@ export default function ReportChart({ tab = 'revenue', points = [], loading, err
     if (points[i].Profit == null) { if (segments.at(-1)?.length) segments.push([]) }
     else { if (!segments.length) segments.push([]); segments.at(-1).push([x(i), y(Number(points[i].Profit))]) }
   }
-  const legend = revenue ? [{ label: 'Doanh số', color: '#1677ff' }, { label: 'Lãi gộp', color: '#16a34a' }] : ORDER_SERIES
+  const legend = revenue ? [{ label: 'Doanh số', color: '#1677ff' }, { label: 'Lãi gộp', color: '#16a34a' }] : orderSeries
   return <section aria-label={title} aria-busy={loading} className="min-w-0 rounded-[14px] border border-admin-border bg-white p-5">
     <header className="mb-3 flex flex-wrap items-center justify-between gap-3"><h3 className="m-0 text-base font-semibold">{title}</h3><div className="flex flex-wrap gap-4 text-xs text-admin-muted">{legend.map((s) => <span key={s.label} className="flex items-center gap-1.5"><span className="size-2.5 rounded-sm" style={{ backgroundColor: s.color }} />{s.label}</span>)}</div></header>
     {loading ? <LoadingState className="min-h-[250px]" label="Đang tải biểu đồ…" /> : error ? <ErrorState title="Không tải được biểu đồ" message={error} onRetry={onRetry} className="min-h-[250px]" /> : <figure className="m-0">
@@ -51,7 +53,7 @@ export default function ReportChart({ tab = 'revenue', points = [], loading, err
           return <g key={point.DateFrom ?? i} role={onPoint ? 'link' : undefined} tabIndex={onPoint ? 0 : undefined} aria-label={onPoint ? 'Xem báo cáo ' + description : undefined} onClick={onPoint ? () => onPoint(point) : undefined} onKeyDown={onPoint ? (event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onPoint(point) } } : undefined} className={onPoint ? 'cursor-pointer' : ''}>
             <title>{description}</title>
             {onPoint && <rect x={x(i) - width / 2 - 10} y="20" width={width + 20} height="200" fill="transparent" />}
-            {revenue ? value !== 0 && <rect x={x(i) - width / 2} y={Math.min(y(value), y(0))} width={width} height={Math.abs(y(value) - y(0))} rx="4" fill="#1677ff" opacity={partial ? .55 : 1} /> : ORDER_SERIES.map((series) => {
+            {revenue ? value !== 0 && <rect x={x(i) - width / 2} y={Math.min(y(value), y(0))} width={width} height={Math.abs(y(value) - y(0))} rx="4" fill="#1677ff" opacity={partial ? .55 : 1} /> : orderSeries.map((series) => {
               const count = Number(point[series.key]) || 0
               cumulative += count
               return count > 0 && <rect key={series.key} x={x(i) - width / 2} y={y(cumulative)} width={width} height={y(0) - y(count)} fill={series.color}><title>{point.Label}: {series.label} {count}</title></rect>
@@ -63,7 +65,7 @@ export default function ReportChart({ tab = 'revenue', points = [], loading, err
         {hasData && revenue && points.map((p, i) => p.Profit != null && <circle key={i} cx={x(i)} cy={y(Number(p.Profit))} r="4" fill={Number(p.Profit) < 0 ? '#e11d2e' : '#16a34a'} pointerEvents="none" />)}
         {!hasData && <text x={78 + plotWidth / 2} y="126" textAnchor="middle" className="fill-admin-muted text-sm">Chưa có dữ liệu trong kỳ đã chọn.</text>}
       </svg></div>
-      <figcaption className="mt-1 text-xs text-admin-muted">{onPoint ? 'Bấm vào một tháng để xem báo cáo. * Tháng hiện tại chưa kết thúc.' : revenue ? 'Theo ngày giao hàng. Lãi gộp trước điều chỉnh trả hàng; điểm thiếu giá nhập không được nối đường.' : 'Theo ngày đặt hàng; trạng thái được cập nhật đến thời điểm xem báo cáo.'}</figcaption>
+      <figcaption className="mt-1 text-xs text-admin-muted">{onPoint ? 'Bấm vào một tháng để xem báo cáo. * Tháng hiện tại chưa kết thúc.' : revenue ? 'Theo ngày giao hàng. Lãi gộp trước điều chỉnh trả hàng; điểm thiếu giá nhập không được nối đường.' : purchases ? 'Theo ngày tạo phiếu; trạng thái được cập nhật đến thời điểm xem báo cáo.' : 'Theo ngày đặt hàng; trạng thái được cập nhật đến thời điểm xem báo cáo.'}</figcaption>
     </figure>}
   </section>
 }

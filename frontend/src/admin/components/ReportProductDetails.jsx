@@ -10,7 +10,7 @@ const money = (value) => value == null ? <span className="text-admin-muted">Chư
 export default function ReportProductDetails({ product, query, onClose }) {
   const location = useLocation()
   const dialog = useRef(null), title = useId(), [page, setPage] = useState(1)
-  const state = useAdminQuery('/admin/statistics/reports/revenue/lines', { ...query, product_id: product.ProductId, page, page_size: REPORT_PAGE_SIZE })
+  const state = useAdminQuery('/admin/statistics/reports/revenue/lines', { ...query, product_id: product.ProductId, ...(product.ProductVariantId ? { variant_id: product.ProductVariantId } : {}), page, page_size: REPORT_PAGE_SIZE })
   useEffect(() => { const element = dialog.current; element.showModal(); return () => element.close() }, [])
   const lastPage = Math.max(1, Math.ceil((state.data?.Total ?? 0) / REPORT_PAGE_SIZE))
   if (state.data && !state.loading && page > lastPage) setPage(lastPage)
@@ -24,7 +24,7 @@ export default function ReportProductDetails({ product, query, onClose }) {
     { key: 'Profit', label: 'Lãi gộp', render: money },
   ]
   return <dialog ref={dialog} className="report-drawer font-admin" aria-labelledby={title} onCancel={(event) => { event.preventDefault(); onClose() }} onClick={(event) => { if (event.target === dialog.current) onClose() }}>
-    <div className="flex min-h-full flex-col gap-5"><header className="flex items-start justify-between gap-4"><div><h2 id={title} className="m-0 text-xl font-bold">{product.ProductName}</h2><p className="mt-2 mb-0 text-sm text-admin-muted">Các dòng đơn đã ghi nhận bán hàng · {reportRangeLabel(query.date_from, query.date_to)}</p></div><button type="button" autoFocus className="report-button" onClick={onClose}>Đóng</button></header>
+    <div className="flex min-h-full flex-col gap-5"><header className="flex items-start justify-between gap-4"><div><h2 id={title} className="m-0 text-xl font-bold">{product.ProductName}</h2>{product.ProductVariantId && <p className="mt-2 mb-0 text-sm font-medium">{[product.VariantName, product.Sku].filter(Boolean).join(' · ')}</p>}<p className="mt-2 mb-0 text-sm text-admin-muted">Các dòng đơn đã ghi nhận bán hàng · {reportRangeLabel(query.date_from, query.date_to)}</p></div><button type="button" autoFocus className="report-button" onClick={onClose}>Đóng</button></header>
       <p className="m-0 rounded-lg bg-admin-page p-3 text-sm text-admin-muted">Giá bán, giảm giá và giá nhập được lấy từ dữ liệu đã lưu trên đơn. Bấm mã đơn để xem chi tiết; nút Quay lại báo cáo sẽ giữ nguyên kỳ, bộ lọc và sản phẩm đang xem.</p>
       <AdminTable label="Chi tiết bán hàng theo đơn" columns={columns} rows={state.data?.Items ?? []} rowKey="Key" loading={state.loading} error={state.error} onRetry={state.refresh} emptyText="Chưa có dòng đơn trong kỳ đã chọn." className="report-table" />
       {state.data?.Total > REPORT_PAGE_SIZE && <Pagination variant="admin" itemLabel="dòng đơn" page={page} pageSize={REPORT_PAGE_SIZE} total={state.data.Total} onPageChange={setPage} />}

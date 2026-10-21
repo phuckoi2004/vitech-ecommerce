@@ -1,7 +1,7 @@
 import { browserMonth, monthPeriod, recentMonths, vietnamToday } from '../../lib/dashboard-periods.js'
 import { formatDate } from '../../lib/format.js'
 
-export const REPORT_TABS = { revenue: 'Bán hàng & lãi gộp', orders: 'Đơn hàng' }
+export const REPORT_TABS = { revenue: 'Bán hàng & lãi gộp', orders: 'Đơn hàng', purchases: 'Đơn nhập hàng' }
 export const REPORT_PAGE_SIZE = 10
 export const REPORT_SORTS = ['revenue', 'quantity', 'cost', 'profit', 'margin', 'name'].flatMap((key) => [key + '_asc', key + '_desc'])
 const validMonth = (value) => /^\d{4}-(0[1-9]|1[0-2])$/.test(value ?? '')
@@ -13,7 +13,7 @@ export function reportPeriods() {
 export function defaultReportFilters(now = new Date()) {
   const month = browserMonth(now)
   return { period: 'month', month, year: month.slice(0, 4), quarter: String(Math.ceil(Number(month.slice(5)) / 3)),
-    date_from: month + '-01', date_to: vietnamToday(now), category_id: '', brand_id: '', product_id: '', sort: 'revenue_desc' }
+    date_from: month + '-01', date_to: vietnamToday(now), category_id: '', brand_id: '', product_id: '', supplier_id: '', sort: 'revenue_desc' }
 }
 export function reportFilters(params, now = new Date()) {
   const result = defaultReportFilters(now)
@@ -49,15 +49,16 @@ export function reportPeriod(filter, now = new Date()) {
   if ((Date.parse(to) - Date.parse(from)) / 86400000 >= 366) throw new Error('Mỗi lần xem báo cáo tối đa 366 ngày.')
   return { date_from: from, date_to: to }
 }
-export function reportQuery(filter, now = new Date()) {
+export function reportQuery(filter, now = new Date(), tab = 'revenue') {
   const query = reportPeriod(filter, now)
   for (const key of ['category_id', 'brand_id', 'product_id']) if (filter[key]) query[key] = filter[key]
+  if (tab === 'purchases' && filter.supplier_id) query.supplier_id = filter.supplier_id
   return query
 }
 export function reportSearch(filter, tab = 'revenue') {
   const params = new URLSearchParams()
   if (tab !== 'revenue') params.set('tab', tab)
-  for (const key of Object.keys(defaultReportFilters())) if (filter[key] !== '' && filter[key] != null) params.set(key, filter[key])
+  for (const key of Object.keys(defaultReportFilters())) if ((key !== 'supplier_id' || tab === 'purchases') && filter[key] !== '' && filter[key] != null) params.set(key, filter[key])
   return params
 }
 export const reportRate = (count, total) => total > 0 ? (count / total * 100).toLocaleString('vi-VN', { maximumFractionDigits: 1 }) + '%' : '0%'
@@ -65,7 +66,7 @@ export const reportRangeLabel = (from, to) => from === to ? formatDate(from) : `
 export const reportMargin = (value) => value == null ? '—' : Number(value).toLocaleString('vi-VN', { maximumFractionDigits: 2 }) + '%'
 export function reportColumns(tab) {
   return tab === 'revenue'
-    ? [['ProductName', 'Sản phẩm'], ['Quantity', 'SL bán'], ['Revenue', 'Doanh số'], ['Cost', 'Tổng giá nhập'], ['Profit', 'Lãi gộp'], ['Margin', 'Biên lãi']]
+    ? [['ProductName', 'Sản phẩm'], ['ReceivedQuantity', 'SL nhập'], ['Quantity', 'SL bán'], ['StockQuantity', 'SL còn'], ['Revenue', 'Doanh số'], ['Cost', 'Tổng giá nhập'], ['Profit', 'Lãi gộp'], ['Margin', 'Biên lãi']]
     : [['PeriodLabel', 'Tháng đặt hàng'], ['TotalOrders', 'Đơn đặt'], ['InProgressOrders', 'Đang xử lý'], ['DeliveredOrders', 'Đã giao'], ['CancelledOrders', 'Đã hủy'], ['CancelRate', 'Tỷ lệ hủy']]
 }
 

@@ -8,12 +8,21 @@ import { adminRoutes } from '../routes/index.jsx'
 const api = vi.hoisted(() => ({ getAdminData: vi.fn() }))
 vi.mock('../../services/api/admin.js', () => api)
 let fail, total, missing, cancelledTotal, cancelledFailure, deliveredTotal, deliveredFailure
-const options = { Categories: [{ Id: 'cat1', Name: 'Điện thoại từ API' }], Brands: [{ Id: 'b1', Name: 'Hãng từ API' }], Products: [{ Id: 'p1', Name: 'Sản phẩm từ API', CategoryId: 'cat1', BrandId: 'b1' }] }
+const options = { Suppliers: [{ Id: 's1', Name: 'Nhà cung cấp từ API' }], Categories: [{ Id: 'cat1', Name: 'Điện thoại từ API' }], Brands: [{ Id: 'b1', Name: 'Hãng từ API' }], Products: [{ Id: 'p1', Name: 'Sản phẩm từ API', CategoryId: 'cat1', BrandId: 'b1' }] }
 beforeEach(() => {
   vi.resetAllMocks(); fail = false; total = 1; missing = false; cancelledTotal = 1; cancelledFailure = false; deliveredTotal = 2; deliveredFailure = false
   api.getAdminData.mockImplementation(async (_, path, query) => {
     if (path === '/users/me/notifications/unread-count') return { Count: 0 }
     if (path === '/admin/statistics/report-options') return structuredClone(options)
+    if (path === '/admin/statistics/reports/purchases') {
+      if (fail) throw new Error('Lỗi đọc báo cáo nhập hàng')
+      const summary = { TotalOrders: 11, InProgressOrders: 3, CompletedOrders: 4, ClosedOrders: 1, CancelledOrders: 2, RejectedOrders: 1, OrderedQuantity: 27, ReceivedQuantity: 18, OrderedAmount: '35000000' }
+      return { Period: { DateFrom: query.date_from, DateTo: query.date_to }, Summary: summary,
+        Chart: [{ ...summary, DateFrom: query.date_from, Label: '01/10' }],
+        Suppliers: [{ ...summary, SupplierId: 's1', SupplierName: 'Nhà cung cấp từ API' }],
+        Items: total ? [{ PurchaseOrderId: 'po1', PurchaseOrderCode: 'PN-TRANG-' + query.page, CreatedAt: '2026-10-01T03:00:00Z', SupplierId: 's1', SupplierName: 'Nhà cung cấp từ API', Status: 'Receiving', OrderedQuantity: 5, ReceivedQuantity: 2, OrderedAmount: '10000000' }] : [], Total: total }
+    }
+    if (path === '/admin/purchase-orders/po1') return { PurchaseOrderId: 'po1', PurchaseOrderCode: 'PN-CHI-TIET', Status: 'Pending', CreatedByUserId: 'staff1', CreatedByName: 'Người lập', Items: [] }
     if (path === '/admin/statistics/reports/orders/delivered') {
       if (deliveredFailure) throw new Error('Không tải được danh sách đơn đã giao')
       const start = (query.page - 1) * query.page_size
@@ -34,7 +43,7 @@ beforeEach(() => {
     if (path.startsWith('/admin/statistics/reports/')) {
       if (fail) throw new Error('Lỗi đọc báo cáo')
       const orders = path.endsWith('/orders')
-      const product = { Key: 'row' + query.page, ProductId: 'p1', ProductName: 'Doanh số trang ' + query.page, CategoryName: 'Điện thoại', BrandName: 'Hãng', Quantity: 1, Revenue: '100000', Cost: missing ? null : '60000', Profit: missing ? null : '40000', Margin: missing ? null : '40', LinesMissingCost: missing ? 1 : 0 }
+      const product = { Key: 'row' + query.page, ProductId: 'p1', ProductName: 'Doanh số trang ' + query.page, CategoryName: 'Điện thoại', BrandName: 'Hãng', ReceivedQuantity: 12, Quantity: 1, StockQuantity: 31, Revenue: '100000', Cost: missing ? null : '60000', Profit: missing ? null : '40000', Margin: missing ? null : '40', LinesMissingCost: missing ? 1 : 0 }
       return { Period: { DateFrom: query.date_from, DateTo: query.date_to },
         Summary: { Revenue: '100000', Cost: missing ? null : '60000', Profit: missing ? null : '40000', Margin: missing ? null : '40', LinesMissingCost: missing ? 1 : 0, TotalOrders: orders ? cancelledTotal + deliveredTotal + 1 : 4, DeliveredOrders: deliveredTotal, InProgressOrders: 1, CancelledOrders: cancelledTotal, Quantity: 1, AverageOrderValue: '25000' },
         Chart: [{ DateFrom: query.date_from, Label: '01/10', Revenue: '60000', Profit: '20000', TotalOrders: 2, DeliveredOrders: 1, InProgressOrders: 1, CancelledOrders: 0 }, { DateFrom: '2026-10-02', Label: '02/10', Revenue: '40000', Profit: '20000', TotalOrders: 2, DeliveredOrders: 1, InProgressOrders: 0, CancelledOrders: 1 }],
@@ -52,6 +61,8 @@ function open(path = '/admin/reports', role = 'Admin', permissions = ['admin.por
 test('summary and product table keep daily chart points from the report API', async () => {
   open('/admin/reports?period=month&month=2026-09')
   await screen.findByText('Doanh số trang 1')
+  const row = screen.getByRole('button', { name: 'Doanh số trang 1' }).closest('tr')
+  expect(within(row).getAllByRole('cell').slice(1, 4).map((cell) => cell.textContent)).toEqual(['12', '1', '31'])
   expect(within(screen.getByRole('article', { name: 'Doanh số bán hàng' })).getByText(/100\.000/)).toBeInTheDocument()
   expect(screen.getByRole('img').querySelectorAll('rect')).toHaveLength(2)
   expect(api.getAdminData).toHaveBeenCalledWith('access-for-test', '/admin/statistics/reports/revenue',
@@ -316,4 +327,114 @@ test('delivered order codes remain readable without order-view permission', asyn
   const details = await screen.findByRole('region', { name: 'Đơn đã giao trong kỳ' })
   await within(details).findByText('VT-GIAO-1')
   expect(within(details).queryByRole('link')).not.toBeInTheDocument()
+})
+
+const purchasePermissions = ['admin.portal','profile:read','revenue_reports:view','order_reports:view','purchases:view']
+for (const role of ['Admin', 'Staff']) test(role + ' can read purchase totals, status chart and supplier breakdown', async () => {
+  open('/admin/reports?tab=purchases&month=2026-09', role, purchasePermissions)
+  await screen.findByRole('link', { name: 'PN-TRANG-1' })
+  expect(screen.getByRole('heading', { name: 'Thống kê đơn nhập hàng' })).toBeInTheDocument()
+  expect(within(screen.getByRole('article', { name: 'Phiếu nhập trong kỳ' })).getByText('11')).toBeInTheDocument()
+  expect(within(screen.getByRole('article', { name: 'Số lượng đã nhận' })).getByText('18')).toBeInTheDocument()
+  expect(screen.getByRole('img', { name: 'Đơn nhập theo trạng thái hiện tại' }).querySelectorAll('rect')).toHaveLength(5)
+  expect(within(screen.getByRole('region', { name: 'Top nhà cung cấp' })).getByText(/Nhà cung cấp từ API/)).toBeInTheDocument()
+  expect(screen.getByRole('combobox', { name: 'Nhà cung cấp', exact: true })).toBeInTheDocument()
+  const call = api.getAdminData.mock.calls.find(([,path]) => path.endsWith('/reports/purchases'))
+  expect(call[2]).not.toHaveProperty('sort')
+})
+test('purchase supplier and product filters persist, paginate and reset when switching reports', async () => {
+  total = 11
+  const router = open('/admin/reports?tab=purchases&month=2026-09', 'Admin', purchasePermissions)
+  await screen.findByRole('link', { name: 'PN-TRANG-1' })
+  fireEvent.change(screen.getByRole('combobox', { name: 'Nhà cung cấp', exact: true }), { target: { value: 's1' } })
+  fireEvent.change(screen.getByRole('combobox', { name: 'Sản phẩm', exact: true }), { target: { value: 'p1' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Áp dụng' }))
+  await waitFor(() => expect(router.state.location.search).toContain('supplier_id=s1'))
+  await waitFor(() => expect(api.getAdminData).toHaveBeenLastCalledWith('access-for-test', '/admin/statistics/reports/purchases', expect.objectContaining({ supplier_id: 's1', product_id: 'p1', page: 1 }), expect.any(AbortSignal)))
+  await screen.findByRole('link', { name: 'PN-TRANG-1' })
+  fireEvent.click(screen.getByRole('button', { name: 'Trang sau' }))
+  await screen.findByRole('link', { name: 'PN-TRANG-2' })
+  expect(within(screen.getByRole('article', { name: 'Phiếu nhập trong kỳ' })).getByText('11')).toBeInTheDocument()
+  fireEvent.click(within(screen.getByRole('navigation', { name: 'Loại báo cáo' })).getByRole('button', { name: 'Đơn hàng', exact: true }))
+  await screen.findByText('Tỷ lệ hủy 25%')
+  expect(router.state.location.search).not.toContain('supplier_id')
+  expect(screen.queryByRole('combobox', { name: 'Nhà cung cấp', exact: true })).not.toBeInTheDocument()
+  await act(() => router.navigate(-1))
+  await screen.findByRole('link', { name: 'PN-TRANG-2' })
+  expect(screen.getByRole('combobox', { name: 'Nhà cung cấp', exact: true })).toHaveValue('s1')
+  fireEvent.click(screen.getByRole('button', { name: 'Xóa lọc' }))
+  await screen.findByRole('link', { name: 'PN-TRANG-1' })
+  expect(router.state.location.search).not.toContain('supplier_id')
+  expect(screen.getByRole('combobox', { name: 'Sản phẩm', exact: true })).toHaveValue('')
+})
+test('purchase details return to the same report filters and page', async () => {
+  total = 11
+  const router = open('/admin/reports?tab=purchases&month=2026-09&supplier_id=s1&page=2', 'Admin', purchasePermissions)
+  const origin = router.state.location.search
+  fireEvent.click(await screen.findByRole('link', { name: 'PN-TRANG-2' }))
+  await screen.findByRole('heading', { name: 'Phiếu nhập PN-CHI-TIET' })
+  fireEvent.click(screen.getByRole('button', { name: '← Quay lại báo cáo' }))
+  await screen.findByRole('link', { name: 'PN-TRANG-2' })
+  expect(router.state.location.search).toBe(origin)
+})
+test('purchase failures hide stale totals, recover and clamp a shortened list', async () => {
+  total = 11
+  open('/admin/reports?tab=purchases&page=2', 'Staff', purchasePermissions)
+  await screen.findByRole('link', { name: 'PN-TRANG-2' })
+  fail = true
+  fireEvent.click(screen.getByRole('button', { name: 'Làm mới' }))
+  await waitFor(() => expect(within(screen.getByRole('article', { name: 'Giá trị đặt hàng' })).getByText('—')).toBeInTheDocument())
+  fail = false; total = 1
+  fireEvent.click(screen.getByRole('button', { name: 'Làm mới' }))
+  await screen.findByRole('link', { name: 'PN-TRANG-1' })
+  total = 0
+  fireEvent.click(screen.getByRole('button', { name: 'Làm mới' }))
+  await screen.findByText('Chưa có phiếu nhập trong kỳ theo bộ lọc đang chọn.')
+})
+test('purchase tab requires purchase read permission', async () => {
+  open('/admin/reports?tab=purchases')
+  await screen.findByText('Doanh số trang 1')
+  expect(within(screen.getByRole('navigation', { name: 'Loại báo cáo' })).queryByRole('button', { name: 'Đơn nhập hàng' })).not.toBeInTheDocument()
+  expect(api.getAdminData.mock.calls.some(([,path]) => path.endsWith('/reports/purchases'))).toBe(false)
+})
+
+test('variant rows show their own quantities and drill down to the selected color only', async () => {
+  const read = api.getAdminData.getMockImplementation()
+  api.getAdminData.mockImplementation(async (token, path, query, signal) => {
+    if (path === '/admin/statistics/reports/revenue') {
+      const report = await read(token, path, query, signal)
+      const base = report.Items[0]
+      return { ...report, Total: 2, Items: [
+        { ...base, Key: 'red', ProductVariantId: 'v-red', VariantName: 'Đỏ 128GB', Sku: 'SKU-RED', ReceivedQuantity: 12, Quantity: 2, StockQuantity: 10 },
+        { ...base, Key: 'blue', ProductVariantId: 'v-blue', VariantName: 'Xanh 256GB', Sku: 'SKU-BLUE', ReceivedQuantity: 20, Quantity: 3, StockQuantity: 17 },
+      ] }
+    }
+    if (path === '/admin/statistics/reports/revenue/lines') {
+      const report = await read(token, path, query, signal)
+      return { ...report, Items: report.Items.map(row => ({ ...row, Sku: query.variant_id === 'v-red' ? 'SKU-RED' : 'SKU-BLUE' })) }
+    }
+    return read(token, path, query, signal)
+  })
+  const router = open('/admin/reports?month=2026-09&brand_id=b1')
+  const red = await screen.findByRole('button', { name: /Doanh số trang 1.*Đỏ 128GB/ })
+  const blue = screen.getByRole('button', { name: /Doanh số trang 1.*Xanh 256GB/ })
+  expect(within(red.closest('tr')).getAllByRole('cell').slice(1, 4).map(cell => cell.textContent)).toEqual(['12','2','10'])
+  expect(within(blue.closest('tr')).getAllByRole('cell').slice(1, 4).map(cell => cell.textContent)).toEqual(['20','3','17'])
+  expect(api.getAdminData).toHaveBeenCalledWith('access-for-test', '/admin/statistics/reports/revenue', expect.objectContaining({ group_by: 'variant' }), expect.any(AbortSignal))
+  fireEvent.click(blue)
+  let dialog = await screen.findByRole('dialog')
+  expect(await within(dialog).findByText('SKU-BLUE')).toBeInTheDocument()
+  expect(within(dialog).queryByText('SKU-RED')).not.toBeInTheDocument()
+  expect(router.state.location.search).toContain('variant=v-blue')
+  expect(api.getAdminData).toHaveBeenLastCalledWith('access-for-test', '/admin/statistics/reports/revenue/lines', expect.objectContaining({ product_id: 'p1', variant_id: 'v-blue', brand_id: 'b1' }), expect.any(AbortSignal))
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Đóng' }))
+  await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+  fireEvent.click(screen.getByRole('button', { name: /Doanh số trang 1.*Đỏ 128GB/ }))
+  dialog = await screen.findByRole('dialog')
+  expect(await within(dialog).findByText('SKU-RED')).toBeInTheDocument()
+  await act(() => router.navigate(-1))
+  await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+  await act(() => router.navigate(-1))
+  dialog = await screen.findByRole('dialog')
+  expect(await within(dialog).findByText('SKU-BLUE')).toBeInTheDocument()
 })

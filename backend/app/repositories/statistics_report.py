@@ -7,7 +7,8 @@ or split payments cannot multiply sales. Shipping/refunds are outside this sales
 from sqlalchemy import and_, case, exists, func, select
 
 from app.models import (Brand, Category, Conversation, Order, OrderItem, PaymentTransaction,
-    Product, ProductVariant, ReturnRequest, User, WarrantyRequest)
+    Product, ProductVariant, PurchaseOrderItem, PurchaseReceipt, PurchaseReceiptItem,
+    ReturnRequest, StockAdjustment, Supplier, User, WarrantyRequest)
 
 
 class StatisticsReportRepository:
@@ -69,16 +70,18 @@ class StatisticsReportRepository:
             func.count(func.distinct(Order.OrderId)).label('TotalOrders'), start=start, end=end, **filters)
         return self.session.execute(query.group_by(bucket).order_by(bucket)).mappings().all()
 
-    def _products(self, start, end, **filters):
+    def _products(self, start, end, *, by_variant=False, **filters):
         columns = (Product.ProductId, Product.Name.label('ProductName'),
             Category.Name.label('CategoryName'), Brand.Name.label('BrandName'))
+        if by_variant:
+            columns += (ProductVariant.ProductVariantId, ProductVariant.VariantName, ProductVariant.Sku)
         query = self._sold_lines(*columns, *self._sales_totals(), start=start, end=end, **filters)
         return (query.join(Category, Category.CategoryId == Product.CategoryId)
             .join(Brand, Brand.BrandId == Product.BrandId).group_by(*columns)).subquery()
 
-    def sales_details(self, start, end, *, offset, limit, sort='revenue_desc', **filters):
-        """One product for the entire period; aggregate before pagination/sorting."""
-        grouped = self._products(start, end, **filters)
+    def sales_details(self, start, end, *, offset, limit, sort='revenue_desc', by_variant=False, **filters):
+        """Aggregate products or individual SKUs before pagination/sorting."""
+        grouped = self._products(start, end, by_variant=by_variant, **filters)
         total = int(self.session.scalar(select(func.count()).select_from(grouped)) or 0)
         profit = case((grouped.c.LinesMissingCost == 0, grouped.c.Revenue - grouped.c.KnownCost), else_=None)
         margin = case((grouped.c.Revenue > 0, profit * 100 / grouped.c.Revenue), else_=None)
@@ -86,7 +89,8 @@ class StatisticsReportRepository:
             'cost': case((grouped.c.LinesMissingCost == 0, grouped.c.KnownCost), else_=None),
             'profit': profit, 'margin': margin, 'name': grouped.c.ProductName}[sort.rsplit('_', 1)[0]]
         direction = column.asc() if sort.endswith('_asc') else column.desc()
-        query = select(grouped).order_by(direction.nulls_last(), grouped.c.ProductName, grouped.c.ProductId).offset(offset).limit(limit)
+        query = select(grouped).order_by(direction.nulls_last(), grouped.c.ProductName, grouped.c.ProductId,
+            *([grouped.c.ProductVariantId] if by_variant else [])).offset(offset).limit(limit)
         return self.session.execute(query).mappings().all(), total
 
     def top_products(self, start, end, **filters):
@@ -94,11 +98,44 @@ class StatisticsReportRepository:
         query = select(grouped).order_by(grouped.c.Revenue.desc(), grouped.c.ProductId).limit(5)
         return self.session.execute(query).mappings().all()
 
-    def sales_lines(self, start, end, *, offset, limit, **filters):
+    def product_quantities(self, product_ids, start, end, *, by_variant=False):
+        """Declared opening stock plus period receipts; current stock is grouped separately."""
+        if not product_ids:
+            return {}
+        identifier = ProductVariant.ProductVariantId if by_variant else ProductVariant.ProductId
+        received = self.session.execute(select(identifier.label('QuantityId'),
+            func.sum(PurchaseReceiptItem.Quantity).label('ReceivedQuantity'))
+            .select_from(PurchaseReceiptItem)
+            .join(PurchaseReceipt, PurchaseReceipt.PurchaseReceiptId == PurchaseReceiptItem.PurchaseReceiptId)
+            .join(PurchaseOrderItem, PurchaseOrderItem.PurchaseOrderItemId == PurchaseReceiptItem.PurchaseOrderItemId)
+            .join(ProductVariant, ProductVariant.ProductVariantId == PurchaseOrderItem.ProductVariantId)
+            .where(identifier.in_(product_ids), PurchaseReceipt.ReceivedAt >= start,
+                PurchaseReceipt.ReceivedAt < end).group_by(identifier)).mappings().all()
+        opening = self.session.execute(select(identifier.label('QuantityId'),
+            func.sum(StockAdjustment.QuantityAfter).label('OpeningQuantity'))
+            .select_from(StockAdjustment)
+            .join(ProductVariant, ProductVariant.ProductVariantId == StockAdjustment.ProductVariantId)
+            .where(identifier.in_(product_ids), StockAdjustment.AdjustmentType == 'Opening',
+                StockAdjustment.CreatedAt < end).group_by(identifier)).mappings().all()
+        stock = self.session.execute(select(identifier.label('QuantityId'),
+            func.sum(ProductVariant.StockQuantity).label('StockQuantity'))
+            .where(identifier.in_(product_ids), ProductVariant.IsDeleted.is_(False))
+            .group_by(identifier)).mappings().all()
+        result = {row['QuantityId']: {'ReceivedQuantity': row['ReceivedQuantity']} for row in received}
+        for row in opening:
+            quantities = result.setdefault(row['QuantityId'], {})
+            quantities['ReceivedQuantity'] = quantities.get('ReceivedQuantity', 0) + row['OpeningQuantity']
+        for row in stock:
+            result.setdefault(row['QuantityId'], {})['StockQuantity'] = row['StockQuantity']
+        return result
+
+    def sales_lines(self, start, end, *, offset, limit, variant_id=None, **filters):
         query = self._sold_lines(OrderItem.OrderItemId, Order.OrderId, Order.OrderCode, Order.DeliveredAt,
             Product.ProductId, OrderItem.ProductName, OrderItem.VariantInfo, OrderItem.Sku,
             OrderItem.UnitCost, OrderItem.UnitPrice, OrderItem.Quantity, OrderItem.LineTotal,
             start=start, end=end, **filters)
+        if variant_id is not None:
+            query = query.where(ProductVariant.ProductVariantId == variant_id)
         total = int(self.session.scalar(select(func.count()).select_from(query.subquery())) or 0)
         query = query.order_by(Order.DeliveredAt.desc(), Order.OrderCode, OrderItem.OrderItemId)
         return self.session.execute(query.offset(offset).limit(limit)).mappings().all(), total
@@ -146,4 +183,5 @@ class StatisticsReportRepository:
         categories = self.session.execute(select(Category.CategoryId.label('Id'), Category.Name).order_by(Category.Name, Category.CategoryId)).mappings().all()
         brands = self.session.execute(select(Brand.BrandId.label('Id'), Brand.Name).order_by(Brand.Name, Brand.BrandId)).mappings().all()
         products = self.session.execute(select(Product.ProductId.label('Id'), Product.Name, Product.CategoryId, Product.BrandId).order_by(Product.Name, Product.ProductId)).mappings().all()
-        return {'Categories': categories, 'Brands': brands, 'Products': products}
+        suppliers = self.session.execute(select(Supplier.SupplierId.label('Id'), Supplier.Name).order_by(Supplier.Name, Supplier.SupplierId)).mappings().all()
+        return {'Categories': categories, 'Brands': brands, 'Products': products, 'Suppliers': suppliers}

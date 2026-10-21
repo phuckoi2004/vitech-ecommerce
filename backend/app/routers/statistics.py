@@ -15,6 +15,7 @@ from app.schemas import (
 )
 from app.services.statistics import StatisticsService
 from app.services.statistics_report import StatisticsReportService
+from app.schemas.statistics import PurchaseReportResponse
 from app.schemas.statistics import (CancelledOrdersResponse, DeliveredOrdersResponse, DashboardWorkload, OrderReportResponse, ReportOptionsResponse,
     SalesLinesResponse, SalesReportResponse)
 
@@ -35,17 +36,18 @@ def report_options(service: Reports, actor: CurrentActor):
 def sales_report(date_from: date, date_to: date, service: Reports, actor: CurrentActor,
                  category_id: UUID | None = None, brand_id: UUID | None = None,
                  product_id: UUID | None = None, page: Page = 1, page_size: PageSize = 10,
-                 sort: str = Query('revenue_desc', pattern='^(revenue|quantity|cost|profit|margin|name)_(asc|desc)$')):
+                 sort: str = Query('revenue_desc', pattern='^(revenue|quantity|cost|profit|margin|name)_(asc|desc)$'),
+                 group_by: Literal['product', 'variant'] = 'product'):
     return service.report(actor, 'revenue', date_from, date_to, category_id=category_id,
-                          brand_id=brand_id, product_id=product_id, page=page, page_size=page_size, sort=sort)
+                          brand_id=brand_id, product_id=product_id, page=page, page_size=page_size, sort=sort, group_by=group_by)
 
 
 @admin_router.get('/reports/revenue/lines', response_model=SalesLinesResponse)
 def sales_lines(date_from: date, date_to: date, product_id: UUID, service: Reports, actor: CurrentActor,
                 category_id: UUID | None = None, brand_id: UUID | None = None,
-                page: Page = 1, page_size: PageSize = 10):
+                page: Page = 1, page_size: PageSize = 10, variant_id: UUID | None = None):
     return service.lines(actor, date_from, date_to, product_id=product_id, category_id=category_id,
-                         brand_id=brand_id, page=page, page_size=page_size)
+                         brand_id=brand_id, page=page, page_size=page_size, variant_id=variant_id)
 
 
 @admin_router.get('/workload', response_model=DashboardWorkload)
@@ -59,6 +61,15 @@ def orders_report(date_from: date, date_to: date, service: Reports, actor: Curre
                   product_id: UUID | None = None, page: Page = 1, page_size: PageSize = 10):
     return service.report(actor, 'orders', date_from, date_to, category_id=category_id,
                           brand_id=brand_id, product_id=product_id, page=page, page_size=page_size)
+
+
+@admin_router.get('/reports/purchases', response_model=PurchaseReportResponse)
+def purchases_report(date_from: date, date_to: date, service: Reports, actor: CurrentActor,
+                     supplier_id: UUID | None = None, category_id: UUID | None = None,
+                     brand_id: UUID | None = None, product_id: UUID | None = None,
+                     page: Page = 1, page_size: PageSize = 10):
+    return service.purchases(actor, date_from, date_to, supplier_id=supplier_id, category_id=category_id,
+                             brand_id=brand_id, product_id=product_id, page=page, page_size=page_size)
 
 
 @admin_router.get('/reports/orders/cancelled', response_model=CancelledOrdersResponse)

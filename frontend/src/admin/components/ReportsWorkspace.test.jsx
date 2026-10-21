@@ -13,7 +13,7 @@ function setup(overrides = {}) {
 }
 test('empty report has the agreed product columns and no fabricated values or bars', () => {
   setup()
-  expect(screen.getAllByRole('columnheader').map((cell) => cell.textContent)).toEqual(['Sản phẩm','SL bán','Doanh số','Tổng giá nhập','Lãi gộp','Biên lãi'])
+  expect(screen.getAllByRole('columnheader').map((cell) => cell.textContent)).toEqual(['Sản phẩm','SL nhập','SL bán','SL còn','Doanh số','Tổng giá nhập','Lãi gộp','Biên lãi'])
   expect(within(screen.getByRole('article', { name: 'Doanh số bán hàng' })).getByText(/0/)).toBeInTheDocument()
   expect(screen.getByRole('img').querySelectorAll('rect')).toHaveLength(0)
   expect(screen.queryByText('Doanh thu cao nhất')).not.toBeInTheDocument()

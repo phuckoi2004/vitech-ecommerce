@@ -1,6 +1,6 @@
 # Tổng quan và báo cáo bán hàng — 21/10/2026
 
-Thay thế các mô tả giao diện cũ về biểu đồ một cột/tháng, kỳ cố định 5 tháng và bảng doanh số theo sản phẩm/tháng trong `admin-dashboard.md`.
+Tài liệu này mô tả báo cáo hiện hành với kỳ 6 tháng gần nhất, thay thế các mô tả giao diện cũ trong `admin-dashboard.md`.
 
 ## Dữ liệu và cấu trúc database
 
@@ -23,7 +23,7 @@ Công việc, đơn mới và cảnh báo tồn kho tự tải lại mỗi phút
 
 Thời gian dùng ngày lịch Việt Nam, tự cập nhật khi sang ngày hoặc quay lại tab. Kỳ hiện tại từ đầu tháng đến hôm nay; kỳ so sánh từ đầu tháng trước đến cùng ngày, chặn tại ngày cuối của tháng ngắn hơn và ghi rõ cả hai khoảng. Biểu đồ 6 tháng lấy cùng API báo cáo bán hàng; bấm tháng mở báo cáo của tháng đó. Tháng đang chạy có dấu hiệu chưa hết tháng.
 
-Báo cáo có hai tab: Bán hàng & lãi gộp và Đơn hàng. Bộ lọc gồm tháng bất kỳ, quý, năm, sáu tháng gần nhất, khoảng ngày tự chọn tối đa 366 ngày; hỗ trợ năm trước. Kỳ đang chạy kết thúc hôm nay. Danh mục, thương hiệu, sản phẩm được áp dụng đồng thời lên toàn bộ báo cáo.
+Báo cáo có ba tab: Bán hàng & lãi gộp, Đơn hàng và Đơn nhập hàng. Bộ lọc gồm tháng bất kỳ, quý, năm, sáu tháng gần nhất, khoảng ngày tự chọn tối đa 366 ngày; hỗ trợ năm trước. Kỳ đang chạy kết thúc hôm nay. Danh mục, thương hiệu, sản phẩm được áp dụng đồng thời lên toàn bộ báo cáo. Tab Đơn nhập hàng bổ sung nhà cung cấp; danh sách có cả nhà cung cấp ngừng hoạt động để tra cứu lịch sử.
 
 Trong tab Đơn hàng, bấm thẻ “Đã hủy” để mở bảng đơn hủy ngay dưới các thẻ. Bảng giữ nguyên kỳ, danh mục, thương hiệu và sản phẩm đang lọc; gồm mã đơn, ngày đặt, khách hàng, giá trị đơn và lý do hủy. Đây là các đơn đặt trong kỳ và hiện đã hủy, cùng phạm vi với số trên thẻ. Một đơn có nhiều SKU khớp bộ lọc vẫn chỉ hiện một dòng. Giá trị đơn là tổng tiền đã lưu trên đơn, gồm phí vận chuyển nếu có, không phải doanh số của các sản phẩm đang lọc.
 
@@ -33,11 +33,17 @@ Bấm thẻ “Đã giao” trong tab Đơn hàng để xem danh sách tương t
 
 Biểu đồ tối đa 31 ngày hiển thị từng ngày, khoảng dài hơn hiển thị từng tháng. Doanh số dùng cột, lãi gộp dùng đường; hỗ trợ lãi âm và ngắt đường khi thiếu giá nhập. Đơn hàng dùng cột chồng theo trạng thái.
 
-Bảng bán hàng gộp mỗi sản phẩm trên toàn kỳ, sắp xếp trong SQL trước khi phân trang. Tổng hợp và Top 5 không phụ thuộc trang đang xem. Bấm sản phẩm mở ngăn chi tiết từng dòng đơn: mã đơn, ngày giao, SKU, số lượng, đơn giá, giảm giá, tiền hàng, giá nhập, tổng giá nhập và lãi. Mã đơn liên kết tới chi tiết đơn. Bộ lọc, tab, sắp xếp, trang và sản phẩm đang mở nằm trong URL để tải lại/Back giữ đúng ngữ cảnh. Khi mở đơn từ ngăn chi tiết, nút “Quay lại báo cáo” khôi phục đầy đủ URL đó. Tổng giá nhập và lãi ở chi tiết đơn cũng hiện “Chưa đủ dữ liệu” nếu có dòng thiếu giá nhập.
+Bảng bán hàng hiển thị mỗi màu/biến thể (SKU) một dòng trên toàn kỳ, sắp xếp trong SQL trước khi phân trang. Số lượng nhập, bán, còn và doanh số/lãi của dòng đều theo đúng SKU đó. Tổng hợp và Top 5 sản phẩm không phụ thuộc trang đang xem; Top 5 vẫn gộp theo sản phẩm. Bấm dòng biến thể mở chi tiết đơn của riêng biến thể; bấm Top 5 mở mọi biến thể của sản phẩm. Mã đơn liên kết tới chi tiết đơn. Bộ lọc, tab, sắp xếp, trang, sản phẩm và biến thể đang mở nằm trong URL (`detail`, `variant`) để tải lại/Back giữ đúng ngữ cảnh. Khi mở đơn từ ngăn chi tiết, nút “Quay lại báo cáo” khôi phục đầy đủ URL đó. Tổng giá nhập và lãi ở chi tiết đơn cũng hiện “Chưa đủ dữ liệu” nếu có dòng thiếu giá nhập.
 
 Trên điện thoại, menu quản trị và bộ lọc báo cáo có nút mở/đóng; thẻ chỉ số xếp hai cột. Số tiền lớn rút gọn theo triệu/tỷ, vẫn giữ giá trị đầy đủ trong nhãn truy cập và chú thích. Biểu đồ co theo chiều rộng màn hình và giảm mật độ nhãn để thấy toàn kỳ; bảng dữ liệu tiếp tục cuộn ngang riêng.
 
-Tab nhập hàng và tồn kho chuyên sâu là phần mở rộng sau, chưa bổ sung trong lần này. Không dọn/xóa đơn thử hoặc sửa giá nhập lịch sử.
+Tab Đơn nhập hàng tính theo ngày tạo phiếu (GMT+7), trạng thái hiện tại. Mỗi phiếu được đếm một lần dù có nhiều SKU. Đang xử lý gồm Pending/Approved/Receiving; Completed, Closed, Cancelled, Rejected được phân biệt trên biểu đồ. Bảng từng phiếu có mã mở chi tiết, ngày tạo, nhà cung cấp, trạng thái, số lượng đặt/đã nhận và giá trị đặt. Quay lại từ chi tiết giữ kỳ, bộ lọc và trang.
+
+Số lượng đặt, đã nhận và giá trị đặt trong tổng hợp/biểu đồ/Top 5 nhà cung cấp bỏ phiếu Cancelled/Rejected. Giá trị lấy từ tổng LineTotal của các dòng phù hợp bộ lọc, không phải tiền thực chi hay giá trị hàng thực nhận. Đã nhận là lũy kế hiện tại của các phiếu tạo trong kỳ, kể cả nhận sau kỳ; không phải báo cáo biên nhận theo ngày nhận. Dòng phiếu hủy/từ chối vẫn giữ giá trị đặt để tra cứu, nhưng không cộng vào tổng. Tổng hợp và Top 5 không phụ thuộc trang danh sách.
+
+Tab nhập hàng yêu cầu quyền xem báo cáo đơn hàng và xem phiếu nhập; Staff/Admin hiện có các quyền này. Tồn kho chuyên sâu là phần mở rộng sau. Không dọn/xóa đơn thử hoặc sửa giá nhập lịch sử.
+
+Bảng Bán hàng & lãi gộp bổ sung ba cột cạnh nhau: SL nhập, SL bán, SL còn. SL nhập gồm tồn khai báo ban đầu (StockAdjustments loại Opening, QuantityAfter; chỉ lấy khai báo trước thời điểm kết thúc kỳ, mỗi biến thể một lần) cộng PurchaseReceiptItems.Quantity theo ngày nhận PurchaseReceipts.ReceivedAt trong kỳ GMT+7, kể cả phiếu được tạo ngoài kỳ. SL bán giữ cách tính bán hàng hiện hành. SL còn là StockQuantity hiện tại của đúng biến thể, không phụ thuộc kỳ lọc; biến thể đã xóa hiển thị 0. Các số được tổng hợp riêng theo SKU để tránh nhân bản doanh số hoặc cộng cả các màu khác; không sửa dữ liệu hay schema database.
 
 ## Nhãn trạng thái tiếng Việt
 
@@ -49,9 +55,11 @@ Mã trạng thái gửi qua API, lưu trên đơn và dùng để xử lý nghi�
 
 ## API
 
-- `GET /admin/statistics/reports/revenue`: thêm Quantity, Cost, Profit, Margin, LinesMissingCost trong Summary/Chart/Items; Items gộp sản phẩm toàn kỳ; thêm TopProducts. `sort` là một trong `revenue|quantity|cost|profit|margin|name` + `_asc|_desc`, mặc định `revenue_desc`.
-- `GET /admin/statistics/reports/revenue/lines`: bắt buộc product_id; dùng cùng date_from/date_to, category_id, brand_id, page/page_size. Trả từng dòng bán hàng đã chốt, phân trang trong SQL.
+- `GET /admin/statistics/reports/revenue`: Quantity, Cost, Profit, Margin, LinesMissingCost trong Summary/Chart/Items; Items có ReceivedQuantity, StockQuantity. `group_by=variant` trên giao diện trả mỗi SKU một dòng với ProductVariantId, VariantName, Sku; mặc định API `group_by=product` giữ cách gộp cũ. TopProducts luôn gộp theo sản phẩm. `sort` là một trong `revenue|quantity|cost|profit|margin|name` + `_asc|_desc`, mặc định `revenue_desc`.
+- `GET /admin/statistics/reports/revenue/lines`: bắt buộc product_id; dùng cùng date_from/date_to, category_id, brand_id, page/page_size; variant_id tùy chọn để chỉ đọc đúng SKU đang mở. Trả từng dòng bán hàng đã chốt, phân trang trong SQL.
 - `GET /admin/statistics/reports/orders`: thêm InProgressOrders và CancellationReasons; Items vẫn theo tháng đặt hàng.
+- `GET /admin/statistics/reports/purchases`: date_from/date_to bắt buộc; supplier_id, category_id, brand_id, product_id tùy chọn; page/page_size (mặc định 1/10, tối đa 100). Trả Period, Summary, Chart, Items, Suppliers (Top 5), Total, Page, PageSize. Summary gồm TotalOrders, InProgressOrders, CompletedOrders, ClosedOrders, CancelledOrders, RejectedOrders, OrderedQuantity, ReceivedQuantity, OrderedAmount. Chỉ SELECT từ PurchaseOrders, PurchaseOrderItems, Suppliers và danh mục hiện có.
+- `GET /admin/statistics/report-options`: trả Categories, Brands, Products và Suppliers; nhà cung cấp chỉ gồm Id, Name, bao gồm ngừng hoạt động.
 - `GET /admin/statistics/reports/orders/cancelled`: danh sách các đơn đặt trong kỳ và hiện đã hủy, dùng chung bộ lọc ngày/danh mục/thương hiệu/sản phẩm với báo cáo Đơn hàng; phân trang trong SQL. Mỗi dòng gồm OrderId, OrderCode, OrderedAt, CustomerName, TotalAmount, CancelReason. Chỉ đọc từ các bảng/cột hiện có.
 - `GET /admin/statistics/reports/orders/delivered`: danh sách các đơn đặt trong kỳ và hiện Đã giao/Hoàn tất, dùng cùng bộ lọc và cách phân trang với danh sách đơn hủy. Không yêu cầu giao dịch thanh toán thành công, không lọc theo ngày giao. Mỗi dòng gồm OrderId, OrderCode, OrderedAt, DeliveredAt (có thể null), CustomerName, TotalAmount, OrderStatus. Một đơn nhiều SKU khớp bộ lọc vẫn chỉ xuất hiện một lần.
 - `GET /admin/statistics/workload`: tổng PendingOrders, WaitingChats, PendingReturns, NewWarranties hiện tại trong một SELECT.
@@ -65,7 +73,7 @@ Backend chạy trên SQLite trong bộ nhớ riêng, không kết nối DATABASE
 
 ```powershell
 cd backend
-..\.venv\Scripts\python.exe -m pytest tests/test_admin_variant_list.py tests/test_statistics_reports.py tests/test_statistics_service.py tests/test_statistics_queries.py tests/test_inventory.py -q -p no:cacheprovider
+..\.venv\Scripts\python.exe -m pytest tests/test_admin_variant_list.py tests/test_statistics_reports.py tests/test_statistics_service.py tests/test_statistics_queries.py tests/test_purchase_reports.py tests/test_inventory.py -q -p no:cacheprovider
 ```
 
 Frontend trên Windows dùng config loader native và worker threads để tránh sandbox chặn fork:
@@ -84,3 +92,5 @@ Phần chi tiết đơn hủy: 48 test backend và 53 subtest, 87 test frontend 
 Bổ sung chi tiết đơn đã giao: 56 test backend và 53 subtest, 93 test frontend liên quan đạt; build thành công, lint giữ hai cảnh báo có sẵn. Kiểm tra gồm đơn Hoàn tất chưa thanh toán, ngày giao trống hoặc nằm ngoài kỳ, biên ngày GMT+7, lọc nhiều SKU không trùng đơn, phân trang/thu hẹp trang khi làm mới, chuyển danh sách, giữ URL khi mở chi tiết và quay lại. Trình duyệt đạt ở cả sáu chiều rộng, không lỗi JavaScript; ảnh `delivered-orders-1440.png`, `delivered-orders-390.png`. API mới đã nạp và xác minh qua proxy frontend. Không thay đổi database hay dữ liệu nghiệp vụ.
 
 Đợt sửa bổ sung: 71 test backend và 36 subtest đạt; 55 test frontend liên quan đạt; build thành công, lint chỉ còn hai cảnh báo có sẵn. Toàn bộ frontend đạt 1.156/1.157 test; test kiểm tra khoảng ngày không hợp lệ của `ReturnsPage.test.jsx` vẫn lỗi và tái hiện khi thay layout bằng bản đã commit qua cấu hình chẩn đoán riêng. Không sửa trang Đổi trả trong đợt này.
+
+Bổ sung báo cáo nhập hàng: 61 test backend và 53 subtest, 74 test frontend liên quan đạt; build thành công, lint giữ hai cảnh báo có sẵn. Do giới hạn bộ nhớ và ổ C đầy, kiểm thử giao diện dùng cấu hình tạm bỏ plugin CSS; CSS được xác minh riêng trên bản build production bằng Chrome. Admin và Staff đều đạt tại 1440, 1024, 768, 390, 320px; không lỗi JavaScript hay tràn ngang trang. Kiểm tra lọc đồng thời nhà cung cấp/sản phẩm, phân trang, chuyển tab, mở phiếu và quay lại giữ URL. Kết quả/ảnh ở `output/purchase-report/`. Backend local đã nạp endpoint mới, xác minh qua proxy frontend. Không thêm bảng/cột hay ghi dữ liệu nghiệp vụ.
