@@ -90,7 +90,19 @@ function renderHome(auth = makeAuth()) {
   return router
 }
 
+function endBannerTransition(carousel, target = carousel.querySelector('.home-banner-track'), propertyName = 'transform') {
+  const event = new Event('transitionend', { bubbles: true })
+  Object.defineProperty(event, 'propertyName', { value: propertyName })
+  fireEvent(target, event)
+}
+
+async function settleBanner(carousel) {
+  endBannerTransition(carousel)
+  await waitFor(() => expect(carousel).toHaveAttribute('aria-busy', 'false'))
+}
+
 afterEach(() => {
+  vi.useRealTimers()
   vi.unstubAllGlobals()
   localStorage.clear()
 })
@@ -244,10 +256,106 @@ describe('catalog sections', () => {
     await user.click(within(carousel).getByRole('button', { name: 'Banner tiếp theo' }))
     expect(within(carousel).getByRole('button', { name: 'Xem banner 2' })).toHaveAttribute('aria-current', 'true')
     expect(within(carousel).getByRole('link', { name: 'Laptop cho sinh viên' })).toHaveAttribute('href', 'https://vietech.example/laptop')
+    await settleBanner(carousel)
     await user.click(within(carousel).getByRole('button', { name: 'Banner tiếp theo' }))
     expect(within(carousel).getByRole('button', { name: 'Xem banner 1' })).toHaveAttribute('aria-current', 'true')
+    await settleBanner(carousel)
     await user.click(within(carousel).getByRole('button', { name: 'Banner trước' }))
     expect(within(carousel).getByRole('button', { name: 'Xem banner 2' })).toHaveAttribute('aria-current', 'true')
+    await settleBanner(carousel)
+    await user.click(within(carousel).getByRole('button', { name: 'Xem banner 1' }))
+    expect(within(carousel).getByRole('link', { name: 'Ra mắt iPhone 18' })).toBeInTheDocument()
+    expect(within(carousel).queryByRole('link', { name: 'Laptop cho sinh viên' })).not.toBeInTheDocument()
+    await settleBanner(carousel)
+
+    // Ignore further clicks until both the transition and any loop rebase have finished.
+    const next = within(carousel).getByRole('button', { name: 'Banner tiếp theo' })
+    act(() => {
+      fireEvent.click(next)
+      fireEvent.click(next)
+    })
+    expect(within(carousel).getByRole('button', { name: 'Xem banner 2' })).toHaveAttribute('aria-current', 'true')
+    expect(next).toHaveAttribute('aria-disabled', 'true')
+    await settleBanner(carousel)
+    expect(next).toHaveAttribute('aria-disabled', 'false')
+  })
+
+  test('the persistent track slides through both loop clones and rebases without a transition', async () => {
+    mockApi({ '/banners': json([1, 2, 3].map((id) => ({ BannerId: `bn${id}`, Title: `Banner ${id}`, ImageUrl: `https://cdn.example/${id}.png` }))) })
+    renderHome()
+    const carousel = await screen.findByRole('region', { name: 'Chương trình nổi bật' })
+    fireEvent.mouseEnter(carousel)
+    const track = carousel.querySelector('.home-banner-track')
+    const slides = [...track.children]
+    const next = within(carousel).getByRole('button', { name: 'Banner tiếp theo' })
+    const prev = within(carousel).getByRole('button', { name: 'Banner trước' })
+    expect(slides).toHaveLength(5)
+    expect(track.style.transform).toBe('translate3d(-100%, 0, 0)')
+    expect(slides[0]).toHaveAttribute('inert')
+    expect(slides[4]).toHaveAttribute('aria-hidden', 'true')
+
+    fireEvent.click(prev)
+    expect(track.style.transform).toBe('translate3d(-0%, 0, 0)')
+    expect(carousel).toHaveAttribute('aria-busy', 'true')
+    endBannerTransition(carousel, slides[1])
+    endBannerTransition(carousel, track, 'opacity')
+    expect(carousel).toHaveAttribute('aria-busy', 'true')
+    endBannerTransition(carousel)
+    expect(track).toHaveClass('is-resetting')
+    expect(track.style.transform).toBe('translate3d(-300%, 0, 0)')
+    fireEvent.click(next)
+    expect(track.style.transform).toBe('translate3d(-300%, 0, 0)')
+    await waitFor(() => expect(carousel).toHaveAttribute('aria-busy', 'false'))
+
+    fireEvent.click(next)
+    expect(track.style.transform).toBe('translate3d(-400%, 0, 0)')
+    endBannerTransition(carousel)
+    expect(track).toHaveClass('is-resetting')
+    expect(track.style.transform).toBe('translate3d(-100%, 0, 0)')
+    await waitFor(() => expect(carousel).toHaveAttribute('aria-busy', 'false'))
+    expect([...track.children]).toEqual(slides)
+
+    fireEvent.click(within(carousel).getByRole('button', { name: 'Xem banner 3' }))
+    expect(track.style.transform).toBe('translate3d(-300%, 0, 0)')
+    await settleBanner(carousel)
+  })
+
+  test('reduced motion is read from matchMedia and changes during a transition release navigation', async () => {
+    let listener
+    const media = { matches: false, addEventListener: vi.fn((_, fn) => { listener = fn }), removeEventListener: vi.fn() }
+    vi.stubGlobal('matchMedia', vi.fn(() => media))
+    mockApi({ '/banners': json([1, 2].map((id) => ({ BannerId: `bn${id}`, Title: `Banner ${id}`, ImageUrl: `https://cdn.example/${id}.png` }))) })
+    renderHome()
+    const carousel = await screen.findByRole('region', { name: 'Chương trình nổi bật' })
+    const next = within(carousel).getByRole('button', { name: 'Banner tiếp theo' })
+    fireEvent.click(next)
+    expect(carousel).toHaveAttribute('aria-busy', 'true')
+    act(() => { media.matches = true; listener() })
+    expect(carousel).toHaveAttribute('aria-busy', 'false')
+    fireEvent.click(next)
+    expect(carousel).toHaveAttribute('aria-busy', 'false')
+    expect(carousel.querySelector('.home-banner-track').style.transform).toBe('translate3d(-100%, 0, 0)')
+    expect(window.matchMedia).toHaveBeenCalledWith('(prefers-reduced-motion: reduce)')
+    act(() => { media.matches = false; listener() })
+    fireEvent.click(next)
+    expect(carousel).toHaveAttribute('aria-busy', 'true')
+    await settleBanner(carousel)
+  })
+
+  test('autoplay pauses on hover and a missing transitionend cannot leave the carousel locked', async () => {
+    mockApi({ '/banners': json([1, 2].map((id) => ({ BannerId: `bn${id}`, Title: `Banner ${id}`, ImageUrl: `https://cdn.example/${id}.png` }))) })
+    renderHome()
+    const carousel = await screen.findByRole('region', { name: 'Chương trình nổi bật' })
+    fireEvent.mouseEnter(carousel)
+    vi.useFakeTimers()
+    act(() => vi.advanceTimersByTime(6000))
+    expect(within(carousel).getByRole('button', { name: 'Xem banner 1' })).toHaveAttribute('aria-current', 'true')
+    fireEvent.mouseLeave(carousel)
+    act(() => vi.advanceTimersByTime(5000))
+    expect(within(carousel).getByRole('button', { name: 'Xem banner 2' })).toHaveAttribute('aria-current', 'true')
+    expect(carousel).toHaveAttribute('aria-busy', 'true')
+    act(() => vi.advanceTimersByTime(900))
+    expect(carousel).toHaveAttribute('aria-busy', 'false')
   })
 
   test('an empty banner list does not invent phone images or product links', async () => {
