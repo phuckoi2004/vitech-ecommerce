@@ -103,6 +103,7 @@ from .service_request import (
 )
 from .user import NotificationService
 from .warranty_period import vietnam_date
+from app.schemas.service_request import CustomerReturnItemOption
 
 PENDING = "Pending"
 APPROVED = "Approved"
@@ -211,6 +212,68 @@ class ReturnService(BaseService):
         self.payments = PaymentService(session, gateway=gateway, clock=clock)
 
     # ================================================================== Customer
+
+    def customer_return_items(self, actor: Actor, order_id: uuid.UUID) -> list[CustomerReturnItemOption]:
+        """Preview the customer's own delivered lines using the same policy and conflicts as creation."""
+        require_role(actor, *CUSTOMER_ONLY)
+        order = self.orders.get_by_id_and_customer(order_id, actor.user_id)
+        if order is None:
+            raise NotFoundError("Không tìm thấy đơn hàng", code="order_not_found")
+        if order.OrderStatus not in DELIVERED_ORDER_STATUSES:
+            raise BusinessRuleError("Chỉ đổi/trả sản phẩm thuộc đơn hàng đã giao", code="return_order_not_delivered")
+        window_reason = None
+        try:
+            self._check_window(order)
+        except BusinessRuleError as error:
+            window_reason = error.message
+        deadline = (return_deadline(order.DeliveredAt, self.policy.window_days)
+                    if self.policy.window_days is not None and order.DeliveredAt is not None
+                    and order.DeliveredAt.tzinfo is not None and order.DeliveredAt <= self.now() else None)
+        result = []
+        for item in self.order_items.list_by_order(order_id):
+            variant = self.variants.get_by_id(item.ProductVariantId)
+            if variant is None:
+                continue
+            serials = []
+            if variant.IsSerialTracked:
+                for serial in self.serials.list_by_order_item(item.OrderItemId):
+                    if serial.ProductVariantId != item.ProductVariantId:
+                        continue
+                    state = self._customer_return_option(item, serial)
+                    serials.append({"ProductSerialId": serial.ProductSerialId, "SerialNumber": serial.SerialNumber,
+                                    "CanRequest": state["CanRequest"] and window_reason is None,
+                                    "Reason": window_reason or state["Reason"]})
+                can_request = any(serial["CanRequest"] for serial in serials)
+                state = {"MaxQuantity": 1 if serials else 0, "CanRequest": can_request,
+                         "Reason": None if can_request else window_reason or
+                         "Chưa có thiết bị đủ điều kiện đổi/trả. Vui lòng kiểm tra Serial/IMEI hoặc liên hệ VieTech."}
+            else:
+                state = self._customer_return_option(item, None)
+                state["CanRequest"] = state["CanRequest"] and window_reason is None
+                state["Reason"] = window_reason or state["Reason"]
+            result.append(CustomerReturnItemOption(
+                OrderItemId=item.OrderItemId, ProductId=variant.ProductId, ProductVariantId=item.ProductVariantId,
+                ProductName=item.ProductName, VariantInfo=item.VariantInfo, Quantity=item.Quantity,
+                IsSerialTracked=variant.IsSerialTracked, ReturnDeadline=deadline, WindowDays=self.policy.window_days,
+                Serials=serials, **state))
+        return result
+
+    def _customer_return_option(self, item: OrderItem, serial: ProductSerial | None) -> dict:
+        maximum = 1 if serial is not None else max(0, item.Quantity - self._held_quantity(item))
+        reason = None
+        if serial is not None:
+            existing = self.requests.get_open_by_product_serial(serial.ProductSerialId)
+            if existing is not None:
+                reason = f"Serial/IMEI đang có yêu cầu đổi/trả {existing.RequestCode}"
+            elif self.warranty_requests.get_open_by_product_serial(serial.ProductSerialId) is not None:
+                reason = "Serial/IMEI đang có yêu cầu bảo hành chưa xử lý xong"
+            elif serial.Status != SERIAL_SOLD:
+                reason = "Serial/IMEI không còn ở trạng thái đã bán cho khách hàng"
+        elif self.warranty_requests.get_open_by_order_item_without_serial(item.OrderItemId) is not None:
+            reason = "Sản phẩm đang có yêu cầu bảo hành chưa xử lý xong"
+        elif maximum == 0:
+            reason = "Toàn bộ số lượng sản phẩm đã nằm trong các yêu cầu đổi/trả."
+        return {"MaxQuantity": maximum, "CanRequest": reason is None, "Reason": reason}
 
     def create_return_request(self, actor: Actor, data: ReturnRequestCreate) -> ReturnRequestDetailResponse:
         """Customer gửi yêu cầu đổi/trả cho hàng thuộc đơn đã giao của mình, trong thời hạn đã cấu hình."""

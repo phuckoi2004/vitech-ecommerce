@@ -163,8 +163,6 @@ test('initial list and count failures stay distinguishable from an empty inbox',
 
 test.each([
   ['Order', '/orders/', 'Chi tiết đơn hàng', 'VT-001'],
-  ['WarrantyRequest', '/warranty-requests/', 'Chi tiết bảo hành', 'BH-001'],
-  ['ReturnRequest', '/return-requests/', 'Chi tiết đổi trả', 'DT-001'],
 ])('opens %s using only the existing customer API and marks the notification read', async (type, path, title, code) => {
   const state = mockApi([{ ...notice, ReferenceType: type }])
   renderPage()
@@ -179,6 +177,31 @@ test.each([
   const orderLink = within(dialog).queryByRole('link', { name: 'Mở trang đơn hàng' })
   if (type === 'Order') expect(orderLink).toHaveAttribute('href', `/don-hang/${id}`)
   else expect(orderLink).not.toBeInTheDocument()
+})
+
+test('a warranty notification opens the customer warranty page and marks the notice read', async () => {
+  const state = mockApi([{ ...notice, ReferenceType: 'WarrantyRequest' }])
+  const router = renderPage()
+  await userEvent.click(await screen.findByRole('link', { name: notice.Title, exact: true }))
+  expect(await screen.findByRole('heading', { name: 'Yêu cầu BH-001' })).toBeInTheDocument()
+  expect(router.state.location.search).toBe('?section=service&request=' + id)
+  expect(state.notes[0].IsRead).toBe(true)
+  expect(state.calls.some(call => call.path === '/warranty-requests/' + id)).toBe(true)
+  expect(state.calls.some(call => call.path.startsWith('/admin/'))).toBe(false)
+  expect(screen.queryByText(/PRIVATE-/)).not.toBeInTheDocument()
+})
+
+test('a return notification opens its request inside the return history and marks it read', async () => {
+  const state = mockApi([{ ...notice, ReferenceType: 'ReturnRequest' }])
+  const router = renderPage()
+  await userEvent.click(await screen.findByRole('link', { name: notice.Title, exact: true }))
+  expect(await screen.findByRole('heading', { name: 'Yêu cầu DT-001' })).toBeInTheDocument()
+  expect(router.state.location.search).toBe('?section=service&type=return&request=' + id)
+  expect(within(screen.getByRole('navigation', { name: 'Loại yêu cầu' })).getByRole('link', { name: 'Đổi/trả' })).toHaveAttribute('aria-current', 'page')
+  expect(state.notes[0].IsRead).toBe(true)
+  expect(state.calls.some(call => call.path === '/return-requests/' + id)).toBe(true)
+  expect(state.calls.some(call => call.path.startsWith('/admin/'))).toBe(false)
+  expect(screen.queryByText(/PRIVATE-/)).not.toBeInTheDocument()
 })
 
 test('a failed read action remains retryable and opens its original content after retry', async () => {

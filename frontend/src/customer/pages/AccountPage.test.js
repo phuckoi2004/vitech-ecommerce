@@ -70,3 +70,17 @@ test('a successful null address opens the profile with empty address fields', as
     assert.equal(input(container, id).value, '')
   }
 })
+
+test('account navigation uses the new warranty label and exposes the creation submenu', async () => {
+  harness(async () => null)
+  await screen.findByLabelText('Họ và tên')
+  const service = screen.getByRole('button', { name: 'Bảo hành và đổi trả' })
+  assert.equal(screen.queryByText('Tra cứu bảo hành và đổi trả'), null)
+  await userEvent.hover(service)
+  const create = screen.getByRole('link', { name: 'Tạo yêu cầu bảo hành' })
+  assert.equal(create.getAttribute('href'), '/bao-hanh/tao-yeu-cau')
+  assert.ok(service.closest('.cacc-menu-group').contains(create))
+  const createReturn = screen.getByRole('link', { name: 'Tạo yêu cầu đổi/trả' })
+  assert.equal(createReturn.getAttribute('href'), '/doi-tra/tao-yeu-cau')
+  assert.ok(service.closest('.cacc-menu-group').contains(createReturn))
+})

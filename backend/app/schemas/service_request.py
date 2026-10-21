@@ -26,7 +26,7 @@ import uuid
 from datetime import date, datetime
 from typing import Any, Literal
 
-from pydantic import Field, model_validator
+from pydantic import AliasPath, Field, model_validator
 
 from .common import (
     AttachmentFileType,
@@ -109,6 +109,32 @@ class WarrantyResultRejection(RequestSchema):
 # ---------------------------------------------------------------------------
 # WarrantyRequests
 # ---------------------------------------------------------------------------
+
+
+class CustomerWarrantySerialOption(ResponseSchema):
+    ProductSerialId: uuid.UUID
+    SerialNumber: str
+    WarrantyStartDate: date | None = None
+    WarrantyEndDate: date | None = None
+    CanRequest: bool
+    Reason: str | None = None
+
+
+class CustomerWarrantyItemOption(ResponseSchema):
+    OrderItemId: uuid.UUID
+    ProductId: uuid.UUID
+    ProductVariantId: uuid.UUID
+    ProductName: str
+    VariantInfo: str
+    Sku: str
+    Quantity: int
+    WarrantyMonths: int
+    IsSerialTracked: bool
+    WarrantyStartDate: date | None = None
+    WarrantyEndDate: date | None = None
+    CanRequest: bool
+    Reason: str | None = None
+    Serials: list[CustomerWarrantySerialOption] = Field(default_factory=list)
 
 
 class WarrantyRequestCreate(RequestSchema):
@@ -195,6 +221,12 @@ class WarrantyRequestResponse(_WarrantyRequestFields):
     Kết quả đang chờ duyệt là nội bộ: ResultType/ResultNote chỉ hiển thị khi đã có ResultApprovedAt.
     """
 
+    ProductName: str | None = Field(default=None, validation_alias=AliasPath("order_item", "ProductName"))
+    VariantInfo: str | None = Field(default=None, validation_alias=AliasPath("order_item", "VariantInfo"))
+    OrderId: uuid.UUID | None = Field(default=None, validation_alias=AliasPath("order_item", "OrderId"))
+    OrderCode: str | None = Field(default=None, validation_alias=AliasPath("order_item", "order", "OrderCode"))
+    SerialNumber: str | None = Field(default=None, validation_alias=AliasPath("product_serial", "SerialNumber"))
+
     @model_validator(mode="after")
     def _hide_unapproved_result(self):
         if self.ResultApprovedAt is None:
@@ -236,6 +268,29 @@ class AdminWarrantyRequestDetailResponse(AdminWarrantyRequestResponse):
 # ---------------------------------------------------------------------------
 # ReturnRequests
 # ---------------------------------------------------------------------------
+
+
+class CustomerReturnSerialOption(ResponseSchema):
+    ProductSerialId: uuid.UUID
+    SerialNumber: str
+    CanRequest: bool
+    Reason: str | None = None
+
+
+class CustomerReturnItemOption(ResponseSchema):
+    OrderItemId: uuid.UUID
+    ProductId: uuid.UUID
+    ProductVariantId: uuid.UUID
+    ProductName: str
+    VariantInfo: str
+    Quantity: int
+    MaxQuantity: int
+    IsSerialTracked: bool
+    ReturnDeadline: date | None = None
+    WindowDays: int | None = None
+    CanRequest: bool
+    Reason: str | None = None
+    Serials: list[CustomerReturnSerialOption] = Field(default_factory=list)
 
 
 class ReturnRequestCreate(RequestSchema):
@@ -321,6 +376,12 @@ class ReturnRequestResponse(_ReturnRequestFields):
 
     Số tiền đang chờ Admin duyệt là nội bộ: CompensationAmount chỉ hiển thị khi đã có CompensationApprovedAt.
     """
+
+    ProductName: str | None = Field(default=None, validation_alias=AliasPath("order_item", "ProductName"))
+    VariantInfo: str | None = Field(default=None, validation_alias=AliasPath("order_item", "VariantInfo"))
+    OrderId: uuid.UUID | None = Field(default=None, validation_alias=AliasPath("order_item", "OrderId"))
+    OrderCode: str | None = Field(default=None, validation_alias=AliasPath("order_item", "order", "OrderCode"))
+    SerialNumber: str | None = Field(default=None, validation_alias=AliasPath("product_serial", "SerialNumber"))
 
     @model_validator(mode="after")
     def _hide_unapproved_amount(self):

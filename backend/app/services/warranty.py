@@ -81,7 +81,7 @@ from app.schemas import (
 )
 
 from .actor import ADMIN_ONLY, CUSTOMER_ONLY, STAFF_OR_ADMIN, Actor, require_role
-from app.schemas.service_request import WarrantyProgressRequest
+from app.schemas.service_request import CustomerWarrantyItemOption, WarrantyProgressRequest
 from .base import BaseService, utc_now
 from .catalog import ProductVariantService
 from .exceptions import BusinessRuleError, ConflictError, NotFoundError
@@ -148,6 +148,54 @@ class WarrantyService(BaseService):
         self.notifications = NotificationService(session, clock=clock)
 
     # ================================================================== Customer
+
+    def customer_warranty_items(self, actor: Actor, order_id: uuid.UUID) -> list[CustomerWarrantyItemOption]:
+        """Read only the customer's delivered lines and their assigned devices; never expose stock serials."""
+        require_role(actor, *CUSTOMER_ONLY)
+        order = self.orders.get_by_id_and_customer(order_id, actor.user_id)
+        if order is None:
+            raise NotFoundError("Không tìm thấy đơn hàng", code="order_not_found")
+        if order.OrderStatus not in DELIVERED_ORDER_STATUSES:
+            raise BusinessRuleError("Chỉ gửi yêu cầu bảo hành cho sản phẩm thuộc đơn hàng đã giao",
+                                    code="warranty_order_not_delivered")
+        result = []
+        for item in self.order_items.list_by_order(order_id):
+            variant = self.variants.get_by_id(item.ProductVariantId)
+            if variant is None:
+                continue
+            serials = []
+            if variant.IsSerialTracked:
+                for serial in self.serials.list_by_order_item(item.OrderItemId):
+                    if serial.ProductVariantId == item.ProductVariantId:
+                        serials.append({"ProductSerialId": serial.ProductSerialId, "SerialNumber": serial.SerialNumber,
+                                        **self._customer_option_state(order, item, serial)})
+                state = {"CanRequest": any(s["CanRequest"] for s in serials),
+                         "Reason": None if any(s["CanRequest"] for s in serials) else
+                         "Chưa có thiết bị đủ điều kiện. Vui lòng kiểm tra Serial/IMEI hoặc liên hệ VieTech."}
+            else:
+                state = self._customer_option_state(order, item, None)
+            result.append(CustomerWarrantyItemOption(
+                OrderItemId=item.OrderItemId, ProductId=variant.ProductId, ProductVariantId=item.ProductVariantId,
+                ProductName=item.ProductName, VariantInfo=item.VariantInfo, Sku=item.Sku,
+                Quantity=item.Quantity, WarrantyMonths=item.WarrantyMonths, IsSerialTracked=variant.IsSerialTracked,
+                Serials=serials, **state))
+        return result
+
+    def _customer_option_state(self, order: Order, item: OrderItem, serial: ProductSerial | None) -> dict:
+        state = {"WarrantyStartDate": None, "WarrantyEndDate": None, "CanRequest": False, "Reason": None}
+        try:
+            period = self._warranty_period(order, item, serial)
+            if period:
+                state.update(WarrantyStartDate=period.start, WarrantyEndDate=period.end)
+            if serial is not None and serial.Status != SERIAL_SOLD:
+                raise BusinessRuleError("Thiết bị không còn ở trạng thái đã bán cho khách hàng")
+            self._ensure_no_open_request(item, serial)
+            self._ensure_not_being_returned(item, serial)
+            state["Reason"] = _ineligible_reason(period, self.now())
+            state["CanRequest"] = state["Reason"] is None
+        except (BusinessRuleError, ConflictError) as error:
+            state["Reason"] = error.message
+        return state
 
     def create_warranty_request(self, actor: Actor, data: WarrantyRequestCreate) -> WarrantyRequestDetailResponse:
         """Customer gửi yêu cầu bảo hành; hệ thống kiểm tra điều kiện, không đủ thời hạn thì tự từ chối (lưu lý do)."""

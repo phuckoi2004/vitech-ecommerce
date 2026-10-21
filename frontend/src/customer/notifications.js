@@ -1,17 +1,18 @@
 import { safeNext } from '../auth/session.js'
+import { returnRequestPath, warrantyRequestPath } from './routes/paths.js'
 import { formatStatus } from '../lib/status-labels.js'
 import { CHAT_PATH, HOME_PATH, INFO_PATHS, NEWS_PATH, SEARCH_PATH, CART_PATH, WISHLIST_PATH, NOTIFICATIONS_PATH, ACCOUNT_PATH } from './routes/paths.js'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const RESOURCES = {
   Order: ['/orders/', 'Chi tiết đơn hàng'],
-  WarrantyRequest: ['/warranty-requests/', 'Chi tiết bảo hành'],
-  ReturnRequest: ['/return-requests/', 'Chi tiết đổi trả'],
 }
 const PAGES = new Set([HOME_PATH, SEARCH_PATH, CART_PATH, WISHLIST_PATH, NOTIFICATIONS_PATH, ACCOUNT_PATH, CHAT_PATH, NEWS_PATH, ...Object.values(INFO_PATHS)])
 
 export function customerNotificationTarget(item) {
   const id = typeof item.ReferenceId === 'string' && UUID.test(item.ReferenceId) ? item.ReferenceId : null
+  if (item.ReferenceType === 'WarrantyRequest') return id ? { kind: 'link', to: warrantyRequestPath(id) } : null
+  if (item.ReferenceType === 'ReturnRequest') return id ? { kind: 'link', to: returnRequestPath(id) } : null
   if (Object.hasOwn(RESOURCES, item.ReferenceType)) {
     if (!id) return null
     const [path, title] = RESOURCES[item.ReferenceType]

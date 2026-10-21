@@ -54,7 +54,9 @@ class WarrantyRequestRepository(BaseRepository[WarrantyRequest]):
         stmt = (
             select(WarrantyRequest)
             .where(WarrantyRequest.WarrantyRequestId == warranty_request_id)
-            .options(selectinload(WarrantyRequest.attachments), selectinload(WarrantyRequest.histories))
+            .options(selectinload(WarrantyRequest.attachments), selectinload(WarrantyRequest.histories),
+                     selectinload(WarrantyRequest.order_item).selectinload(OrderItem.order),
+                     selectinload(WarrantyRequest.product_serial))
         )
         return self.session.scalars(stmt).one_or_none()
 
@@ -133,6 +135,8 @@ class WarrantyRequestRepository(BaseRepository[WarrantyRequest]):
         return self.get_all(
             *self._filters(customer_id, assigned_staff_id, supplier_id, status, eligibility_status),
             order_by=(WarrantyRequest.RequestedAt.desc(), WarrantyRequest.WarrantyRequestId),
+            options=(selectinload(WarrantyRequest.order_item).selectinload(OrderItem.order),
+                     selectinload(WarrantyRequest.product_serial)),
             offset=offset,
             limit=limit,
         )
@@ -185,7 +189,9 @@ class ReturnRequestRepository(BaseRepository[ReturnRequest]):
         stmt = (
             select(ReturnRequest)
             .where(ReturnRequest.ReturnRequestId == return_request_id)
-            .options(selectinload(ReturnRequest.attachments), selectinload(ReturnRequest.histories))
+            .options(selectinload(ReturnRequest.attachments), selectinload(ReturnRequest.histories),
+                     selectinload(ReturnRequest.order_item).selectinload(OrderItem.order),
+                     selectinload(ReturnRequest.product_serial))
         )
         return self.session.scalars(stmt).one_or_none()
 
@@ -256,6 +262,8 @@ class ReturnRequestRepository(BaseRepository[ReturnRequest]):
         return self.get_all(
             *self._filters(customer_id, assigned_staff_id, status, request_type),
             order_by=order,
+            options=(selectinload(ReturnRequest.order_item).selectinload(OrderItem.order),
+                     selectinload(ReturnRequest.product_serial)),
             offset=offset,
             limit=limit,
         )

@@ -242,6 +242,8 @@ class ReturnRequest(Base):
     order_item: Mapped[OrderItem] = relationship(
         back_populates="return_requests", foreign_keys=[OrderItemId]
     )
+    # Read context for the customer portal; the existing ProductSerialId FK remains unchanged.
+    product_serial: Mapped[ProductSerial | None] = relationship(foreign_keys=[ProductSerialId], viewonly=True)
     attachments: Mapped[list[ServiceRequestAttachment]] = relationship(
         back_populates="return_request",
         foreign_keys="ServiceRequestAttachment.ReturnRequestId",

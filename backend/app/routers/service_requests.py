@@ -8,7 +8,10 @@ Legacy repair-centre, independent review and return finance endpoints are paused
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query, Request, status
+from starlette.concurrency import run_in_threadpool
+
+from app.core.errors import AuthError
 
 from app.schemas import (
     AdminReturnRequestDetailResponse,
@@ -36,7 +39,9 @@ from app.schemas import (
 )
 from app.services.returns import ReturnService
 from app.services.warranty import WarrantyService
-from app.schemas.service_request import ReturnProgressRequest, WarrantyProgressRequest
+from app.schemas.service_request import CustomerReturnItemOption, CustomerWarrantyItemOption, ReturnProgressRequest, WarrantyProgressRequest
+from app.services.actor import CUSTOMER_ONLY, require_role
+from app.services.service_request_media import EVIDENCE_MAX_BYTES, ServiceRequestMediaService
 from app.services import BusinessRuleError
 
 from .dependencies import (
@@ -46,6 +51,7 @@ from .dependencies import (
     PageSize,
     get_return_service,
     get_warranty_service,
+    get_service_request_media_service,
 )
 
 router = APIRouter(tags=["Bảo hành và đổi trả"])
@@ -57,6 +63,29 @@ StatusFilter = Annotated[str | None, Query(alias="status")]
 
 
 # ------------------------------------------------------------------ warranty (customer)
+
+
+@router.get("/orders/{order_id}/warranty-items", response_model=list[CustomerWarrantyItemOption])
+def customer_warranty_items(order_id: uuid.UUID, service: Warranty, actor: CurrentActor):
+    return service.customer_warranty_items(actor, order_id)
+
+
+@router.post("/service-request-image-uploads", status_code=status.HTTP_201_CREATED)
+async def upload_service_request_image(
+    request: Request, actor: CurrentActor,
+    service: Annotated[ServiceRequestMediaService, Depends(get_service_request_media_service)],
+):
+    require_role(actor, *CUSTOMER_ONLY)
+    declared = request.headers.get("Content-Length", "")
+    if declared.isdigit() and int(declared) > EVIDENCE_MAX_BYTES:
+        raise AuthError(413, "Ảnh minh chứng tối đa 2 MB.")
+    data = bytearray()
+    async for chunk in request.stream():
+        if len(data) + len(chunk) > EVIDENCE_MAX_BYTES:
+            raise AuthError(413, "Ảnh minh chứng tối đa 2 MB.")
+        data.extend(chunk)
+    url = await run_in_threadpool(service.upload_image, actor, bytes(data))
+    return {"FileUrl": url, "FileType": "Image"}
 
 
 @router.post("/warranty-requests", response_model=WarrantyRequestDetailResponse, status_code=status.HTTP_201_CREATED)
@@ -175,6 +204,11 @@ def complete_warranty_request(request_id: uuid.UUID, service: Warranty, actor: C
 
 
 # ------------------------------------------------------------------ returns (customer)
+
+
+@router.get("/orders/{order_id}/return-items", response_model=list[CustomerReturnItemOption])
+def customer_return_items(order_id: uuid.UUID, service: Returns, actor: CurrentActor):
+    return service.customer_return_items(actor, order_id)
 
 
 @router.post("/return-requests", response_model=ReturnRequestDetailResponse, status_code=status.HTTP_201_CREATED)

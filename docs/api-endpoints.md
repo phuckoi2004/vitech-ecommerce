@@ -299,10 +299,13 @@ Khi nhân viên/Admin phụ trách gửi tin trả lời, Customer nhận thông
 | Method | Đường dẫn | Quyền | Body | Query | Trả về | Service |
 |---|---|---|---|---|---|---|
 | POST | `/warranty-requests` | Đăng nhập | `WarrantyRequestCreate` |  | `WarrantyRequestDetailResponse` | `create_warranty_request` |
+| GET | `/orders/{order_id}/warranty-items` | Customer sở hữu đơn đã giao |  |  | `CustomerWarrantyItemOption[]` (Serials, CanRequest, Reason, thời hạn) | `customer_warranty_items` |
+| POST | `/service-request-image-uploads` | Customer | Raw JPG/PNG/WEBP, tối đa 2 MiB |  | `{FileUrl, FileType: "Image"}` | `ServiceRequestMediaService.upload_image` |
 | GET | `/warranty-requests` | Đăng nhập |  | status, page, page_size | `PageResponse[WarrantyRequestResponse]` | `list_my_warranty_requests` |
 | GET | `/warranty-requests/{request_id}` | Đăng nhập |  |  | `WarrantyRequestDetailResponse` | `get_my_warranty_request` |
 | POST | `/warranty-requests/{request_id}/cancel` | Đăng nhập | `ServiceRequestNote` (tùy chọn, chỉ `Note`) |  | `WarrantyRequestDetailResponse` | `cancel_warranty_request` |
 | POST | `/return-requests` | Đăng nhập | `ReturnRequestCreate` |  | `ReturnRequestDetailResponse` | `create_return_request` |
+| GET | `/orders/{order_id}/return-items` | Customer sở hữu đơn đã giao |  |  | `CustomerReturnItemOption[]` (Serials, MaxQuantity, ReturnDeadline, WindowDays, CanRequest, Reason) | `customer_return_items` |
 | GET | `/return-requests` | Đăng nhập |  | status, page, page_size | `PageResponse[ReturnRequestResponse]` | `list_my_return_requests` |
 | GET | `/return-requests/{request_id}` | Đăng nhập |  |  | `ReturnRequestDetailResponse` | `get_my_return_request` |
 | POST | `/return-requests/{request_id}/cancel` | Đăng nhập | `ServiceRequestNote` (tùy chọn, chỉ `Note`) |  | `ReturnRequestDetailResponse` | `cancel_return_request` |

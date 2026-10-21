@@ -1,13 +1,8 @@
 import { formatDate } from '../../lib/format.js'
-import { formatStatus } from '../../lib/status-labels.js'
+import { RETURN_STATUSES } from '../../lib/returns.js'
+export { RETURN_STATUSES, returnStatusLabel, returnTypeLabel } from '../../lib/returns.js'
 
 export const RETURN_PAGE_SIZE = 6
-export const RETURN_STATUSES = [
-  ['Pending', 'Đang chờ'], ['Approved', 'Đã tiếp nhận'], ['Receiving', 'Đang điều phối'],
-  ['Processing', 'Đang đánh giá hư hại'], ['Completed', 'Đã trả máy'], ['Rejected', 'Từ chối'], ['Cancelled', 'Đã hủy'],
-]
-export const returnStatusLabel = (status) => RETURN_STATUSES.find(([key]) => key === status)?.[1] ?? formatStatus(status)
-export const returnTypeLabel = (type) => ({ Exchange: 'Đổi', Return: 'Trả' })[type] ?? type
 const validDay = (value) => /^\d{4}-\d{2}-\d{2}$/.test(value ?? '') && !Number.isNaN(Date.parse(value)) && new Date(value).toISOString().slice(0, 10) === value
 const fold = (value) => String(value ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/gi, 'd').toLowerCase()
 export function returnFilters(params) {

@@ -150,6 +150,18 @@ describe('deep links and history', () => {
 })
 
 describe('guards', () => {
+  test('the return creation page requires sign-in and preserves the intended URL', async () => {
+    const router = renderAt('/doi-tra/tao-yeu-cau')
+    expect(await screen.findByRole('heading', { name: 'Đăng nhập' })).toBeInTheDocument()
+    expect(location(router)).toBe('/dang-nhap?next=%2Fdoi-tra%2Ftao-yeu-cau')
+  })
+
+  test('the warranty creation page requires customer sign-in and preserves its URL', async () => {
+    const router = renderAt('/bao-hanh/tao-yeu-cau')
+    expect(await screen.findByRole('heading', { name: 'Đăng nhập' })).toBeInTheDocument()
+    expect(location(router)).toBe('/dang-nhap?next=%2Fbao-hanh%2Ftao-yeu-cau')
+  })
+
   test('a signed-out visitor of a customer page signs in with the page kept in next', async () => {
     const router = renderAt('/tai-khoan')
     expect(await screen.findByRole('heading', { name: 'Đăng nhập' })).toBeInTheDocument()

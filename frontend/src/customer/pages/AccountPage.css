@@ -24,6 +24,13 @@
 .cacc-body { display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 16px; align-items: start; }
 
 .cacc-menu { display: flex; flex-direction: column; gap: 4px; padding: 10px; }
+.cacc-menu-entry > .cacc-menu-item, .cacc-menu-group > .cacc-menu-item { width: 100%; }
+.cacc-menu-group { position: relative; }
+.cacc-menu-chevron { margin-left: auto; font-size: 19px; }
+.cacc-submenu { display: none; position: absolute; z-index: 6; left: 100%; top: 0; width: 245px; padding-left: 12px; }
+.cacc-submenu a { display: block; padding: 16px 18px; border: 1px solid #e4eaf2; border-radius: 10px; background: white; color: #14213d; box-shadow: 0 8px 24px rgb(20 33 61 / 12%); text-decoration: none; font-size: 14px; }
+.cacc-submenu a:hover, .cacc-submenu a:focus-visible { background: #fff1f1; color: #d53239; }
+.cacc-menu-group:hover > .cacc-submenu, .cacc-menu-group:focus-within > .cacc-submenu { display: block; }
 .cacc-menu-item {
   display: flex;
   align-items: center;
@@ -220,7 +227,9 @@
 
 @media (max-width: 860px) {
   .cacc-body { grid-template-columns: minmax(0, 1fr); }
-  .cacc-menu { flex-direction: row; overflow-x: auto; }
+  .cacc-menu { flex-direction: column; }
+  .cacc-submenu { position: static; width: 100%; padding: 0 0 0 24px; }
+  .cacc-submenu a { box-shadow: none; padding: 12px; }
   .cacc-menu-item { flex-shrink: 0; }
   .cacc-order-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
