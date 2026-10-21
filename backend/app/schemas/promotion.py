@@ -53,6 +53,7 @@ class PromotionCreate(RequestSchema):
 
     Name: varchar(255)
     Description: str | None = None
+    ApplyMode: Literal["Coupon", "Automatic"] = "Coupon"
     DiscountType: DiscountTypeValue
     DiscountValue: Money
     MinOrderValue: VndAmount
@@ -68,6 +69,8 @@ class PromotionCreate(RequestSchema):
         _check_percentage(self.DiscountType, self.DiscountValue)
         _check_fixed_amount(self.DiscountType, self.DiscountValue)
         check_end_after_start(self.StartDate, self.EndDate)
+        if self.ApplyMode == "Automatic" and self.MinOrderValue != 0:
+            raise ValueError("Giảm trực tiếp không có điều kiện giá trị đơn tối thiểu")
         return self
 
 
@@ -79,6 +82,7 @@ class PromotionUpdate(RequestSchema):
 
     Name: varchar(255) | None = None
     Description: str | None = None
+    ApplyMode: Literal["Coupon", "Automatic"] | None = None
     DiscountType: DiscountTypeValue | None = None
     DiscountValue: Money | None = None
     MinOrderValue: VndAmount | None = None
@@ -116,6 +120,7 @@ class PromotionResponse(ResponseSchema):
     PromotionId: uuid.UUID
     Name: str
     Description: str | None
+    ApplyMode: Literal["Coupon", "Automatic"] = "Coupon"
     DiscountType: DiscountTypeValue
     DiscountValue: Money
     MinOrderValue: Money

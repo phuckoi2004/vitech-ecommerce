@@ -14,7 +14,7 @@ import { CouponStatus } from './CouponUi.jsx'
 import Modal from './Modal.jsx'
 import PromotionAudit from './PromotionAudit.jsx'
 
-function CouponDetails({ row, promotions, now, can, onEdit, onDelete, onClose }) {
+function CouponDetails({ row, promotions, now, can, onEdit, onDelete }) {
   const program = promotions.find((item) => item.PromotionId === row.PromotionId)
   const fields = [
     ['Tên mã giảm giá', row.Name], ['Mã giảm giá', row.Code], ['Chương trình mẹ', program?.Name ?? '—'],
@@ -32,7 +32,7 @@ function CouponDetails({ row, promotions, now, can, onEdit, onDelete, onClose })
     <div className="flex flex-col gap-[7px]"><h3 className="m-0 text-xs font-medium text-admin-muted">Mô tả chương trình</h3><p className="m-0 whitespace-pre-wrap break-words">{program?.Description || '—'}</p></div>
     <CouponProgram promotion={program} />
     <PromotionAudit row={row} />
-    <div className="flex justify-end gap-2"><PromotionPopupButton secondary onClick={onClose}>Đóng</PromotionPopupButton>{can('delete') && <PromotionPopupButton secondary danger onClick={onDelete}>Xóa mã</PromotionPopupButton>}{can('update') && <PromotionPopupButton onClick={onEdit}>Sửa thông tin</PromotionPopupButton>}</div>
+    <div className="flex justify-end gap-2">{can('delete') && <PromotionPopupButton secondary danger onClick={onDelete}>Xóa mã</PromotionPopupButton>}{can('update') && <PromotionPopupButton onClick={onEdit}>Sửa thông tin</PromotionPopupButton>}</div>
   </div>
 }
 

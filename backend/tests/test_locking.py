@@ -97,7 +97,8 @@ class LockingQueryTest(unittest.TestCase):
         self.assertEqual(ProductSerialRepository(session).count_unassigned_order_units(uuid.uuid4()), 0)
         query = sql(session.statements[0])
         self.assertIn('JOIN "Orders"', query)
-        self.assertIn('"Orders"."OrderStatus" IN', query)
+        self.assertIn('"Orders"."OrderStatus" =', query)
+        self.assertEqual(session.statements[0].compile().params['OrderStatus_1'], 'Pending')
         self.assertIn('"ProductSerials"."OrderItemId" = "OrderItems"."OrderItemId"', query)
 
     def test_coupon_lock_is_case_insensitive_and_populates_existing(self):

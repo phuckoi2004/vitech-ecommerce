@@ -71,7 +71,9 @@ function SummaryItem({ line, detail }) {
     <div className="checkout-item-info">
       <h3 className="checkout-item-name">{line.ProductName}</h3>
       <p className="checkout-item-meta">{variantLabel} • SL: {line.Quantity}</p>
-      <p className="checkout-item-meta">Đơn giá: <Money value={line.CurrentPrice} /></p>
+      <p className="checkout-item-meta">Đơn giá: <Money value={line.CurrentPrice} />
+        {Number(line.OriginalPrice) > Number(line.CurrentPrice) && <> <del><span className="sr-only">Giá gốc </span>
+          <Money value={line.OriginalPrice} /></del></>}</p>
       <p className="checkout-item-total"><Money value={line.LineTotal} /></p>
     </div>
   </article>

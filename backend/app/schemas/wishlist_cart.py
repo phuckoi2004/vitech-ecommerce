@@ -48,7 +48,7 @@ class WishlistDetailResponse(ResponseSchema):
 
 
 class CartItemCreate(RequestSchema):
-    """UnitPrice do server lấy từ ProductVariants.Price, không nhận từ client."""
+    """UnitPrice do server tính (giá bán sau giảm trực tiếp), không nhận từ client."""
 
     ProductVariantId: uuid.UUID
     Quantity: PositiveInt
@@ -85,8 +85,9 @@ class CartResponse(ResponseSchema):
 class CartLineResponse(ResponseSchema):
     """Dòng giỏ hàng tính theo dữ liệu hiện tại (giá, trạng thái bán, tồn kho).
 
-    UnitPrice: giá lúc thêm vào giỏ; CurrentPrice: giá bán hiện tại; LineTotal = CurrentPrice × Quantity.
-    IsAvailable: biến thể còn bán và Quantity không vượt tồn kho hiện tại.
+    UnitPrice: giá bán lúc thêm vào giỏ; CurrentPrice: giá bán hiện tại sau giảm trực tiếp (như SalePrice ở trang
+    sản phẩm); OriginalPrice: giá trước giảm trực tiếp (lớn hơn CurrentPrice khi đang có chương trình);
+    LineTotal = CurrentPrice × Quantity. IsAvailable: biến thể còn bán và Quantity không vượt tồn kho hiện tại.
     """
 
     CartItemId: uuid.UUID
@@ -97,6 +98,7 @@ class CartLineResponse(ResponseSchema):
     Sku: str
     Quantity: PositiveInt
     UnitPrice: Money
+    OriginalPrice: Money
     CurrentPrice: Money
     LineTotal: Money
     IsSelected: bool

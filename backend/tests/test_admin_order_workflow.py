@@ -22,23 +22,29 @@ class AdminOrderWorkflowTest(OrderTestBase):
         self.assertEqual({n.UserId for n in alerts}, {self.staff.UserId, self.admin.UserId, other.UserId, locked.UserId})
         self.assertNotIn(deleted.UserId, {n.UserId for n in alerts})
         self.assertTrue(all(n.ActionUrl == f"/admin/orders/{order.OrderId}" and not n.IsRead for n in alerts))
+        expected_total = f"{order.TotalAmount:,.0f}".replace(",", ".")
+        self.assertTrue(all(f"{expected_total}đ ({self.cod.Name})" in n.Content for n in alerts))
+        self.assertEqual(len(alerts), 4)
+        self.assertFalse(any(n.NotificationType == "Order" and n.UserId != self.customer.UserId
+                             for n in self.db.rows(Notification)))
         own = next(n for n in alerts if n.UserId == self.staff.UserId)
         notification_service(self.db, self.session).mark_read(self.f.actor(self.staff), own.NotificationId)
         self.assertTrue(own.IsRead)
         self.assertTrue(all(not n.IsRead for n in alerts if n is not own))
-        self.set_status(order.OrderId, "Processing")
+        self.set_status(order.OrderId, "Confirmed")
         self.assertTrue(all(n.IsRead for n in alerts))
         self.assertTrue(any(not n.IsRead for n in self.f.notifications_for(self.customer)))
 
     def test_first_confirmer_owns_steps_and_admin_intervenes_without_changing_owner(self):
         order = self.create_cod()
         another = self.f.user("Staff")
-        result = self.set_status(order.OrderId, "Processing")
+        result = self.set_status(order.OrderId, "Confirmed")
         self.assertEqual(result.AssignedStaffId, self.staff.UserId)
         self.assertIsNotNone(result.ConfirmedAt)
         for target in ("Shipping", "Processing"):
             with self.assertRaises(PermissionDeniedError):
                 self.svc.update_order_status(self.f.actor(another), order.OrderId, OrderStatusUpdate(OrderStatus=target))
+        self.svc.update_order_status(self.f.actor(self.admin), order.OrderId, OrderStatusUpdate(OrderStatus="Processing"))
         self.svc.update_order_status(self.f.actor(self.admin), order.OrderId, OrderStatusUpdate(OrderStatus="Shipping"))
         self.assertEqual(self.svc.admin_get_order(self.f.actor(another), order.OrderId).AssignedStaffId, self.staff.UserId)
         with self.assertRaises(PermissionDeniedError):
@@ -47,7 +53,7 @@ class AdminOrderWorkflowTest(OrderTestBase):
 
     def test_other_staff_cannot_cancel_edit_notes_or_take_over(self):
         order = self.create_cod()
-        self.set_status(order.OrderId, "Processing")
+        self.set_status(order.OrderId, "Confirmed")
         other = self.f.actor(self.f.user("Staff"))
         for call in (
             lambda: self.svc.update_order_status(other, order.OrderId, OrderStatusUpdate(OrderStatus="Cancelled")),
@@ -63,7 +69,7 @@ class AdminOrderWorkflowTest(OrderTestBase):
     def test_failed_confirmation_preserves_pending_owner_and_unread_alerts(self):
         order = self.create_cod()
         self.svc.orders.get_by_id(order.OrderId).PaymentMethodId = self.qr.PaymentMethodId
-        with self.assertRaises(BusinessRuleError): self.set_status(order.OrderId, "Processing")
+        with self.assertRaises(BusinessRuleError): self.set_status(order.OrderId, "Confirmed")
         stored = self.svc.orders.get_by_id(order.OrderId)
         self.assertEqual((stored.OrderStatus, stored.AssignedStaffId), ("Pending", None))
         self.assertTrue(all(not n.IsRead for n in self.db.rows(Notification) if n.NotificationType == "NewOrder"))

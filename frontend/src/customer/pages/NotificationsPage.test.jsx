@@ -20,7 +20,8 @@ function mockApi(notes = [{ ...notice }]) {
     } else if (path === '/users/me/notifications') {
       if (state.failList) return json({ detail: 'Không tải được danh sách.' }, 503)
       const page = Number(url.searchParams.get('page') || 1)
-      data = { Items: state.notes.slice((page - 1) * 20, page * 20), Total: state.notes.length, Page: page, PageSize: 20 }
+      const items = state.notes.filter(item => !url.searchParams.has('is_read') || item.IsRead === (url.searchParams.get('is_read') === 'true'))
+      data = { Items: items.slice((page - 1) * 20, page * 20), Total: items.length, Page: page, PageSize: 20 }
     } else if (path.startsWith('/users/me/notifications/') && method === 'POST') {
       if (state.failMark) return json({ detail: 'Không lưu được trạng thái đã đọc.' }, 503)
       if (path.endsWith('/read-all')) {
@@ -45,6 +46,36 @@ function renderPage() {
   return router
 }
 afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks(); vi.unstubAllGlobals() })
+
+test('unread filtering uses the API across pages and refreshes after marking a notification read', async () => {
+  const state = mockApi(Array.from({ length: 22 }, (_, index) => ({ ...notice,
+    NotificationId: 'note-' + index, Title: 'Cập nhật ' + index, IsRead: index % 2 === 0 })))
+  renderPage()
+  const user = userEvent.setup()
+  await user.click(await screen.findByRole('button', { name: 'Sau', exact: true }))
+  await screen.findByRole('button', { name: 'Cập nhật 21', exact: true })
+  await user.click(within(screen.getByRole('group', { name: 'Lọc thông báo' })).getByRole('button', { name: 'Chưa đọc', exact: true }))
+  await screen.findByRole('button', { name: 'Cập nhật 1', exact: true })
+  expect(state.calls.some(call => call.path === '/users/me/notifications' && call.query.get('is_read') === 'false' && call.query.get('page') === '1')).toBe(true)
+  expect(screen.queryByRole('button', { name: 'Cập nhật 0', exact: true })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: 'Sau', exact: true })).not.toBeInTheDocument()
+  await user.click(screen.getAllByRole('button', { name: 'Đánh dấu đã đọc', exact: true })[0])
+  await waitFor(() => expect(screen.queryByRole('button', { name: 'Cập nhật 1', exact: true })).not.toBeInTheDocument())
+  expect(state.notes[1].IsRead).toBe(true)
+})
+
+test('reading the last unread notification on a later page returns to an existing page', async () => {
+  mockApi(Array.from({ length: 21 }, (_, index) => ({ ...notice,
+    NotificationId: 'note-' + index, Title: 'Cập nhật ' + index })))
+  renderPage()
+  const user = userEvent.setup()
+  await user.click(within(screen.getByRole('group', { name: 'Lọc thông báo' })).getByRole('button', { name: 'Chưa đọc', exact: true }))
+  await user.click(await screen.findByRole('button', { name: 'Sau', exact: true }))
+  await screen.findByRole('button', { name: 'Cập nhật 20', exact: true })
+  await user.click(screen.getByRole('button', { name: 'Đánh dấu đã đọc', exact: true }))
+  expect(await screen.findByRole('button', { name: 'Cập nhật 0', exact: true })).toBeInTheDocument()
+  expect(screen.queryByRole('heading', { name: 'Bạn đã đọc hết thông báo' })).not.toBeInTheDocument()
+})
 
 test('foreground polling updates both the notification list and bell after thirty seconds', async () => {
   vi.useFakeTimers()

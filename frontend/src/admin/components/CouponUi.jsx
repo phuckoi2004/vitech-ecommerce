@@ -2,10 +2,11 @@ import detailIcon from '../assets/coupon-detail-source.svg'
 import editIcon from '../assets/coupon-edit-source.svg'
 import trashIcon from '../assets/coupon-trash-source.svg'
 import { COUPON_STATUSES } from '../lib/coupons.js'
+import { formatStatus } from '../../lib/status-labels.js'
 
 export function CouponStatus({ value }) {
   const color = { active: 'bg-[#16a34a] text-white', upcoming: 'bg-admin-soft text-admin-blue', exhausted: 'bg-admin-page text-admin-muted', expired: 'bg-admin-page text-admin-muted' }[value] ?? 'bg-admin-page text-admin-muted'
-  return <span className={'inline-block rounded-full px-2.5 py-1.5 text-[11px] leading-[normal] font-semibold whitespace-nowrap ' + color}>{COUPON_STATUSES[value] ?? value}</span>
+  return <span className={'inline-block rounded-full px-2.5 py-1.5 text-[11px] leading-[normal] font-semibold whitespace-nowrap ' + color}>{formatStatus(value, COUPON_STATUSES)}</span>
 }
 export function CouponAction({ kind, row, disabled, onClick }) {
   const label = { view: 'Chi tiết', edit: 'Sửa', delete: 'Xóa' }[kind]

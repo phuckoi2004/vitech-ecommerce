@@ -1,5 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
-import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { Link, Outlet, useLocation } from 'react-router-dom'
 import logoMark from '../../assets/storefront/vietech-mark.png'
 import logoName from '../../assets/storefront/vietech-wordmark.png'
 import AccountButton from '../components/AccountButton.jsx'
@@ -7,51 +6,10 @@ import CartLink from '../components/CartLink.jsx'
 import CustomerChat from '../components/CustomerChat.jsx'
 import ChatDraftProvider from '../components/ChatDraftProvider.jsx'
 import NotificationLink from '../components/NotificationLink.jsx'
+import SearchBox from '../components/SearchBox.jsx'
 import WishlistLink from '../components/WishlistLink.jsx'
-import { CHAT_PATH, HOME_PATH, INFO_PATHS, NEWS_PATH, SEARCH_PATH } from '../routes/paths.js'
+import { CHAT_PATH, HOME_PATH, INFO_PATHS, NEWS_PATH } from '../routes/paths.js'
 import './CustomerLayout.css'
-
-// Wait briefly after typing; keep Vietnamese input composition intact before navigating to results.
-function SearchForm() {
-  const navigate = useNavigate()
-  const { pathname, search, key } = useLocation()
-  const route = pathname + search
-  const currentKeyword = pathname === SEARCH_PATH ? new URLSearchParams(search).get('q') ?? '' : ''
-  const [draft, setDraft] = useState({ route, value: currentKeyword })
-  const keyword = draft.route === route ? draft.value : currentKeyword
-  const timer = useRef(null)
-  const composing = useRef(false)
-
-  useEffect(() => () => clearTimeout(timer.current), [key])
-
-  function find(value, immediately = false) {
-    clearTimeout(timer.current)
-    const text = value.trim()
-    if ((!text && pathname !== SEARCH_PATH) || composing.current) return
-    const target = text ? `${SEARCH_PATH}?q=${encodeURIComponent(text)}` : SEARCH_PATH
-    if (target === route) return
-    const open = () => navigate(target, { replace: pathname === SEARCH_PATH })
-    if (immediately) open()
-    else timer.current = setTimeout(open, 300)
-  }
-
-  function change(value) {
-    setDraft({ route, value })
-    find(value)
-  }
-
-  function submit(event) {
-    event.preventDefault()
-    find(keyword, true)
-  }
-
-  return <form className="shop-search" role="search" onSubmit={submit}>
-    <input type="search" name="q" value={keyword} onChange={(event) => change(event.target.value)}
-      onCompositionStart={() => { composing.current = true; clearTimeout(timer.current) }}
-      onCompositionEnd={(event) => { composing.current = false; change(event.currentTarget.value) }}
-      placeholder="Tìm kiếm điện thoại, laptop, phụ kiện..." aria-label="Tìm kiếm sản phẩm" maxLength={100} />
-  </form>
-}
 
 const FOOTER_COLUMNS = [
   { title: 'Về VieTech', items: [['Giới thiệu', INFO_PATHS.about], ['Tin tức', NEWS_PATH], ['Liên hệ', INFO_PATHS.contact], ['Hệ thống cửa hàng', INFO_PATHS.stores]] },
@@ -67,10 +25,10 @@ export default function CustomerLayout({ children }) {
     <header className="shop-header">
       <div className="shop-header-inner">
         <Link className="shop-logo" to={HOME_PATH} aria-label="VieTech – Trang chủ">
-          <img className="shop-logo-mark" src={logoMark} alt="" width="136" height="83" />
-          <img className="shop-logo-wordmark" src={logoName} alt="VieTech" width="189" height="49" />
+          <img className="shop-logo-mark" src={logoMark} alt="" width="112" height="68" />
+          <img className="shop-logo-wordmark" src={logoName} alt="VieTech" width="160" height="41" />
         </Link>
-        <SearchForm />
+        <SearchBox />
         <nav className="shop-actions" aria-label="Tài khoản">
           <CartLink />
           <AccountButton />

@@ -11,14 +11,14 @@
 
 ## 3.29 — Luồng đơn và người phụ trách
 
-- Luồng mới: `Pending → Processing → Shipping → Delivered`, tương ứng **Chờ xác nhận → Đang xử lý → Đang giao → Đã giao (đóng đơn)**.
-- Nút lần lượt: **Xác nhận → Giao hàng → Giao hoàn tất**. Không còn tạo bước Confirmed hoặc yêu cầu bấm Completed ở cuối.
+- Chốt lại ngày 21/10: khôi phục bước Đã xác nhận. Luồng hiện hành là `Pending → Confirmed → Processing → Shipping → Delivered`, tương ứng **Chờ xác nhận → Đã xác nhận → Đang xử lý → Đang giao → Đã giao (đóng đơn)**.
+- Nút lần lượt: **Xác nhận → Bắt đầu xử lý → Giao hàng → Giao hoàn tất**. Đã xác nhận có bộ lọc và một bước riêng trong tiến trình; bỏ chữ “(cũ)” khỏi nhãn trạng thái. Không yêu cầu bấm Completed ở cuối.
 - Xác nhận đầu tiên ghi người thao tác vào `AssignedStaffId` và thời gian `ConfirmedAt`. Khóa dòng đơn trước khi kiểm tra/ghi để hai lần xác nhận không lấy quyền phụ trách của nhau.
 - Sau đó chỉ nhân viên đã xác nhận được chuyển bước/hủy và xử lý ghi chú, gán/gỡ Serial của đơn đó; nhân viên khác vẫn xem được. Admin được can thiệp, không tự thay người phụ trách khi làm thay.
 - Không cho dùng PATCH thông tin đơn để tự thay/xóa `AssignedStaffId` và lách quyền. Nhân viên không được tự chiếm đơn cũ chưa có người phụ trách; Admin có thể xử lý các đơn này.
 - Khi Đã giao: trong cùng transaction ghi thời điểm giao/đóng, bán các Serial đã gán, bắt đầu bảo hành và cộng bộ đếm doanh số/số đơn/số lượng bán đúng một lần. Gọi lặp không ghi thêm giao dịch COD hoặc cộng doanh số lần nữa. Không ghi lại hàng lịch sử.
 - Giữ điều kiện thanh toán và Serial trước giao: QR phải đã thanh toán; COD phải xác nhận thu đủ tiền khi giao hoàn tất; biến thể có quản lý Serial phải gán đủ mã trước giao.
-- Giữ các giá trị enum và bản ghi Confirmed/Completed cũ trong CSDL để đọc lịch sử, không sửa dữ liệu thật. Confirmed cũ có thể tiếp tục sang Processing theo quyền; Delivered/Completed đều không có bước chuyển mới trên admin.
+- `Confirmed` là bước hoạt động bình thường, tiếp tục sang Processing theo quyền. `Completed` vẫn đọc được cho các bản ghi đã có; Delivered/Completed đều không có bước chuyển mới trên admin. Không sửa dữ liệu thật hoặc cấu trúc CSDL.
 
 ### Nhánh hủy và giới hạn phạm vi
 
@@ -31,7 +31,7 @@
 - `ReferenceType=Order`, `ReferenceId=OrderId`, đường dẫn thẳng `/admin/orders/{id}`. Bộ điều hướng kiểm tra quyền `orders:view` và định dạng ID; mở đúng trang chi tiết cùng sidebar.
 - Người bấm đọc chỉ đánh dấu bản thông báo của chính mình. Người khác chưa đọc vẫn còn cảnh báo.
 - Bất kỳ người hợp lệ xác nhận đơn thành công: đánh dấu đã đọc mọi thông báo `NewOrder` của đúng đơn đó trong cùng transaction. Hủy đơn cũng giải quyết cảnh báo đang chờ xác nhận. Không xóa lịch sử, không đánh dấu thông báo khách hoặc đơn khác.
-- Chuông dùng chấm đỏ nhấp nhẹ khi có thông báo chưa đọc. Các phiên khác cập nhật bằng polling mỗi 5 giây và khi cửa sổ được focus; phiên vừa thao tác làm mới ngay. Đây không phải WebSocket. Chấm đỏ vẫn còn nếu người dùng còn thông báo khác chưa đọc.
+- Chốt lại khi ghép incoming: chuông dùng chấm đỏ đứng yên, không nhấp nháy; bấm chuông mở trang thông báo riêng, có lọc tất cả/chưa đọc. Đọc thông báo thì hết chấm cho thông báo đó; xác nhận/hủy đơn tự đánh dấu đã đọc cảnh báo `NewOrder` của đúng đơn cho mọi người. Chấm đỏ vẫn còn nếu người dùng còn thông báo khác chưa đọc. Phiên vừa thao tác làm mới ngay; các phiên khác kiểm tra lại mỗi 60 giây và khi cửa sổ được focus. Đây không phải WebSocket, nên thao tác từ máy khác không được đẩy tức thời. Nội dung thông báo đơn mới bổ sung tổng tiền và phương thức thanh toán, không tạo thêm một thông báo `Order` trùng sự kiện.
 
 ## 3.33–3.36 — Đánh giá, tin tức và banner
 
@@ -45,7 +45,7 @@
 ## Những phần giữ lại để đối chiếu tiếp
 
 - Bảo hành 3.27 và đổi trả 3.28 giữ luồng hiện hành, chờ trao đổi tiếp; không bật lại hoàn tiền/trung tâm bảo hành/đổi máy.
-- Thống kê giữ số đơn giao thành công, số đơn hủy và tỷ lệ hủy; theo yêu cầu tiếp theo **không thêm tỷ lệ hoàn thành**. Người dùng cho biết đã sửa mục thống kê trong báo cáo; chưa có bản Word mới để xác minh nội dung đó.
+- Quyết định trước khi pull là chỉ giữ số đơn giao thành công, số đơn hủy và tỷ lệ hủy, không thêm tỷ lệ hoàn thành. Khi xử lý merge ngày 21/10, người dùng chốt **lấy nguyên bản incoming cho phần báo cáo/thống kê**, không trộn với bản local; quyết định này thay giới hạn tỷ lệ trước đó. Riêng trang chi tiết đơn hàng (phần 5) bỏ toàn bộ giá nhập, cột lãi, tổng hợp lãi/biên lãi và các nhãn dự kiến/thiếu giá nhập; giữ thông tin mua hàng, thanh toán và luồng xử lý đơn của bản local. Giữ điều hướng quay lại đúng nơi mở đơn: từ báo cáo thì về báo cáo với bộ lọc trước đó, từ danh sách đơn thì về danh sách đơn. Phần form sản phẩm/biến thể (phần 3) giữ nguyên bản local, không lấy ô giá niêm yết tham khảo và xử lý lưu ô đó của incoming. Chưa sửa bản Word.
 - Không thay đổi dữ liệu CSDL thật, migration, thông tin SePay, cron, hoặc frontend khách hàng.
 
 ## Kiểm thử
@@ -72,7 +72,7 @@
 Quyết định mới này thay phần đang chờ thống nhất Serial ở mục trước; giữ nguyên nội dung cũ để theo dõi quyết định. Người dùng đã cho phép sửa backend/API và kiểm thử trong phạm vi này, không đổi cấu trúc CSDL, không tự bật `IsSerialTracked` cho dữ liệu cũ.
 
 - `IsSerialTracked` thuộc `ProductVariants`; mặc định hiện vẫn false. Lần kiểm tra chỉ đọc database đang cấu hình ghi nhận 464 biến thể chưa xóa đều false. Không chạy thao tác ghi dữ liệu thật, không thay cờ hoặc sinh Serial giả cho các biến thể đó. Luồng sau áp dụng khi biến thể đã bật quản lý Serial và đã có mã thực tế.
-- Khi NV/QTV xác nhận `Pending → Processing`, hệ thống khóa đơn, khóa các biến thể theo thứ tự ID, tự chọn đủ mã `Available` chưa gắn đơn cho từng dòng rồi chuyển `Reserved`, gắn `ProductSerials.OrderItemId`. Dữ liệu `Confirmed` cũ cũng được gán khi sang Processing. Giữ mã đã hợp lệ nếu dữ liệu cũ đã có gán, không đổi sang máy khác. Không đủ mã, lỗi lưu hoặc lỗi dòng tiếp theo thì hoàn tác toàn bộ: trạng thái, người phụ trách, Serial và thông báo đã đọc.
+- Khi NV/QTV xác nhận `Pending → Confirmed`, hệ thống khóa đơn, khóa các biến thể theo thứ tự ID, tự chọn mã `Available` chưa gắn đơn cho từng dòng rồi chuyển `Reserved`, gắn `ProductSerials.OrderItemId`. Bước sang Processing giữ các mã đã gán; dữ liệu Confirmed chưa được gán từ trước vẫn được xử lý tại bước này. Phần máy cũ không mã được áp dụng theo quyết định cuối tài liệu. Lỗi khóa/lưu hoặc lỗi dòng tiếp theo thì hoàn tác toàn bộ: trạng thái, người phụ trách, Serial và thông báo đã đọc.
 - `GET /admin/orders/{id}/serials` tiếp tục dùng để xem. Cả trang chi tiết và cửa sổ thao tác nhanh đều chỉ đọc Serial, bỏ ô nhập/nút gán/nút gỡ. Hai endpoint POST gán và DELETE gỡ cũ bị chặn tại service với `order_serials_read_only`, kể cả Admin; ẩn nút không phải biện pháp phân quyền duy nhất.
 - Tồn khả dụng `StockQuantity` đã được trừ khi đặt đơn. Xác nhận chỉ giữ Serial, không trừ lại. Giao hoàn tất giữ liên kết mã với dòng đơn, chuyển Reserved sang Sold và ghi bảo hành theo cơ chế hiện có; không xóa mã và không trừ tồn lần nữa. Hủy trước khi giao hoàn tồn và nhả mã theo luồng cũ; hủy khi đang giao vẫn giữ máy chờ nhận lại.
 - Nút chỉnh tồn chỉ QTV: biến thể không quản lý Serial tiếp tục đặt trực tiếp số lượng. Biến thể quản lý Serial tăng thêm N thì sau bước nhập số tồn xuất hiện form chỉ có một ô nhập Serial nhiều dòng cho N máy. Chưa gửi API khi mới mở bước này. Hủy không lưu; sai số lượng, mã trùng trong yêu cầu/trong CSDL, mã rỗng hoặc dài quá 100 ký tự thì không tăng số tồn hay lưu dở mã mới. Quy tắc trim, phân biệt hoa thường và giới hạn độ dài dùng lại như nhập hàng.
@@ -108,7 +108,7 @@ Quyết định mới sau phản hồi của người dùng: **không bắt nh�
 - Lỗi UI đã xác định: checkbox lưu vào form.IsSerialTracked nhưng bộ lưu tồn đọc item.IsSerialTracked của lần tải trước. Đã nối giá trị checkbox đang chỉnh vào bộ lưu tồn, giữ riêng cờ đã lưu. Tick rồi tăng số lượng và bấm **Lưu tồn kho** mở form Serial ngay, không cần **Lưu thay đổi**. Giảm/hủy không mở form nhập mã. Hủy form khôi phục checkbox về thiết lập đã lưu.
 - API PATCH tồn kho nhận thêm IsSerialTracked và ExpectedIsSerialTracked tùy chọn, boolean thực sự. Khi checkbox thay đổi, frontend gửi cờ mới cùng số tồn, số cũ và các mã mới trong một yêu cầu. Backend khóa biến thể, kiểm tra trạng thái cũ, kiểm tra đủ đúng số mã tăng thêm và trùng mã rồi mới lưu số tồn/cờ/các mã trong cùng transaction. Sai dữ liệu, lỗi lưu hoặc xung đột thì hoàn tác tất cả. Không thay cờ cho các biến thể khác, không chạy cập nhật dữ liệu thật.
 - Ví dụ có 10 máy cũ không mã, tick quản lý Serial rồi tăng thành 13: chỉ nhập 3 mã mới. Sau lưu còn 10 máy không mã + 3 máy có mã. Giảm xuống 8 không loại mã nào; giảm tiếp xuống 2 thì bỏ hết 5 máy không mã còn lại và loại ngẫu nhiên 1 mã. Bản ghi mã bị loại chuyển WrittenOff, không xóa, không lấy mã Reserved/Sold.
-- Không dùng giả định StockQuantity luôn bằng số Serial Available. Nhóm máy chưa được gán cho đơn = StockQuantity + số lượng đơn Pending/Confirmed chưa có Serial Reserved; phần không mã trong nhóm này = tổng nhóm trừ số mã Available chưa gắn đơn. Đơn Processing/Shipping không được cộng phần máy cũ thiếu mã vào nhóm tồn khả dụng nữa. Nếu số mã vượt số máy trong nhóm thì chặn dữ liệu lệch; không tự sửa tồn hoặc sinh mã giả.
+- Không dùng giả định StockQuantity luôn bằng số Serial Available. Nhóm máy chưa được gán cho đơn = StockQuantity + số lượng đơn Pending chưa có Serial Reserved; phần không mã trong nhóm này = tổng nhóm trừ số mã Available chưa gắn đơn. Đơn Confirmed/Processing/Shipping không được cộng phần máy thiếu mã vào nhóm tồn khả dụng nữa. Nếu số mã vượt số máy trong nhóm thì chặn dữ liệu lệch; không tự sửa tồn hoặc sinh mã giả.
 - Xác nhận đơn tự lấy các mã Available chưa gắn đơn trước, tới số lượng khách mua. Nếu mã ít hơn số lượng mua, phần còn lại được hiểu là tồn cũ không mã. Mã đã tồn tại vẫn được ưu tiên kể cả biến thể đang tắt yêu cầu nhập mã cho hàng mới. Các mã đang khóa không được bỏ qua để âm thầm bán hàng không mã: báo xung đột và hoàn tác, cho phép thử lại. Không cho NV/QTV gán/gỡ tay.
 - Trang chi tiết và cửa sổ thao tác đơn hiển thị Serial/IMEI: kèm mã thực tế; với phần không mã, vẫn có nhãn và để trống sau dấu hai chấm, không ghi mã giả hoặc “Chưa gán”. Đơn có phần máy cũ không mã vẫn chuyển giao hàng và hoàn tất được; chỉ bán các mã Reserved thực sự có, không trừ tồn lần nữa.
 - Hủy đơn đang giao tạo dòng hàng chờ về cho từng máy có Serial và một dòng số lượng cho phần không mã còn lại. Nhận lại hàng cộng đúng cả hai phần, tránh bỏ sót máy cũ. Không thay nghiệp vụ ReturnRequests/WarrantyRequests hay giao diện khách hàng.

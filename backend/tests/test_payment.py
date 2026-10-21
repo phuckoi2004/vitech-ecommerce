@@ -123,11 +123,14 @@ class QrAndCallbackTest(PaymentTestBase):
         code = f"GW-{self.order.OrderCode}"
         self.callback(code, "130000.00")
         self.assertEqual(self.order.PaymentStatus, "Paid")
+        for user in (self.staff, self.admin):
+            self.assertEqual([n.Title for n in self.f.notifications_for(user)], ["Đã nhận thanh toán"])
         notifications = len(self.f.notifications_for(self.customer))
         again = self.callback(code, "130000.00")
         self.assertEqual(again.PaymentTransactionId, tx.PaymentTransactionId)
         self.assertEqual(len(self.txs(self.order)), 1)
         self.assertEqual(len(self.f.notifications_for(self.customer)), notifications)
+        self.assertEqual(len(self.f.notifications_for(self.admin)), 1)
         self.callback(code, "130000.00", success=False)  # thất bại đến sau thành công: bỏ qua
         self.assertEqual((self.txs(self.order)[0].Status, self.order.PaymentStatus), ("Success", "Paid"))
 

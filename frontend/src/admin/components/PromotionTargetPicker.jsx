@@ -1,9 +1,9 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { promotionTargetName } from '../lib/promotions.js'
-import { ALL_PROMOTION_CATEGORIES, SAVED_PROMOTION_SCOPE, promotionProductCategory } from '../lib/promotion-targets.js'
+import { ALL_PROMOTION_CATEGORIES, SAVED_PROMOTION_SCOPE, promotionCategoryFamily, promotionProductCategory } from '../lib/promotion-targets.js'
 
 const searchKey = (text) => String(text).normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/gi, 'd').toLocaleLowerCase('vi')
-export default function PromotionTargetPicker({ products, selection, onChange, disabled }) {
+export default function PromotionTargetPicker({ products, categories = [], selection, onChange, disabled }) {
   const [open, setOpen] = useState(false), [keyword, setKeyword] = useState('')
   const root = useRef(null), trigger = useRef(null), panelId = useId()
   const unavailable = disabled || !selection.categoryId || [ALL_PROMOTION_CATEGORIES, SAVED_PROMOTION_SCOPE].includes(selection.categoryId)
@@ -13,7 +13,8 @@ export default function PromotionTargetPicker({ products, selection, onChange, d
     document.addEventListener('pointerdown', outside)
     return () => document.removeEventListener('pointerdown', outside)
   }, [open])
-  const available = products.filter((product) => promotionProductCategory(product) === selection.categoryId)
+  const family = promotionCategoryFamily(selection.categoryId, categories)
+  const available = products.filter((product) => family.includes(promotionProductCategory(product)))
   const shown = available.filter((product) => searchKey(product.Name).includes(searchKey(keyword.trim())))
   const summary = !selection.categoryId ? 'Chọn danh mục trước' : selection.categoryId === SAVED_PROMOTION_SCOPE ? 'Theo phạm vi đã lưu' : selection.allProducts ? 'Tất cả sản phẩm' : promotionTargetName(selection.productIds, available, 'ProductId') || 'Chọn sản phẩm áp dụng'
   return <div ref={root} className="relative flex min-w-0 flex-col gap-[7px]" onKeyDown={(event) => { if (open && event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); setOpen(false); trigger.current?.focus() } }}>

@@ -31,6 +31,7 @@ if TYPE_CHECKING:
 
 PROMOTION_STATUSES = ("Draft", "Scheduled", "Active", "Expired", "Cancelled")
 DISCOUNT_TYPES = ("Percentage", "FixedAmount")
+APPLY_MODES = ("Coupon", "Automatic")
 
 
 class Promotion(Base):
@@ -38,6 +39,7 @@ class Promotion(Base):
 
     __tablename__ = "Promotions"
     __table_args__ = (
+        check_in("ApplyMode", APPLY_MODES, "ApplyMode_Valid"),
         check_in("DiscountType", DISCOUNT_TYPES, "DiscountType_Valid"),
         CheckConstraint('"DiscountValue" >= 0', name="DiscountValue_NonNegative"),
         CheckConstraint(
@@ -58,6 +60,7 @@ class Promotion(Base):
     )
     Name: Mapped[str] = mapped_column(String(255), nullable=False)
     Description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    ApplyMode: Mapped[str] = mapped_column(String(20), nullable=False, default="Coupon", server_default=text("'Coupon'"))
     DiscountType: Mapped[str] = mapped_column(String(20), nullable=False)
     DiscountValue: Mapped[Decimal] = mapped_column(Numeric(15, 2), nullable=False)
     MinOrderValue: Mapped[Decimal] = mapped_column(Numeric(15, 2), nullable=False)

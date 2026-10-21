@@ -22,7 +22,7 @@ class AutomaticSerialTest(OrderTestBase):
         return self.db.get(Order, response.OrderId)
 
     def confirm(self, order):
-        return self.set_status(order.OrderId, "Processing")
+        return self.set_status(order.OrderId, "Confirmed")
 
     def test_confirmation_automatically_allocates_exact_quantity_and_keeps_stock(self):
         order = self.checkout()
@@ -36,6 +36,11 @@ class AutomaticSerialTest(OrderTestBase):
         names = [n for n, _ in self.db.locks]
         self.assertIn("ProductVariant", names)
         self.assertIn("ProductSerial", names)
+        self.assertEqual(order.OrderStatus, "Confirmed")
+        self.set_status(order.OrderId, "Processing")
+        self.assertEqual(self.svc.get_order_serials(self.f.actor(self.staff), order.OrderId)[0].SerialNumbers,
+                         summary.SerialNumbers)
+        self.assertEqual(self.phone.StockQuantity, 2)
 
     def test_other_orders_never_get_a_device_already_reserved(self):
         first, second = self.checkout(), self.checkout(customer=self.other)
@@ -70,6 +75,7 @@ class AutomaticSerialTest(OrderTestBase):
             s.Status = "WrittenOff"
         self.confirm(order)
         self.assertEqual(self.svc.get_order_serials(self.f.actor(self.staff), order.OrderId)[0].SerialNumbers, ['PHONE-0'])
+        self.set_status(order.OrderId, "Processing")
         self.set_status(order.OrderId, 'Shipping')
         self.svc.confirm_cod_delivery(self.f.actor(self.staff), order.OrderId)
         self.assertEqual((order.OrderStatus, self.codes[0].Status, self.phone.StockQuantity), ('Delivered', 'Sold', 2))
@@ -106,6 +112,7 @@ class AutomaticSerialTest(OrderTestBase):
             serial.Status = 'WrittenOff'
         self.confirm(order)
         self.assertEqual(self.svc.get_order_serials(self.f.actor(self.staff), order.OrderId)[0].SerialNumbers, [])
+        self.set_status(order.OrderId, "Processing")
         self.set_status(order.OrderId, 'Shipping')
         self.svc.confirm_cod_delivery(self.f.actor(self.staff), order.OrderId)
         self.assertEqual(order.OrderStatus, 'Delivered')
@@ -114,6 +121,7 @@ class AutomaticSerialTest(OrderTestBase):
         order = self.checkout()
         for serial in self.codes[1:]: serial.Status = 'WrittenOff'
         self.confirm(order)
+        self.set_status(order.OrderId, "Processing")
         self.set_status(order.OrderId, 'Shipping')
         self.set_status(order.OrderId, 'Cancelled')
         rows = self.db.rows(ShipmentReturnItem)
@@ -136,6 +144,7 @@ class AutomaticSerialTest(OrderTestBase):
         order = self.checkout()
         self.confirm(order)
         assigned = self.svc.get_order_serials(self.f.actor(self.staff), order.OrderId)[0].SerialNumbers
+        self.set_status(order.OrderId, "Processing")
         self.set_status(order.OrderId, "Shipping")
         self.svc.confirm_cod_delivery(self.f.actor(self.staff), order.OrderId)
         self.assertEqual(self.phone.StockQuantity, 2)
@@ -152,6 +161,7 @@ class AutomaticSerialTest(OrderTestBase):
     def test_shipping_cancellation_keeps_devices_until_returned(self):
         order = self.checkout()
         self.confirm(order)
+        self.set_status(order.OrderId, "Processing")
         self.set_status(order.OrderId, "Shipping")
         self.set_status(order.OrderId, "Cancelled")
         self.assertEqual(self.phone.StockQuantity, 2)
@@ -161,7 +171,7 @@ class AutomaticSerialTest(OrderTestBase):
         order = self.checkout()
         order.OrderStatus = "Confirmed"
         order.AssignedStaffId = self.staff.UserId
-        self.confirm(order)
+        self.set_status(order.OrderId, "Processing")
         self.assertEqual(sum(s.Status == "Reserved" for s in self.codes), 2)
 
 
@@ -172,7 +182,7 @@ def test_http_confirmation_allocates_and_all_internal_roles_cannot_change_serial
     order = factory.order(customer, factory.payment_method('COD'), status='Pending', lines=((variant, 1),))
     serial = db.add(ProductSerial(ProductVariantId=variant.ProductVariantId, SerialNumber='AUTO-HTTP', Status='Available'))
     base = f'/admin/orders/{order.OrderId}'
-    assert as_user(staff).post(base + '/status', json={'OrderStatus': 'Processing'}).status_code == 200
+    assert as_user(staff).post(base + '/status', json={'OrderStatus': 'Confirmed'}).status_code == 200
     for user in (staff, admin):
         client = as_user(user)
         assert client.get(base + '/serials').json()[0]['SerialNumbers'] == ['AUTO-HTTP']

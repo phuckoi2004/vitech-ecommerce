@@ -8,6 +8,7 @@ const STORAGE_PREFIX = 'vietech-cart-coupon:'
 // (backend/app/services/promotion.py _evaluate and preview_cart_coupon). Anything else is not a verdict on the code.
 const REJECTIONS = new Set([
   'coupon_invalid', 'coupon_expired', 'coupon_usage_exceeded', 'coupon_min_order_value', 'coupon_not_applicable', 'cart_empty',
+  'coupon_customer_limit', 'coupon_price_floor',
 ])
 
 // The coupon code a customer applied in the cart, kept for this browser tab. The cart and the order confirmation

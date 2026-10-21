@@ -4,12 +4,13 @@ Không tính tiền, không đổi trạng thái, không kiểm tra quyền.
 """
 
 import uuid
+from collections.abc import Sequence
 from datetime import datetime
 
 from sqlalchemy import or_, select
 from sqlalchemy.orm import joinedload, selectinload
 
-from app.models import Order, OrderItem, OrderStatusHistory, PaymentMethod, ShippingMethod, User
+from app.models import Order, OrderItem, OrderStatusHistory, PaymentMethod, ProductVariant, ShippingMethod, User
 
 from .base import BaseRepository
 
@@ -44,6 +45,10 @@ class OrderRepository(BaseRepository[Order]):
     def exists_by_code(self, order_code: str) -> bool:
         return self.exists(Order.OrderCode == order_code)
 
+    def customer_used_coupon(self, customer_id: uuid.UUID, coupon_id: uuid.UUID) -> bool:
+        """Khách đã có đơn chưa hủy dùng coupon này."""
+        return self.exists(Order.CustomerId == customer_id, Order.CouponId == coupon_id, Order.OrderStatus != "Cancelled")
+
     def get_by_id_and_customer(self, order_id: uuid.UUID, customer_id: uuid.UUID) -> Order | None:
         return self.get_one(Order.OrderId == order_id, Order.CustomerId == customer_id)
 
@@ -52,7 +57,11 @@ class OrderRepository(BaseRepository[Order]):
         stmt = (
             select(Order)
             .where(Order.OrderId == order_id)
-            .options(selectinload(Order.items), selectinload(Order.status_histories))
+            .options(
+                selectinload(Order.items).selectinload(OrderItem.product_variant),
+                selectinload(Order.items).selectinload(OrderItem.review),
+                selectinload(Order.status_histories),
+            )
         )
         return self.session.scalars(stmt).one_or_none()
 
@@ -60,12 +69,13 @@ class OrderRepository(BaseRepository[Order]):
         self,
         customer_id: uuid.UUID | None,
         assigned_staff_id: uuid.UUID | None,
-        order_status: str | None,
+        order_status: str | Sequence[str] | None,
         payment_status: str | None,
         ordered_from: datetime | None,
         ordered_to: datetime | None,
         order_code_contains: str | None = None,
         keyword: str | None = None,
+        product_id: uuid.UUID | None = None,
     ) -> list:
         conditions = []
         if keyword:
@@ -78,6 +88,13 @@ class OrderRepository(BaseRepository[Order]):
                     User.PhoneNumber.ilike(pattern, escape="\\"),
                 )),
             ))
+        if product_id is not None:
+            # Đơn có ít nhất một dòng thuộc sản phẩm này (qua biến thể).
+            conditions.append(Order.OrderId.in_(
+                select(OrderItem.OrderId)
+                .join(ProductVariant, ProductVariant.ProductVariantId == OrderItem.ProductVariantId)
+                .where(ProductVariant.ProductId == product_id)
+            ))
         if order_code_contains:
             # Tìm theo mã đơn, không phân biệt hoa thường; escape ký tự đặc biệt của LIKE.
             escaped = order_code_contains.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
@@ -86,8 +103,10 @@ class OrderRepository(BaseRepository[Order]):
             conditions.append(Order.CustomerId == customer_id)
         if assigned_staff_id is not None:
             conditions.append(Order.AssignedStaffId == assigned_staff_id)
-        if order_status is not None:
+        if isinstance(order_status, str):
             conditions.append(Order.OrderStatus == order_status)
+        elif order_status:
+            conditions.append(Order.OrderStatus.in_(order_status))
         if payment_status is not None:
             conditions.append(Order.PaymentStatus == payment_status)
         if ordered_from is not None:
@@ -101,23 +120,36 @@ class OrderRepository(BaseRepository[Order]):
         *,
         customer_id: uuid.UUID | None = None,
         assigned_staff_id: uuid.UUID | None = None,
-        order_status: str | None = None,
+        order_status: str | Sequence[str] | None = None,
         payment_status: str | None = None,
         ordered_from: datetime | None = None,
         ordered_to: datetime | None = None,
         order_code_contains: str | None = None,
         keyword: str | None = None,
+        product_id: uuid.UUID | None = None,
         offset: int | None = None,
         limit: int | None = None,
+        with_items: bool = False,
     ) -> list[Order]:
-        """ordered_from bao gồm, ordered_to không bao gồm (khoảng [from, to))."""
+        """ordered_from bao gồm, ordered_to không bao gồm (khoảng [from, to)); order_status một hoặc nhiều giá trị.
+
+        product_id: đơn có dòng thuộc sản phẩm này. with_items: nạp sẵn Items kèm biến thể, sản phẩm và review
+        (CustomerOrderSummary).
+        """
+        options = (
+            (selectinload(Order.items).selectinload(OrderItem.product_variant).selectinload(ProductVariant.product),
+             selectinload(Order.items).selectinload(OrderItem.review))
+            if with_items else ()
+        )
         return self.get_all(
             *self._filters(
-                customer_id, assigned_staff_id, order_status, payment_status, ordered_from, ordered_to, order_code_contains, keyword
+                customer_id, assigned_staff_id, order_status, payment_status, ordered_from, ordered_to, order_code_contains,
+                keyword=keyword, product_id=product_id,
             ),
             order_by=(Order.OrderedAt.desc(), Order.OrderId),
             offset=offset,
             limit=limit,
+            options=options,
         )
 
     def count_orders(
@@ -125,16 +157,18 @@ class OrderRepository(BaseRepository[Order]):
         *,
         customer_id: uuid.UUID | None = None,
         assigned_staff_id: uuid.UUID | None = None,
-        order_status: str | None = None,
+        order_status: str | Sequence[str] | None = None,
         payment_status: str | None = None,
         ordered_from: datetime | None = None,
         ordered_to: datetime | None = None,
         order_code_contains: str | None = None,
         keyword: str | None = None,
+        product_id: uuid.UUID | None = None,
     ) -> int:
         return self.count(
             *self._filters(
-                customer_id, assigned_staff_id, order_status, payment_status, ordered_from, ordered_to, order_code_contains, keyword
+                customer_id, assigned_staff_id, order_status, payment_status, ordered_from, ordered_to, order_code_contains,
+                keyword=keyword, product_id=product_id,
             )
         )
 

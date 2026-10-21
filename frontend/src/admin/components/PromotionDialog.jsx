@@ -3,7 +3,8 @@ import useInternalAuth from '../../hooks/useInternalAuth.js'
 import { ErrorState, LoadingState } from '../../components/shared/index.js'
 import useAdminQuery, { useAdminLoad } from '../hooks/useAdminQuery.js'
 import { createPromotion, updatePromotion, deletePromotion, cancelPromotion, getPromotionProducts } from '../services/promotions.js'
-import { PROMOTION_TYPES, promotionBody, promotionDateTime, promotionForm, promotionMoney, promotionPatch, promotionTargetName, promotionValue, samePromotionTargets } from '../lib/promotions.js'
+import { PROMOTION_MODES, PROMOTION_TYPES, promotionBody, promotionDateTime, promotionForm, promotionMoney, promotionPatch, promotionTargetName, promotionValue, samePromotionTargets } from '../lib/promotions.js'
+import { promotionTopCategories } from '../lib/promotion-targets.js'
 import Modal from './Modal.jsx'
 import PromotionEditor from './PromotionEditor.jsx'
 import { PromotionPopupButton, PromotionStatus } from './PromotionUi.jsx'
@@ -12,9 +13,10 @@ import useCouponRefresh from '../hooks/useCouponRefresh.js'
 
 function PromotionDetails({ row, products, categories, onEdit, onDelete, canEdit, canDelete }) {
   const targets = promotionForm(row)
-  const scope = <>{targets.ProductIds.length > 0 && <><span>Sản phẩm: </span><span>{promotionTargetName(targets.ProductIds, products, 'ProductId')}</span></>}{targets.ProductIds.length > 0 && targets.CategoryIds.length > 0 && <br />}{targets.CategoryIds.length > 0 && <><span>Danh mục: </span><span>{promotionTargetName(targets.CategoryIds, categories, 'CategoryId')}</span></>}{!targets.ProductIds.length && !targets.CategoryIds.length && 'Toàn đơn'}</>
+  const scope = <>{targets.ProductIds.length > 0 && <><span>Sản phẩm: </span><span>{promotionTargetName(targets.ProductIds, products, 'ProductId')}</span></>}{targets.ProductIds.length > 0 && targets.CategoryIds.length > 0 && <br />}{targets.CategoryIds.length > 0 && <><span>Danh mục: </span><span>{promotionTargetName(promotionTopCategories(targets.CategoryIds, categories), categories, 'CategoryId')}</span></>}{!targets.ProductIds.length && !targets.CategoryIds.length && 'Toàn đơn'}</>
   return <div className="flex flex-col gap-[15px] text-xs leading-[normal]">
     <dl className="m-0 flex flex-col gap-[15px]">{[
+      ['Cách áp dụng', PROMOTION_MODES[row.ApplyMode ?? 'Coupon']],
       ['Tên chương trình', row.Name], ['Loại giảm giá', PROMOTION_TYPES[row.DiscountType]], ['Giá trị giảm', promotionValue(row)], ['Đơn hàng tối thiểu', promotionMoney(row.MinOrderValue)], ['Giảm tối đa', row.MaxDiscountAmount == null ? 'Không giới hạn' : promotionMoney(row.MaxDiscountAmount)], ['Thời gian bắt đầu', promotionDateTime(row.StartDate)], ['Thời gian kết thúc', promotionDateTime(row.EndDate)], ['Phạm vi áp dụng', scope],
     ].map(([label, value]) => <div key={label} className="grid grid-cols-[180px_minmax(0,1fr)] items-start"><dt className="font-medium text-admin-muted">{label}</dt><dd className="m-0 font-semibold break-words">{value}</dd></div>)}
     </dl>

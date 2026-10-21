@@ -134,7 +134,7 @@ Lỗi API được chuyển thành thông báo tiếng Việt. API nghiệp vụ
 
 | Nhóm/trang | URL chính | Nội dung |
 |---|---|---|
-| Tổng quan | `/admin` | Bốn thống kê, doanh thu năm tháng và các bảng tóm tắt |
+| Tổng quan | `/admin` | Bốn thống kê, doanh số 6 tháng và các bảng tóm tắt |
 | Tài khoản | `/admin/users` | Danh sách, thêm nhân viên, xem/sửa, khóa/mở khóa, xóa theo quyền |
 | Hồ sơ cá nhân | `/admin/profile` | Thông tin của người đang đăng nhập, avatar, đổi mật khẩu |
 | Danh sách sản phẩm | `/admin/products` | Quản lý từng SKU/biến thể; xem, thêm, sửa và xóa |
@@ -163,7 +163,7 @@ Không cần tạo hai bản giao diện giống nhau cho Admin và Staff. Cùng
 
 Bốn ô tổng quan lấy dữ liệu về tổng đơn, doanh thu, đơn chờ và sản phẩm sắp hết. Khi dữ liệu thực sự rỗng, số liệu có thể là 0; khi đang tải hoặc tải lỗi thì hiển thị trạng thái tương ứng thay vì giả dữ liệu.
 
-Năm tháng gần nhất trên tổng quan được tạo bằng JavaScript từ lịch máy người dùng. Frontend chuyển các tháng thành kỳ truy vấn rồi gọi các API thống kê. Nhãn tháng là dữ liệu hiển thị; số đơn và tiền doanh thu vẫn lấy từ backend.
+Sáu tháng gần nhất trên tổng quan được tạo bằng JavaScript từ lịch máy người dùng. Frontend chuyển các tháng thành kỳ truy vấn rồi gọi các API thống kê. Nhãn tháng là dữ liệu hiển thị; số đơn và tiền doanh thu vẫn lấy từ backend.
 
 Cảnh báo gắn với `ProductVariants.StockQuantity` và `MinStockLevel`. Backend tạo thông báo khi thao tác thay đổi kho vượt ngưỡng theo quy tắc tồn thấp. Trường hợp ngưỡng bằng 0 được xử lý theo quy tắc backend hiện có. Trạng thái hết hàng được phân biệt với sắp hết trong danh sách sản phẩm.
 
@@ -351,11 +351,13 @@ API chính: `/admin/conversations/unassigned`, `/assigned`, `/{id}`, `/{id}/mess
 
 ## 17. Báo cáo doanh thu và số lượng đơn
 
-Hai tab dùng cùng kiểu bộ lọc thời gian: chọn từng tháng trong 12 tháng của năm hoặc năm tháng gần nhất. Một tháng hiển thị một cột, năm tháng hiển thị năm cột. Nhãn ghi rõ Tháng m/yyyy, không dùng nhãn “Tháng này”.
+Hai tab dùng cùng kiểu bộ lọc thời gian: chọn từng tháng trong 12 tháng của năm hoặc 6 tháng gần nhất. Một tháng hiển thị một cột, 6 tháng hiển thị 6 cột. Nhãn ghi rõ Tháng m/yyyy, không dùng nhãn “Tháng này”.
 
-Bộ lọc hiện hành gồm thời gian, danh mục, thương hiệu và sản phẩm. Lọc sản phẩm phụ thuộc các lựa chọn danh mục/thương hiệu. Đã bỏ lọc tài khoản, nhà cung cấp và xuất báo cáo theo yêu cầu.
+Bộ lọc hiện hành gồm thời gian, danh mục, thương hiệu và sản phẩm. Lọc sản phẩm phụ thuộc các lựa chọn danh mục/thương hiệu. Tab Đơn nhập hàng bổ sung lọc nhà cung cấp. Chưa có lọc tài khoản và xuất báo cáo.
 
-Nhấn Áp dụng gửi kỳ và các ID lọc tới `/admin/statistics/reports/revenue` hoặc `/orders`. Backend dùng cùng bộ điều kiện để tính tóm tắt, biểu đồ và bảng chi tiết; frontend không chỉ thay biểu đồ rồi giữ nguyên bảng dưới.
+Nhấn Áp dụng gửi kỳ và các ID lọc tới `/admin/statistics/reports/revenue`, `/orders` hoặc `/purchases` theo tab. Backend dùng cùng bộ điều kiện để tính tóm tắt, biểu đồ và bảng chi tiết; frontend không chỉ thay biểu đồ rồi giữ nguyên bảng dưới.
+
+Đơn nhập hàng dùng ngày tạo phiếu theo GMT+7, đếm mỗi phiếu một lần. Bảng phiếu có phân trang và mở chi tiết; quay lại giữ kỳ, bộ lọc và trang. Tổng hợp gồm các trạng thái, số lượng đặt, đã nhận và giá trị đặt. Số lượng/giá trị bỏ phiếu hủy hoặc từ chối, chỉ cộng dòng phù hợp bộ lọc sản phẩm. Đã nhận là lũy kế hiện tại của các phiếu tạo trong kỳ; giá trị đặt chưa phải khoản thực chi cho nhà cung cấp. Chi tiết cách tính và Top 5 nhà cung cấp có ngay trên trang. API chỉ đọc, không thêm bảng/cột.
 
 Bảng chi tiết thể hiện kỳ theo tháng, ví dụ Tháng 10/2026. Với phản hồi biểu đồ một tháng gồm các điểm ngắn hơn, frontend dùng tổng kỳ để tạo một cột theo yêu cầu hiển thị. Backend vẫn tổng hợp bảng chi tiết theo tháng lịch.
 

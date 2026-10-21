@@ -22,7 +22,7 @@ describe('order payment rules', () => {
   test('"Đã thanh toán" only for a Paid order; a pending one reads by its method', () => {
     expect(paymentStatusText({ PaymentStatus: 'Paid' }, false)).toBe('Đã thanh toán')
     expect(paymentStatusText({ PaymentStatus: 'Pending' }, false)).toBe('Chờ thanh toán')
-    expect(paymentStatusText({ PaymentStatus: 'Pending' }, true)).toBe('Thanh toán khi nhận hàng')
+    expect(paymentStatusText({ PaymentStatus: 'Pending' }, true)).toBe('Chưa thanh toán')
     expect(paymentStatusText({ PaymentStatus: 'Cancelled' }, false)).toBe('Đã huỷ thanh toán')
     // Cancelled once paid: the money is recorded (to give back), never said to be refunded.
     expect(paymentStatusText({ OrderStatus: 'Cancelled', PaymentStatus: 'Paid' }, false)).toBe('Đã ghi nhận thanh toán')

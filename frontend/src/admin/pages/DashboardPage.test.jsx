@@ -3,92 +3,96 @@ import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { AuthContext } from '../../auth/context.js'
 import { makeAuth } from '../../test/auth.js'
-import { browserMonth } from '../../lib/dashboard-periods.js'
-import useBrowserMonth from '../hooks/useBrowserMonth.js'
+import useReportingDate from '../hooks/useReportingDate.js'
 import DashboardPage from './DashboardPage.jsx'
 import AdminNotifications from '../components/AdminNotifications.jsx'
 
 const api = vi.hoisted(() => ({ getAdminData: vi.fn(), getRevenueSeries: vi.fn(), getDashboardStock: vi.fn(), markNotificationRead: vi.fn(), markAllNotificationsRead: vi.fn() }))
 vi.mock('../../services/api/admin.js', () => api)
-
+const permissions = ['admin.portal', ...['products','orders','inventory','chat','returns','warranties','revenue_reports','order_reports'].map((key) => key + ':view')]
 function renderPage(element = <DashboardPage />) {
-  return render(<AuthContext.Provider value={makeAuth({ role: 'Admin' })}><MemoryRouter>{element}</MemoryRouter></AuthContext.Provider>)
+  return render(<AuthContext.Provider value={makeAuth({ role: 'Admin', permissions })}><MemoryRouter>{element}</MemoryRouter></AuthContext.Provider>)
 }
-
 beforeEach(() => {
   vi.resetAllMocks()
-  api.getAdminData.mockImplementation(async (token, path) => path.endsWith('/statistics/orders')
-    ? { TotalOrders: 0, ByStatus: { Pending: 0 } }
+  vi.setSystemTime(new Date('2026-10-21T05:00:00Z'))
+  api.getAdminData.mockImplementation(async (token, path) => path.includes('/statistics/reports/')
+    ? { Summary: { Revenue: '0', Cost: '0', Profit: '0', TotalOrders: 0, DeliveredOrders: 0, CancelledOrders: 0 }, Items: [], Total: 0 }
+    : path.endsWith('/workload') ? { PendingOrders: 0, WaitingChats: 0, PendingReturns: 0, NewWarranties: 0 }
     : path.endsWith('/unread-count') ? { Count: 0 } : { Items: [], Total: 0, Page: 1, PageSize: 5 })
-  api.getRevenueSeries.mockImplementation(async (token, months) => months.map((month) => ({ month, data: { NetRevenue: '0.00', OrderCount: 0 }, error: '' })))
-  api.getDashboardStock.mockResolvedValue({ Items: [], Total: 0 })
+  api.getRevenueSeries.mockImplementation(async (token, months) => months.map((month) => ({ month, data: { Revenue: '0', Profit: '0', TotalOrders: 0 }, error: '' })))
+  api.getDashboardStock.mockResolvedValue({ Items: [], OutOfStockTotal: 0, LowStockTotal: 0 })
 })
 afterEach(() => vi.useRealTimers())
 
 describe('dashboard data', () => {
-  test('empty APIs show zero cards, table columns and no made-up bars or rows', async () => {
+  test('empty APIs show zeros, an empty chart and genuine empty operational tables', async () => {
     renderPage()
-    for (const name of ['Tổng đơn hàng', 'Đơn chờ xử lý', 'Sản phẩm sắp hết']) expect(await within(screen.getByRole('article', { name })).findByText('0')).toBeInTheDocument()
-    expect(await within(screen.getByRole('article', { name: 'Doanh thu' })).findByText(/0\s*₫/)).toBeInTheDocument()
-    expect(await screen.findByRole('img', { name: 'Chưa có dữ liệu doanh thu trong 5 tháng gần nhất' })).toBeInTheDocument()
-    expect(screen.queryByRole('img', { name: /^Tháng/ })).not.toBeInTheDocument()
-    const orders = screen.getByRole('region', { name: 'Đơn hàng mới nhất' })
-    for (const name of ['Mã đơn', 'Người nhận', 'Giá trị', 'Trạng thái', 'Ngày đặt']) expect(within(orders).getByRole('columnheader', { name })).toBeInTheDocument()
+    expect(await within(screen.getByRole('article', { name: 'Doanh số bán hàng' })).findByText(/0\s*₫/)).toBeInTheDocument()
+    expect(await within(screen.getByRole('article', { name: 'Số đơn đã giao' })).findByText('0')).toBeInTheDocument()
+    expect(within(screen.getByRole('article', { name: 'Số đơn đã giao' })).getByText('0 / 0')).toBeInTheDocument()
+    expect(await within(screen.getByRole('article', { name: 'Số đơn hủy' })).findByText('0')).toBeInTheDocument()
+    expect(within(screen.getByRole('article', { name: 'Số đơn hủy' })).getByText('0 / 0')).toBeInTheDocument()
+    expect(await screen.findByText('Chưa có dữ liệu trong kỳ đã chọn.')).toBeInTheDocument()
     expect(await screen.findByText('Chưa có đơn hàng.')).toBeInTheDocument()
     expect(await screen.findByText('Chưa có sản phẩm cần cảnh báo.')).toBeInTheDocument()
-    expect(screen.queryByText(/so với tháng trước/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Doanh thu cao nhất/)).not.toBeInTheDocument()
   })
-
-  test('real data fills the cards, status rows, five bars and the full low-stock count', async () => {
-    api.getAdminData.mockImplementation(async (token, path, query) => path.endsWith('/statistics/orders')
-      ? { TotalOrders: query.date_from.startsWith(browserMonth()) ? 12 : 10 }
-      : path === '/admin/orders' && query.order_status ? { Items: [], Total: 3 }
-        : { Items: [{ OrderId: 'o1', OrderCode: 'VT-real', ReceiverName: 'Người nhận thật', TotalAmount: '1200000.00', OrderStatus: 'Shipping', OrderedAt: '2026-10-12T18:00:00Z' }], Total: 1 })
-    api.getRevenueSeries.mockImplementation(async (token, months) => months.map((month, index) => ({ month, data: { NetRevenue: String((index + 1) * 1000000), OrderCount: 1 }, error: '' })))
-    api.getDashboardStock.mockResolvedValue({ Items: [{ ProductVariantId: 'v1', ProductName: 'Điện thoại thật', VariantName: '256GB', Sku: 'PHONE', StockQuantity: 0 }], Total: 23 })
+  test('dashboard uses sales report totals, same elapsed dates, and actionable workload links', async () => {
+    api.getAdminData.mockImplementation(async (token, path, query) => {
+      if (path.endsWith('/reports/revenue')) return { Summary: { Revenue: query.date_from === '2026-10-01' ? '434000' : '400000', Cost: '300000', Profit: '134000', Margin: '30.88', TotalOrders: 3 } }
+      if (path.endsWith('/reports/orders')) return { Summary: { TotalOrders: 10, DeliveredOrders: 4, CancelledOrders: 6 } }
+      if (path.endsWith('/workload')) return { PendingOrders: 3, WaitingChats: 2, PendingReturns: 1, NewWarranties: 0 }
+      return { Items: [{ OrderId: 'o1', OrderCode: 'VT-real', ReceiverName: 'Người nhận thật', TotalAmount: '524000', OrderStatus: 'Shipping', OrderedAt: '2026-10-12T18:00:00Z' }], Total: 1 }
+    })
+    api.getRevenueSeries.mockImplementation(async (token, months) => months.map((month, index) => ({ month, data: { Revenue: String((index + 1) * 1000000), Profit: '-10000', TotalOrders: 1 }, error: '' })))
+    api.getDashboardStock.mockResolvedValue({ Items: [{ ProductVariantId: 'v1', ProductName: 'Điện thoại thật', VariantName: '256GB', Sku: 'PHONE', StockQuantity: 0 }], OutOfStockTotal: 10, LowStockTotal: 13 })
     renderPage()
-    expect(await within(screen.getByRole('article', { name: 'Sản phẩm sắp hết' })).findByText('23')).toBeInTheDocument()
-    expect(await screen.findByText('VT-real')).toBeInTheDocument()
-    expect(screen.getByText('Đang giao')).toBeInTheDocument()
-    expect(screen.getByText('Người nhận thật')).toBeInTheDocument()
-    expect(screen.getByText('Điện thoại thật')).toBeInTheDocument()
-    expect(screen.getAllByRole('img', { name: /^Tháng/ })).toHaveLength(5)
-    expect(screen.getByText('+20% so với tháng trước')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Xem tất cả (23)' })).toHaveAttribute('href', '/admin/inventory?tab=low-stock')
+    expect(await within(screen.getByRole('article', { name: 'Doanh số bán hàng' })).findByText(/434\.000/)).toBeInTheDocument()
+    expect(await within(screen.getByRole('article', { name: 'Số đơn đã giao' })).findByText('4')).toBeInTheDocument()
+    expect(within(screen.getByRole('article', { name: 'Số đơn đã giao' })).getByText('4 / 10')).toBeInTheDocument()
+    expect(within(screen.getByRole('article', { name: 'Số đơn hủy' })).getByText('6')).toBeInTheDocument()
+    expect(within(screen.getByRole('article', { name: 'Số đơn hủy' })).getByText('6 / 10')).toBeInTheDocument()
+    expect(screen.queryByRole('article', { name: 'Đơn ghi nhận bán hàng' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('article', { name: 'Tỷ lệ hủy' })).not.toBeInTheDocument()
+    expect(screen.getByText('+8,5% so với cùng kỳ tháng trước')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Chờ xác nhận' })).toHaveAttribute('href','/admin/orders?status=Pending')
+    expect(screen.getByRole('link', { name: 'Chat đang chờ' })).toHaveAttribute('href','/admin/support?tab=waiting')
+    expect(screen.getByRole('link', { name: 'Hết hàng' })).toHaveTextContent('Hết hàng: 10')
+    expect(screen.getByRole('link', { name: 'Hết hàng' })).toHaveAttribute('href','/admin/products?status=Active&stock=out_of_stock')
+    expect(screen.getByRole('link', { name: 'Sắp hết' })).toHaveTextContent('Sắp hết: 13')
+    expect(screen.getByRole('link', { name: 'Sắp hết' })).toHaveAttribute('href','/admin/products?status=Active&stock=low_stock')
+    expect(screen.getAllByRole('link', { name: /^Xem báo cáo Tháng/ })).toHaveLength(6)
+    expect(api.getAdminData).toHaveBeenCalledWith('access-for-test','/admin/statistics/reports/revenue',expect.objectContaining({ date_from:'2026-09-01',date_to:'2026-09-21' }),expect.any(AbortSignal))
+    expect(api.getAdminData.mock.calls.some(([,path]) => path === '/admin/statistics/revenue')).toBe(false)
   })
-
-  test('failed APIs stay errors while other sections render; retry recovers', async () => {
+  test('failed inventory stays unknown while other sections render and retry recovers', async () => {
     api.getDashboardStock.mockRejectedValueOnce(new Error('Không kết nối được máy chủ.'))
     renderPage()
-    expect(await within(screen.getByRole('article', { name: 'Sản phẩm sắp hết' })).findByText('—')).toBeInTheDocument()
+    await waitFor(() => expect(screen.getByRole('link', { name: 'Hết hàng' })).toHaveTextContent('Hết hàng: —'))
     expect(await screen.findByText('Chưa có đơn hàng.')).toBeInTheDocument()
-    api.getDashboardStock.mockResolvedValue({ Items: [], Total: 0 })
     fireEvent.click(screen.getAllByRole('button', { name: 'Thử lại' })[0])
-    expect(await within(screen.getByRole('article', { name: 'Sản phẩm sắp hết' })).findByText('0')).toBeInTheDocument()
+    await waitFor(() => expect(screen.getByRole('link', { name: 'Hết hàng' })).toHaveTextContent('Hết hàng: 0'))
+    expect(screen.getByRole('link', { name: 'Sắp hết' })).toHaveTextContent('Sắp hết: 0')
   })
-
-  test('leaving the page cancels the requests, including revenue series', () => {
+  test('leaving cancels every pending request', () => {
     const signals = []
-    api.getAdminData.mockImplementation((token, path, query, signal) => { signals.push(signal); return new Promise(() => {}) })
-    api.getRevenueSeries.mockImplementation((token, months, signal) => { signals.push(signal); return new Promise(() => {}) })
-    api.getDashboardStock.mockImplementation((token, signal) => { signals.push(signal); return new Promise(() => {}) })
-    const view = renderPage()
-    view.unmount()
+    api.getAdminData.mockImplementation((token,path,query,signal) => { signals.push(signal); return new Promise(() => {}) })
+    api.getRevenueSeries.mockImplementation((token,months,signal) => { signals.push(signal); return new Promise(() => {}) })
+    api.getDashboardStock.mockImplementation((token,signal) => { signals.push(signal); return new Promise(() => {}) })
+    const view = renderPage(); view.unmount()
     expect(signals.length).toBeGreaterThan(0)
     expect(signals.every((signal) => signal.aborted)).toBe(true)
   })
-
-  test('the computer clock advances the current month without reloading', async () => {
-    vi.useFakeTimers()
-    vi.setSystemTime(new Date(2026, 11, 31, 23, 59, 50))
-    const { result, unmount } = renderHook(useBrowserMonth)
-    expect(result.current).toBe('2026-12')
+  test('reporting day advances at Vietnam midnight even within the same month', async () => {
+    vi.useFakeTimers(); vi.setSystemTime(new Date('2026-10-21T16:59:50Z'))
+    const { result, unmount } = renderHook(useReportingDate)
+    expect(result.current).toBe('2026-10-21')
     await act(() => vi.advanceTimersByTimeAsync(30000))
-    expect(result.current).toBe('2027-01')
+    expect(result.current).toBe('2026-10-22')
     unmount()
   })
 })
-
 describe('notification menu', () => {
   test('real notifications can be marked read; Escape closes the menu and restores focus', async () => {
     let read = false

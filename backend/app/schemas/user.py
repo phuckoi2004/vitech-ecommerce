@@ -7,7 +7,9 @@ import uuid
 from datetime import date, datetime
 from typing import Annotated, Literal
 
-from pydantic import Field
+from pydantic import Field, field_serializer
+
+from app.core.status_labels import notification_content
 
 from .common import (
     AccountStatusValue,
@@ -165,6 +167,10 @@ class NotificationResponse(ResponseSchema):
     IsRead: bool
     ReadAt: datetime | None
     CreatedAt: datetime
+
+    @field_serializer("Content")
+    def localized_content(self, value: str) -> str:
+        return notification_content(value, self.NotificationType, self.ReferenceType)
 
 
 class NotificationCountResponse(ResponseSchema):

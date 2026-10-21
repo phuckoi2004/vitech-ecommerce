@@ -1,10 +1,12 @@
 # Tổng quan quản trị — cấu trúc frontend Stage 8.2
 
+**Cập nhật 21/10/2026:** Tổng quan và Báo cáo đã thay đổi theo [thiết kế báo cáo hiện hành](admin-reporting-redesign.md). Phần bên dưới giữ mô tả các giai đoạn trước; dùng tài liệu mới cho định nghĩa doanh số, giá nhập, lãi gộp, kỳ so sánh và API báo cáo.
+
 Trang `/admin` triển khai frame Figma `196:2` bằng Tailwind, sử dụng React Router, AuthProvider, API client và các component dùng chung của bản frontend hiện tại. Sidebar/header, bốn ô thống kê, biểu đồ doanh thu, bảng đơn mới, cảnh báo tồn kho và chuông thông báo đều hoạt động. Không sửa luồng đăng nhập hoặc backend trong thay đổi này.
 
 ## Tháng và dữ liệu thật
 
-- `new Date()` lấy đồng hồ và múi giờ địa phương của trình duyệt. Biểu đồ gồm tháng hiện tại và bốn tháng trước, tự xử lý đổi năm và tháng 2 năm nhuận. Ví dụ đồng hồ ở tháng 10/2026 sẽ hiển thị 06–10/2026. Tháng được cập nhật mỗi 30 giây và khi quay lại cửa sổ/tab.
+- `new Date()` lấy đồng hồ và múi giờ địa phương của trình duyệt. Biểu đồ gồm tháng hiện tại và năm tháng trước, tự xử lý đổi năm và tháng 2 năm nhuận. Ví dụ đồng hồ ở tháng 10/2026 sẽ hiển thị 05–10/2026. Tháng được cập nhật mỗi 30 giây và khi quay lại cửa sổ/tab.
 - Đồng hồ máy chọn khoảng thời gian; số liệu doanh thu lấy từ API, không suy ra từ đồng hồ. API thống kê vẫn nhận ngày lịch Việt Nam, tính cả ngày cuối tháng.
 - Tổng đơn hàng và doanh thu dùng tháng hiện tại. Đơn chờ xử lý là toàn bộ đơn Pending. Tồn kho là số hiện tại. Đơn mới nhất lấy trên toàn bộ lịch sử.
 - Khi chưa có dữ liệu: chỉ số bằng 0, không tạo cột biểu đồ/bản ghi giả; vẫn giữ nhãn tháng, tiêu đề cột và thông báo trống. Khi API lỗi: hiển thị lỗi và nút thử lại, không coi lỗi là số 0.
@@ -15,7 +17,7 @@ Trang `/admin` triển khai frame Figma `196:2` bằng Tailwind, sử dụng Rea
 | Nội dung | API |
 |---|---|
 | Tổng đơn, so sánh tháng trước | `/admin/statistics/orders?date_from=...&date_to=...` |
-| Doanh thu và biểu đồ 5 tháng | `/admin/statistics/revenue?date_from=...&date_to=...` |
+| Doanh số và biểu đồ 6 tháng | `/admin/statistics/reports/revenue?date_from=...&date_to=...` |
 | Đơn chờ xử lý | `/admin/orders?order_status=Pending&page_size=1` → `Total` |
 | Đơn hàng mới nhất | `/admin/orders?page=1&page_size=4` |
 | Cảnh báo tồn kho | `/admin/inventory/low-stock?page=1&page_size=4` → `Items`, `Total` |
@@ -51,8 +53,8 @@ Phần bổ sung này ghi các quyết định mới và hợp đồng đã đ�
 ### Báo cáo và lịch sử thanh toán
 
 - API báo cáo hiện có `/admin/statistics/report-options`, `/admin/statistics/reports/revenue` và `/admin/statistics/reports/orders`, dùng cho Staff/Admin theo quyền. Chúng bổ sung cho các API thống kê cũ, không xóa API cũ.
-- Hai màn hình báo cáo có lựa chọn từng tháng trong 12 tháng của năm hoặc 5 tháng gần nhất. Từng tháng hiển thị một cột, 5 tháng hiển thị 5 cột; nhãn là tháng cụ thể. Bộ lọc tác động đồng thời biểu đồ và bảng; kỳ bảng là tháng/năm, không chia tuần.
-- Tạm bỏ lọc tài khoản, lọc nhà cung cấp và xuất báo cáo trên UI. Không suy ra giá trị bằng 0 khi API báo lỗi.
+- Hai màn hình báo cáo có lựa chọn từng tháng trong 12 tháng của năm hoặc 6 tháng gần nhất. Từng tháng hiển thị một cột, 6 tháng hiển thị 6 cột; nhãn là tháng cụ thể. Bộ lọc tác động đồng thời biểu đồ và bảng; kỳ bảng là tháng/năm, không chia tuần.
+- Cập nhật 21/10/2026: tab Đơn nhập hàng dùng `/admin/statistics/reports/purchases`, bổ sung lọc nhà cung cấp kết hợp thời gian/danh mục/thương hiệu/sản phẩm. Xem cách tính hiện hành trong [admin-reporting-redesign.md](admin-reporting-redesign.md). Chưa có lọc tài khoản và xuất báo cáo; không suy ra giá trị bằng 0 khi API báo lỗi.
 - Báo cáo doanh số theo sản phẩm dùng OrderItems.LineTotal của đơn Delivered/Completed theo DeliveredAt, có giao dịch Payment Success; không tính lặp doanh số khi một đơn có nhiều giao dịch. Báo cáo này không đồng nghĩa mọi chỉ số doanh thu thuần của StatisticsService: phí giao, hoàn tiền và giá vốn cần phân biệt theo từng API.
 
 ### Đọc kết quả kiểm thử và tài liệu lịch sử

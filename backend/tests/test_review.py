@@ -85,8 +85,14 @@ class CreateReviewTest(ReviewTestBase):
         self.assertEqual(self.stats(), (1, Decimal("4.00")))
         self.assertIn(("Product", self.product.ProductId), self.db.locks)
 
-    def test_only_delivered_orders_can_be_reviewed(self):
-        for status in ("Pending", "Confirmed", "Processing", "Shipping", "Completed", "Cancelled"):
+    def test_completed_orders_can_still_be_reviewed(self):
+        # Completed comes after delivery: the customer has the product.
+        result = self.create(self.delivered_item(status="Completed"))
+        self.assertEqual(result.Rating, 5)
+        self.assertEqual(len(self.reviews()), 1)
+
+    def test_only_delivered_or_completed_orders_can_be_reviewed(self):
+        for status in ("Pending", "Confirmed", "Processing", "Shipping", "Cancelled"):
             with self.subTest(status=status), self.assertRaises(BusinessRuleError) as ctx:
                 self.create(self.delivered_item(status=status))
             self.assertEqual(ctx.exception.code, "review_order_not_delivered")

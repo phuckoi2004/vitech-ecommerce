@@ -304,7 +304,7 @@ def test_cod_order_delivery_review_status_only_return_and_statistics(pg, team, m
                      'join "Users" u on u."UserId" = c."UserId" where u."Role" = \'Customer\' '
                      'and ci."ProductVariantId" = :v', v=item["variant"]["ProductVariantId"]) == 0
 
-    for target in ("Processing", "Shipping"):
+    for target in ("Confirmed", "Processing", "Shipping"):
         moved = ok(client.post(f"/admin/orders/{order_id}/status", headers=staff, json={"OrderStatus": target}))
         assert moved["OrderStatus"] == target
     # COD cannot be marked Delivered without recording the collection.

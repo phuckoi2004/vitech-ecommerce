@@ -32,7 +32,7 @@ function mockApi({ reviews: initialReviews = [], orders = [order()], writeError,
     const method = options.method || 'GET'
     const query = Object.fromEntries(url.searchParams)
     const body = options.body ? JSON.parse(options.body) : undefined
-    calls.push({ path, method, query, body, token: options.headers?.Authorization })
+    calls.push({ path, method, query, params: url.searchParams, body, token: options.headers?.Authorization })
     let data, status = 200
     if (path === '/products/p1/reviews') {
       const items = reviews.filter((item) => !query.rating || item.Rating === Number(query.rating))
@@ -61,8 +61,8 @@ function mockApi({ reviews: initialReviews = [], orders = [order()], writeError,
   return { calls, controls, releaseWrite }
 }
 
-function show({ role = 'Customer', onRequireLogin = vi.fn(), onSummaryChange = vi.fn() } = {}) {
-  render(<MemoryRouter><AuthContext.Provider value={makeAuth({ role })}>
+function show({ role = 'Customer', onRequireLogin = vi.fn(), onSummaryChange = vi.fn(), url = '/san-pham/demo' } = {}) {
+  render(<MemoryRouter initialEntries={[url]}><AuthContext.Provider value={makeAuth({ role })}>
     <div className="pd-page"><ProductReviews product={product} onRequireLogin={onRequireLogin} onSummaryChange={onSummaryChange} /></div>
   </AuthContext.Provider></MemoryRouter>)
   return { onRequireLogin, onSummaryChange }
@@ -70,11 +70,10 @@ function show({ role = 'Customer', onRequireLogin = vi.fn(), onSummaryChange = v
 
 async function openComposer(user) {
   await user.click(screen.getByRole('button', { name: 'Viết đánh giá' }))
-  const dialog = screen.getByRole('dialog', { name: `Đánh giá ${product.Name}` })
-  const select = await within(dialog).findByRole('combobox', { name: 'Sản phẩm đã mua trong đơn' })
-  await user.selectOptions(select, 'item-o1')
+  const dialog = screen.getByRole('dialog', { name: 'Viết đánh giá' })
+  await within(dialog).findByText(/Đơn hàng VT-/)
   await user.click(within(dialog).getByRole('radio', { name: '5 sao', exact: true }))
-  await user.type(within(dialog).getByRole('textbox', { name: 'Nội dung đánh giá' }), '  Sản phẩm dùng rất tốt.  ')
+  await user.type(within(dialog).getByRole('textbox', { name: 'Nhận xét của bạn' }), '  Sản phẩm dùng rất tốt.  ')
   return dialog
 }
 
@@ -187,15 +186,20 @@ test('an empty filter invites a different filter without fabricating reviews', a
 test('creation sends only the purchased line, stars and trimmed content, then refreshes reviews and statistics', async () => {
   const { calls } = mockApi(); const { onSummaryChange } = show(); const user = userEvent.setup()
   const dialog = await openComposer(user)
-  const select = within(dialog).getByRole('combobox', { name: 'Sản phẩm đã mua trong đơn' })
-  expect(within(select).queryByRole('option', { name: /Sản phẩm khác/ })).not.toBeInTheDocument()
+  // The review is for this product: no order or version to pick, only the purchase it is tied to.
+  expect(within(dialog).queryByRole('combobox')).not.toBeInTheDocument()
+  expect(within(dialog).getByText(product.Name, { exact: true })).toBeInTheDocument()
+  expect(within(dialog).getByText(/Đơn hàng VT-/)).toHaveTextContent('Đen · 256GB')
+  expect(within(dialog).queryByText(/Sản phẩm khác/)).not.toBeInTheDocument()
   await user.click(within(dialog).getByRole('button', { name: 'Gửi đánh giá' }))
   expect(await screen.findByText('Sản phẩm dùng rất tốt.')).toBeInTheDocument()
   await waitFor(() => expect(onSummaryChange).toHaveBeenLastCalledWith(expect.objectContaining({ count: 1, rating: 5 })))
   const write = calls.find((call) => call.method === 'POST')
   expect(write).toMatchObject({ path: '/reviews', token: 'Bearer access-for-test', body: { OrderItemId: 'item-o1', Rating: 5, Content: 'Sản phẩm dùng rất tốt.' } })
   expect(Object.keys(write.body).sort()).toEqual(['Content', 'OrderItemId', 'Rating'])
-  expect(calls.find((call) => call.path === '/orders').query.order_status).toBe('Delivered')
+  // Received orders (Delivered or Completed) that hold this product.
+  const orders = calls.find((call) => call.path === '/orders').params
+  expect([orders.getAll('order_status'), orders.get('product_id')]).toEqual([['Delivered', 'Completed'], product.ProductId])
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   expect(screen.queryByRole('button', { name: /Xóa đánh giá/ })).not.toBeInTheDocument()
 })
@@ -216,36 +220,69 @@ test('an order load error remains retryable instead of saying the customer has n
   expect(screen.queryByText(/Bạn chưa có đơn hàng đã giao/)).not.toBeInTheDocument()
   controls.orderError = false
   await user.click(within(alert).getByRole('button', { name: 'Thử lại' }))
-  expect(await screen.findByRole('combobox', { name: 'Sản phẩm đã mua trong đơn' })).toBeInTheDocument()
+  expect(await screen.findByText(/Đơn hàng VT-/)).toBeInTheDocument()
 })
 
-test.each(['Completed', 'Shipping', 'Cancelled'])('a stale order detail at %s cannot be reviewed', async (status) => {
+test('a completed order can be reviewed: the review goes to its line of this product', async () => {
+  const { calls } = mockApi({ orders: [order('o1', { OrderStatus: 'Completed' })] }); show(); const user = userEvent.setup()
+  await user.click(screen.getByRole('button', { name: 'Viết đánh giá' }))
+  const dialog = screen.getByRole('dialog', { name: 'Viết đánh giá' })
+  await within(dialog).findByText(/Đơn hàng VT-/)
+  await user.click(within(dialog).getByRole('radio', { name: '4 sao', exact: true }))
+  await user.type(within(dialog).getByRole('textbox', { name: 'Nhận xét của bạn' }), 'Dùng ổn định.')
+  await user.click(within(dialog).getByRole('button', { name: 'Gửi đánh giá' }))
+  await waitFor(() => expect(calls.find((call) => call.method === 'POST')?.body).toEqual({ OrderItemId: 'item-o1', Rating: 4, Content: 'Dùng ổn định.' }))
+})
+test('opened from an order (?review=), the form opens at once and the review goes to that purchase', async () => {
+  const { calls } = mockApi({ orders: [order('o1'), order('o2')] })
+  show({ url: '/san-pham/demo?review=o2' }); const user = userEvent.setup()
+
+  const dialog = await screen.findByRole('dialog', { name: 'Viết đánh giá' })
+  await within(dialog).findByText(/Đơn hàng VT-/)
+  await user.click(within(dialog).getByRole('radio', { name: '5 sao', exact: true }))
+  await user.type(within(dialog).getByRole('textbox', { name: 'Nhận xét của bạn' }), 'Giao nhanh.')
+  await user.click(within(dialog).getByRole('button', { name: 'Gửi đánh giá' }))
+  await waitFor(() => expect(calls.find((call) => call.method === 'POST')?.body.OrderItemId).toBe('item-o2'))
+})
+
+test('every purchase already reviewed: nothing to send, and the form says so', async () => {
+  const reviewed = (id) => order(id, { Items: [{ OrderItemId: `item-${id}`, ProductVariantId: 'v1', ProductId: product.ProductId,
+    ProductName: product.Name, VariantInfo: 'Đen · 256GB', Quantity: 1, ReviewId: `r-${id}` }] })
+  const { calls } = mockApi({ orders: [reviewed('o1'), reviewed('o2')] }); show(); const user = userEvent.setup()
+  await user.click(screen.getByRole('button', { name: 'Viết đánh giá' }))
+  await waitFor(() => expect(screen.queryByText('Đang kiểm tra sản phẩm bạn đã mua…')).not.toBeInTheDocument())
+  expect(screen.queryByText('Bạn đã đánh giá sản phẩm này cho mọi lần mua.')).not.toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'Gửi đánh giá' })).toBeDisabled()
+  expect(calls.some((call) => call.method === 'POST')).toBe(false)
+})
+test.each(['Shipping', 'Cancelled'])('a stale order detail at %s cannot be reviewed', async (status) => {
   const { calls } = mockApi({ orders: [order('o1', { OrderStatus: status })] }); show(); const user = userEvent.setup()
   await user.click(screen.getByRole('button', { name: 'Viết đánh giá' }))
-  expect(await screen.findByText(/không còn ở trạng thái đã giao/)).toBeInTheDocument()
-  expect(screen.queryByRole('combobox', { name: 'Sản phẩm đã mua trong đơn' })).not.toBeInTheDocument()
+  expect(await screen.findByText(/Bạn chưa có đơn hàng đã giao nào có sản phẩm này/)).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'Gửi đánh giá' })).toBeDisabled()
   expect(calls.some((call) => call.method === 'POST')).toBe(false)
 })
 
-test('purchased inactive variants are still selectable and order pagination does not truncate purchase history', async () => {
-  const orders = Array.from({ length: 11 }, (_, index) => order(`o${index + 1}`, {
-    Items: [{ OrderItemId: `line${index}`, ProductVariantId: index === 10 ? 'old-variant' : 'v1', ProductName: product.Name, VariantInfo: 'Phiên bản đã mua' }],
+test('a purchase of an inactive variant still counts, and later pages are read when the newest are reviewed', async () => {
+  const orders = Array.from({ length: 51 }, (_, index) => order(`o${index + 1}`, {
+    Items: [{ OrderItemId: `line${index}`, ProductVariantId: index === 50 ? 'old-variant' : 'v1', ProductName: product.Name,
+      VariantInfo: 'Phiên bản đã mua', Quantity: 1, ReviewId: index === 50 ? null : `r${index}` }],
   }))
   const { calls } = mockApi({ orders }); show(); const user = userEvent.setup()
   await user.click(screen.getByRole('button', { name: 'Viết đánh giá' }))
-  await screen.findByRole('button', { name: 'Đơn tiếp' })
-  await user.click(screen.getByRole('button', { name: 'Đơn tiếp' }))
-  const items = await screen.findByRole('combobox', { name: 'Sản phẩm đã mua trong đơn' })
-  expect(within(items).getByRole('option', { name: /Phiên bản đã mua/ })).toHaveValue('line10')
+  const dialog = screen.getByRole('dialog', { name: 'Viết đánh giá' })
+  await within(dialog).findByText(/Đơn hàng VT-/)
   expect(calls.some((call) => call.path === '/orders' && call.query.page === '2')).toBe(true)
+  await user.click(within(dialog).getByRole('radio', { name: '3 sao', exact: true }))
+  await user.type(within(dialog).getByRole('textbox', { name: 'Nhận xét của bạn' }), 'Bản cũ vẫn tốt.')
+  await user.click(within(dialog).getByRole('button', { name: 'Gửi đánh giá' }))
+  await waitFor(() => expect(calls.find((call) => call.method === 'POST')?.body.OrderItemId).toBe('line50'))
 })
-
 test('missing stars and whitespace content are rejected without sending a review', async () => {
   const { calls } = mockApi(); show(); const user = userEvent.setup()
   await user.click(screen.getByRole('button', { name: 'Viết đánh giá' }))
-  const select = await screen.findByRole('combobox', { name: 'Sản phẩm đã mua trong đơn' })
-  await user.selectOptions(select, 'item-o1')
-  await user.type(screen.getByRole('textbox', { name: 'Nội dung đánh giá' }), '   ')
+  await screen.findByText(/Đơn hàng VT-/)
+  await user.type(screen.getByRole('textbox', { name: 'Nhận xét của bạn' }), '   ')
   await user.click(screen.getByRole('button', { name: 'Gửi đánh giá' }))
   expect(await screen.findByRole('alert')).toHaveTextContent('Vui lòng chọn số sao')
   await user.click(screen.getByRole('radio', { name: '4 sao', exact: true }))
@@ -264,8 +301,13 @@ test.each([
   const dialog = await openComposer(user)
   await user.click(within(dialog).getByRole('button', { name: 'Gửi đánh giá' }))
   expect(await within(dialog).findByRole('alert')).toHaveTextContent(detail)
-  expect(within(dialog).getByRole('textbox', { name: 'Nội dung đánh giá' })).toHaveValue('  Sản phẩm dùng rất tốt.  ')
-  if (code === 'review_exists') expect(within(dialog).getByRole('option', { name: /Đã đánh giá/ })).toBeDisabled()
+  expect(within(dialog).getByRole('textbox', { name: 'Nhận xét của bạn' })).toHaveValue('  Sản phẩm dùng rất tốt.  ')
+  // Reviewed meanwhile: the next purchase is looked up; here there is none left.
+  if (code === 'review_exists') {
+    await waitFor(() => expect(within(dialog).queryByText('Đang kiểm tra sản phẩm bạn đã mua…')).not.toBeInTheDocument())
+    expect(within(dialog).queryByText('Bạn đã đánh giá sản phẩm này cho mọi lần mua.')).not.toBeInTheDocument()
+    expect(within(dialog).getByRole('button', { name: 'Gửi đánh giá' })).toBeDisabled()
+  }
 })
 
 test('repeated clicks and closing during a pending write never send a second review', async () => {
@@ -287,12 +329,12 @@ test('only the owner within seven days sees edit; editing changes stars/content 
   await screen.findByText('Nội dung đánh giá own')
   expect(screen.getAllByRole('button', { name: 'Chỉnh sửa đánh giá' })).toHaveLength(1)
   await user.click(screen.getByRole('button', { name: 'Chỉnh sửa đánh giá' }))
-  const dialog = screen.getByRole('dialog', { name: 'Chỉnh sửa đánh giá' })
+  const dialog = screen.getByRole('dialog', { name: 'Sửa đánh giá' })
   expect(within(dialog).queryByRole('combobox')).not.toBeInTheDocument()
   await user.click(within(dialog).getByRole('radio', { name: '4 sao', exact: true }))
-  const text = within(dialog).getByRole('textbox', { name: 'Nội dung đánh giá' })
+  const text = within(dialog).getByRole('textbox', { name: 'Nhận xét của bạn' })
   await user.clear(text); await user.type(text, 'Nội dung đã cập nhật')
-  await user.click(within(dialog).getByRole('button', { name: 'Lưu thay đổi' }))
+  await user.click(within(dialog).getByRole('button', { name: 'Cập nhật đánh giá' }))
   expect(await screen.findByText('Nội dung đã cập nhật')).toBeInTheDocument()
   expect(calls.find((call) => call.method === 'PATCH')).toMatchObject({ path: '/reviews/own', body: { Rating: 4, Content: 'Nội dung đã cập nhật' } })
   expect(calls.some((call) => call.path === '/orders')).toBe(false)
@@ -312,7 +354,7 @@ test('the submit rechecks a deadline that expires while the form is open', async
   const { calls } = mockApi({ reviews: [own] }); show(); const user = userEvent.setup()
   await user.click(await screen.findByRole('button', { name: 'Chỉnh sửa đánh giá' }))
   vi.mocked(Date.now).mockReturnValue(Date.parse(own.CreatedAt) + REVIEW_EDIT_WINDOW_MS)
-  await user.click(screen.getByRole('button', { name: 'Lưu thay đổi' }))
+  await user.click(screen.getByRole('button', { name: 'Cập nhật đánh giá' }))
   expect(await screen.findByRole('alert')).toHaveTextContent('Đã quá thời hạn 7 ngày')
   expect(calls.some((call) => call.method === 'PATCH')).toBe(false)
 })

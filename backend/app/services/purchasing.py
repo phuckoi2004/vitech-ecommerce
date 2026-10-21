@@ -31,6 +31,7 @@ from decimal import Decimal
 
 from sqlalchemy.orm import Session
 
+from app.core.status_labels import PURCHASE_STATUS_LABELS, status_label
 from app.models import PurchaseOrder, PurchaseOrderItem, Supplier
 from app.repositories import (
     ProductVariantRepository,
@@ -314,7 +315,7 @@ class PurchaseOrderService(BaseService):
         """
         require_role(actor, *ADMIN_ONLY)
         if data.Status not in (PO_APPROVED, PO_REJECTED):
-            raise BusinessRuleError(f"Quyết định không hợp lệ: {data.Status}", code="invalid_decision")
+            raise BusinessRuleError("Quyết định duyệt phiếu nhập không hợp lệ", code="invalid_decision")
         reject_reason = (data.RejectReason or "").strip() or None
         if data.Status == PO_REJECTED and reject_reason is None:
             raise BusinessRuleError("Từ chối phiếu nhập phải ghi lý do", code="reject_reason_required")
@@ -366,7 +367,7 @@ class PurchaseOrderService(BaseService):
             po = self._lock(purchase_order_id)
             if po.Status not in RECEIVABLE_STATUSES:
                 raise BusinessRuleError(
-                    f"Không thể nhận hàng cho phiếu ở trạng thái {po.Status}", code="purchase_order_not_receivable"
+                    f"Không thể nhận hàng cho phiếu ở trạng thái {status_label(po.Status, PURCHASE_STATUS_LABELS)}", code="purchase_order_not_receivable"
                 )
             items = {i.PurchaseOrderItemId: i for i in self.items.list_by_purchase_order(po.PurchaseOrderId)}
             requested: dict[uuid.UUID, int] = {}
@@ -436,7 +437,7 @@ class PurchaseOrderService(BaseService):
             po = self._lock(purchase_order_id)
             if po.Status != PO_RECEIVING:
                 raise BusinessRuleError(
-                    f"Chỉ đóng phiếu đang nhận hàng còn thiếu (hiện tại: {po.Status})", code="purchase_order_not_closable"
+                    f"Chỉ đóng phiếu đang nhận hàng còn thiếu (hiện tại: {status_label(po.Status, PURCHASE_STATUS_LABELS)})", code="purchase_order_not_closable"
                 )
             items = self.items.list_by_purchase_order(po.PurchaseOrderId)
             if not any(i.ReceivedQuantity < i.OrderedQuantity for i in items):
@@ -478,7 +479,7 @@ class PurchaseOrderService(BaseService):
         self._require_draft_owner(actor, po)
         if po.Status not in EDITABLE_STATUSES:
             raise BusinessRuleError(
-                f"Chỉ sửa phiếu đang chờ duyệt (hiện tại: {po.Status})", code="purchase_order_not_editable"
+                f"Chỉ sửa phiếu đang chờ duyệt (hiện tại: {status_label(po.Status, PURCHASE_STATUS_LABELS)})", code="purchase_order_not_editable"
             )
         return po
 

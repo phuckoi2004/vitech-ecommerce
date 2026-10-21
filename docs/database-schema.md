@@ -179,6 +179,7 @@ Ký hiệu trong các bảng dưới: **NN** = NOT NULL, **PK** = Primary Key, *
 | Color | varchar(50) | | | |
 | Storage | varchar(50) | | | |
 | Price | numeric(15,2) | x | | CHECK Price >= 0 |
+| CompareAtPrice | numeric(15,2) | | NULL | Giá niêm yết, chỉ lưu tham khảo (từ 20/10/2026 không hiện gạch ngang cho khách); CHECK NULL hoặc >= Price; migration `93e7a2b0c518` |
 | CostPrice | numeric(15,2) | x | 0 | CHECK CostPrice >= 0 — giá vốn hiện tại (COGS) |
 | StockQuantity | integer | x | 0 | CHECK StockQuantity >= 0 |
 | MinStockLevel | integer | x | 0 | CHECK MinStockLevel >= 0 |
@@ -187,6 +188,8 @@ Ký hiệu trong các bảng dưới: **NN** = NOT NULL, **PK** = Primary Key, *
 | IsSerialTracked | boolean | x | false | Biến thể quản lý Serial/IMEI (thêm bởi migration `763f153af842`, đã áp dụng 11/10/2026) |
 
 `StockQuantity` và `CostPrice` không sửa qua CRUD biến thể: chỉ thay đổi qua đơn hàng, nhận hàng (giá vốn bình quân gia quyền), khai báo tồn đầu kỳ và điều chỉnh kho (`StockAdjustments`).
+
+Ngoại lệ dữ liệu thử theo yêu cầu 19/10/2026: script một lần giảm từ giá vốn mẫu hiện tại theo các mức đã chốt, có manifest và snapshot trước/sau; không mở quyền sửa vốn qua CRUD, không viết lại phiếu kho hoặc vốn đã chốt trên đơn. Xem [cặp giá và giá vốn mẫu mới](retail-list-and-sample-cost-2026-10-19.md).
 
 Bật/tắt `IsSerialTracked` chỉ khi `StockQuantity = 0`. Tắt (đợt 5.8, không đổi schema) còn bị từ chối (`serial_tracking_in_use`) khi biến thể có serial trạng thái khác `WrittenOff`, có bất kỳ dòng `OrderItems` nào (mọi trạng thái đơn: `OrderItems` không lưu dòng nào từng gắn serial và `ProductSerials.OrderItemId` chỉ giữ liên kết hiện tại), có yêu cầu bảo hành/đổi trả đang mở hoặc phiếu `ShipmentReturns` `AwaitingReturn`. Không xóa/đổi trạng thái serial hay lịch sử; cần bán không theo serial thì tạo biến thể mới.
 
@@ -399,6 +402,8 @@ Xác nhận kết quả Refund (đợt 5.11, phương án D2; migration `a9f4c2e
 
 Promotion là nơi duy nhất quản lý thông tin giảm giá.
 
+Từ migration `82d6f1a9b407`: `ApplyMode = Coupon` cho chương trình qua mã, `Automatic` cho giảm trực tiếp mỗi chiếc. Migration `93e7a2b0c518` tách giá niêm yết `ProductVariants.CompareAtPrice` khỏi giá bán cơ sở `Price`; `SalePrice` sau Automatic và phần trăm vẫn do server tính. Không thêm bảng nhận/lưu voucher. Xem [giá ưu đãi và điểm tích hợp đặt hàng](customer-pricing-promotions.md).
+
 | Column | Type | NN | Default | Ràng buộc |
 |---|---|---|---|---|
 | PromotionId | uuid | x | gen_random_uuid() | PK |
@@ -406,6 +411,7 @@ Promotion là nơi duy nhất quản lý thông tin giảm giá.
 | Name | varchar(255) | x | | |
 | Description | text | | | |
 | DiscountType | varchar(20) | x | | CHECK IN (Percentage, FixedAmount) |
+| ApplyMode | varchar(20) | x | Coupon | CHECK IN (Coupon, Automatic) |
 | DiscountValue | numeric(15,2) | x | | CHECK DiscountValue >= 0 |
 | MinOrderValue | numeric(15,2) | x | | CHECK MinOrderValue >= 0 |
 | MaxDiscountAmount | numeric(15,2) | | | CHECK MaxDiscountAmount >= 0; NULL = không giới hạn |

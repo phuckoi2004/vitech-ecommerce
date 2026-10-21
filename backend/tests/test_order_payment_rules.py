@@ -119,24 +119,26 @@ class StaffConfirmTest(OrderPaymentRulesBase):
         for payment_status in ("Pending", "Failed"):
             order = self.make_order(self.qr, payment_status=payment_status)
             for actor in (self.staff, self.admin):
-                self.assert_code("order_not_paid", lambda: self.set_status(order, "Processing", actor))
+                self.assert_code("order_not_paid", lambda: self.set_status(order, "Confirmed", actor))
             self.assertEqual((order.OrderStatus, order.ConfirmedAt, self.history(order)), ("Pending", None, []))
 
     def test_paid_transfer_order_is_confirmed_and_moves_on(self):
         order, tx = self.qr_order_with_qr()
         self.bank_transfer(tx)
-        self.assertEqual(self.set_status(order, "Processing").OrderStatus, "Processing")
+        self.assertEqual(self.set_status(order, "Confirmed").OrderStatus, "Confirmed")
         self.assertIsNotNone(order.ConfirmedAt)
-        self.assertEqual(self.history(order), ["Processing"])
+        self.assertEqual(self.history(order), ["Confirmed"])
+        self.assertEqual(self.set_status(order, "Processing").OrderStatus, "Processing")
+        self.assertEqual(self.history(order), ["Confirmed", "Processing"])
 
     def test_unpaid_cod_order_is_confirmed_before_cash_is_collected(self):
         order = self.make_order(self.cod)
-        self.assertEqual(self.set_status(order, "Processing").OrderStatus, "Processing")
+        self.assertEqual(self.set_status(order, "Confirmed").OrderStatus, "Confirmed")
         self.assertEqual(order.PaymentStatus, "Pending")
 
     def test_an_unpaid_transfer_order_stays_pending_and_the_expiry_job_cancels_it(self):
         order, tx = self.qr_order_with_qr()
-        self.assert_code("order_not_paid", lambda: self.set_status(order, "Processing"))
+        self.assert_code("order_not_paid", lambda: self.set_status(order, "Confirmed"))
         self.expire_after_deadline(order)
         self.assertEqual(self.orders.expire_unpaid_qr_orders().processed, 1)
         self.assertEqual((order.OrderStatus, order.PaymentStatus, tx.Status), ("Cancelled", "Cancelled", "Cancelled"))
@@ -162,7 +164,7 @@ class LatePaymentTest(OrderPaymentRulesBase):
         # The expiry job leaves a paid order alone: its stock and coupon stay with it.
         self.assertEqual(self.orders.expire_unpaid_qr_orders().processed, 0)
         self.assertEqual((order.OrderStatus, self.variant.StockQuantity, self.coupon.UsedCount), ("Pending", 5, 1))
-        self.assertEqual(self.set_status(order, "Processing").OrderStatus, "Processing")
+        self.assertEqual(self.set_status(order, "Confirmed").OrderStatus, "Confirmed")
 
     def test_payment_after_the_expiry_job_cancelled_the_order_is_kept_for_a_manual_refund(self):
         order, tx = self.qr_order_with_qr()

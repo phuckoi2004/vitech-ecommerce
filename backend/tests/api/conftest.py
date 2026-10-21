@@ -136,7 +136,7 @@ class Api:
             "ReceiverName": "Nguyễn Văn A", "ReceiverPhone": "0900000000", "ShippingAddress": "1 Lê Lợi"}), 201)
 
     def ship(self, order_id: str, staff: Person) -> None:
-        for status in ("Processing", "Shipping"):
+        for status in ("Confirmed", "Processing", "Shipping"):
             expect(self.client.post(f"/admin/orders/{order_id}/status", headers=staff.headers,
                                     json={"OrderStatus": status}), 200)
 

@@ -1,19 +1,20 @@
 import { EmptyState, ErrorState, LoadingState } from '../../components/shared/index.js'
 import { formatDate, formatMoney } from '../../lib/format.js'
+import { orderStatusLabel } from '../lib/orders.js'
 
 const ORDER_STATUS = {
-  Pending: ['Chờ xử lý', 'bg-[#f59e0b] text-admin-text'],
-  Confirmed: ['Đã xác nhận', 'bg-admin-soft text-admin-blue'],
-  Processing: ['Đang xử lý', 'bg-admin-soft text-admin-blue'],
-  Shipping: ['Đang giao', 'bg-admin-soft text-admin-blue'],
-  Delivered: ['Đã giao', 'bg-[#16a34a] text-white'],
-  Completed: ['Hoàn thành', 'bg-[#16a34a] text-white'],
-  Cancelled: ['Đã hủy', 'bg-admin-red text-white'],
+  Pending: 'bg-[#f59e0b] text-admin-text',
+  Confirmed: 'bg-admin-soft text-admin-blue',
+  Processing: 'bg-admin-soft text-admin-blue',
+  Shipping: 'bg-admin-soft text-admin-blue',
+  Delivered: 'bg-[#16a34a] text-white',
+  Completed: 'bg-[#16a34a] text-white',
+  Cancelled: 'bg-admin-red text-white',
 }
 
 export function OrderStatus({ value }) {
-  const [label, classes] = ORDER_STATUS[value] ?? [value, 'bg-admin-soft text-admin-blue']
-  return <span className={`inline-block rounded-full px-2.5 py-1.5 text-[11px] font-semibold whitespace-nowrap ${classes}`}>{label}</span>
+  const classes = ORDER_STATUS[value] ?? 'bg-admin-soft text-admin-blue'
+  return <span className={`inline-block rounded-full px-2.5 py-1.5 text-[11px] font-semibold whitespace-nowrap ${classes}`}>{orderStatusLabel(value)}</span>
 }
 
 export const ORDER_COLUMNS = [

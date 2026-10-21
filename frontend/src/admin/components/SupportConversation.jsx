@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import useInternalAuth from '../../hooks/useInternalAuth.js'
 import useSupportThread from '../hooks/useSupportThread.js'
 import { claimSupportConversation, closeSupportConversation, markSupportRead, sendSupportMessage } from '../services/support.js'
-import { supportName, supportTime } from '../lib/support.js'
+import { supportAgent, supportName, supportTime } from '../lib/support.js'
 import { NewsButton } from './NewsUi.jsx'
 import { SupportError, SupportStatus } from './SupportUi.jsx'
 import Modal from './Modal.jsx'
@@ -98,7 +98,7 @@ export default function SupportConversation({ id, draft, onDraft, onClaimed, onC
   return <section aria-label="Nội dung cuộc trò chuyện" className="support-thread flex h-full min-w-0 flex-1 flex-col">
     <header className="support-thread-header flex shrink-0 items-center justify-between gap-3 border-b border-admin-border px-[18px] py-3.5">
       <button type="button" className="support-back" onClick={onBack} aria-label="Quay lại danh sách hội thoại">←</button>
-      <div className="min-w-0"><h3 className="m-0 truncate text-xs leading-[normal] font-semibold">{supportName(conversation)}</h3><p className={'mt-[3px] mb-0 truncate leading-[normal] text-admin-muted ' + (status === 'active' ? 'text-[9px]' : 'text-[10px]')}>Khách hàng{conversation.CustomerEmail ? ' • ' + conversation.CustomerEmail : ''}</p></div>
+      <div className="min-w-0"><h3 className="m-0 truncate text-xs leading-[normal] font-semibold">{supportName(conversation)}</h3><p className={'mt-[3px] mb-0 truncate leading-[normal] text-admin-muted ' + (status === 'active' ? 'text-[9px]' : 'text-[10px]')}>Khách hàng{conversation.CustomerEmail ? ' • ' + conversation.CustomerEmail : ''}{supportAgent(conversation, user) ? ' • Người hỗ trợ: ' + supportAgent(conversation, user) : ''}</p></div>
       <div className="flex shrink-0 items-center gap-3"><SupportStatus status={status} />{mine && open && canWrite && <button type="button" disabled={disabled} onClick={() => setConfirmClose(true)} className="cursor-pointer text-[10px] text-admin-muted hover:text-admin-red disabled:opacity-50">Kết thúc hỗ trợ</button>}</div>
     </header>
     <div ref={scroll} onScroll={() => { const element = scroll.current; nearBottom.current = element.scrollHeight - element.scrollTop - element.clientHeight < 70 }} className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-[18px]" role="log" aria-label="Tin nhắn" aria-live="polite" aria-relevant="additions">
@@ -116,7 +116,7 @@ export default function SupportConversation({ id, draft, onDraft, onClaimed, onC
       {waiting ? <><div className="min-w-0 flex-1"><p className="m-0 text-[10px] leading-[normal] font-semibold">Sẵn sàng hỗ trợ khách hàng?</p><p className="mt-1 mb-0 text-[9px] leading-[normal] text-admin-muted">Sau khi tiếp nhận, bạn có thể gửi và nhận tin nhắn trong cuộc trò chuyện này.</p></div>{canWrite && <NewsButton disabled={disabled} onClick={() => act('claim')}>{busy === 'claim' ? 'Đang tiếp nhận…' : 'Tiếp nhận cuộc trò chuyện'}</NewsButton>}</> : mine && open && canWrite ? <form className="flex w-full items-center gap-2.5" onSubmit={(event) => { event.preventDefault(); void act('send') }}>
         <label htmlFor="support-reply" className="sr-only">Tin nhắn trả lời</label><textarea id="support-reply" value={draft} onChange={(event) => onDraft(event.target.value)} disabled={!!busy} maxLength={5000} rows={2} placeholder="Nhập tin nhắn phản hồi khách hàng..." className="support-composer block min-w-0 shrink resize-none rounded-[9px] border border-admin-border bg-white px-3 py-3 text-sm text-admin-text placeholder:text-admin-muted focus:border-admin-blue focus:outline-none disabled:opacity-60" />
         <NewsButton type="submit" aria-label="Gửi tin nhắn" className="shrink-0" disabled={disabled || !draft.trim()}>{busy === 'send' ? 'Đang gửi…' : 'Gửi'}</NewsButton>
-      </form> : <p className="m-0 text-[11px] text-admin-muted">{!open ? 'Cuộc trò chuyện đã kết thúc.' : conversation.Mode === 'AI' ? 'Hội thoại với AI chỉ được xem tại đây.' : !mine ? 'Cuộc trò chuyện đang do nhân viên khác phụ trách.' : 'Bạn chưa có quyền gửi tin nhắn.'}</p>}
+      </form> : <p className="m-0 text-[11px] text-admin-muted">{!open ? 'Cuộc trò chuyện đã kết thúc.' : conversation.Mode === 'AI' ? 'Hội thoại với AI chỉ được xem tại đây.' : !mine ? `Cuộc trò chuyện đang do ${conversation.AssignedStaffName || 'nhân viên khác'} phụ trách.` : 'Bạn chưa có quyền gửi tin nhắn.'}</p>}
     </footer>
     <Modal open={confirmClose} title="Kết thúc cuộc trò chuyện?" variant="news-delete" className="w-[470px]" busy={!!busy} onClose={() => setConfirmClose(false)} footer={<><NewsButton secondary disabled={!!busy} onClick={() => setConfirmClose(false)}>Hủy</NewsButton><NewsButton disabled={disabled} onClick={() => act('close')}>{busy === 'close' ? 'Đang kết thúc…' : 'Xác nhận kết thúc'}</NewsButton></>}><p className="m-0 text-xs text-admin-muted">Bạn và khách hàng sẽ không thể gửi thêm tin nhắn trong cuộc trò chuyện này.</p></Modal>
     {sendFailure && <SupportSendErrorDialog failure={sendFailure} busy={busy === 'send'} canRetry={!state.loading && mine && open && canWrite} onClose={() => setSendFailure(null)} onRetry={() => act('send', sendFailure.content)} />}

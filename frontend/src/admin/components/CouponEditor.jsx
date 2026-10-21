@@ -13,6 +13,7 @@ function Inherited({ label, value = '' }) { return <Field label={label}><input a
 function Select({ children, ...props }) { return <span className="relative block"><select className={CONTROL + ' appearance-none pr-8'} {...props}>{children}</select><span aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[11px] text-admin-muted">▼</span></span> }
 
 export default function CouponEditor({ row, promotions, promotionId, now, busy, failure, onSave, onClose }) {
+  promotions = promotions.filter((item) => item.ApplyMode !== 'Automatic')
   const [form, setForm] = useState(() => couponForm(row, promotions.some((item) => item.PromotionId === promotionId) ? promotionId : ''))
   const [validation, setValidation] = useState('')
   const elapsed = useCouponClock(monotonicNow)

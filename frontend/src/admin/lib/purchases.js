@@ -1,4 +1,5 @@
 import { formatDate } from '../../lib/format.js'
+import { formatStatus } from '../../lib/status-labels.js'
 
 export const PURCHASE_PAGE_SIZE = 5
 export const PURCHASE_TABS = [['', 'Tất cả'], ['Pending', 'Chờ xác nhận'], ['Approved', 'Đã xác nhận'], ['Rejected', 'Từ chối'], ['history', 'Lịch sử đã xử lý']]
@@ -79,6 +80,6 @@ export function purchaseReceiveBody(po, values, variants, note) {
 
 export function purchaseCsv(rows, supplierNames, creatorNames) {
   const cell = (value) => '"' + String(value ?? '').replace(/^[\s]*[=+@-]/, (prefix) => "'" + prefix).replace(/"/g, '""') + '"'
-  const data = [['Mã phiếu', 'Nhà cung cấp', 'Người tạo', 'Ngày lập', 'Tổng SL', 'Tổng tiền', 'Trạng thái'], ...rows.map((po) => [po.PurchaseOrderCode, supplierNames[po.SupplierId] ?? '', creatorNames[po.CreatedByUserId] ?? '', formatDate(po.CreatedAt), purchaseQuantity(po), po.TotalAmount, PURCHASE_STATUSES[po.Status] ?? po.Status])]
+  const data = [['Mã phiếu', 'Nhà cung cấp', 'Người tạo', 'Ngày lập', 'Tổng SL', 'Tổng tiền', 'Trạng thái'], ...rows.map((po) => [po.PurchaseOrderCode, supplierNames[po.SupplierId] ?? '', creatorNames[po.CreatedByUserId] ?? '', formatDate(po.CreatedAt), purchaseQuantity(po), po.TotalAmount, formatStatus(po.Status, PURCHASE_STATUSES)])]
   return '\uFEFF' + data.map((row) => row.map(cell).join(',')).join('\r\n')
 }

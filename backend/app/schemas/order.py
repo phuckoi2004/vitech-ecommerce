@@ -6,7 +6,7 @@ UnitCost (giá vốn tại thời điểm bán), InternalNote, AssignedStaffId c
 import uuid
 from datetime import datetime
 
-from pydantic import Field, model_validator
+from pydantic import AliasPath, Field, model_validator
 
 from .common import (
     Money,
@@ -141,10 +141,13 @@ class OrderCogsResponse(ResponseSchema):
 
 
 class OrderItemResponse(ResponseSchema):
-    """Dành cho khách hàng: không có UnitCost."""
+    """Dành cho khách hàng: không có UnitCost. ProductId để trang đơn hàng lấy ảnh và đường dẫn sản phẩm."""
 
     OrderItemId: uuid.UUID
     ProductVariantId: uuid.UUID
+    ProductId: uuid.UUID | None = Field(default=None, validation_alias=AliasPath("product_variant", "ProductId"))
+    # Review của dòng đơn (kể cả review đã bị ẩn): khác None là dòng đã được đánh giá.
+    ReviewId: uuid.UUID | None = Field(default=None, validation_alias=AliasPath("review", "ReviewId"))
     ProductName: str
     Sku: str
     VariantInfo: str
@@ -180,6 +183,24 @@ class OrderSummary(ResponseSchema):
     OrderStatus: OrderStatusValue
     PaymentStatus: PaymentStatusValue
     OrderedAt: datetime
+
+
+class OrderSummaryItem(ResponseSchema):
+    """Một dòng đơn trong lịch sử mua hàng; ProductSlug mở trang sản phẩm (đánh giá), None nếu không đọc được."""
+
+    OrderItemId: uuid.UUID
+    ProductName: str
+    VariantInfo: str
+    Quantity: PositiveInt
+    ProductId: uuid.UUID | None = Field(default=None, validation_alias=AliasPath("product_variant", "ProductId"))
+    ProductSlug: str | None = Field(default=None, validation_alias=AliasPath("product_variant", "product", "Slug"))
+    ReviewId: uuid.UUID | None = Field(default=None, validation_alias=AliasPath("review", "ReviewId"))
+
+
+class CustomerOrderSummary(OrderSummary):
+    """Lịch sử mua hàng của khách: kèm các dòng đơn để hiện tên sản phẩm."""
+
+    Items: list[OrderSummaryItem] = relation_field("items")
 
 
 class OrderResponse(OrderSummary):

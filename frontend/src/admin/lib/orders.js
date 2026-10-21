@@ -1,8 +1,11 @@
+import { formatStatus } from '../../lib/status-labels.js'
+
 export const ORDER_PAGE_SIZE = 5
 
 export const ORDER_STATUSES = [
   ['', 'Tất cả', 'w-20'],
   ['Pending', 'Chờ xác nhận', 'w-[122px]'],
+  ['Confirmed', 'Đã xác nhận', 'w-[112px]'],
   ['Processing', 'Đang xử lý', 'w-[112px]'],
   ['Shipping', 'Đang giao', 'w-[102px]'],
   ['Delivered', 'Đã giao', 'w-[90px]'],
@@ -10,8 +13,8 @@ export const ORDER_STATUSES = [
 ]
 
 export const ORDER_NEXT = {
-  Pending: ['Processing', 'Xác nhận'],
-  Confirmed: ['Processing', 'Xác nhận'], // Existing records remain actionable without generating this status.
+  Pending: ['Confirmed', 'Xác nhận'],
+  Confirmed: ['Processing', 'Bắt đầu xử lý'],
   Processing: ['Shipping', 'Giao hàng'],
   Shipping: ['Delivered', 'Giao hoàn tất'],
 }
@@ -28,7 +31,8 @@ export function orderFilters(params) {
   }
 }
 
-export const orderStatusLabel = (value) => ORDER_STATUSES.find(([status]) => status === value)?.[1] ?? ({ Confirmed: 'Đã xác nhận (cũ)', Completed: 'Hoàn tất' })[value] ?? value
+export const orderStatusLabel = (value) => ORDER_STATUSES.find(([status]) => status && status === value)?.[1] ?? formatStatus(value)
+export const paymentStatusLabel = (value) => formatStatus(value, PAYMENT_LABELS)
 export const canOperateOrder = (order, auth) => Boolean(order && auth.permissions.includes('orders:update') && (
   auth.user.Role === 'Admin' || (auth.user.Role === 'Staff' && (order.OrderStatus === 'Pending' || order.AssignedStaffId === auth.user.UserId))
 ))

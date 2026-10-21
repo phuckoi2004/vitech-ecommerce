@@ -14,7 +14,8 @@ export default function CartItem({ line, detail, busy = '', locked = false, onCh
   const status = lineStatus(line, detail)
   const { imageUrl, slug, variantLabel } = lineDisplay(line, detail)
   const buyable = status === 'ok' || status === 'atLimit'
-  const priceChanged = Number(line.UnitPrice) !== Number(line.CurrentPrice)
+  // Added at the price now struck through (a direct promotion started since): the struck price already says so.
+  const priceChanged = Number(line.UnitPrice) !== Number(line.CurrentPrice) && Number(line.UnitPrice) !== Number(line.OriginalPrice)
   const stockText = STOCK_TEXT[status]
     ?? (status === 'atLimit' || line.StockQuantity <= LOW_STOCK ? `Còn ${line.StockQuantity} sản phẩm` : 'Còn hàng')
   const image = <StoreImage src={imageUrl} alt="" loading="lazy" decoding="async"
@@ -33,7 +34,10 @@ export default function CartItem({ line, detail, busy = '', locked = false, onCh
       <div className="cart-item-info">
         <h3 className="cart-item-name">{line.ProductName}</h3>
         <p className="cart-item-variant">{variantLabel}</p>
-        <p className="cart-item-price"><Money value={line.CurrentPrice} /></p>
+        <p className="cart-item-price"><Money value={line.CurrentPrice} />
+          {Number(line.OriginalPrice) > Number(line.CurrentPrice) && <del className="cart-item-original">
+            <span className="sr-only">Giá gốc </span><Money value={line.OriginalPrice} />
+          </del>}</p>
         {priceChanged && <p className="cart-item-note">Giá đã thay đổi, lúc thêm vào giỏ là <Money value={line.UnitPrice} />.</p>}
         {line.Quantity > 1 && <p className="cart-item-note">Thành tiền: <Money className="cart-item-subtotal" value={line.LineTotal} /></p>}
         <div className="cart-item-actions">

@@ -32,9 +32,9 @@ function product(id, variants, overrides = {}) {
 
 // A cart server with the backend's rules: quantity ≤ stock, totals from the current price over selected lines that
 // can be bought, every change returning the whole cart. `sellable: false` marks a withdrawn variant. `coupons`:
-// {CODE: {percent, min}}, previewed on the selected lines like the backend. `intercept(call)` may answer a request
-// first (an error or a pending promise).
-function fakeServer({ lines = [], products = {}, coupons = {}, intercept } = {}) {
+// {CODE: {percent, min}}, previewed on the selected lines like the backend; `publicCoupons` is the GET /coupons list.
+// `intercept(call)` may answer a request first (an error or a pending promise).
+function fakeServer({ lines = [], products = {}, coupons = {}, publicCoupons = [], intercept } = {}) {
   const state = { lines: lines.map((item) => ({ ...item })) }
   const calls = []
   const reply = (status, data) => new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json' } })
@@ -67,6 +67,7 @@ function fakeServer({ lines = [], products = {}, coupons = {}, intercept } = {})
     const found = itemId && state.lines.find((item) => item.CartItemId === itemId)
     if (endpoint === '/users/me/notifications/unread-count') return reply(200, { Count: 0 })
     if (endpoint === '/cart' && method === 'GET') return reply(200, summary())
+    if (endpoint === '/coupons') return reply(200, publicCoupons)
     if (endpoint === '/cart/coupon-preview') {
       const cart = summary()
       if (!cart.Items.some((item) => item.IsSelected && item.IsAvailable)) {
@@ -189,6 +190,31 @@ describe('cart page', () => {
     expect(server.calls.filter((call) => call.endpoint === '/products/p1')).toHaveLength(1)
     expect(server.calls.find((call) => call.endpoint === '/cart').token).toBe('Bearer access-for-test')
     expect(document.title).toBe('Giỏ hàng | VieTech')
+  })
+
+  test('a line on a direct promotion shows its sale price with the original price struck through', async () => {
+    // Added before the promotion started, at the price now struck through.
+    fakeServer({ lines: [line({ OriginalPrice: '44990000.00', UnitPrice: '44990000.00' })], products: { p1: IPHONE } })
+    renderCart()
+
+    const item = await screen.findByRole('article', { name: 'iPhone 18 Pro Max' })
+    const price = item.querySelector('.cart-item-price')
+    expect(price).toHaveTextContent(vnd(41990000))
+    expect(price.querySelector('del')).toHaveTextContent(`Giá gốc ${vnd(44990000)}`)
+    expect(within(item).queryByText(/Giá đã thay đổi/)).not.toBeInTheDocument()
+  })
+
+  test('each line shows the photo of the colour in the cart, not the default colour', async () => {
+    const photo = (url) => ({ ImageUrl: url, DisplayOrder: 1, IsDefault: true })
+    fakeServer({
+      lines: [line({ ProductVariantId: 'v2', VariantName: '512GB Đen', CurrentPrice: '45990000.00', UnitPrice: '45990000.00' })],
+      products: { p1: { ...IPHONE, DefaultVariantId: 'v1',
+        VariantImages: { v1: [photo('https://cdn.test/do.png')], v2: [photo('https://cdn.test/den.png')] } } },
+    })
+    renderCart()
+
+    const item = await screen.findByRole('article', { name: 'iPhone 18 Pro Max' })
+    await waitFor(() => expect(item.querySelector('img')).toHaveAttribute('src', 'https://cdn.test/den.png'))
   })
 
   test('a product that is no longer sold keeps its line with a placeholder image and cannot be bought', async () => {
@@ -369,7 +395,7 @@ describe('cart coupon', () => {
     const dialog = screen.getByRole('dialog', { name: 'Nhập hoặc chọn mã khuyến mãi' })
     expect(within(dialog).getByRole('textbox', { name: 'Mã khuyến mãi' })).toHaveFocus()
     expect(within(dialog).getByRole('button', { name: 'Áp dụng' })).toBeDisabled()
-    expect(within(dialog).getByText(/Chưa có mã khuyến mãi nào để chọn/)).toBeInTheDocument()
+    expect(await within(dialog).findByText(/Hiện chưa có mã khuyến mãi nào để chọn/)).toBeInTheDocument()
     await user.type(within(dialog).getByRole('textbox', { name: 'Mã khuyến mãi' }), ' giam10 ')
     await user.click(within(dialog).getByRole('button', { name: 'Áp dụng' }))
     expect(await within(dialog).findByText('GIAM10')).toBeInTheDocument()
@@ -394,6 +420,44 @@ describe('cart coupon', () => {
     expect(within(summary).getByText('Áp dụng mã giảm giá')).toBeInTheDocument()
     expect(within(summary).queryByText('Giảm giá')).not.toBeInTheDocument()
     expect(sessionStorage.getItem('vietech-cart-coupon:Customer-id')).toBeNull()
+  })
+
+  test('public coupons are listed to choose from; one the selection does not reach yet cannot be chosen', async () => {
+    const offer = (code, overrides) => ({ CouponId: code, Code: code, Name: `Ưu đãi ${code}`, DiscountType: 'Percentage',
+      DiscountValue: '10.00', MinOrderValue: '0.00', MaxDiscountAmount: null, EndDate: '2026-12-31T16:59:59Z',
+      RemainingUses: 5, ...overrides })
+    const server = fakeServer({
+      lines: [line()], products: { p1: IPHONE }, coupons: { GIAM10: { percent: 10, min: 0 } },
+      publicCoupons: [offer('GIAM10', { MaxDiscountAmount: '5000000.00' }), offer('VIP', { DiscountType: 'FixedAmount',
+        DiscountValue: '2000000.00', MinOrderValue: '50000000.00', RemainingUses: null })],
+    })
+    const user = userEvent.setup()
+    renderCart()
+
+    await user.click(await screen.findByRole('button', { name: 'Chọn mã giảm giá' }))
+    const dialog = screen.getByRole('dialog', { name: 'Nhập hoặc chọn mã khuyến mãi' })
+    const list = await within(dialog).findByRole('list', { name: 'Mã khuyến mãi có thể chọn' })
+    const [first, second] = within(list).getAllByRole('listitem')
+    expect(first).toHaveTextContent('Giảm 10%')
+    expect(first).toHaveTextContent(`Mọi đơn hàng · Giảm tối đa ${vnd(5000000)}`)
+    expect(first).toHaveTextContent('Còn 5 lượt')
+    expect(second).toHaveTextContent(`Giảm ${vnd(2000000)}`)
+    expect(second).toHaveTextContent(`Mua thêm ${vnd(8010000)} để dùng mã này`) // 50 000 000 − 41 990 000 đã chọn
+    expect(within(second).getByRole('button', { name: 'Chọn mã VIP' })).toBeDisabled()
+    // The list is public: it is read without the customer's token.
+    expect(server.calls.find((call) => call.endpoint === '/coupons').token).toBeUndefined()
+
+    await user.click(within(first).getByRole('button', { name: 'Chọn mã GIAM10' }))
+    expect(await within(dialog).findByText(/cho các sản phẩm đã chọn/)).toBeInTheDocument()
+    expect(within(dialog).getByRole('textbox', { name: 'Mã khuyến mãi' })).toHaveValue('GIAM10')
+    expect(within(first).getByRole('button', { name: 'Chọn mã GIAM10' })).toHaveAttribute('aria-pressed', 'true')
+    expect(previews(server)).toEqual([expect.objectContaining({ query: { code: 'GIAM10' } })])
+
+    await user.click(within(dialog).getByRole('button', { name: 'Xác nhận' }))
+    const summary = screen.getByRole('complementary', { name: 'Thông tin đơn hàng' })
+    expect(within(summary).getByText('GIAM10')).toBeInTheDocument()
+    expect(within(summary).getByText('Giảm giá').nextElementSibling).toHaveTextContent(`−${vnd(4199000)}`)
+    expect(previews(server)).toHaveLength(1)
   })
 
   test('a wrong code shows the server message, keeps the dialog open and closing changes nothing', async () => {

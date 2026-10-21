@@ -58,7 +58,7 @@ PROMOTION_ACTIVE = "Active"
 PROMOTION_CANCELLED = "Cancelled"
 PERCENTAGE = "Percentage"
 # Trường ảnh hưởng điều kiện/giá trị giảm: không sửa khi Promotion đang Active.
-LOCKED_WHEN_ACTIVE = ("DiscountType", "DiscountValue", "MinOrderValue", "MaxDiscountAmount", "StartDate", "EndDate")
+LOCKED_WHEN_ACTIVE = ("ApplyMode", "DiscountType", "DiscountValue", "MinOrderValue", "MaxDiscountAmount", "StartDate", "EndDate")
 
 _CENT = Decimal("0.01")
 _VND = Decimal("1")
@@ -81,10 +81,13 @@ class DiscountLine(Protocol):
 
 @dataclass
 class SimpleDiscountLine:
+    """``cost``: giá nhập (CostPrice) cả dòng; None = không kiểm tra giá sàn cho dòng này."""
+
     product_id: uuid.UUID
     category_id: uuid.UUID
     gross: Decimal
     discount: Decimal = Decimal("0")
+    cost: Decimal | None = None
 
 
 def money(value: Decimal) -> Decimal:
@@ -209,6 +212,7 @@ class PromotionService(BaseService):
             values = data.model_dump(exclude_unset=True, exclude={"ProductIds", "CategoryIds"})
             _check_fixed_amount(values.get("DiscountType"), values.get("DiscountValue"))
             product_ids, category_ids = self._valid_targets(data.ProductIds, data.CategoryIds)
+            self._validate_automatic(values, product_ids, category_ids)
             promotion = self.promotions.create({**values, "CreatedByUserId": actor.user_id})
             promotion.Status = promotion_status(promotion, self.now())
             self.promotions.flush()
@@ -224,6 +228,12 @@ class PromotionService(BaseService):
             promotion.Status = promotion_status(promotion, self.now())
             values = data.model_dump(exclude_unset=True, exclude={"ProductIds", "CategoryIds"})
             target_values = data.model_dump(exclude_unset=True, include={"ProductIds", "CategoryIds"})
+            automatic_values = {key: values.get(key, getattr(promotion, key, None)) for key in
+                                ("ApplyMode", "DiscountType", "DiscountValue", "MinOrderValue", "MaxDiscountAmount")}
+            next_products = target_values.get("ProductIds", [item.ProductId for item in self.promotion_products.list_by_promotion(promotion_id)])
+            next_categories = target_values.get("CategoryIds", [item.CategoryId for item in self.promotion_categories.list_by_promotion(promotion_id)])
+            if automatic_values["ApplyMode"] == "Automatic" and self.coupons.list_by_promotion(promotion_id):
+                raise BusinessRuleError("Chương trình đã có mã giảm giá, không chuyển sang giảm trực tiếp", code="promotion_has_coupons")
             if promotion.Status == PROMOTION_ACTIVE:
                 changed = sorted(f for f in LOCKED_WHEN_ACTIVE if f in values and values[f] != getattr(promotion, f))
                 for field, repository, key in (("ProductIds", self.promotion_products, "ProductId"), ("CategoryIds", self.promotion_categories, "CategoryId")):
@@ -242,6 +252,10 @@ class PromotionService(BaseService):
             # Chỉ khi loại/giá trị giảm thay đổi: sửa tên/mô tả của dữ liệu cũ có phần lẻ vẫn được.
             if "DiscountType" in values or "DiscountValue" in values:
                 _check_fixed_amount(merged["DiscountType"], merged["DiscountValue"])
+            config_changed = bool(set(values) & set(LOCKED_WHEN_ACTIVE) or target_values)
+            activating = values.get("Status") in ("Active", "Scheduled") and promotion.Status == "Draft"
+            if (config_changed or activating) and values.get("Status", promotion.Status) not in ("Cancelled", "Expired"):
+                self._validate_automatic(automatic_values, next_products, next_categories)
             # Validate everything first, then save metadata and scope in ONE transaction.
             products, categories = self._valid_targets(target_values.get("ProductIds", []), target_values.get("CategoryIds", []))
             self.promotions.update(promotion, values)
@@ -288,6 +302,27 @@ class PromotionService(BaseService):
     def _response(self, promotion: Promotion, *, detail: bool = True):
         schema = AdminPromotionDetailResponse if detail else AdminPromotionResponse
         return schema.model_validate(promotion).model_copy(update={"EvaluatedAt": self.now()})
+
+    def _validate_automatic(self, values, product_ids, category_ids):
+        if values.get("ApplyMode") != "Automatic":
+            return
+        if values.get("MinOrderValue", 0) != 0 or values["DiscountValue"] <= 0:
+            raise BusinessRuleError("Giảm trực tiếp cần mức giảm lớn hơn 0 và đơn tối thiểu bằng 0", code="invalid_automatic_promotion")
+        from types import SimpleNamespace
+        from sqlalchemy import or_, select
+        from app.models import Product, ProductVariant
+        from app.core.product_pricing import discount_for
+        stmt = select(ProductVariant).join(ProductVariant.product).where(
+            Product.IsDeleted.is_(False), Product.Status == "Active",
+            ProductVariant.IsDeleted.is_(False), ProductVariant.IsActive.is_(True))
+        if product_ids or category_ids:
+            stmt = stmt.where(or_(Product.ProductId.in_(product_ids), Product.CategoryId.in_(category_ids)))
+        config = SimpleNamespace(**{"MaxDiscountAmount": None, **values})
+        for variant in self.session.scalars(stmt):
+            if variant.CostPrice <= 0 or variant.Price - discount_for(config, variant.Price) < variant.CostPrice:
+                raise BusinessRuleError(
+                    f"Biến thể {variant.Sku} chưa có giá nhập hợp lệ hoặc giá sau giảm thấp hơn giá nhập. Hãy điều chỉnh mức giảm/phạm vi.",
+                    code="promotion_price_floor")
 
     def _synchronize(self) -> None:
         # Just-in-time synchronization: no browser clock or external cron is required.
@@ -367,6 +402,8 @@ class CouponService(BaseService):
             promotion = self.promotions.get_by_id(values["PromotionId"])
             if promotion is None:
                 raise NotFoundError("Không tìm thấy chương trình khuyến mãi", code="promotion_not_found")
+            if getattr(promotion, "ApplyMode", "Coupon") == "Automatic":
+                raise BusinessRuleError("Mã giảm giá phải thuộc chương trình áp dụng bằng mã", code="coupon_requires_coupon_promotion")
             if self.coupons.exists_by_code(values["Code"]):
                 raise ConflictError("Mã giảm giá đã tồn tại", code="coupon_code_exists")
             coupon = self.coupons.create({**values, "CreatedByUserId": actor.user_id})
@@ -389,6 +426,8 @@ class CouponService(BaseService):
                 promotion = self.promotions.get_by_id(values["PromotionId"])
                 if promotion is None:
                     raise NotFoundError("Không tìm thấy chương trình khuyến mãi", code="promotion_not_found")
+                if getattr(promotion, "ApplyMode", "Coupon") == "Automatic":
+                    raise BusinessRuleError("Mã giảm giá phải thuộc chương trình áp dụng bằng mã", code="coupon_requires_coupon_promotion")
                 coupon.promotion = promotion
             if values.get("UsageLimit") is not None and values["UsageLimit"] < coupon.UsedCount:
                 raise BusinessRuleError(
@@ -417,14 +456,20 @@ class CouponService(BaseService):
 
         Không khóa, không tăng UsedCount. Kết quả cuối cùng được tính lại khi tạo đơn.
         """
+        from .pricing import variant_price
+
         require_role(actor, *CUSTOMER_ONLY)
         cart = self.carts.get_by_user(actor.user_id)
         items = self.cart_items.list_by_cart(cart.CartId, is_selected=True, with_variant=True) if cart else []
+        now = self.now()
+        promotions = self.promotions.list_automatic(now) if items else []
+        # Như giỏ hàng và tạo đơn: mã tính trên giá bán sau giảm trực tiếp.
         lines = [
             SimpleDiscountLine(
                 product_id=item.product_variant.ProductId,
                 category_id=item.product_variant.product.CategoryId,
-                gross=money(item.product_variant.Price * item.Quantity),
+                gross=money(variant_price(item.product_variant, promotions, now)["SalePrice"] * item.Quantity),
+                cost=(item.product_variant.CostPrice or Decimal("0")) * item.Quantity,
             )
             for item in items
             if is_variant_sellable(item.product_variant) and item.Quantity <= item.product_variant.StockQuantity
@@ -434,6 +479,9 @@ class CouponService(BaseService):
         subtotal = sum((line.gross for line in lines), Decimal("0"))
         coupon = self.coupons.get_by_code(code, with_promotion=True)
         eligible, discount = self._evaluate(coupon, lines, subtotal)
+        self._check_customer(coupon, actor.user_id)
+        allocate_discount(discount, eligible)
+        self._check_price_floor(eligible)
         return CouponPreviewResponse(
             Code=coupon.Code,
             PromotionId=coupon.PromotionId,
@@ -445,17 +493,20 @@ class CouponService(BaseService):
     # ---------------------------------------------------------- Dùng cho OrderService (trong transaction tạo/hủy đơn)
 
     def apply_coupon_to_order(
-        self, code: str, lines: Sequence[DiscountLine], subtotal: Decimal
+        self, code: str, lines: Sequence[DiscountLine], subtotal: Decimal, *, customer_id: uuid.UUID | None = None
     ) -> tuple[Coupon, Decimal]:
         """Khóa coupon (FOR UPDATE), kiểm tra, tính và phân bổ tiền giảm vào ``lines``, tăng UsedCount.
 
-        Chỉ gọi bên trong use case tạo đơn (không dùng trực tiếp từ Router).
+        ``customer_id``: mỗi khách dùng mỗi mã một lần (đơn đã hủy không tính). Chỉ gọi bên trong use case tạo đơn
+        (không dùng trực tiếp từ Router).
         """
         self.require_enclosing_use_case()
         with self.transaction():
             coupon = self.coupons.get_by_code_for_update(code)
             eligible, discount = self._evaluate(coupon, lines, subtotal)
+            self._check_customer(coupon, customer_id)
             allocate_discount(discount, eligible)
+            self._check_price_floor(eligible)
             coupon.UsedCount += 1
             coupon.IsActive = coupon_status(coupon, self.now()) == "Active"
             return coupon, discount
@@ -508,6 +559,19 @@ class CouponService(BaseService):
             raise BusinessRuleError("Mã giảm giá không áp dụng cho sản phẩm trong đơn", code="coupon_not_applicable")
         base = sum((line.gross for line in eligible), Decimal("0"))
         return eligible, calculate_discount(promotion, base)
+
+    def _check_customer(self, coupon: Coupon, customer_id: uuid.UUID | None) -> None:
+        """Mỗi tài khoản dùng mỗi mã một lần; đơn đã hủy trả lại lượt của khách."""
+        if customer_id is not None and self.orders.customer_used_coupon(customer_id, coupon.CouponId):
+            raise BusinessRuleError("Bạn đã sử dụng mã này", code="coupon_customer_limit")
+
+    @staticmethod
+    def _check_price_floor(lines: Sequence[DiscountLine]) -> None:
+        """Sau phân bổ coupon, dòng được giảm không thấp hơn giá nhập (chưa có giá nhập hợp lệ cũng từ chối)."""
+        for line in lines:
+            cost = getattr(line, "cost", None)
+            if cost is not None and (cost <= 0 or line.gross - line.discount < cost):
+                raise BusinessRuleError("Mã không áp dụng được cho các sản phẩm đã chọn", code="coupon_price_floor")
 
     def _eligible_lines(self, promotion_id: uuid.UUID, lines: Sequence[DiscountLine]) -> list[DiscountLine]:
         """Promotion không gán Product/Category: toàn bộ dòng. Danh mục chỉ khớp trực tiếp."""

@@ -205,7 +205,18 @@ test('the detail link opens a separate page and back retains the list filters', 
   expect(router.state.location.search).toBe('?keyword=THAT')
 })
 
-test.each([['Pending', 'Processing', 'Xác nhận'], ['Processing', 'Shipping', 'Giao hàng']])('advancing %s requires confirmation and sends only the next state', async (current, target, label) => {
+test('confirmed orders have their own filter and status label without the old suffix', async () => {
+  orders = [{ ...base, OrderStatus: 'Confirmed' }, { ...base, OrderId: 'o2', OrderCode: 'DH-THAT-02' }]
+  const router = renderPage()
+  await screen.findByText('2 đơn hàng')
+  fireEvent.click(within(screen.getByRole('group', { name: 'Lọc trạng thái đơn hàng' })).getByRole('button', { name: 'Đã xác nhận', exact: true }))
+  await screen.findByText('1 đơn hàng')
+  expect(router.state.location.search).toBe('?status=Confirmed')
+  expect(await screen.findByRole('button', { name: 'Bắt đầu xử lý DH-THAT-01' })).toBeInTheDocument()
+  expect(screen.queryByText(/\(cũ\)/)).not.toBeInTheDocument()
+})
+
+test.each([['Pending', 'Confirmed', 'Xác nhận'], ['Confirmed', 'Processing', 'Bắt đầu xử lý'], ['Processing', 'Shipping', 'Giao hàng']])('advancing %s requires confirmation and sends only the next state', async (current, target, label) => {
   orders = [{ ...base, OrderStatus: current }]
   serialItems[0].SerialNumbers = ['SN-PACKED']
   renderPage()
@@ -274,7 +285,7 @@ test('a paid transfer order is confirmed from the quick action as before', async
   await waitFor(() => expect(confirm).toBeEnabled())
   expect(within(dialog).queryByText(/chỉ được xác nhận sau khi khách đã thanh toán/)).not.toBeInTheDocument()
   fireEvent.click(confirm)
-  await waitFor(() => expect(api.updateOrderStatus).toHaveBeenCalledWith('access-for-test', 'o1', { OrderStatus: 'Processing', Note: null }))
+  await waitFor(() => expect(api.updateOrderStatus).toHaveBeenCalledWith('access-for-test', 'o1', { OrderStatus: 'Confirmed', Note: null }))
 })
 
 test('COD delivery requires explicit collection and uses the collection endpoint without a client amount', async () => {
@@ -356,7 +367,7 @@ test('write failures retain notes for retry and a pending write disables duplica
   expect(within(dialog).getByRole('button', { name: 'Đóng' })).toBeDisabled()
   fireEvent.submit(dialog.querySelector('#order-status-form'))
   expect(api.updateOrderStatus).toHaveBeenCalledTimes(2)
-  await act(async () => finish({ ...base, OrderStatus: 'Processing' }))
+  await act(async () => finish({ ...base, OrderStatus: 'Confirmed' }))
   await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
 })
 

@@ -154,12 +154,16 @@ class StockQuantityEditTest(InventoryTestBase):
         self.assertEqual(variant.StockQuantity, 1)
 
     def test_confirmed_legacy_units_are_not_counted_as_free_unnumbered_stock(self):
-        variant = self.f.variant(stock=2, serial_tracked=True)
-        self.f.order(self.customer, self.f.payment_method('COD'), lines=((variant, 5),), status='Processing')
-        for i in range(2):
-            self.db.add(ProductSerial(ProductVariantId=variant.ProductVariantId, SerialNumber=f'FREE-{i}', Status='Available'))
-        self.edit(variant, 1)
-        self.assertEqual(sum(s.Status == 'WrittenOff' for s in self.db.rows(ProductSerial)), 1)
+        for status in ('Confirmed', 'Processing'):
+            with self.subTest(status=status):
+                variant = self.f.variant(stock=2, serial_tracked=True)
+                self.f.order(self.customer, self.f.payment_method('COD'), lines=((variant, 5),), status=status)
+                for i in range(2):
+                    self.db.add(ProductSerial(ProductVariantId=variant.ProductVariantId,
+                        SerialNumber=f'FREE-{status}-{i}', Status='Available'))
+                self.edit(variant, 1)
+                self.assertEqual(sum(s.Status == 'WrittenOff' for s in self.db.rows(ProductSerial)
+                                     if s.ProductVariantId == variant.ProductVariantId), 1)
 
     def test_serial_increase_and_reduction_are_rolled_back_on_persistence_failure(self):
         variant = self.f.variant(stock=1, serial_tracked=True)

@@ -15,6 +15,7 @@ from app.schemas import (
     AdminOrderResponse,
     AdminOrderStatusHistoryResponse,
     CodDeliveryConfirm,
+    CustomerOrderSummary,
     OrderAdminUpdate,
     OrderCancelRequest,
     OrderCogsResponse,
@@ -25,7 +26,6 @@ from app.schemas import (
     OrderSerialAssign,
     OrderStatusHistoryResponse,
     OrderStatusUpdate,
-    OrderSummary,
     PageResponse,
     ShipmentReturnReceive,
     ShipmentReturnResponse,
@@ -83,13 +83,15 @@ def create_order(data: OrderCreate, service: Orders, actor: CurrentActor):
     return service.create_order(actor, data)
 
 
-@router.get("/orders", response_model=PageResponse[OrderSummary])
+@router.get("/orders", response_model=PageResponse[CustomerOrderSummary])
 def list_my_orders(service: Orders, actor: CurrentActor, order_code: str | None = None,
-                   order_status: str | None = None, ordered_from: AwareDatetime | None = None,
-                   ordered_to: AwareDatetime | None = None, page: Page = 1, page_size: PageSize = 20):
-    """Order history; ``ordered_from``/``ordered_to`` form a half-open range [from, to)."""
+                   order_status: Annotated[list[str] | None, Query()] = None, ordered_from: AwareDatetime | None = None,
+                   ordered_to: AwareDatetime | None = None, product_id: uuid.UUID | None = None,
+                   page: Page = 1, page_size: PageSize = 20):
+    """Order history with each order's lines; ``order_status`` may repeat (any of them matches);
+    ``ordered_from``/``ordered_to`` form a half-open range [from, to); ``product_id`` keeps orders with that product."""
     return service.search_customer_orders(actor, order_code=order_code, order_status=order_status,
-                                          ordered_from=ordered_from, ordered_to=ordered_to,
+                                          ordered_from=ordered_from, ordered_to=ordered_to, product_id=product_id,
                                           page=page, page_size=page_size)
 
 

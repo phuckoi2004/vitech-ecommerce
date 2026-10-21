@@ -42,6 +42,13 @@ def test_success_checkout_workflow_and_cancellation(api, admin, staff, customer)
                                    json={"CancelReason": "Đổi ý"}), 200)
     assert cancelled["OrderStatus"] == "Cancelled" and stock(api, shop) == 3  # stock returned once
 
+    # Order history: order_status repeats (any matches) and each order lists its lines with the product slug.
+    history = expect(client.get("/orders", headers=customer.headers,
+                                params=[("order_status", "Delivered"), ("order_status", "Cancelled")]), 200)
+    assert {o["OrderId"] for o in history["Items"]} == {order_id, second["OrderId"]}
+    lines = next(o for o in history["Items"] if o["OrderId"] == order_id)["Items"]
+    assert [line["Quantity"] for line in lines] == [2] and lines[0]["ProductName"] and lines[0]["ProductSlug"]
+
 
 def test_401_without_token(api):
     expect_unauthorized(api.client.get("/orders"))
@@ -108,7 +115,7 @@ def test_business_rules_order_workflow(api, staff, customer):
     expect(client.post(f"/admin/orders/{order_id}/status", headers=staff.headers, json={"OrderStatus": "Shipping"}),
            400, "invalid_status_transition")  # steps cannot be skipped
     expect(client.post(f"/admin/orders/{order_id}/status", headers=staff.headers,
-                       json={"OrderStatus": "Processing", "CancelReason": "x"}), 400, "cancel_reason_not_allowed")
+                       json={"OrderStatus": "Confirmed", "CancelReason": "x"}), 400, "cancel_reason_not_allowed")
     api.ship(order_id, staff)
     expect(client.post(f"/orders/{order_id}/cancel", headers=customer.headers, json={"CancelReason": "Muộn"}), 400,
            "order_not_cancellable")  # already shipping

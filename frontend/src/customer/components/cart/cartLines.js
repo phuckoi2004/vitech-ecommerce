@@ -1,4 +1,4 @@
-import { toProductCard } from '../../../lib/catalog-api.js'
+import { variantImages } from '../../../lib/product-detail.js'
 
 // Below this stock the line says how many are left instead of "Còn hàng".
 export const LOW_STOCK = 5
@@ -19,13 +19,13 @@ export function lineStatus(line, detail) {
   return line.Quantity >= line.StockQuantity ? 'atLimit' : 'ok'
 }
 
-// What the line shows from its product detail: image, link and "Xám • 256GB" (the variant name when the detail
-// has no colour or storage, or is not available).
+// What the line shows from its product detail: the photo of the colour in the cart (not the default variant's),
+// link and "Xám • 256GB" (the variant name when the detail has no colour or storage, or is not available).
 export function lineDisplay(line, detail) {
-  const card = detail ? toProductCard(detail) : null
   const variant = detail?.Variants?.find((item) => item.ProductVariantId === line.ProductVariantId)
   const label = [variant?.Color, variant?.Storage].filter(Boolean).join(' • ')
-  return { imageUrl: card?.imageUrl ?? null, slug: card?.slug ?? null, variantLabel: label || line.VariantName }
+  const imageUrl = detail ? variantImages(detail, line.ProductVariantId)[0]?.ImageUrl ?? null : null
+  return { imageUrl, slug: detail?.Slug ?? null, variantLabel: label || line.VariantName }
 }
 
 const cents = (value) => Math.round(Number(value ?? 0) * 100)

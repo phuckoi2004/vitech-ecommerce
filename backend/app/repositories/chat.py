@@ -21,9 +21,11 @@ class ConversationRepository(BaseRepository[Conversation]):
         unread = (select(Message.ConversationId, func.count().label('Count'))
                   .where(Message.ConversationId.in_(conversation_ids), Message.SenderType == 'Customer', Message.IsRead.is_(False))
                   .group_by(Message.ConversationId).subquery())
+        staff = aliased(User)
         customers = self.session.execute(
-            select(Conversation.ConversationId, User.FullName, User.Email, func.coalesce(unread.c.Count, 0))
+            select(Conversation.ConversationId, User.FullName, User.Email, func.coalesce(unread.c.Count, 0), staff.FullName)
             .join(User, User.UserId == Conversation.CustomerId)
+            .outerjoin(staff, staff.UserId == Conversation.AssignedStaffId)
             .outerjoin(unread, unread.c.ConversationId == Conversation.ConversationId)
             .where(Conversation.ConversationId.in_(conversation_ids))
         ).all()
@@ -37,7 +39,8 @@ class ConversationRepository(BaseRepository[Conversation]):
         latest = aliased(Message, ranked)
         messages = self.session.scalars(select(latest).where(ranked.c.message_rank == 1)).all()
         by_id = {message.ConversationId: message for message in messages}
-        return {id_: (name, email, by_id.get(id_), int(count)) for id_, name, email, count in customers}
+        return {id_: (name, email, by_id.get(id_), int(count), staff_name)
+                for id_, name, email, count, staff_name in customers}
 
     def get_detail(self, conversation_id: uuid.UUID) -> Conversation | None:
         """Conversation kèm toàn bộ Messages; với hội thoại dài nên dùng MessageRepository có phân trang."""
@@ -62,10 +65,13 @@ class ConversationRepository(BaseRepository[Conversation]):
         status: str | None,
         mode: str | None,
         unassigned: bool = False,
+        assigned: bool = False,
     ) -> list:
         conditions = []
         if unassigned:
             conditions.append(Conversation.AssignedStaffId.is_(None))
+        if assigned:
+            conditions.append(Conversation.AssignedStaffId.is_not(None))
         if customer_id is not None:
             conditions.append(Conversation.CustomerId == customer_id)
         if assigned_staff_id is not None:
@@ -84,11 +90,12 @@ class ConversationRepository(BaseRepository[Conversation]):
         status: str | None = None,
         mode: str | None = None,
         unassigned: bool = False,
+        assigned: bool = False,
         offset: int | None = None,
         limit: int | None = None,
     ) -> list[Conversation]:
         return self.get_all(
-            *self._filters(customer_id, assigned_staff_id, status, mode, unassigned),
+            *self._filters(customer_id, assigned_staff_id, status, mode, unassigned, assigned),
             order_by=(Conversation.CreatedAt.desc(), Conversation.ConversationId),
             offset=offset,
             limit=limit,
@@ -102,8 +109,9 @@ class ConversationRepository(BaseRepository[Conversation]):
         status: str | None = None,
         mode: str | None = None,
         unassigned: bool = False,
+        assigned: bool = False,
     ) -> int:
-        return self.count(*self._filters(customer_id, assigned_staff_id, status, mode, unassigned))
+        return self.count(*self._filters(customer_id, assigned_staff_id, status, mode, unassigned, assigned))
 
 
 class MessageRepository(BaseRepository[Message]):

@@ -4,11 +4,11 @@ Các danh mục con được bổ sung ngày 18/10/2026 có thể chọn trong t
 
 Tham chiếu [Figma Category Sidebar, node 5:29](https://www.figma.com/design/aLG7De0fgbWCfaIpzIrPii/VieTech---Homepage-UI?node-id=5-29). Phần mở rộng tham khảo cách tổ chức danh mục/hãng của [CellphoneS](https://cellphones.com.vn/), dùng màu sắc và component sẵn có của VieTech.
 
-- Desktop: rê chuột hoặc bấm danh mục để mở bảng bên phải. Điện thoại/tablet: bấm mở bảng ngay dưới hàng danh mục.
+- Bấm (hoặc chạm) một danh mục đi tới trang danh sách sản phẩm của danh mục đó (`/danh-muc/<slug>`, xem [trang danh mục](customer-category-listing.md)). Trên máy tính, rê chuột lên danh mục mở bảng thương hiệu/giá bên phải; màn hình cảm ứng không có bảng này vì trang danh mục đã có đủ bộ lọc hãng và giá.
 - Bảng gồm bộ lọc thương hiệu có sản phẩm đang bán trong danh mục và “Chọn theo giá”. Không hiển thị danh mục con, gợi ý sản phẩm hay liên kết “Xem tất cả”. Không thêm hãng/sản phẩm mẫu hoặc biến thương hiệu thành danh mục con.
 - Chọn hãng đi tới `/danh-muc/<slug>?brand=<BrandId>`; API lọc đồng thời danh mục và thương hiệu. Phạm vi tìm sản phẩm vẫn gồm các danh mục con để không bỏ sót hàng trong danh mục đã chọn.
 - Có trạng thái tải, rỗng, lỗi và thử lại cho danh sách thương hiệu. Chỉ đọc danh sách sản phẩm tóm tắt khi mở menu để xác định hãng phù hợp; không tải danh mục con hoặc chi tiết sản phẩm trong menu. Chuyển danh mục/đóng menu hủy yêu cầu cũ.
-- Dùng Tab/Enter để mở, mũi tên phải để vào bảng, Escape để đóng và trả focus. Bấm ngoài hoặc nút đóng để thu lại.
+- Bàn phím: Tab tới danh mục, Enter mở trang danh mục, mũi tên phải mở bảng và đưa focus vào, Escape đóng và trả focus. Bấm ngoài hoặc nút đóng để thu lại.
 - SVG nền tròn danh mục lấy nguyên bản từ Figma, kích thước 24×24; icon loại sản phẩm dùng bộ icon hiện có. Dữ liệu danh mục, hãng và banner tiếp tục lấy từ API.
 - Menu mở rộng gọn theo nội dung, các ô thương hiệu bo góc và dùng `LogoUrl` do Admin lưu; thiếu ảnh hoặc tải lỗi thì hiển thị tên thương hiệu.
 - Chọn mức giá đi tới `/danh-muc/<slug>?price=<mức>`; trang danh sách cho phép kết hợp với thương hiệu hoặc bỏ lọc giá. Các mức dùng chung: dưới 5 triệu, 5–10 triệu, 10–15 triệu, 15–20 triệu, từ 20 triệu. Mốc trên của các khoảng giữa không bao gồm trong khoảng (10 triệu thuộc mức 10–15 triệu).

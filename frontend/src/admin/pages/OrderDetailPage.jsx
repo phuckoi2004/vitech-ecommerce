@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate, useOutletContext, useParams, useSearchParams } from 'react-router-dom'
+import { useLocation, useNavigate, useOutletContext, useParams, useSearchParams } from 'react-router-dom'
 import { ErrorState, LoadingState } from '../../components/shared/index.js'
 import { formatDate, formatDateTime, formatMoney } from '../../lib/format.js'
 import historyDot from '../assets/order-history-dot.svg'
@@ -10,7 +10,7 @@ import OrderProgress from '../components/OrderProgress.jsx'
 import OrderStatusModal from '../components/OrderStatusModal.jsx'
 import { ProductButton } from '../components/ProductUi.jsx'
 import useOrderWorkflow from '../hooks/useOrderWorkflow.js'
-import { canCancelOrder, orderListSearch, orderStatusLabel, PAYMENT_LABELS } from '../lib/orders.js'
+import { canCancelOrder, orderListSearch, orderStatusLabel, paymentStatusLabel } from '../lib/orders.js'
 import { updateOrderNote } from '../services/orders.js'
 
 const CARD = 'min-w-0 rounded-[14px] border border-admin-border bg-white px-[18px] py-4'
@@ -23,6 +23,10 @@ function Info({ label, children, strong = false }) {
 export default function OrderDetailPage() {
   const { orderId } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
+  const reportOrigin = location.state?.reportOrigin
+  const reportBack = reportOrigin && typeof reportOrigin.search === 'string' && reportOrigin.search.startsWith('?')
+    ? '/admin/reports' + reportOrigin.search : null
   const [params] = useSearchParams()
   const [extraOpen, setExtraOpen] = useState(false)
   const { onSubPage } = useOutletContext() ?? {}
@@ -34,7 +38,7 @@ export default function OrderDetailPage() {
   }, [onSubPage, order?.OrderCode])
 
   function statusDone(message) { choose(null); setNotice(message); detail.refresh(); serials.refresh() }
-  function back() { navigate('/admin/orders' + orderListSearch(params)) }
+  function back() { navigate(reportBack ?? '/admin/orders' + orderListSearch(params)) }
   const columns = [
     { key: 'ProductName', label: 'Sản phẩm', className: 'w-[49.7%]', render: (name, item) => <div className="min-w-0 break-words"><span className="font-medium">{name}</span><span className="mt-1 block text-[10px] text-admin-muted">{item.VariantInfo}</span><span className="mt-0.5 block text-[10px] break-all text-admin-muted">SKU: {item.Sku}</span>{Number(item.DiscountAmount) > 0 && <span className="mt-0.5 block text-[10px] text-admin-muted">Giảm: {formatMoney(item.DiscountAmount)}</span>}</div> },
     { key: 'Quantity', label: 'SL', className: 'w-[13.2%]' },
@@ -42,7 +46,7 @@ export default function OrderDetailPage() {
     { key: 'LineTotal', label: 'Thành tiền', className: 'w-[19.6%]', render: formatMoney },
   ]
   return <section aria-label="Chi tiết đơn hàng" className="flex min-w-0 flex-col gap-[18px]">
-    <div className="flex min-h-[46px] items-center justify-between gap-3"><h2 className="m-0 text-xl font-bold">{order ? 'Đơn hàng #' + order.OrderCode : 'Chi tiết đơn hàng'}</h2><ProductButton secondary className="w-[100px] shrink-0 px-3!" disabled={busy} onClick={back}>← Quay lại</ProductButton></div>
+    <div className="flex min-h-[46px] flex-wrap items-center justify-between gap-3"><h2 className="m-0 text-xl font-bold">{order ? 'Đơn hàng #' + order.OrderCode : 'Chi tiết đơn hàng'}</h2><ProductButton secondary className="shrink-0 px-3!" disabled={busy} onClick={back}>{reportBack ? '← Quay lại báo cáo' : '← Quay lại'}</ProductButton></div>
     {notice && <p role="status" className="m-0 rounded-[10px] bg-green-50 p-3 text-xs text-green-700">{notice}</p>}
     {error && !intent && <p role="alert" className="m-0 rounded-[10px] bg-red-50 p-3 text-xs text-red-700">{error}</p>}
     {detail.loading ? <LoadingState label="Đang tải chi tiết đơn hàng…" /> : detail.error ? <ErrorState title="Không tải được đơn hàng" message={detail.error} onRetry={detail.refresh} /> : order && <>
@@ -79,7 +83,7 @@ export default function OrderDetailPage() {
             </> : <p className="m-0 text-xs text-admin-muted">Bạn có quyền xem đơn hàng.</p>}
           </section>
           <details className={CARD} open={extraOpen} onToggle={(event) => setExtraOpen(event.currentTarget.open)}><summary className="cursor-pointer text-xs font-semibold text-admin-blue">Giao hàng, thanh toán & ghi chú</summary><div className="mt-4 flex flex-col gap-4">
-            <dl className="m-0 flex flex-col gap-4"><Info label="Địa chỉ giao hàng">{order.ShippingAddress}</Info><Info label="Ghi chú khách hàng">{order.CustomerNote}</Info><Info label="Thanh toán">{PAYMENT_LABELS[order.PaymentStatus] ?? order.PaymentStatus}</Info><Info label="Phương thức thanh toán">{payment.loading ? 'Đang tải…' : payment.data?.Name ?? 'Chưa tải được'}</Info>{order.CancelReason && <Info label="Lý do hủy">{order.CancelReason}</Info>}</dl>
+            <dl className="m-0 flex flex-col gap-4"><Info label="Địa chỉ giao hàng">{order.ShippingAddress}</Info><Info label="Ghi chú khách hàng">{order.CustomerNote}</Info><Info label="Thanh toán">{paymentStatusLabel(order.PaymentStatus)}</Info><Info label="Phương thức thanh toán">{payment.loading ? 'Đang tải…' : payment.data?.Name ?? 'Chưa tải được'}</Info>{order.CancelReason && <Info label="Lý do hủy">{order.CancelReason}</Info>}</dl>
             {payment.error && <ErrorState title="Chưa tải được phương thức thanh toán" message={payment.error} onRetry={payment.refresh} className="py-2" />}
             <dl className="m-0 grid grid-cols-2 gap-x-3 gap-y-2 text-[11px]"><dt className="text-admin-muted">Tiền hàng</dt><dd className="m-0 text-right">{formatMoney(order.Subtotal)}</dd><dt className="text-admin-muted">Phí vận chuyển</dt><dd className="m-0 text-right">{formatMoney(order.ShippingFee)}</dd><dt className="text-admin-muted">Giảm giá đơn hàng</dt><dd className="m-0 text-right">{formatMoney(order.DiscountAmount)}</dd><dt className="border-t border-admin-border pt-2 font-semibold">Tổng thanh toán</dt><dd className="m-0 border-t border-admin-border pt-2 text-right font-semibold text-admin-blue">{formatMoney(order.TotalAmount)}</dd></dl>
             {canUpdate ? <InternalNote key={order.InternalNote ?? ''} order={order} busy={busy} onSave={(value) => write((token) => updateOrderNote(token, orderId, { InternalNote: value }), () => { detail.refresh(); setNotice('Đã lưu ghi chú nội bộ.') })} /> : <dl className="m-0"><Info label="Ghi chú nội bộ">{order.InternalNote}</Info></dl>}

@@ -162,3 +162,19 @@ def test_conversation_lock_always_refreshes_existing_session_state():
     id_ = uuid.uuid4()
     ConversationRepository(session).get_by_id_for_update(id_)
     assert session.calls == ['flush', (Conversation, id_, {'with_for_update': True, 'populate_existing': True})]
+
+
+def test_admin_sees_every_customer_being_helped_and_who_is_helping(inbox):
+    client, _, _, current, ids, actors = inbox
+    assert client.post(f'/admin/conversations/{ids[0]}/claim').status_code == 200  # Staff 2 takes the first chat
+    mine = client.get('/admin/conversations/assigned', params={'status': 'Open'}).json()['Items']
+    assert [(row['ConversationId'], row['AssignedStaffName']) for row in mine] == [(str(ids[0]), 'Staff 2')]
+    assert client.get('/admin/conversations/active').status_code == 403  # Staff only see their own chats
+    current['actor'] = actors[4]
+    active = client.get('/admin/conversations/active')
+    assert active.status_code == 200, active.text
+    rows = active.json()['Items']
+    assert [(row['ConversationId'], row['CustomerName'], row['AssignedStaffName']) for row in rows] == [
+        (str(ids[0]), 'Customer 0', 'Staff 2')]
+    queue = client.get('/admin/conversations/unassigned').json()['Items']
+    assert [(row['ConversationId'], row['AssignedStaffName']) for row in queue] == [(str(ids[1]), None)]

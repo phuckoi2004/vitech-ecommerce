@@ -84,7 +84,7 @@ test.each([['a paid transfer order', 'SEPAY', 'Paid'], ['an unpaid COD order', '
     await waitFor(() => expect(submit).toBeEnabled())
     expect(screen.queryByText(/chỉ được xác nhận sau khi khách đã thanh toán/)).not.toBeInTheDocument()
     fireEvent.click(submit)
-    await waitFor(() => expect(api.updateOrderStatus).toHaveBeenCalledWith('access-for-test', 'o1', { OrderStatus: 'Processing', Note: null }))
+    await waitFor(() => expect(api.updateOrderStatus).toHaveBeenCalledWith('access-for-test', 'o1', { OrderStatus: 'Confirmed', Note: null }))
   })
 
 test('while its payment method cannot be read, an order is not confirmed', async () => {
@@ -129,6 +129,27 @@ test('different variants remain separate product rows; history contains only eve
   expect(screen.queryByText(/Hệ thống thông báo đơn mới/)).not.toBeInTheDocument()
 })
 
+test.each(['Pending', 'Confirmed', 'Processing', 'Shipping', 'Delivered', 'Completed', 'Cancelled'])(
+  '%s order details show sale amounts without purchase costs, profits or cost warnings', async status => {
+  order.OrderStatus = status
+  order.Items = [{ ...order.Items[0], UnitCost: '700000.00' }, { ...order.Items[1], UnitCost: '0.00' }]
+  renderPage()
+  const table = await screen.findByRole('table')
+  expect(within(table).getAllByRole('columnheader').map(cell => cell.textContent)).toEqual(['Sản phẩm', 'SL', 'Đơn giá', 'Thành tiền'])
+  expect(within(table).getAllByRole('row')[1].lastElementChild).toHaveTextContent('1.000.000')
+  expect(screen.queryByLabelText('Lãi của đơn hàng')).not.toBeInTheDocument()
+  expect(screen.queryByText(/Giá nhập|giá nhập|Lãi|lãi|Biên lãi|Chưa đủ dữ liệu|Tiền hàng thực thu/)).not.toBeInTheDocument()
+})
+
+test('the in-page back button restores a report location instead of the order list', async () => {
+  const search = '?period=month&month=2026-09&brand_id=b1&sort=profit_asc&page=2&detail=p1'
+  const router = renderPage({ pathname: '/admin/orders/o1', state: { reportOrigin: { search } } })
+  await screen.findByRole('heading', { level: 2, name: 'Đơn hàng #DH-API-01' })
+  fireEvent.click(screen.getByRole('button', { name: '← Quay lại báo cáo' }))
+  expect(router.state.location.pathname).toBe('/admin/reports')
+  expect(router.state.location.search).toBe(search)
+})
+
 test('empty product and history arrays keep the table headers without inventing records', async () => {
   order.Items = []; order.StatusHistories = []
   renderPage()
@@ -139,12 +160,12 @@ test('empty product and history arrays keep the table headers without inventing 
   expect(screen.queryByText('iPhone 17 Pro Max 256GB')).not.toBeInTheDocument()
 })
 
-test.each([['Pending', 0, 'Chờ xác nhận'], ['Confirmed', 0, 'Đã xác nhận'], ['Processing', 1, 'Đang xử lý'], ['Shipping', 2, 'Đang giao'], ['Delivered', 3, 'Đã giao'], ['Completed', 3, 'Hoàn tất']])('progress handles backend state %s within the four design stages', async (status, index, label) => {
+test.each([['Pending', 0, 'Chờ xác nhận'], ['Confirmed', 1, 'Đã xác nhận'], ['Processing', 2, 'Đang xử lý'], ['Shipping', 3, 'Đang giao'], ['Delivered', 4, 'Đã giao'], ['Completed', 4, 'Hoàn tất']])('progress handles backend state %s within five stages', async (status, index, label) => {
   order.OrderStatus = status
   renderPage()
   const progress = await screen.findByRole('list', { name: 'Tiến trình đơn hàng' })
   const steps = within(progress).getAllByRole('listitem')
-  expect(steps).toHaveLength(4)
+  expect(steps).toHaveLength(5)
   expect(steps[index]).toHaveAttribute('aria-current', 'step')
   expect(steps[index]).toHaveTextContent(label)
   expect(steps.filter((step) => step.getAttribute('aria-current') === 'step')).toHaveLength(1)
@@ -168,8 +189,10 @@ test('confirming updates the detail page, history and next action without return
   const submit = within(dialog).getByRole('button', { name: 'Xác nhận', exact: true })
   await waitFor(() => expect(submit).toBeEnabled())
   fireEvent.click(submit)
-  await waitFor(() => expect(api.updateOrderStatus).toHaveBeenCalledWith('access-for-test', 'o1', { OrderStatus: 'Processing', Note: 'Đã gọi xác nhận' }))
-  await screen.findByRole('button', { name: 'Giao hàng' })
+  await waitFor(() => expect(api.updateOrderStatus).toHaveBeenCalledWith('access-for-test', 'o1', { OrderStatus: 'Confirmed', Note: 'Đã gọi xác nhận' }))
+  await screen.findByRole('button', { name: 'Bắt đầu xử lý' })
+  expect(screen.queryByText(/\(cũ\)/)).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: 'Giao hàng' })).not.toBeInTheDocument()
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   expect(screen.getByText('Đã gọi xác nhận')).toBeInTheDocument()
   expect(router.state.location.pathname).toBe('/admin/orders/o1')

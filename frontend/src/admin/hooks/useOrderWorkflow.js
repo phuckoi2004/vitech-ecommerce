@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import useInternalAuth from '../../hooks/useInternalAuth.js'
 import useAdminQuery from './useAdminQuery.js'
-import { canCancelOrder, canOperateOrder, ORDER_NEXT, orderStatusLabel, PAYMENT_LABELS } from '../lib/orders.js'
+import { canCancelOrder, canOperateOrder, ORDER_NEXT, orderStatusLabel, paymentStatusLabel } from '../lib/orders.js'
 import { confirmCodDelivery, updateOrderStatus } from '../services/orders.js'
 
 // Shared by the full detail page and quick actions: one set of payment, serial and status rules.
@@ -10,7 +10,7 @@ export default function useOrderWorkflow(orderId, initialAction, onDone) {
   const detail = useAdminQuery('/admin/orders/' + encodeURIComponent(orderId))
   const order = detail.data
   const payment = useAdminQuery('/payment-methods/' + encodeURIComponent(order?.PaymentMethodId ?? ''), {}, Boolean(order?.PaymentMethodId))
-  const needsSerials = Boolean(order && ['Processing', 'Shipping', 'Delivered', 'Completed'].includes(order.OrderStatus))
+  const needsSerials = Boolean(order && ['Confirmed', 'Processing', 'Shipping', 'Delivered', 'Completed'].includes(order.OrderStatus))
   const serials = useAdminQuery('/admin/orders/' + encodeURIComponent(orderId) + '/serials', {}, needsSerials)
   const [requestedIntent, setIntent] = useState(initialAction)
   const [note, setNote] = useState('')
@@ -35,7 +35,7 @@ export default function useOrderWorkflow(orderId, initialAction, onDone) {
     if (payment.loading || !payment.data) blocked = 'Cần tải được phương thức thanh toán trước khi xác nhận đơn.'
     else if (awaitingPayment) {
       blocked = 'Đơn thanh toán chuyển khoản chỉ được xác nhận sau khi khách đã thanh toán (hiện tại: '
-        + (PAYMENT_LABELS[order.PaymentStatus] ?? order.PaymentStatus) + ').'
+        + paymentStatusLabel(order.PaymentStatus) + ').'
     }
   } else if (order && ['Processing', 'Shipping'].includes(order.OrderStatus)) {
     if (payment.loading || !payment.data) blocked = 'Cần tải được phương thức thanh toán trước khi chuyển trạng thái.'

@@ -1,7 +1,8 @@
 """Review service: khách hàng đánh giá dòng đơn đã giao, chỉnh sửa trong 7 ngày; Staff/Admin kiểm duyệt (ẩn/xóa mềm).
 
 Nguồn nghiệp vụ: docs/business-requirements.md mục 11 và quyết định đợt 5.2:
-- Chỉ Customer sở hữu đơn được đánh giá; đơn phải đang Delivered (trạng thái khác, kể cả Completed, bị từ chối).
+- Chỉ Customer sở hữu đơn được đánh giá; đơn phải đã giao đến khách: Delivered hoặc Completed (hoàn tất sau khi giao).
+  Trạng thái khác bị từ chối.
 - Mỗi OrderItem tối đa một review (UNIQUE OrderItemId ở database, tính cả review đã ẩn). UserId lấy từ Actor;
   ProductId suy ra từ OrderItem → ProductVariant (không nhận từ client).
 - Chỉnh sửa: chủ sở hữu, trong 7 ngày tính từ CreatedAt — được sửa khi now < CreatedAt + 7 ngày (đúng tại hạn là
@@ -46,7 +47,8 @@ from .base import BaseService, utc_now
 from .exceptions import BusinessRuleError, ConflictError, NotFoundError
 from .promotion import money
 
-REVIEWABLE_ORDER_STATUS = "Delivered"
+# Đơn khách đã nhận hàng: Delivered, rồi Completed khi cửa hàng hoàn tất đơn.
+REVIEWABLE_ORDER_STATUSES = frozenset({"Delivered", "Completed"})
 REVIEW_EDIT_WINDOW = timedelta(days=7)
 CREATE_FIELDS = frozenset({"OrderItemId", "Rating", "Content", "Images"})
 UPDATE_FIELDS = frozenset({"Rating", "Content"})
@@ -71,7 +73,7 @@ class ReviewService(BaseService):
     # ------------------------------------------------------------------ Customer
 
     def create_review(self, actor: Actor, data: ReviewCreate) -> ReviewResponse:
-        """Customer đánh giá một dòng đơn của chính mình khi đơn đang Delivered (mỗi dòng đơn một review)."""
+        """Customer đánh giá một dòng đơn của chính mình khi đơn đã giao: Delivered/Completed (mỗi dòng đơn một review)."""
         require_role(actor, *CUSTOMER_ONLY)
         values = self._values(data, CREATE_FIELDS)
         rating = _check_rating(values.get("Rating"))
@@ -82,9 +84,9 @@ class ReviewService(BaseService):
             if item is None:  # không tồn tại hoặc thuộc đơn của khách khác: không tiết lộ
                 raise NotFoundError("Không tìm thấy dòng đơn hàng", code="order_item_not_found")
             order = self.orders.get_by_id(item.OrderId)
-            if order is None or order.OrderStatus != REVIEWABLE_ORDER_STATUS:
+            if order is None or order.OrderStatus not in REVIEWABLE_ORDER_STATUSES:
                 raise BusinessRuleError(
-                    "Chỉ đánh giá sản phẩm thuộc đơn hàng đã giao (Delivered)", code="review_order_not_delivered"
+                    "Chỉ đánh giá sản phẩm thuộc đơn hàng đã giao", code="review_order_not_delivered"
                 )
             variant = self.variants.get_by_id(item.ProductVariantId)
             if variant is None:

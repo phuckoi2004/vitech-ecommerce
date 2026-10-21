@@ -42,6 +42,7 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
+from app.core.status_labels import TRANSACTION_STATUS_LABELS, status_label
 from app.models import Order, PaymentTransaction
 from app.models.payment import EVIDENCE_REFERENCE_MAX_LENGTH, RESOLUTION_SOURCE_GATEWAY, RESOLUTION_SOURCE_MANUAL
 from app.models.reconciliation import (
@@ -361,6 +362,7 @@ class PaymentService(BaseService):
         else:
             order.PaymentStatus = PAYMENT_PAID
             self._notify(order, "Thanh toán thành công", f"Đơn hàng {order.OrderCode} đã được thanh toán.")
+            self._notify_staff(order, "Đã nhận thanh toán", f"Đơn hàng {order.OrderCode} đã được thanh toán chuyển khoản.")
             outcome = "paid"
         self.transactions.flush()
         return outcome
@@ -547,7 +549,7 @@ class PaymentService(BaseService):
     ) -> PageResponse[PaymentReconciliationResponse]:
         require_role(actor, *STAFF_OR_ADMIN)
         if status is not None and status not in RECONCILIATION_STATUSES:
-            raise BusinessRuleError(f"Trạng thái đối soát không hợp lệ: {status}", code="invalid_reconciliation_status")
+            raise BusinessRuleError("Trạng thái đối soát không hợp lệ", code="invalid_reconciliation_status")
         if issue_type is not None and issue_type not in RECONCILIATION_ISSUE_TYPES:
             raise BusinessRuleError(f"Loại đối soát không hợp lệ: {issue_type}", code="invalid_reconciliation_type")
         offset, limit = self._page_args(page, page_size)
@@ -880,7 +882,7 @@ class PaymentService(BaseService):
             order = self._lock_order(refund.OrderId)
             refund = self.transactions.get_by_id_for_update(refund_transaction_id)
             if refund.Status != TX_PENDING:
-                raise BusinessRuleError(f"Giao dịch hoàn tiền đã có kết quả ({refund.Status})", code="refund_not_pending")
+                raise BusinessRuleError(f"Giao dịch hoàn tiền đã có kết quả ({status_label(refund.Status, TRANSACTION_STATUS_LABELS)})", code="refund_not_pending")
             if refund.CreatedByUserId is not None and refund.CreatedByUserId == actor.user_id:
                 raise BusinessRuleError(
                     "Người lập giao dịch hoàn tiền không được tự xác nhận; cần Admin khác xác nhận",

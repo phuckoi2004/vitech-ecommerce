@@ -1,5 +1,6 @@
 export const PROMOTION_PAGE_SIZE = 6
 export const PROMOTION_TYPES = { Percentage: 'Phần trăm', FixedAmount: 'Số tiền' }
+export const PROMOTION_MODES = { Coupon: 'Dùng mã giảm giá', Automatic: 'Giảm trực tiếp sản phẩm' }
 export const PROMOTION_STATUSES = { Draft: 'Bản nháp', Scheduled: 'Sắp diễn ra', Active: 'Đang diễn ra', Expired: 'Đã kết thúc', Cancelled: 'Đã hủy' }
 export const promotionMoney = (value) => Number(value).toLocaleString('vi-VN', { maximumFractionDigits: 2 }) + 'đ'
 export const promotionValue = (row) => row.DiscountType === 'Percentage' ? Number(row.DiscountValue).toLocaleString('vi-VN', { maximumFractionDigits: 2 }) + '%' : promotionMoney(row.DiscountValue)
@@ -21,13 +22,15 @@ export function localPromotionTime(value) {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
 }
 export function promotionForm(row) {
-  return { Name: row?.Name ?? '', Description: row?.Description ?? '', DiscountType: row?.DiscountType ?? 'Percentage', DiscountValue: row?.DiscountValue ?? '', MinOrderValue: row?.MinOrderValue ?? '0', MaxDiscountAmount: row?.MaxDiscountAmount ?? '', StartDate: localPromotionTime(row?.StartDate), EndDate: localPromotionTime(row?.EndDate), Status: row?.Status ?? 'Draft', ProductIds: (row?.Products ?? []).map((item) => item.ProductId), CategoryIds: (row?.Categories ?? []).map((item) => item.CategoryId) }
+  return { Name: row?.Name ?? '', Description: row?.Description ?? '', ApplyMode: row?.ApplyMode ?? 'Coupon', DiscountType: row?.DiscountType ?? 'Percentage', DiscountValue: row?.DiscountValue ?? '', MinOrderValue: row?.MinOrderValue ?? '0', MaxDiscountAmount: row?.MaxDiscountAmount ?? '', StartDate: localPromotionTime(row?.StartDate), EndDate: localPromotionTime(row?.EndDate), Status: row?.Status ?? 'Draft', ProductIds: (row?.Products ?? []).map((item) => item.ProductId), CategoryIds: (row?.Categories ?? []).map((item) => item.CategoryId) }
 }
 export function promotionBody(form) {
   const Name = form.Name.trim()
   if (!Name || Name.length > 255) throw new Error('Tên chương trình cần từ 1 đến 255 ký tự.')
   if (!Object.hasOwn(PROMOTION_TYPES, form.DiscountType) || !Object.hasOwn(PROMOTION_STATUSES, form.Status)) throw new Error('Loại giảm hoặc trạng thái không hợp lệ.')
-  const body = { Name, Description: form.Description.trim() || null, DiscountType: form.DiscountType, Status: form.Status }
+  const ApplyMode = form.ApplyMode ?? 'Coupon'
+  if (!Object.hasOwn(PROMOTION_MODES, ApplyMode)) throw new Error('Cách áp dụng không hợp lệ.')
+  const body = { Name, Description: form.Description.trim() || null, ApplyMode, DiscountType: form.DiscountType, Status: form.Status }
   for (const key of ['DiscountValue', 'MinOrderValue', 'MaxDiscountAmount']) {
     const value = String(form[key]).trim()
     if (key === 'MaxDiscountAmount' && !value) { body[key] = null; continue }
@@ -35,6 +38,7 @@ export function promotionBody(form) {
     body[key] = value
   }
   if (form.DiscountType === 'Percentage' && Number(body.DiscountValue) > 100) throw new Error('Giảm theo phần trăm không được vượt quá 100%.')
+  if (ApplyMode === 'Automatic' && (Number(body.MinOrderValue) !== 0 || Number(body.DiscountValue) <= 0)) throw new Error('Giảm trực tiếp cần mức giảm lớn hơn 0 và đơn tối thiểu bằng 0.')
   if (!form.StartDate || !form.EndDate || !Number.isFinite(new Date(form.StartDate).getTime()) || !Number.isFinite(new Date(form.EndDate).getTime())) throw new Error('Vui lòng nhập thời gian bắt đầu và kết thúc hợp lệ.')
   body.StartDate = new Date(form.StartDate).toISOString(); body.EndDate = new Date(form.EndDate).toISOString()
   if (body.EndDate < body.StartDate) throw new Error('Thời gian kết thúc không được trước thời gian bắt đầu.')
@@ -46,9 +50,9 @@ export function samePromotionTargets(left, right) {
 }
 export function promotionPatch(form, original) {
   const next = promotionBody(form), before = promotionForm(original), patch = {}
-  for (const key of ['Name', 'Description', 'Status', 'DiscountType', 'DiscountValue', 'MinOrderValue', 'MaxDiscountAmount', 'StartDate', 'EndDate']) {
+  for (const key of ['Name', 'Description', 'Status', 'ApplyMode', 'DiscountType', 'DiscountValue', 'MinOrderValue', 'MaxDiscountAmount', 'StartDate', 'EndDate']) {
     if (original.Status === 'Active' && !['Name', 'Description', 'Status'].includes(key)) continue
-    if (['StartDate', 'EndDate'].includes(key) ? form[key] !== before[key] : String(next[key] ?? '') !== String(original[key] ?? '')) patch[key] = next[key]
+    if (['StartDate', 'EndDate'].includes(key) ? form[key] !== before[key] : String(next[key] ?? '') !== String((key === 'ApplyMode' ? original[key] ?? 'Coupon' : original[key]) ?? '')) patch[key] = next[key]
   }
   return patch
 }

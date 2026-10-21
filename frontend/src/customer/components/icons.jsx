@@ -8,6 +8,7 @@ function Icon({ className = '', children }) {
 export const ArrowRightIcon = (props) => <Icon {...props}><path d="M5 12h14M13 6l6 6-6 6" /></Icon>
 export const ChevronLeftIcon = (props) => <Icon {...props}><path d="m15 6-6 6 6 6" /></Icon>
 export const ChevronRightIcon = (props) => <Icon {...props}><path d="m9 6 6 6-6 6" /></Icon>
+export const ChevronDownIcon = (props) => <Icon {...props}><path d="m6 9 6 6 6-6" /></Icon>
 
 const CATEGORY_SHAPES = {
   phone: <><rect x="7" y="2.75" width="10" height="18.5" rx="2.25" /><path d="M11 18h2" /></>,

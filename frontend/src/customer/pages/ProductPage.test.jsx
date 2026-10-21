@@ -23,7 +23,7 @@ const product = {
     { ProductImageId: 'i2', ImageUrl: '/second.png', IsDefault: false, DisplayOrder: 1 }],
 }
 
-function mockApi({ detail = product, productStatus = 200, cartStatus = 200, relatedStatus = 200, holdCart = false } = {}) {
+function mockApi({ detail = product, productStatus = 200, cartStatus = 200, relatedStatus = 200, holdCart = false, categories = null } = {}) {
   const calls = []
   let quantities = [], resolveCart
   const addGate = new Promise((resolve) => { resolveCart = resolve })
@@ -34,7 +34,8 @@ function mockApi({ detail = product, productStatus = 200, cartStatus = 200, rela
     const body = options.body ? JSON.parse(options.body) : null
     calls.push({ endpoint, method, body, token: options.headers?.Authorization, query: Object.fromEntries(url.searchParams) })
     let result, status = 200
-    if (endpoint === '/products/slug/san-pham-kiem-thu') {
+    if (endpoint === '/categories' && categories) result = categories
+    else if (endpoint === '/products/slug/san-pham-kiem-thu') {
       result = productStatus === 200 ? detail : { detail: 'Lỗi tải sản phẩm' }; status = productStatus
     } else if (endpoint === '/products') {
       status = relatedStatus
@@ -75,14 +76,33 @@ test('a product with no colour data does not invent a standard colour option', a
   expect(screen.getByRole('button', { name: 'Thêm vào giỏ hàng' })).toBeEnabled()
 })
 
-test('real product metadata, breadcrumbs and demo offers are distinguished', async () => {
-  mockApi(); renderProduct()
+test.each([
+  ['a need group is left out', 'c-pin', ['Trang chủ', 'Điện thoại', 'Apple']],
+  ['a product line stays', 'c-ip18', ['Trang chủ', 'Điện thoại', 'Apple', 'iPhone 18']],
+])('the breadcrumb follows CellphoneS: category, brand, product line — %s', async (_, categoryId, crumbs) => {
+  const categories = [{ CategoryId: 'c-phone', Name: 'Điện thoại', Slug: 'dien-thoai', ParentCategoryId: null },
+    { CategoryId: 'c-pin', Name: 'Điện thoại pin trâu', Slug: 'dien-thoai-pin-trau', ParentCategoryId: 'c-phone' },
+    { CategoryId: 'c-ip18', Name: 'iPhone 18', Slug: 'iphone-18', ParentCategoryId: 'c-phone' }]
+  const own = categories.find((item) => item.CategoryId === categoryId)
+  mockApi({ categories, detail: { ...product, Category: { CategoryId: own.CategoryId, Name: own.Name, Slug: own.Slug } } })
+  renderProduct()
+  const nav = await screen.findByRole('navigation', { name: 'Đường dẫn sản phẩm' })
+  await waitFor(() => expect(within(nav).getAllByRole('link').map((link) => link.textContent)).toEqual(crumbs))
+  expect(within(nav).getByRole('link', { name: 'Apple' })).toHaveAttribute('href', '/danh-muc/dien-thoai?brand=b1')
+  expect(within(nav).getByText(product.Name)).toHaveAttribute('aria-current', 'page')
+})
+
+test('real product metadata replaces demo content and coupons are left to the cart', async () => {
+  const { calls } = mockApi(); renderProduct()
   expect(await screen.findByRole('heading', { level: 1, name: product.Name })).toBeInTheDocument()
   const crumbs = screen.getByRole('navigation', { name: 'Đường dẫn sản phẩm' })
-  expect(within(crumbs).getByRole('link', { name: 'Điện thoại' })).toHaveAttribute('href', '/danh-muc/dien-thoai')
-  expect(within(crumbs).getByRole('link', { name: 'Apple' })).toHaveAttribute('href', '/thuong-hieu/apple')
+  expect(await within(crumbs).findByRole('link', { name: 'Điện thoại' })).toHaveAttribute('href', '/danh-muc/dien-thoai')
+  expect(within(crumbs).getByRole('link', { name: 'Apple' })).toHaveAttribute('href', `/danh-muc/dien-thoai?brand=${product.BrandId ?? product.Brand.BrandId}`)
   expect(screen.queryByText(/Mã SP:/)).not.toBeInTheDocument()
-  expect(screen.getByText('Nội dung demo')).toBeInTheDocument()
+  expect(screen.queryByText('Nội dung demo')).not.toBeInTheDocument()
+  // Coupons are chosen in the cart ("Áp dụng mã giảm giá"), not on the product page.
+  expect(screen.queryByRole('heading', { name: 'Mã ưu đãi dành cho bạn' })).not.toBeInTheDocument()
+  expect(calls.some((call) => call.endpoint === '/coupons')).toBe(false)
   expect(screen.queryByText(/A20 Pro/)).not.toBeInTheDocument()
   expect(screen.queryByText(/Giảm 20%/)).not.toBeInTheDocument()
 })

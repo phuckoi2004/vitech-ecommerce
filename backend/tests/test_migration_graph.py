@@ -24,11 +24,14 @@ MERGE_HEAD = "c6a4e2b8d901"
 # Head after the merge: drops the unused Stage 4 OtpChallenges table (decision 11/10/2026).
 OTP_HEAD = "3d9f987f3c6f"
 WORKFLOW_HEAD = "7e4c9b2d1a60"
-# Two branches from the service-request workflow, joined by a history-only merge revision.
+# Preserve the independent pricing and catalog/purchasing migration histories.
 CATEGORY_IMAGE_HEAD = "6f8a2c4d9b10"
-NEWS_VIEW_HEAD = "71a4d9c8e620"
+NEWS_VIEWS_HEAD = "71a4d9c8e620"
+PROMOTION_HEAD = "82d6f1a9b407"
+PRICING_HEAD = "93e7a2b0c518"
 CATALOG_DELETE_HEAD = "a6d2e8f4b190"
-HEAD = "b2f8c6d4e901"
+CATALOG_MERGE_HEAD = "b2f8c6d4e901"
+HEAD = "c3a9f5e7d206"
 COUPON_REVISION = "213feab4a632"
 STATUS_REVISION = "dd773e03e503"
 TRANSACTION_TYPE_REVISION = "9b10f42fc70d"
@@ -88,12 +91,15 @@ def test_unique_revision_ids_and_one_complete_canonical_graph():
     duplicates = {revision: [name for name, identifier in identifiers if identifier == revision]
                   for revision, count in counts.items() if count > 1}
     assert duplicates == {}, f"Duplicate Alembic revision identifiers: {duplicates}"
-    assert len(identifiers) == 27
+    assert len(identifiers) == 30
     graph = scripts()
     assert graph.get_heads() == [HEAD]
-    assert graph.get_revision(HEAD).down_revision == (CATALOG_DELETE_HEAD, NEWS_VIEW_HEAD)
+    assert graph.get_revision(HEAD).down_revision == (PRICING_HEAD, CATALOG_MERGE_HEAD)
+    assert graph.get_revision(PRICING_HEAD).down_revision == PROMOTION_HEAD
+    assert graph.get_revision(PROMOTION_HEAD).down_revision == NEWS_VIEWS_HEAD
+    assert graph.get_revision(NEWS_VIEWS_HEAD).down_revision == CATEGORY_IMAGE_HEAD
+    assert graph.get_revision(CATALOG_MERGE_HEAD).down_revision == (CATALOG_DELETE_HEAD, NEWS_VIEWS_HEAD)
     assert graph.get_revision(CATALOG_DELETE_HEAD).down_revision == WORKFLOW_HEAD
-    assert graph.get_revision(NEWS_VIEW_HEAD).down_revision == CATEGORY_IMAGE_HEAD
     assert graph.get_revision(CATEGORY_IMAGE_HEAD).down_revision == WORKFLOW_HEAD
     assert graph.get_revision(WORKFLOW_HEAD).down_revision == OTP_HEAD
     assert graph.get_revision(OTP_HEAD).down_revision == MERGE_HEAD
@@ -120,6 +126,23 @@ def test_old_local_head_receives_all_domain_migrations_then_repair_merge():
     repair_sql = render(path[-1].module.upgrade)
     assert 'ADD CONSTRAINT "CK_Users_AccountStatus_Valid"' in repair_sql
     assert 'ADD CONSTRAINT "CK_PaymentTransactions_TransactionType_Valid"' in repair_sql
+
+
+def test_pricing_database_receives_catalog_migrations_without_replaying_pricing():
+    path = list(scripts().iterate_revisions(HEAD, PRICING_HEAD, implicit_base=True))
+    assert {revision.revision for revision in path} == {CATALOG_DELETE_HEAD, CATALOG_MERGE_HEAD, HEAD}
+
+
+def test_catalog_database_receives_pricing_migrations_without_replaying_catalog():
+    path = list(scripts().iterate_revisions(HEAD, CATALOG_MERGE_HEAD, implicit_base=True))
+    assert {revision.revision for revision in path} == {PROMOTION_HEAD, PRICING_HEAD, HEAD}
+
+
+def test_pricing_catalog_merge_has_no_schema_or_data_operations():
+    module = scripts().get_revision(HEAD).module
+    for operation in (module.upgrade, module.downgrade):
+        statements = [statement.strip() for statement in render(operation).split(";") if statement.strip()]
+        assert statements == ["BEGIN", "COMMIT"]
 
 
 def test_remote_head_receives_local_validation_then_merge_only():

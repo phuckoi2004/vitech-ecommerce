@@ -11,6 +11,8 @@ import { SHIPPING_PAGE_TITLES } from '../lib/shipping-methods.js'
 import promotionBell from '../assets/promotion-bell-source.svg'
 import couponBell from '../assets/coupon-bell-source.svg'
 
+const NOTIFICATIONS_ITEM = { id: 'notifications', label: 'Thông báo', path: '/admin/notifications' }
+
 const CATALOG_HEADERS = {
   promotions: { title: 'Quản lý khuyến mãi', breadcrumb: 'Khuyến mãi / Chương trình khuyến mãi' },
   coupons: { title: 'Quản lý mã giảm giá', breadcrumb: 'Khuyến mãi / Mã giảm giá' },
@@ -47,7 +49,7 @@ export default function AdminHomePage() {
   const shippingPage = path === '/admin/shipping-methods/new' || /^\/admin\/shipping-methods\/[^/]+\/edit$/.test(path)
   const shippingTitle = shippingPage ? SHIPPING_PAGE_TITLES[path === '/admin/shipping-methods/new' ? 'new' : 'edit'] : ''
   const menu = visibleMenu(auth.permissions)
-  const current = path === ADMIN_PROFILE_ITEM.path ? ADMIN_PROFILE_ITEM : ADMIN_SECTIONS.find((item) => item.path === path || (orderDetail && item.id === 'orders') || (returnDetail && item.id === 'returns') || (warrantyDetail && item.id === 'warranties') || (purchaseTitle && item.id === 'purchases') || (newsPage && item.id === 'news') || (bannerPage && item.id === 'banners') || (paymentPage && item.id === 'payments') || (shippingPage && item.id === 'shipping')) ?? ADMIN_MENU[0]
+  const current = path === NOTIFICATIONS_ITEM.path ? NOTIFICATIONS_ITEM : path === ADMIN_PROFILE_ITEM.path ? ADMIN_PROFILE_ITEM : ADMIN_SECTIONS.find((item) => item.path === path || (orderDetail && item.id === 'orders') || (returnDetail && item.id === 'returns') || (warrantyDetail && item.id === 'warranties') || (purchaseTitle && item.id === 'purchases') || (newsPage && item.id === 'news') || (bannerPage && item.id === 'banners') || (paymentPage && item.id === 'payments') || (shippingPage && item.id === 'shipping')) ?? ADMIN_MENU[0]
   const catalogHeader = warrantyDetail ? { title: 'Chi tiết bảo hành', breadcrumb: 'Bảo hành / Chi tiết yêu cầu' } : returnDetail ? { title: 'Chi tiết đổi trả', breadcrumb: 'Đổi trả / Chi tiết yêu cầu' } : paymentTitle ? { title: paymentTitle, breadcrumb: 'Trang chủ / Thanh toán / ' + paymentTitle } : productTitle ? { title: productTitle, breadcrumb: 'Sản phẩm / Danh sách sản phẩm / ' + productTitle } : CATALOG_HEADERS[current.id]
   const contentSection = ['news', 'banners'].includes(current.id)
   const contentTitle = newsTitle || bannerTitle

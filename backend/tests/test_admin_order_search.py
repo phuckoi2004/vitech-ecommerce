@@ -9,7 +9,7 @@ from app.repositories.user import NotificationRepository
 from tests.test_content_atomic import content  # isolated engine fixture, including UUID/time functions
 
 
-def seed_orders(context):
+def seed_orders(context, *, lines_by_customer=None):
     factory = context['factory']
     first = context['customer']
     first.FullName, first.PhoneNumber = 'An Nguyen', '0981234567'
@@ -18,7 +18,9 @@ def seed_orders(context):
     third = factory.user()
     third.FullName, third.PhoneNumber = 'Literal %_ name', '0712345678'
     method = factory.payment_method('COD')
-    orders = [factory.order(user, method) for user in (first, second, third)]
+    lines_by_customer = lines_by_customer or ((), (), ())
+    orders = [factory.order(user, method, lines=lines)
+              for user, lines in zip((first, second, third), lines_by_customer)]
     with context['engine'].begin() as connection:
         connection.execute(User.__table__.update().where(User.UserId == first.UserId).values(
             FullName=first.FullName, PhoneNumber=first.PhoneNumber))
@@ -45,6 +47,23 @@ def test_search_matches_literal_contiguous_substrings_of_account_name_and_phone(
         assert len(rows) == 1 and repo.count_orders(keyword='0') == 3
         assert repo.count_orders(keyword='098', customer_id=third.CustomerId) == 0
         assert repo.count_orders(keyword='098', order_status='Shipping') == 0
+
+
+def test_account_search_and_product_history_filters_combine_with_the_same_count(content):
+    phone, case = content['factory'].variant(), content['factory'].variant()
+    first, _, third = seed_orders(content, lines_by_customer=(
+        ((phone, 1), (case, 1)), ((case, 1),), ((phone, 1),)))
+    filters = dict(keyword='098', product_id=phone.ProductId, order_status=['Pending', 'Processing'])
+    with Session(content['engine']) as session:
+        repo = OrderRepository(session)
+        rows = repo.list_orders(**filters, offset=0, limit=1, with_items=True)
+        assert [order.OrderId for order in rows] == [first.OrderId]
+        assert repo.count_orders(**filters) == 1
+        assert repo.list_orders(**filters, offset=1, limit=1) == []
+        assert repo.count_orders(**filters, customer_id=third.CustomerId) == 0
+    # The customer's history has its products and review references loaded after the session closes.
+    assert {item.product_variant.product.ProductId for item in rows[0].items} == {phone.ProductId, case.ProductId}
+    assert all(item.review is None for item in rows[0].items)
 
 
 def test_shared_resolution_updates_only_new_order_alerts_without_deleting_history(content):

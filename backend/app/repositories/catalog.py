@@ -1,12 +1,15 @@
 """Repositories cho Categories, Brands, Products, ProductVariants, ProductImages, ProductSerials."""
 
 import uuid
+from datetime import datetime, timezone
 from decimal import Decimal
 from collections.abc import Collection
-from typing import NamedTuple
+from typing import Literal, NamedTuple
 
-from sqlalchemy import String, and_, cast, exists, func, or_, select
-from sqlalchemy.orm import joinedload, selectinload
+from sqlalchemy import String, and_, case, cast, exists, func, or_, select
+from sqlalchemy.orm import aliased, joinedload, selectinload
+
+from app.core.search_text import fold, folded, is_marked, like_pattern, words as search_words
 
 from app.models import (
     Brand,
@@ -28,6 +31,51 @@ from app.models.shipment import SHIPMENT_RETURN_AWAITING
 from .base import BaseRepository
 
 SERIAL_WRITTEN_OFF = "WrittenOff"
+
+
+PRODUCT_SORTS = ("newest", "relevance", "popular", "best_selling", "price_asc", "price_desc", "discount")
+
+
+def _visible_variant_of_product():
+    return (ProductVariant.ProductId == Product.ProductId, ProductVariant.IsActive.is_(True),
+            ProductVariant.IsDeleted.is_(False))
+
+
+def lowest_price_expression(pricing_at=None):
+    """The "from" price customers see: the lowest automatic-promotion price among visible variants."""
+    from app.core.product_pricing import automatic_price_expression
+    return select(func.min(automatic_price_expression(pricing_at or datetime.now(timezone.utc)))).where(
+        *_visible_variant_of_product()).correlate(Product).scalar_subquery()
+
+
+def best_discount_expression(pricing_at=None):
+    """The largest share an automatic promotion takes off a visible variant's selling price."""
+    from app.core.product_pricing import automatic_price_expression
+    original = ProductVariant.Price
+    sale = automatic_price_expression(pricing_at or datetime.now(timezone.utc))
+    return select(func.max((original - sale) / original)).where(
+        *_visible_variant_of_product(), original > 0).correlate(Product).scalar_subquery()
+
+
+def _search_text():
+    """"name brand category parent-category" of a product, what a customer's search words are matched in."""
+    parent = aliased(Category)
+    brand = select(Brand.Name).where(Brand.BrandId == Product.BrandId).correlate(Product).scalar_subquery()
+    category = (select(Category.Name + " " + func.coalesce(parent.Name, ""))
+                .select_from(Category).outerjoin(parent, parent.CategoryId == Category.ParentCategoryId)
+                .where(Category.CategoryId == Product.CategoryId).correlate(Product).scalar_subquery())
+    return Product.Name + " " + func.coalesce(brand, "") + " " + func.coalesce(category, "")
+
+
+class ListingFacts(NamedTuple):
+    """A sellable product as the category filters read it (catalog_facets.ProductFacts plus brand and price)."""
+
+    ProductId: uuid.UUID
+    BrandId: uuid.UUID
+    Name: str
+    Specifications: dict | None
+    Price: Decimal | None
+    Storages: tuple[str, ...]
 
 
 class SerialTrackingUsage(NamedTuple):
@@ -177,6 +225,14 @@ class ProductRepository(BaseRepository[Product]):
         stmt = select(Product).where(Product.ProductId == product_id).options(*self._detail_options())
         return self.session.scalars(stmt).one_or_none()
 
+    def list_with_media(self, product_ids: Collection[uuid.UUID]) -> list[Product]:
+        """Products with their variants and images, in no particular order."""
+        if not product_ids:
+            return []
+        stmt = select(Product).where(Product.ProductId.in_(product_ids)).options(
+            selectinload(Product.variants), selectinload(Product.images))
+        return list(self.session.scalars(stmt))
+
     def get_detail_by_slug(self, slug: str) -> Product | None:
         stmt = select(Product).where(Product.Slug == slug).options(*self._detail_options())
         return self.session.scalars(stmt).one_or_none()
@@ -190,12 +246,27 @@ class ProductRepository(BaseRepository[Product]):
         name_contains: str | None = None,
         min_price: Decimal | None = None,
         max_price: Decimal | None = None,
+        pricing_at=None,
+        product_ids: Collection[uuid.UUID] | None = None,
+        in_stock: bool = False,
+        created_since=None,
     ) -> list:
         conditions = []
+        if product_ids is not None:
+            conditions.append(Product.ProductId.in_(product_ids))
+        if in_stock:
+            conditions.append(exists().where(*_visible_variant_of_product(), ProductVariant.StockQuantity > 0))
+        if created_since is not None:
+            conditions.append(Product.CreatedAt >= created_since)
         if name_contains:
-            # Tìm theo tên, không phân biệt hoa thường; escape ký tự đặc biệt của LIKE.
-            escaped = name_contains.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
-            conditions.append(Product.Name.ilike(f"%{escaped}%", escape="\\"))
+            # Every word, in any order, in the name, brand or category ("dien thoai samsung"). A word typed with marks
+            # must keep them ("cơ" is not "có"); one typed without its space still matches ("iphone17").
+            raw = func.lower(_search_text())
+            plain = folded(_search_text())
+            for word in search_words(name_contains):
+                text = raw if is_marked(word) else plain
+                pattern = like_pattern(word)
+                conditions.append(or_(text.like(pattern, escape="\\"), func.replace(text, " ", "").like(pattern, escape="\\")))
         if category_ids:
             conditions.append(Product.CategoryId.in_(category_ids))
         if brand_id is not None:
@@ -206,11 +277,7 @@ class ProductRepository(BaseRepository[Product]):
             conditions.append(Product.IsDeleted.is_(False))
         if min_price is not None or max_price is not None:
             # Match the "from" price shown to customers, using only visible variants.
-            price = select(func.min(ProductVariant.Price)).where(
-                ProductVariant.ProductId == Product.ProductId,
-                ProductVariant.IsActive.is_(True),
-                ProductVariant.IsDeleted.is_(False),
-            ).correlate(Product).scalar_subquery()
+            price = lowest_price_expression(pricing_at)
             if min_price is not None:
                 conditions.append(price >= min_price)
             if max_price is not None:
@@ -227,16 +294,42 @@ class ProductRepository(BaseRepository[Product]):
         name_contains: str | None = None,
         min_price: Decimal | None = None,
         max_price: Decimal | None = None,
+        pricing_at=None,
+        product_ids: Collection[uuid.UUID] | None = None,
+        in_stock: bool = False,
+        created_since=None,
+        sort: str = "newest",
         offset: int | None = None,
         limit: int | None = None,
     ) -> list[Product]:
-        """Danh sách sản phẩm (không load relationship)."""
+        """Danh sách sản phẩm (không load relationship). Thứ tự luôn kết thúc bằng ngày tạo và ID để phân trang ổn định."""
         return self.get_all(
-            *self._filters(category_ids, brand_id, status, include_deleted, name_contains, min_price, max_price),
-            order_by=(Product.CreatedAt.desc(), Product.ProductId),
+            *self._filters(category_ids, brand_id, status, include_deleted, name_contains, min_price, max_price,
+                           pricing_at, product_ids, in_stock, created_since),
+            order_by=self._order(sort, pricing_at, name_contains),
             offset=offset,
             limit=limit,
         )
+
+    @staticmethod
+    def _order(sort: str, pricing_at, keyword: str | None = None) -> tuple:
+        newest = (Product.CreatedAt.desc(), Product.ProductId)
+        if sort == "relevance" and keyword and search_words(keyword):
+            # The whole phrase in the name first, then every word in the name, then matches via brand/category.
+            name = folded(Product.Name)
+            in_name = and_(*(name.like(like_pattern(fold(word)), escape="\\") for word in search_words(keyword)))
+            rank = case((name.like(like_pattern(fold(keyword)), escape="\\"), 0), (in_name, 1), else_=2)
+            return (rank, *newest)
+        if sort == "popular":
+            return ((Product.SoldQuantity + Product.ReviewCount).desc(), Product.AverageRating.desc(), *newest)
+        if sort == "best_selling":
+            return (Product.SoldQuantity.desc(), *newest)
+        if sort in ("price_asc", "price_desc"):
+            price = lowest_price_expression(pricing_at)
+            return (price.asc().nulls_last() if sort == "price_asc" else price.desc().nulls_last(), *newest)
+        if sort == "discount":
+            return (best_discount_expression(pricing_at).desc().nulls_last(), *newest)
+        return newest
 
     def count_products(
         self,
@@ -248,8 +341,55 @@ class ProductRepository(BaseRepository[Product]):
         name_contains: str | None = None,
         min_price: Decimal | None = None,
         max_price: Decimal | None = None,
+        pricing_at=None,
+        product_ids: Collection[uuid.UUID] | None = None,
+        in_stock: bool = False,
+        created_since=None,
     ) -> int:
-        return self.count(*self._filters(category_ids, brand_id, status, include_deleted, name_contains, min_price, max_price))
+        return self.count(*self._filters(category_ids, brand_id, status, include_deleted, name_contains, min_price,
+                                         max_price, pricing_at, product_ids, in_stock, created_since))
+
+    def count_products_per(
+        self,
+        field: Literal["category", "brand"],
+        *,
+        category_ids: Collection[uuid.UUID] | None = None,
+        brand_id: uuid.UUID | None = None,
+        status: str | None = None,
+        name_contains: str | None = None,
+        min_price: Decimal | None = None,
+        max_price: Decimal | None = None,
+        pricing_at=None,
+        in_stock: bool = False,
+    ) -> dict[uuid.UUID, int]:
+        """Matching non-deleted products per CategoryId or BrandId, with the same filters as count_products."""
+        column = Product.CategoryId if field == "category" else Product.BrandId
+        rows = self.session.execute(
+            select(column, func.count()).where(*self._filters(
+                category_ids, brand_id, status, False, name_contains, min_price, max_price, pricing_at, None, in_stock
+            )).group_by(column)
+        )
+        return dict(rows.all())
+
+    def listing_facts(self, *, category_ids: Collection[uuid.UUID], status: str, pricing_at=None) -> list[ListingFacts]:
+        """Every non-deleted product of the categories with what the listing filters read, in two queries
+        (products with their "from" price, then visible variants' storage) rather than one per product."""
+        rows = self.session.execute(
+            select(Product.ProductId, Product.BrandId, Product.Name, Product.Specifications,
+                   lowest_price_expression(pricing_at))
+            .where(*self._filters(category_ids, None, status, False))
+            .order_by(Product.CreatedAt.desc(), Product.ProductId)
+        ).all()
+        storages: dict[uuid.UUID, list[str]] = {}
+        if rows:
+            for product_id, storage in self.session.execute(
+                select(ProductVariant.ProductId, ProductVariant.Storage).where(
+                    ProductVariant.ProductId.in_([row[0] for row in rows]), ProductVariant.IsActive.is_(True),
+                    ProductVariant.IsDeleted.is_(False), ProductVariant.Storage.is_not(None),
+                ).order_by(ProductVariant.ProductId, ProductVariant.Sku)
+            ):
+                storages.setdefault(product_id, []).append(storage)
+        return [ListingFacts(*row, tuple(storages.get(row[0], ()))) for row in rows]
 
 
 class ProductVariantRepository(BaseRepository[ProductVariant]):
@@ -411,7 +551,7 @@ class ProductSerialRepository(BaseRepository[ProductSerial]):
                           ProductSerial.Status == "Available", ProductSerial.OrderItemId.is_(None))
 
     def count_unassigned_order_units(self, variant_id: uuid.UUID) -> int:
-        """Only unconfirmed orders still share the unbound pool. Confirmed legacy devices may have no code."""
+        """Only pending orders still share the unbound pool; confirmed devices have already been allocated."""
         reserved = select(func.count(ProductSerial.ProductSerialId)).where(
             ProductSerial.OrderItemId == OrderItem.OrderItemId,
             ProductSerial.Status == "Reserved",
@@ -419,7 +559,7 @@ class ProductSerialRepository(BaseRepository[ProductSerial]):
         stmt = select(func.coalesce(func.sum(func.greatest(OrderItem.Quantity - reserved, 0)), 0)).join(
             Order, Order.OrderId == OrderItem.OrderId
         ).where(OrderItem.ProductVariantId == variant_id,
-                Order.OrderStatus.in_(("Pending", "Confirmed")))
+                Order.OrderStatus == "Pending")
         return int(self.session.scalar(stmt) or 0)
 
     def list_available_for_update(self, variant_id: uuid.UUID, *, limit: int,

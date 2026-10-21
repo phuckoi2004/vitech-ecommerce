@@ -13,6 +13,13 @@
 .admin-main { min-width: 0; width: 100%; max-width: 1800px; margin-inline: auto; }
 .admin-topbar { box-shadow: 0 1px 6px rgb(20 33 61 / 3%); }
 .admin-sidebar { box-shadow: 4px 0 20px rgb(15 45 107 / 6%); }
+.admin-menu-toggle { display: none; }
+@media (max-width: 860px) {
+  .admin-sidebar-brand { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .admin-menu-toggle { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 8px 12px; border: 1px solid rgb(255 255 255 / 30%); border-radius: 8px; background: transparent; color: white; font-size: 14px; cursor: pointer; }
+  .admin-sidebar nav { display: none; }
+  .admin-sidebar[data-menu-open="true"] nav { display: flex; flex-direction: column; max-height: min(55dvh, 420px); }
+}
 .admin-filterbar { flex-wrap: wrap; gap: 14px; }
 .admin-filterbar > label { flex: 1 1 170px; min-width: 0; }
 .admin-main :is(div, header):has(> form[role="search"]) { flex-wrap: wrap; }
@@ -24,6 +31,7 @@
 .admin-table { min-width: 640px; }
 .admin-table--products { min-width: 1080px; }
 .admin-table--dashboard-stock { min-width: 0; table-layout: fixed; }
+.admin-table--dashboard-stock th { white-space: normal; }
 .admin-panel { --admin-table-inset: 22px; box-shadow: 0 2px 8px rgb(20 33 61 / 3%); }
 .admin-table-inset { --admin-table-inset: 18px; }
 .admin-shell .admin-table-region {

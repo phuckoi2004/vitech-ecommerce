@@ -1,7 +1,7 @@
 import { ErrorState, LoadingState } from '../../components/shared/index.js'
 import { formatDateTime, formatMoney } from '../../lib/format.js'
 import useOrderWorkflow from '../hooks/useOrderWorkflow.js'
-import { canCancelOrder, orderStatusLabel, PAYMENT_LABELS } from '../lib/orders.js'
+import { canCancelOrder, orderStatusLabel, paymentStatusLabel } from '../lib/orders.js'
 import { updateOrderNote } from '../services/orders.js'
 import AdminTable from './AdminTable.jsx'
 import Modal from './Modal.jsx'
@@ -46,7 +46,7 @@ export default function OrderDialog({ orderId, initialAction, onClose, onDone })
         <DetailField label="Ngày đặt">{formatDateTime(order.OrderedAt)}</DetailField>
         <DetailField label="Người nhận">{order.ReceiverName}</DetailField><DetailField label="Số điện thoại">{order.ReceiverPhone}</DetailField>
         <div className="col-span-2"><DetailField label="Địa chỉ giao hàng">{order.ShippingAddress}</DetailField></div>
-        <DetailField label="Thanh toán">{PAYMENT_LABELS[order.PaymentStatus] ?? order.PaymentStatus}</DetailField>
+        <DetailField label="Thanh toán">{paymentStatusLabel(order.PaymentStatus)}</DetailField>
         <DetailField label="Phương thức thanh toán">{payment.loading ? 'Đang tải…' : payment.data?.Name ?? 'Chưa tải được'}</DetailField>
         {order.CustomerNote && <div className="col-span-2"><DetailField label="Ghi chú khách hàng">{order.CustomerNote}</DetailField></div>}
         {order.CancelReason && <div className="col-span-2"><DetailField label="Lý do hủy">{order.CancelReason}</DetailField></div>}

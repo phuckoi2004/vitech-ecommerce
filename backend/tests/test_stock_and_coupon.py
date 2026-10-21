@@ -218,6 +218,18 @@ class CouponUsageTest(unittest.TestCase):
                 self.svc.release_coupon_usage(coupon.CouponId)
         self.assertEqual(coupon.UsedCount, 0)
 
+    def test_preview_refuses_a_code_the_account_used_or_one_below_cost(self):
+        variant = self.f.variant(stock=3, price="100000", cost="70000")
+        self.f.cart_with(self.customer, (variant, 1))
+        used = self.f.coupon(self.admin)
+        self.f.order(self.customer, self.f.payment_method("COD"), coupon=used)
+        deep = self.f.coupon(self.admin, code="GIAM40", value="40")
+        for code, expected in (("SALE10", "coupon_customer_limit"), ("GIAM40", "coupon_price_floor")):
+            with self.subTest(code=code), self.assertRaises(BusinessRuleError) as ctx:
+                self.svc.preview_cart_coupon(self.f.actor(self.customer), code)
+            self.assertEqual(ctx.exception.code, expected)
+        self.assertEqual((used.UsedCount, deep.UsedCount), (0, 0))
+
     def test_preview_does_not_lock_or_consume_usage(self):
         variant = self.f.variant(stock=3)
         self.f.cart_with(self.customer, (variant, 2))
