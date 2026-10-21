@@ -1,11 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import useCustomerSession from '../../hooks/useCustomerSession.js'
 import { AVATAR_MAX_BYTES, AVATAR_TYPES, changePassword, getDefaultAddress, saveDefaultAddress, updateProfile, uploadAvatar } from '../../lib/account-api.js'
 import { passwordRules } from '../../lib/password-rules.js'
 import { EyeIcon, PasswordInput } from '../components/AuthFields.jsx'
+import OrderHistory from '../components/order/OrderHistory.jsx'
 import '../layouts/CustomerAuthLayout.css'
 import './AccountPage.css'
 
+// The open section is `?section=` (none: profile), so links and the back button reach it.
 const SECTIONS = [
   { id: 'profile', label: 'Thông tin cá nhân' },
   { id: 'orders', label: 'Lịch sử mua hàng' },
@@ -290,7 +293,7 @@ function ProfileSection({ session }) {
 export default function AccountPage() {
   const session = useCustomerSession()
   const { user, signOut } = session
-  const [section, setSection] = useState('profile')
+  const [params, setParams] = useSearchParams()
   const [signingOut, setSigningOut] = useState(false)
 
   useEffect(() => {
@@ -305,7 +308,7 @@ export default function AccountPage() {
     await signOut().catch(() => {})
   }
 
-  const current = SECTIONS.find((item) => item.id === section)
+  const current = SECTIONS.find((item) => item.id === params.get('section')) ?? SECTIONS[0]
   return <>
     <div className="shop-container cacc-page">
       <section className="cacc-card cacc-summary" aria-label="Tóm tắt tài khoản">
@@ -317,19 +320,22 @@ export default function AccountPage() {
       </section>
       <div className="cacc-body">
         <nav className="cacc-card cacc-menu" aria-label="Mục tài khoản">
-          {SECTIONS.map((item) => <button key={item.id} type="button" className={`cacc-menu-item ${item.id === section ? 'is-active' : ''}`}
-            aria-current={item.id === section ? 'page' : undefined} onClick={() => setSection(item.id)}>{item.label}</button>)}
+          {SECTIONS.map((item) => <button key={item.id} type="button" className={`cacc-menu-item ${item === current ? 'is-active' : ''}`}
+            aria-current={item === current ? 'page' : undefined}
+            onClick={() => setParams(item === SECTIONS[0] ? {} : { section: item.id })}>{item.label}</button>)}
           <button type="button" className="cacc-menu-item is-logout" onClick={logout} disabled={signingOut}>
             {signingOut ? 'Đang đăng xuất…' : 'Đăng xuất'}
           </button>
         </nav>
         <section className="cacc-card cacc-panel">
-          {section === 'profile'
+          {current.id === 'profile'
             ? <ProfileSection session={session} />
-            : <>
-              <div className="cacc-panel-heading"><h1>{current.label}</h1></div>
-              <p className="cacc-placeholder">Chức năng đang được xây dựng.</p>
-            </>}
+            : current.id === 'orders'
+              ? <OrderHistory />
+              : <>
+                <div className="cacc-panel-heading"><h1>{current.label}</h1></div>
+                <p className="cacc-placeholder">Chức năng đang được xây dựng.</p>
+              </>}
         </section>
       </div>
     </div>

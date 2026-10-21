@@ -57,3 +57,10 @@ Phạm vi được người dùng cho phép trong yêu cầu này: frontend admi
 - Đã bỏ API `/resubmit`, hàm service và nút/form Gửi lại. Không đổi danh sách trạng thái trong CSDL, quy tắc Admin tạo được duyệt ngay, phần nhận hàng hoặc đóng thiếu. Không có migration hay ghi thử dữ liệu thật.
 - Bản báo cáo đầy đủ được cung cấp có `OrderedQuantity` và `ReceivedQuantity` trong `PurchaseOrderItems`; mô tả `PurchaseOrders.Status` chỉ có chờ duyệt / đã duyệt / từ chối. Bảng đặc tả 3.17 không có bước sửa hoặc gửi lại phiếu bị từ chối.
 - Báo cáo có dữ liệu để ghi chênh lệch đặt/thực nhận, nhưng chưa đặc tả nhận nhiều đợt hay đóng phiếu thiếu. `PurchaseReceipts`, `PurchaseReceiptItems`, các trường đóng phiếu và các trạng thái `Receiving`/`Completed`/`Closed` là phần mở rộng hiện có của hệ thống.
+
+## Đồng bộ source với nhánh giá và khuyến mãi
+
+- Source đã nhận lại hai revision `82d6f1a9b407` (cách áp dụng khuyến mãi) và `93e7a2b0c518` (giá niêm yết của biến thể). Giữ nguyên mã revision và quan hệ cha của các migration đã có.
+- Revision nối lịch sử mới `c3a9f5e7d206` có hai cha `93e7a2b0c518` và `b2f8c6d4e901`, đưa source về một head. Bản thân revision nối không có DDL hoặc thay đổi dữ liệu; kiểm thử kiểm tra đường nâng cấp từ cả hai nhánh mà không chạy lại migration của nhánh đã áp dụng.
+- Lần pull/merge này chỉ cập nhật mã nguồn, chưa chạy migration hoặc thay đổi CSDL thật. Các ghi nhận DDL đã áp dụng ở trên vẫn là lịch sử theo thời điểm.
+- Giữ giá niêm yết trong quản trị cùng quy tắc giá nhập VND nguyên đồng. Giá giảm tự động và xem thử coupon dùng làm tròn xuống đến đồng; phân bổ coupon dùng chung quy tắc với checkout để không tạo phần lẻ đồng cho dữ liệu giá nguyên đồng.

@@ -2,6 +2,12 @@ import { expect, test } from 'vitest'
 import { filterPromotions, localPromotionTime, promotionBody, promotionFilters, promotionForm, promotionPatch } from './promotions.js'
 
 const row = { PromotionId: 'p1', Name: 'Ưu đãi điện thoại', Description: null, DiscountType: 'Percentage', DiscountValue: '10.00', MinOrderValue: '0.00', MaxDiscountAmount: null, StartDate: '2026-10-01T00:00:00.123Z', EndDate: '2026-10-31T23:59:59.123Z', Status: 'Scheduled', Products: [{ ProductId: 'parent' }], Categories: [] }
+
+test('automatic offers use an explicit mode and cannot depend on an order minimum', () => {
+  const form = { ...promotionForm(row), ApplyMode: 'Automatic', DiscountType: 'FixedAmount', DiscountValue: '200000' }
+  expect(promotionBody(form)).toMatchObject({ ApplyMode: 'Automatic', DiscountValue: '200000', MinOrderValue: '0.00' })
+  expect(() => promotionBody({ ...form, MinOrderValue: '1000000' })).toThrow(/đơn tối thiểu/)
+})
 test('combined filters search accents and preserve only known types/status and valid page', () => {
   const filter = promotionFilters(new URLSearchParams('keyword=uu+dai+dien+thoai&type=Percentage&status=Scheduled&page=3'))
   expect(filterPromotions([row, { ...row, PromotionId: 'p2', Status: 'Active' }], filter)).toEqual([row])

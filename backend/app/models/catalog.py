@@ -169,6 +169,7 @@ class ProductVariant(Base):
     __tablename__ = "ProductVariants"
     __table_args__ = (
         CheckConstraint('"Price" >= 0', name="Price_NonNegative"),
+        CheckConstraint('"CompareAtPrice" IS NULL OR "CompareAtPrice" >= "Price"', name="CompareAtPrice_Valid"),
         CheckConstraint('"CostPrice" >= 0', name="CostPrice_NonNegative"),
         CheckConstraint('"StockQuantity" >= 0', name="StockQuantity_NonNegative"),
         CheckConstraint('"MinStockLevel" >= 0', name="MinStockLevel_NonNegative"),
@@ -185,6 +186,8 @@ class ProductVariant(Base):
     Color: Mapped[str | None] = mapped_column(String(50), nullable=True)
     Storage: Mapped[str | None] = mapped_column(String(50), nullable=True)
     Price: Mapped[Decimal] = mapped_column(Numeric(15, 2), nullable=False)
+    # Published list/reference price; Price remains the selling price before an extra Automatic offer.
+    CompareAtPrice: Mapped[Decimal | None] = mapped_column(Numeric(15, 2), nullable=True)
     # Giá vốn hiện tại (COGS).
     CostPrice: Mapped[Decimal] = mapped_column(
         Numeric(15, 2), nullable=False, server_default=text("0")

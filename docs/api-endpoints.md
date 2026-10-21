@@ -37,10 +37,13 @@ Thông báo Admin/Staff mở chi tiết phiếu nhập, bảo hành và đổi t
 | GET | `/categories` | Công khai* |  | active_only, parent_id, roots_only | `list[CategoryResponse]` | `list_categories` |
 | GET | `/categories/slug/{slug}` | Công khai* |  | active_only | `CategoryResponse` | `get_category_by_slug` |
 | GET | `/categories/{category_id}` | Công khai* |  | active_only | `CategoryResponse` | `get_category` |
+| GET | `/categories/{category_id}/filters` | Công khai |  |  | `CategoryFiltersResponse` | `category_filters` |
 | GET | `/brands` | Công khai* |  | active_only | `list[BrandResponse]` | `list_brands` |
 | GET | `/brands/slug/{slug}` | Công khai* |  | active_only | `BrandResponse` | `get_brand_by_slug` |
 | GET | `/brands/{brand_id}` | Công khai* |  | active_only | `BrandResponse` | `get_brand` |
-| GET | `/products` | Công khai |  | keyword, category_id, brand_id, include_descendants, min_price, max_price, page, page_size | `PageResponse[ProductSummary]` | `search_products` |
+| GET | `/products` | Công khai |  | keyword ([cách so khớp](customer-search.md)), category_id, brand_id, include_descendants, min_price, max_price, sort, in_stock, new_arrivals, spec (lặp lại, cần category_id), page, page_size | `PageResponse[ProductSummary]` | `search_products` |
+| GET | `/products/suggestions` | Công khai |  | keyword | `SearchSuggestionsResponse` ([gợi ý dưới ô tìm kiếm](customer-search.md)) | `search_suggestions` |
+| GET | `/products/filters` | Công khai |  | keyword, category_id (gồm danh mục con), brand_id, min_price, max_price, in_stock | `SearchFiltersResponse` ([danh mục gốc và hãng có trong kết quả](customer-search.md)) | `search_filters` |
 | GET | `/products/slug/{slug}` | Công khai |  |  | `ProductDetailResponse` | `get_product_detail_by_slug` |
 | GET | `/products/{product_id}` | Công khai |  |  | `ProductDetailResponse` | `get_product_detail` |
 | GET | `/products/{product_id}/images` | Công khai |  |  | `list[ProductImageResponse]` | `list_images` |
@@ -91,7 +94,7 @@ Thông báo Admin/Staff mở chi tiết phiếu nhập, bảo hành và đổi t
 | GET | `/shipping-methods` | Công khai* |  | active_only | `list[ShippingMethodResponse]` | `list_shipping_methods` |
 | GET | `/shipping-methods/{shipping_method_id}` | Công khai* |  |  | `ShippingMethodResponse` | `get_shipping_method` |
 | POST | `/orders` | Đăng nhập | `OrderCreate` |  | `OrderDetailResponse` | `create_order` |
-| GET | `/orders` | Đăng nhập |  | order_code, order_status, ordered_from, ordered_to, page, page_size | `PageResponse[OrderSummary]` | `search_customer_orders` |
+| GET | `/orders` | Đăng nhập |  | order_code, order_status (lặp được), ordered_from, ordered_to, product_id, page, page_size | `PageResponse[CustomerOrderSummary]` | `search_customer_orders` |
 | GET | `/orders/items/{order_item_id}` | Đăng nhập |  |  | `OrderItemResponse` | `get_customer_order_item` |
 | GET | `/orders/{order_id}` | Đăng nhập |  |  | `OrderDetailResponse` | `get_order` |
 | GET | `/orders/{order_id}/history` | Đăng nhập |  |  | `list[OrderStatusHistoryResponse]` | `get_order_status_history` |
@@ -112,6 +115,16 @@ Thông báo Admin/Staff mở chi tiết phiếu nhập, bảo hành và đổi t
 | GET | `/admin/shipment-returns` | Staff/Admin |  | status, page, page_size | `PageResponse[ShipmentReturnResponse]` | `list_shipment_returns` |
 | GET | `/admin/orders/{order_id}/shipment-return` | Staff/Admin |  |  | `ShipmentReturnResponse` | `get_shipment_return` |
 | POST | `/admin/orders/{order_id}/shipment-return/receive` | Staff/Admin | `ShipmentReturnReceive` |  | `ShipmentReturnResponse` | `receive_shipment_return` |
+
+### Lịch sử mua hàng
+
+- **`GET /orders`** (đơn của khách hàng đang đăng nhập, mới nhất trước):
+  - `order_status` lặp được, đơn khớp một trong các giá trị: `?order_status=Confirmed&order_status=Processing`. Giá trị lạ trả 400 `invalid_order_status`.
+  - `ordered_from`/`ordered_to` cần múi giờ và là khoảng nửa mở [from, to).
+  - `product_id`: chỉ đơn có dòng thuộc sản phẩm đó (form đánh giá).
+  - Mỗi đơn (`CustomerOrderSummary`) có thêm `Items`: `OrderItemId`, `ProductName`, `VariantInfo`, `Quantity`, `ProductId`, `ProductSlug` (`null` nếu không đọc được sản phẩm), `ReviewId` (`null` khi dòng chưa được đánh giá).
+- **`GET /orders/{order_id}`**: mỗi dòng `OrderItemResponse` có thêm `ProductId` (sản phẩm của biến thể) để trang đơn hàng lấy ảnh và đường dẫn sản phẩm qua `GET /products/{product_id}`, và `ReviewId` (`null` khi chưa được đánh giá).
+- **`POST /reviews`**: dòng đơn phải thuộc đơn đã nhận, `Delivered` hoặc `Completed`; trạng thái khác trả 400 `review_order_not_delivered`.
 
 ### Đặt, xác nhận và hủy đơn
 
@@ -206,7 +219,9 @@ Thông báo Admin/Staff mở chi tiết phiếu nhập, bảo hành và đổi t
   - Khi body gửi cả `DiscountType` và `DiscountValue` (luôn đúng với `POST /admin/promotions`), vi phạm trả 422.
   - `PATCH /admin/promotions/{promotion_id}` được kiểm tra lại với giá trị đang lưu. Giảm cố định có phần lẻ (ví dụ chỉ gửi `DiscountValue` có phần lẻ cho khuyến mãi đang là `FixedAmount`), hoặc giảm theo phần trăm lớn hơn 100, trả 400 `invalid_discount_value`.
   - Kiểm tra giảm cố định nguyên đồng chỉ chạy khi `PATCH` có `DiscountType` hoặc `DiscountValue`, nên khuyến mãi cũ có phần lẻ vẫn đổi được tên, mô tả hoặc trạng thái.
+- Giỏ hàng (`CartLineResponse.CurrentPrice`, `SelectedSubtotal`), xem trước mã và đặt đơn dùng giá bán sau chương trình giảm trực tiếp đang chạy, như `SalePrice` của trang sản phẩm; `OriginalPrice` là giá trước giảm. Đơn lưu `Subtotal` theo giá trước giảm, `DiscountAmount` gồm giảm trực tiếp và mã giảm giá (từng dòng cũng vậy).
 - Tiền giảm của mã giảm giá (`GET /cart/coupon-preview` và khi đặt đơn):
+  - Cơ sở là tiền hàng sau giảm trực tiếp; đơn tối thiểu cũng xét trên số này.
   - `Percentage`: cơ sở × `DiscountValue` / 100; `FixedAmount`: `DiscountValue`.
   - Giới hạn bởi `MaxDiscountAmount` (nếu có) và không vượt giá trị cơ sở, rồi làm tròn **xuống** đến đồng.
   - Khi đặt đơn, tiền giảm được phân bổ vào các dòng đơn theo tỷ lệ giá trị dòng, theo đơn vị một đồng (dữ liệu cũ có giá trị lẻ xu thì theo đơn vị một xu). Tổng phân bổ đúng bằng tiền giảm và không dòng nào bị giảm quá giá trị của dòng.
@@ -262,6 +277,7 @@ Thông báo Admin/Staff mở chi tiết phiếu nhập, bảo hành và đổi t
 | POST | `/conversations/{conversation_id}/close` | Đăng nhập |  |  | `ConversationResponse` | `close_conversation` |
 | GET | `/admin/conversations` | Admin |  | status, mode, page, page_size | `PageResponse[AdminConversationResponse]` | `admin_list_conversations` |
 | GET | `/admin/conversations/unassigned` | Staff/Admin |  | page, page_size | `PageResponse[AdminConversationResponse]` | `list_unassigned_conversations` |
+| GET | `/admin/conversations/active` | Admin |  | page, page_size | `PageResponse[AdminConversationResponse]` (có `AssignedStaffName`) | `list_active_conversations` |
 | GET | `/admin/conversations/assigned` | Staff/Admin |  | status, page, page_size | `PageResponse[AdminConversationResponse]` | `list_assigned_conversations` |
 | POST | `/admin/conversations/{conversation_id}/claim` | Staff/Admin |  |  | `AdminConversationResponse` | `claim_conversation` |
 | GET | `/admin/conversations/{conversation_id}` | Staff/Admin |  |  | `AdminConversationDetailResponse` | `get_conversation` |
@@ -365,7 +381,7 @@ Khi nhân viên/Admin phụ trách gửi tin trả lời, Customer nhận thông
 | GET | `/news` | Công khai |  | page, page_size | `PageResponse[NewsArticleSummary]` | `list_published_articles` |
 | GET | `/news/{slug}` | Công khai |  |  | `NewsArticleResponse` | `get_published_article` |
 | POST | `/news/{slug}/views` | Công khai |  |  | `NewsArticleViewResponse` (`ViewCount`) | `record_article_view` |
-| GET | `/banners` | Công khai |  |  | `list[BannerResponse]` | `list_display_banners` |
+| GET | `/banners` | Công khai |  | category_id (trang danh sách: chỉ banner của danh mục đó, theo đường dẫn banner) | `list[BannerResponse]` | `list_display_banners` |
 | GET | `/admin/news` | Staff/Admin |  | status, page, page_size | `PageResponse[AdminNewsArticleSummary]` | `admin_list_articles` |
 | GET | `/admin/news/{article_id}` | Staff/Admin |  |  | `AdminNewsArticleResponse` | `admin_get_article` |
 | POST | `/admin/news` | Staff/Admin | `NewsArticleCreate` |  | `AdminNewsArticleResponse` | `create_article` |
@@ -388,6 +404,9 @@ Khi nhân viên/Admin phụ trách gửi tin trả lời, Customer nhận thông
 | GET | `/admin/statistics/cogs` | Staff/Admin |  | date_from, date_to | `CogsStatisticsResponse` | `cogs_statistics` |
 | GET | `/admin/statistics/top-products` | Staff/Admin |  | date_from, date_to, rank_by, limit | `list[TopProductResponse]` | `top_products` |
 | GET | `/admin/statistics/inventory` | Staff/Admin |  | page, page_size | `InventoryStatisticsResponse` | `inventory_statistics` |
+| GET | `/admin/statistics/reports/purchases` | Staff/Admin |  | date_from, date_to, supplier_id, category_id, brand_id, product_id, page, page_size | `PurchaseReportResponse` | `purchases` |
+
+Báo cáo nhập hàng lọc kỳ theo ngày tạo phiếu GMT+7, đếm mỗi phiếu một lần. Tổng số lượng/giá trị bỏ phiếu hủy, từ chối; giá trị là tiền đặt hàng, số lượng đã nhận là lũy kế hiện tại của các phiếu tạo trong kỳ. `/admin/statistics/report-options` bổ sung `Suppliers: [{Id, Name}]`, có cả nhà cung cấp ngừng hoạt động.
 
 ## Điểm vào máy-với-máy (không dành cho frontend)
 
@@ -437,6 +456,6 @@ Luồng đổi trả hiện hành không bắt kiểm tra thiệt hại, duyệt
 ### Báo cáo và lịch sử thanh toán
 
 - API báo cáo hiện có `/admin/statistics/report-options`, `/admin/statistics/reports/revenue` và `/admin/statistics/reports/orders`, dùng cho Staff/Admin theo quyền. Chúng bổ sung cho các API thống kê cũ, không xóa API cũ.
-- Hai màn hình báo cáo có lựa chọn từng tháng trong 12 tháng của năm hoặc 5 tháng gần nhất. Từng tháng hiển thị một cột, 5 tháng hiển thị 5 cột; nhãn là tháng cụ thể. Bộ lọc tác động đồng thời biểu đồ và bảng; kỳ bảng là tháng/năm, không chia tuần.
-- Tạm bỏ lọc tài khoản, lọc nhà cung cấp và xuất báo cáo trên UI. Không suy ra giá trị bằng 0 khi API báo lỗi.
+- Hai màn hình báo cáo có lựa chọn từng tháng trong 12 tháng của năm hoặc 6 tháng gần nhất. Từng tháng hiển thị một cột, 6 tháng hiển thị 6 cột; nhãn là tháng cụ thể. Bộ lọc tác động đồng thời biểu đồ và bảng; kỳ bảng là tháng/năm, không chia tuần.
+- Cập nhật 21/10/2026: tab Đơn nhập hàng dùng `/admin/statistics/reports/purchases`, bổ sung lọc nhà cung cấp kết hợp thời gian/danh mục/thương hiệu/sản phẩm. Xem cách tính hiện hành trong [admin-reporting-redesign.md](admin-reporting-redesign.md). Chưa có lọc tài khoản và xuất báo cáo; không suy ra giá trị bằng 0 khi API báo lỗi.
 - Báo cáo doanh số theo sản phẩm dùng OrderItems.LineTotal của đơn Delivered/Completed theo DeliveredAt, có giao dịch Payment Success; không tính lặp doanh số khi một đơn có nhiều giao dịch. Báo cáo này không đồng nghĩa mọi chỉ số doanh thu thuần của StatisticsService: phí giao, hoàn tiền và giá vốn cần phân biệt theo từng API.

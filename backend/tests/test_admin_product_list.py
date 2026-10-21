@@ -17,7 +17,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
 
 from app.core.dependencies import get_current_actor
-from app.models import Brand, Category, Product, ProductImage, ProductVariant, User, Cart, CartItem
+from app.models import Brand, Category, Product, ProductImage, ProductVariant, User, Cart, CartItem, Promotion, PromotionProduct, PromotionCategory
 from app.repositories.catalog import ProductRepository
 from app.routers.catalog import admin_router
 from app.routers.dependencies import get_product_service, get_variant_service, get_catalog_item_service
@@ -36,9 +36,13 @@ def catalog():
     def functions(connection, _):
         connection.create_function("gen_random_uuid", 0, lambda: uuid.uuid4().hex)
         connection.create_function("now", 0, lambda: datetime.now(timezone.utc).isoformat(" "))
+        # PostgreSQL's Unicode lower() and translate(), used by the customer keyword search.
+        connection.create_function("lower", 1, lambda text: None if text is None else text.lower(), deterministic=True)
+        connection.create_function("translate", 3, lambda text, source, target: None if text is None
+                                   else text.translate(str.maketrans(source, target)), deterministic=True)
 
     metadata = MetaData()
-    for model in (Category, Brand, Product, ProductVariant, ProductImage, User, Cart, CartItem):
+    for model in (Category, Brand, Product, ProductVariant, ProductImage, User, Cart, CartItem, Promotion, PromotionProduct, PromotionCategory):
         table = model.__table__.to_metadata(metadata)
         if model is Product:
             table.c.Specifications.type = JSON()

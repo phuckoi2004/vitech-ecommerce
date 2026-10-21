@@ -122,7 +122,8 @@ export default function CartPage() {
                 onChooseCoupon={() => setChoosingCoupon(true)} onRemoveCoupon={coupon.remove} onRetryCoupon={coupon.retry}
                 onReloadCart={() => { loaded.reload(); coupon.retry() }} />
             </div>}
-      {choosingCoupon && <CouponDialog code={coupon.code} applied={coupon.preview} withAccessToken={withAccessToken}
+      {choosingCoupon && <CouponDialog code={coupon.code} applied={coupon.preview} subtotal={cart?.SelectedSubtotal}
+        withAccessToken={withAccessToken}
         onConfirm={confirmCoupon} onClose={() => setChoosingCoupon(false)} />}
     </div>
   </div>

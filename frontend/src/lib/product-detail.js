@@ -13,8 +13,9 @@ export const versionLabel = (variant) => variant.Storage?.trim()
 export const colorLabel = (variant) => variant.Color?.trim() || 'Tiêu chuẩn'
 
 export function variantPrice(variant) {
-  if (variant?.Price === null || variant?.Price === undefined || variant.Price === '') return null
-  const price = Number(variant.Price)
+  const value = variant?.SalePrice ?? variant?.Price
+  if (value === null || value === undefined || value === '') return null
+  const price = Number(value)
   return Number.isFinite(price) && price >= 0 ? price : null
 }
 

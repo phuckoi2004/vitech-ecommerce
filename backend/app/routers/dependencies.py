@@ -33,6 +33,7 @@ from app.services.payment import PaymentService
 from app.services.ports import PaymentGateway
 from app.services.product_media import ProductMediaService
 from app.services.promotion import CouponService, PromotionService
+from app.services.pricing import PricingService
 from app.services.purchasing import PurchaseOrderService, SupplierService
 from app.services.returns import ReturnPolicy, ReturnService
 from app.services.review import ReviewService
@@ -101,6 +102,7 @@ get_order_service = _session_service(OrderService)
 get_shipping_method_service = _session_service(ShippingMethodService)
 get_promotion_service = _session_service(PromotionService)
 get_coupon_service = _session_service(CouponService)
+get_pricing_service = _session_service(PricingService)
 get_supplier_service = _session_service(SupplierService)
 get_purchase_order_service = _session_service(PurchaseOrderService)
 get_inventory_service = _session_service(InventoryService)

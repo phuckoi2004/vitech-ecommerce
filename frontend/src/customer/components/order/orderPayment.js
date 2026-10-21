@@ -3,10 +3,12 @@
 // the errors of POST /orders/{id}/payments/qr (create_qr_payment, _ensure_qr_payable, the SePay gateway).
 
 // The order is read again this often while it waits for its transfer.
+import { formatStatus } from '../../../lib/status-labels.js'
+
 export const POLL_MS = 3000
 
 export const ORDER_STATUS = {
-  Pending: 'Chờ xác nhận', Confirmed: 'Đã xác nhận', Processing: 'Đang xử lý', Shipping: 'Đang giao hàng',
+  Pending: 'Chờ xác nhận', Confirmed: 'Đã xác nhận', Processing: 'Đang xử lý', Shipping: 'Đang vận chuyển',
   Delivered: 'Đã giao hàng', Completed: 'Hoàn tất', Cancelled: 'Đã huỷ',
 }
 const PAYMENT_STATUS = {
@@ -15,10 +17,11 @@ const PAYMENT_STATUS = {
 
 // "Đã thanh toán" only when the server says Paid (set by the verified payment webhook, or COD collected on delivery).
 // A cancelled order still Paid holds money to give back: it reads as recorded, without saying it was refunded.
+// An unpaid COD order is "Chưa thanh toán" (paid on delivery), a transfer order "Chờ thanh toán" (its QR).
 export function paymentStatusText(order, cod) {
-  if (order.PaymentStatus === 'Pending') return cod ? 'Thanh toán khi nhận hàng' : 'Chờ thanh toán'
+  if (order.PaymentStatus === 'Pending') return cod ? 'Chưa thanh toán' : 'Chờ thanh toán'
   if (order.PaymentStatus === 'Paid' && order.OrderStatus === 'Cancelled') return 'Đã ghi nhận thanh toán'
-  return PAYMENT_STATUS[order.PaymentStatus] ?? order.PaymentStatus
+  return formatStatus(order.PaymentStatus, PAYMENT_STATUS)
 }
 
 // The page title. A transfer order is "placed, waiting for payment" until the server says Paid, so "Đặt hàng thành

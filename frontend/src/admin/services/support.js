@@ -3,14 +3,19 @@ import { request } from '../../services/api/client.js'
 
 const PATH = '/admin/conversations'
 const conversationPath = (id) => PATH + '/' + encodeURIComponent(id)
-export async function getSupportInbox(token, signal) {
+// Admins oversee every customer being helped (with who is helping); staff see the chats they claimed.
+const activeList = (token, page, signal, role) => role === 'Admin'
+  ? getAdminData(token, PATH + '/active', { page, page_size: 100 }, signal)
+  : getAdminData(token, PATH + '/assigned', { status: 'Open', page, page_size: 100 }, signal)
+export async function getSupportInbox(token, signal, role = 'Staff') {
   const [waiting, active] = await Promise.all([
     getAdminData(token, PATH + '/unassigned', { page: 1, page_size: 100 }, signal),
-    getAdminData(token, PATH + '/assigned', { status: 'Open', page: 1, page_size: 100 }, signal),
+    activeList(token, 1, signal, role),
   ])
   return { waiting, active }
 }
 export function getSupportPage(token, tab, page, signal, role = 'Staff') {
+  if (tab === 'active') return activeList(token, page, signal, role)
   const all = tab === 'all' || (tab === 'closed' && role === 'Admin')
   const path = all ? PATH : PATH + (tab === 'waiting' ? '/unassigned' : '/assigned')
   return getAdminData(token, path, { ...(tab === 'active' ? { status: 'Open' } : tab === 'closed' ? { status: 'Closed' } : {}), page, page_size: 100 }, signal)

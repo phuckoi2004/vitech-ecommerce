@@ -4,7 +4,8 @@ Nguồn nghiệp vụ: docs/business-requirements.md mục 4.
 - Mỗi người dùng có một Wishlist và một Cart (UNIQUE UserId); tạo khi dùng lần đầu.
 - Mọi thao tác nhận Actor (Customer) do Router dựng từ JWT và chỉ tác động lên Wishlist/Cart của chính Actor.
 - Cart không giữ chỗ (reserve) và không thay đổi tồn kho; tồn kho xử lý ở Order.
-- Giá và tổng tiền do server tính từ dữ liệu hiện tại.
+- Giá và tổng tiền do server tính từ dữ liệu hiện tại: giá bán sau chương trình giảm trực tiếp (Automatic),
+  cùng quy tắc với trang sản phẩm (pricing.variant_price).
 """
 
 import uuid
@@ -15,12 +16,13 @@ from decimal import Decimal
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.models import Cart, CartItem, Wishlist
+from app.models import Cart, CartItem, ProductVariant, Wishlist
 from app.repositories import (
     CartItemRepository,
     CartRepository,
     ProductRepository,
     ProductVariantRepository,
+    PromotionRepository,
     WishlistItemRepository,
     WishlistRepository,
 )
@@ -38,6 +40,7 @@ from .actor import CUSTOMER_ONLY, Actor, require_role
 from .base import BaseService, utc_now
 from .catalog import is_product_sellable, is_variant_sellable
 from .exceptions import BusinessRuleError, ConflictError, NotFoundError
+from .pricing import variant_price
 
 _CENT = Decimal("0.01")
 
@@ -118,6 +121,7 @@ class CartService(BaseService):
         self.carts = CartRepository(session)
         self.items = CartItemRepository(session)
         self.variants = ProductVariantRepository(session)
+        self.promotions = PromotionRepository(session)
 
     # ------------------------------------------------------------------ xem
 
@@ -139,19 +143,20 @@ class CartService(BaseService):
             item = self.items.get_by_cart_and_variant(cart.CartId, variant.ProductVariantId)
             quantity = data.Quantity + (item.Quantity if item else 0)
             self._ensure_stock(variant.StockQuantity, quantity)
+            price = self._pricer()(variant)["SalePrice"]
             if item is None:
                 values = {
                     "CartId": cart.CartId,
                     "ProductVariantId": variant.ProductVariantId,
                     "Quantity": quantity,
-                    "UnitPrice": variant.Price,
+                    "UnitPrice": price,
                 }
                 if data.IsSelected is not None:
                     values["IsSelected"] = data.IsSelected
                 self.items.create(values)
             else:
                 item.Quantity = quantity
-                item.UnitPrice = variant.Price
+                item.UnitPrice = price
                 if data.IsSelected is not None:
                     item.IsSelected = data.IsSelected
             self.items.flush()
@@ -224,14 +229,23 @@ class CartService(BaseService):
                 f"Số lượng vượt tồn kho hiện có ({stock_quantity})", code="insufficient_stock"
             )
 
+    def _pricer(self) -> Callable[[ProductVariant], dict]:
+        """Giá một chiếc của biến thể lúc này (OriginalPrice, SalePrice sau giảm trực tiếp, ...)."""
+        now = self.now()
+        promotions = self.promotions.list_automatic(now)
+        return lambda variant: variant_price(variant, promotions, now)
+
     def _summary(self, cart: Cart) -> CartSummaryResponse:
-        """Tính giỏ hàng từ giá, trạng thái bán và tồn kho hiện tại."""
+        """Tính giỏ hàng từ giá bán (sau giảm trực tiếp), trạng thái bán và tồn kho hiện tại."""
         lines = []
         selected_quantity = 0
         selected_subtotal = Decimal("0")
-        for item in self.items.list_by_cart(cart.CartId, with_variant=True):
+        items = self.items.list_by_cart(cart.CartId, with_variant=True)
+        price_of = self._pricer() if items else None
+        for item in items:
             variant = item.product_variant
-            line_total = (variant.Price * item.Quantity).quantize(_CENT)
+            price = price_of(variant)
+            line_total = (price["SalePrice"] * item.Quantity).quantize(_CENT)
             available = is_variant_sellable(variant) and item.Quantity <= variant.StockQuantity
             if item.IsSelected and available:
                 selected_quantity += item.Quantity
@@ -246,7 +260,8 @@ class CartService(BaseService):
                     Sku=variant.Sku,
                     Quantity=item.Quantity,
                     UnitPrice=item.UnitPrice,
-                    CurrentPrice=variant.Price,
+                    OriginalPrice=price["OriginalPrice"],
+                    CurrentPrice=price["SalePrice"],
                     LineTotal=line_total,
                     IsSelected=item.IsSelected,
                     IsAvailable=available,

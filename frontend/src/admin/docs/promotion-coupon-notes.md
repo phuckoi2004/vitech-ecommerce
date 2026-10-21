@@ -1,5 +1,9 @@
 # Ghi chú cần xử lý chung: Chương trình khuyến mãi và Mã giảm giá
 
+## Cập nhật ngày 19/10/2026 — giá giảm trực tiếp và mã công khai
+
+Yêu cầu mới cho phép bổ sung backend/CSDL, frontend quản trị và trang khách: thêm `Promotions.ApplyMode`, giảm trực tiếp theo từng chiếc, hiển thị giá gốc/giá ưu đãi/phần trăm, xem giá và lãi gộp trong admin, danh sách coupon công khai và xem thử giá độc lập. Không làm chức năng nhận/lưu mã. Giỏ hàng, thanh toán và tạo đơn đang do thành viên khác phụ trách nên chưa nối bộ tính giá mới vào luồng đó. Phạm vi và hợp đồng bàn giao ở [customer-pricing-promotions.md](../../../../docs/customer-pricing-promotions.md); nội dung mới thay thế những giới hạn phạm vi cũ bên dưới khi liên quan tới yêu cầu này.
+
 ## Quyết định hiện hành — cập nhật ngày 17/10/2026
 
 Người dùng đã cho phép sửa backend/API và kiểm thử cho các mục dưới đây. Không sửa cấu trúc CSDL, không sửa frontend khách hàng, không ghi dữ liệu thử vào CSDL thật.

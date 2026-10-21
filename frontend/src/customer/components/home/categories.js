@@ -21,13 +21,13 @@ const SHOWCASE_PAIRS = [
 const matches = (item, group) => aliases[group].some((key) => key === nameKey(item.Slug) || key === nameKey(item.Name))
 
 // Prefer the design's groups only when those categories exist; the rest retain their API display order.
-export function selectHomeCategories(categories, preferred, limit) {
+export function selectHomeCategories(categories, preferred) {
   const selected = []
   for (const group of preferred) {
     const found = categories.find((item) => matches(item, group))
     if (found && !selected.includes(found)) selected.push(found)
   }
-  return [...selected, ...categories.filter((item) => !selected.includes(item))].slice(0, limit)
+  return [...selected, ...categories.filter((item) => !selected.includes(item))]
 }
 
 // Every root category as showcase sections of one or two. Related categories share a section; one with no

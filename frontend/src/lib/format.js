@@ -32,6 +32,13 @@ export function formatRating(value) {
   return Number.isFinite(rating) ? rating.toLocaleString('vi-VN', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) : ''
 }
 
+// Discount badges show whole percents: "12.82" → "13%". A real discount is never shown as 0% or a paid price as 100% off.
+export function formatDiscountPercent(value) {
+  const percent = Number(value)
+  if (!Number.isFinite(percent) || percent <= 0) return ''
+  return `${Math.min(Math.max(Math.round(percent), 1), percent < 100 ? 99 : 100)}%`
+}
+
 function vietnamParts(value) {
   const date = value instanceof Date ? value : new Date(value)
   if (Number.isNaN(date.getTime())) return null

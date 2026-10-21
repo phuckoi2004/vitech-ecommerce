@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useRef, useState } from 'react'
+import { useId, useState } from 'react'
 import { Link } from 'react-router-dom'
 import EmptyState from '../../../components/shared/EmptyState.jsx'
 import ErrorState from '../../../components/shared/ErrorState.jsx'
@@ -6,66 +6,31 @@ import useApiData from '../../../hooks/useApiData.js'
 import useInView from '../../../hooks/useInView.js'
 import { listCategories, listProductSummaries, loadProductCards, searchProducts } from '../../../lib/catalog-api.js'
 import { categoryPath } from '../../routes/paths.js'
-import { CategoryIcon, ChevronLeftIcon, ChevronRightIcon } from '../icons.jsx'
+import { CategoryIcon } from '../icons.jsx'
 import ProductCard, { ProductCardSkeleton } from '../ProductCard.jsx'
 import StoreImage from '../StoreImage.jsx'
+import ScrollRail from './ScrollRail.jsx'
 
 const ROW_SIZE = 10
 
-// Horizontally scrolling row of cards; on wide screens an arrow pages through it while there is more that way.
-// The arrows are a pointer shortcut kept out of the tab order (each card is a link, and focusing it scrolls the
-// row), so an arrow disappearing at the end never drops keyboard focus.
 function ProductRail({ products }) {
-  const track = useRef(null)
-  const [edges, setEdges] = useState({ start: true, end: true })
-
-  const measure = useCallback(() => {
-    const element = track.current
-    if (!element) return
-    setEdges({ start: element.scrollLeft <= 4, end: element.scrollLeft + element.clientWidth >= element.scrollWidth - 4 })
-  }, [])
-
-  useEffect(() => {
-    measure()
-    window.addEventListener('resize', measure)
-    return () => window.removeEventListener('resize', measure)
-  }, [measure, products])
-
-  const page = (direction) => track.current?.scrollBy?.({ left: direction * track.current.clientWidth * 0.85, behavior: 'smooth' })
-
-  return <div className="home-rail">
-    {!edges.start && <button type="button" className="home-rail-nav is-prev" onClick={() => page(-1)} tabIndex={-1} aria-hidden="true"><ChevronLeftIcon /></button>}
-    <ul className="home-rail-track" ref={track} onScroll={measure}>
-      {products.map((product) => <li key={product.id}><ProductCard product={product} /></li>)}
-    </ul>
-    {!edges.end && <button type="button" className="home-rail-nav is-next" onClick={() => page(1)} tabIndex={-1} aria-hidden="true"><ChevronRightIcon /></button>}
-  </div>
+  return <ScrollRail>{products.map((product) => <li key={product.id}><ProductCard product={product} /></li>)}</ScrollRail>
 }
 
-// Content of one tab: sub-category chips (child categories), brand chips and the newest products.
-// Category and brand filters run on the server, including all active descendants.
+// Content of one tab: sub-category and brand links, and the newest products of the category (with its children).
+// As on CellphoneS, a sub-category or brand opens its product list page right away instead of filtering this row.
 function CategoryPanel({ category, brandPool, id, labelledBy }) {
-  const [childId, setChildId] = useState('')
-  const [brandId, setBrandId] = useState('')
   const children = useApiData(`children:${category.CategoryId}`, (signal) => listCategories({ parentId: category.CategoryId, signal }))
-  const source = childId || category.CategoryId
-  const brandProducts = useApiData(`brand-products:${source}`, (signal) => listProductSummaries({ categoryId: source, includeDescendants: true, signal }))
-  const products = useApiData(`row:${source}:${brandId}`, async (signal) => {
-    const page = await searchProducts({ categoryId: source, brandId: brandId || undefined, includeDescendants: true, pageSize: ROW_SIZE, signal })
+  const brandProducts = useApiData(`brand-products:${category.CategoryId}`, (signal) => listProductSummaries({ categoryId: category.CategoryId, includeDescendants: true, signal }))
+  const products = useApiData(`row:${category.CategoryId}`, async (signal) => {
+    const page = await searchProducts({ categoryId: category.CategoryId, includeDescendants: true, pageSize: ROW_SIZE, signal })
     return loadProductCards(page.Items, { signal })
   })
 
   const cards = products.data ?? []
   const brandIds = new Set((brandProducts.data ?? []).map((item) => item.BrandId))
   const availableBrands = (brandPool.data ?? []).filter((brand) => brandIds.has(brand.BrandId))
-  const shown = cards
   const childList = children.data ?? []
-  const viewAll = childList.find((child) => child.CategoryId === childId) ?? category
-
-  function pickChild(next) {
-    setChildId(next === childId ? '' : next)
-    setBrandId('')
-  }
 
   let row
   if (products.loading) {
@@ -74,10 +39,10 @@ function CategoryPanel({ category, brandPool, id, labelledBy }) {
     </ul>
   } else if (products.error) {
     row = <ErrorState title="Không tải được sản phẩm" message={products.error} onRetry={products.reload} className="py-8" />
-  } else if (!shown.length) {
+  } else if (!cards.length) {
     row = <EmptyState headingLevel={3} title="Chưa có sản phẩm" description="Danh mục này đang được cập nhật sản phẩm." className="py-8" />
   } else {
-    row = <ProductRail products={shown} />
+    row = <ProductRail products={cards} />
   }
 
   return <div id={id} role={labelledBy ? 'tabpanel' : undefined} aria-labelledby={labelledBy} className="home-panel">
@@ -86,9 +51,9 @@ function CategoryPanel({ category, brandPool, id, labelledBy }) {
     </div>}
     {childList.length > 0 && <ul className="home-subcats" aria-label={`Nhóm ${category.Name}`}>
       {childList.map((child) => <li key={child.CategoryId}>
-        <button type="button" className="home-subcat" aria-pressed={child.CategoryId === childId} onClick={() => pickChild(child.CategoryId)}>
+        <Link className="home-subcat" to={categoryPath(child.Slug)}>
           <StoreImage src={child.ImageUrl} alt="" loading="lazy" fallback={<CategoryIcon name={child.Name} />} /><span>{child.Name}</span>
-        </button>
+        </Link>
       </li>)}
     </ul>}
     <div className="home-brandbar">
@@ -100,11 +65,10 @@ function CategoryPanel({ category, brandPool, id, labelledBy }) {
       </div>}
       {availableBrands.length > 0 && <ul className="home-brandchips" aria-label="Lọc theo thương hiệu">
         {availableBrands.map((brand) => <li key={brand.BrandId}>
-          <button type="button" className="home-brandchip" aria-pressed={brand.BrandId === brandId}
-            onClick={() => setBrandId(brand.BrandId === brandId ? '' : brand.BrandId)}>{brand.Name}</button>
+          <Link className="home-brandchip" to={`${categoryPath(category.Slug)}?brand=${encodeURIComponent(brand.BrandId)}`}>{brand.Name}</Link>
         </li>)}
       </ul>}
-      <Link className="home-viewall" to={`${categoryPath(viewAll.Slug)}${brandId ? `?brand=${encodeURIComponent(brandId)}` : ''}`}>Xem tất cả<span aria-hidden="true"> ›</span><span className="sr-only"> {viewAll.Name}</span></Link>
+      <Link className="home-viewall" to={categoryPath(category.Slug)}>Xem tất cả<span aria-hidden="true"> ›</span><span className="sr-only"> {category.Name}</span></Link>
     </div>
     {row}
   </div>

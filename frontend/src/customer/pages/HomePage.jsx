@@ -16,7 +16,8 @@ export default function HomePage() {
   const categories = useApiData('root-categories', (signal) => listCategories({ rootsOnly: true, signal }))
   const brands = useApiData('brands', (signal) => listBrands({ signal }))
   const roots = categories.data ?? []
-  const shortcuts = selectHomeCategories(roots, ['phone', 'laptop', 'accessories', 'smartHome'], 4)
+  // Every root category gets a shortcut card, the design's groups first.
+  const shortcuts = selectHomeCategories(roots, ['phone', 'laptop', 'accessories', 'smartHome'])
   // Every root category gets a tabbed product row, paired with a related one when there is one.
   const showcase = pairHomeCategories(roots)
 

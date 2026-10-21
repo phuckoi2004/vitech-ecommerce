@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
 import ErrorState from '../../../components/shared/ErrorState.jsx'
 import useApiData from '../../../hooks/useApiData.js'
 import { listBanners } from '../../../lib/catalog-api.js'
+import BannerLink from '../BannerLink.jsx'
 import { ChevronLeftIcon, ChevronRightIcon } from '../icons.jsx'
 import StoreImage from '../StoreImage.jsx'
 import CategoryMenu from './CategoryMenu.jsx'
@@ -10,14 +10,6 @@ import CategoryMenu from './CategoryMenu.jsx'
 const SLIDE_MS = 5000
 const TRANSITION_MS = 700
 const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)'
-
-// LinkUrl is https or an internal path starting with "/" (ContentService); anything else is not a link.
-function BannerLink({ banner, className, children }) {
-  const url = banner.LinkUrl ?? ''
-  if (url.startsWith('/') && !url.startsWith('//')) return <Link className={className} to={url}>{children}</Link>
-  if (url.startsWith('https://')) return <a className={className} href={url}>{children}</a>
-  return <div className={className}>{children}</div>
-}
 
 function useReducedMotion() {
   const [reduced, setReduced] = useState(() => window.matchMedia?.(REDUCED_MOTION_QUERY).matches ?? false)

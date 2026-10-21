@@ -2,6 +2,7 @@ import detailIcon from '../assets/promotion-detail-source.svg'
 import editIcon from '../assets/promotion-edit-source.svg'
 import trashIcon from '../assets/promotion-trash-source.svg'
 import { PROMOTION_STATUSES } from '../lib/promotions.js'
+import { formatStatus } from '../../lib/status-labels.js'
 import { ProductButton } from './ProductUi.jsx'
 
 export { ProductButton as PromotionButton } from './ProductUi.jsx'
@@ -10,7 +11,7 @@ export function PromotionPopupButton({ secondary = false, danger = false, classN
 }
 export function PromotionStatus({ value }) {
   const color = { Draft: 'bg-admin-page text-admin-muted', Scheduled: 'bg-[#f59e0b] text-admin-text', Active: 'bg-[#16a34a] text-white', Expired: 'bg-admin-soft text-admin-blue', Cancelled: 'bg-red-50 text-admin-red' }[value] ?? 'bg-admin-page text-admin-muted'
-  return <span className={'inline-block rounded-full px-2.5 py-1.5 text-[10px] leading-[normal] font-semibold whitespace-nowrap ' + color}>{PROMOTION_STATUSES[value] ?? value}</span>
+  return <span className={'inline-block rounded-full px-2.5 py-1.5 text-[10px] leading-[normal] font-semibold whitespace-nowrap ' + color}>{formatStatus(value, PROMOTION_STATUSES)}</span>
 }
 export function PromotionAction({ kind, name, onClick }) {
   const label = { view: 'Chi tiết', edit: 'Sửa', delete: 'Xóa' }[kind]

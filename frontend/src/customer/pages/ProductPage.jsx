@@ -10,12 +10,13 @@ import { getProductBySlug } from '../../lib/catalog-api.js'
 import { formatRating } from '../../lib/format.js'
 import { canPurchase, initialVariant, productVariants } from '../../lib/product-detail.js'
 import LoginPromptDialog from '../components/LoginPromptDialog.jsx'
+import ProductBreadcrumb from '../components/product/ProductBreadcrumb.jsx'
 import ProductGallery from '../components/product/ProductGallery.jsx'
 import ProductInformation from '../components/product/ProductInformation.jsx'
 import ProductPurchasePanel from '../components/product/ProductPurchasePanel.jsx'
 import ProductReviews from '../components/product/ProductReviews.jsx'
 import RelatedProducts from '../components/product/RelatedProducts.jsx'
-import { CART_PATH, HOME_PATH, LOGIN_PATH, brandPath, categoryPath, productPath } from '../routes/paths.js'
+import { CART_PATH, HOME_PATH, LOGIN_PATH, productPath } from '../routes/paths.js'
 import './ProductPage.css'
 
 function ProductDetails({ product }) {
@@ -60,12 +61,7 @@ function ProductDetails({ product }) {
   }
 
   return <div className="pd-page">
-    <nav className="pd-breadcrumb" aria-label="Đường dẫn sản phẩm"><ol>
-      <li><Link to={HOME_PATH}>Trang chủ</Link></li>
-      {product.Category?.Name && <li>{product.Category.Slug ? <Link to={categoryPath(product.Category.Slug)}>{product.Category.Name}</Link> : product.Category.Name}</li>}
-      {product.Brand?.Name && <li>{product.Brand.Slug ? <Link to={brandPath(product.Brand.Slug)}>{product.Brand.Name}</Link> : product.Brand.Name}</li>}
-      <li aria-current="page">{product.Name}</li>
-    </ol></nav>
+    <ProductBreadcrumb product={product} />
     <header className="pd-heading"><h1>{product.Name}</h1>
       <div className="pd-meta"><span className="pd-stars" aria-label={`Đánh giá ${formatRating(rating)} trên 5 sao`}>
         {Array.from({ length: 5 }, (_, index) => <span key={index} aria-hidden="true">{index < Math.round(rating) ? '★' : '☆'}</span>)}

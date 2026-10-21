@@ -105,6 +105,7 @@ class AdminConversationResponse(ConversationResponse):
     # Read-only context for the internal inbox; never included in Customer schemas.
     CustomerName: str | None = None
     CustomerEmail: str | None = None
+    AssignedStaffName: str | None = None
     LastMessage: AdminMessageResponse | None = None
     UnreadCount: int = 0
 

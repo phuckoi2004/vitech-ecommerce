@@ -48,8 +48,9 @@ def record_news_view(slug: str, service: Content):
 
 
 @router.get("/banners", response_model=list[BannerResponse])
-def list_banners(service: Content):
-    return service.list_display_banners()
+def list_banners(service: Content, category_id: uuid.UUID | None = None):
+    """With category_id: the banners for that product list page (see ContentService.list_display_banners)."""
+    return service.list_display_banners(category_id=category_id)
 
 
 # ------------------------------------------------------------------ news (Admin)

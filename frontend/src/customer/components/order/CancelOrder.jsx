@@ -34,7 +34,7 @@ export default function CancelOrder({ order, transfer, onCancelled, onStale }) {
 
   if (!confirming) {
     return <div className="order-cancel">
-      <button type="button" className="order-link-button" onClick={() => setConfirming(true)}>Huỷ đơn hàng</button>
+      <button type="button" className="od-button is-muted" onClick={() => setConfirming(true)}>Hủy đơn</button>
       {error && <p className="order-error" role="alert">{error}</p>}
     </div>
   }

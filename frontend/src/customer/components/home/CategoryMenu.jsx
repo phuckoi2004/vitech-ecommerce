@@ -19,7 +19,8 @@ function MenuSection({ title, loading, error, onRetry, emptyText, children, hasI
   </section>
 }
 
-// Category + brand selects real catalog filters. A brand is never stored as a child category.
+// Clicking a category opens its product list. Hovering it (mouse) or ArrowRight (keyboard) opens a panel whose brand
+// and price links filter that list. A brand is never stored as a child category.
 export default function CategoryMenu({ categories, brandPool }) {
   const [activeId, setActiveId] = useState(null)
   const root = useRef(null), panel = useRef(null), closeTimer = useRef(null), moveFocus = useRef(false)
@@ -62,14 +63,13 @@ export default function CategoryMenu({ categories, brandPool }) {
   else if (!categories.data?.length) content = <p className="home-catmenu-note">Chưa có danh mục sản phẩm.</p>
   else content = <ul className="home-catmenu-list">
     {categories.data.map((category) => <li key={category.CategoryId}>
-      <button type="button" className={`home-catmenu-item${activeId === category.CategoryId ? ' is-active' : ''}`}
-        aria-expanded={activeId === category.CategoryId} aria-controls={id}
-        onClick={() => !hoverEnabled() && activeId === category.CategoryId ? close() : open(category.CategoryId)}
+      <Link to={categoryPath(category.Slug)} className={`home-catmenu-item${activeId === category.CategoryId ? ' is-active' : ''}`}
+        aria-expanded={activeId === category.CategoryId} aria-controls={activeId === category.CategoryId ? id : undefined}
         onMouseEnter={() => { if (hoverEnabled()) open(category.CategoryId) }}
         onKeyDown={(event) => keyDown(event, category.CategoryId)}>
         <span className="home-catmenu-icon"><StoreImage src={category.ImageUrl} alt="" className="home-catmenu-photo" fallback={<><img src={categoryCircle} width="24" height="24" alt="" /><CategoryIcon name={category.Name} /></>} /></span>
         <span className="home-catmenu-label">{category.Name}</span><ChevronRightIcon className="home-catmenu-chevron" />
-      </button>
+      </Link>
     </li>)}
   </ul>
 

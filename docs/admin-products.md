@@ -1,5 +1,9 @@
 # Quản lý sản phẩm và biến thể
 
+Phần giá ưu đãi bổ sung ngày 19/10/2026 được mô tả ở [giá ưu đãi và coupon công khai](customer-pricing-promotions.md), có migration cho `Promotions.ApplyMode` và `ProductVariants.CompareAtPrice`. Các đoạn không migration bên dưới nói về đợt quản lý sản phẩm/biến thể trước đó.
+
+Form biến thể có **Giá bán** và **Giá niêm yết (tham khảo)**. Giá niêm yết tùy chọn, phải >= giá bán, chỉ lưu để tham khảo: từ 20/10/2026 khách chỉ thấy giá gạch khi có khuyến mãi giảm trực tiếp (giá gạch là giá bán, giá mới là giá sau giảm). Sửa giá của một màu không đổi các màu khác. Khách cũ không gửi `CompareAtPrice` sẽ giữ giá niêm yết hiện có; gửi null mới bỏ nó. Giá vốn vẫn không sửa qua form sản phẩm.
+
 Trang admin dùng React + Vite + JavaScript/JSX + Tailwind CSS, giữ cấu trúc FastAPI Router → Service → Repository và schema PostgreSQL/Supabase hiện có. Không thêm migration.
 
 ## Mô hình thống nhất giữa admin, khách hàng và giỏ hàng

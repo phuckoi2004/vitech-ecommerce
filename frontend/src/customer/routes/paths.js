@@ -4,6 +4,8 @@ export const LOGIN_PATH = '/dang-nhap'
 export const REGISTER_PATH = '/dang-ky'
 export const FORGOT_PASSWORD_PATH = '/quen-mat-khau'
 export const ACCOUNT_PATH = '/tai-khoan'
+// The account page opened at its order history section.
+export const ORDER_HISTORY_PATH = `${ACCOUNT_PATH}?section=orders`
 
 // Pages linked from the header and the home page.
 export const SEARCH_PATH = '/tim-kiem'
@@ -32,6 +34,10 @@ export const INFO_PATHS = {
 }
 
 export const productPath = (slug) => `/san-pham/${encodeURIComponent(slug)}`
+// The product page scrolled to its reviews, where a received purchase is reviewed; with `orderId` the review form
+// opens on that order (ProductReviews reads `?review=`).
+export const productReviewsPath = (slug, orderId) =>
+  `${productPath(slug)}${orderId ? `?review=${encodeURIComponent(orderId)}` : ''}#product-reviews`
 export const categoryPath = (slug) => `/danh-muc/${encodeURIComponent(slug)}`
 export const brandPath = (slug) => `/thuong-hieu/${encodeURIComponent(slug)}`
 export const newsPath = (slug) => `${NEWS_PATH}/${encodeURIComponent(slug)}`

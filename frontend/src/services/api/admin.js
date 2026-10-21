@@ -1,28 +1,28 @@
 import { request } from './client.js'
-import { monthPeriod } from '../../lib/dashboard-periods.js'
+import { monthPeriod, vietnamToday } from '../../lib/dashboard-periods.js'
 
 export function getAdminData(accessToken, path, query = {}, signal) {
   return request(path, { accessToken, query, signal })
 }
 
-export async function getRevenueSeries(accessToken, months, signal) {
-  const results = await Promise.allSettled(months.map((month) => getAdminData(accessToken, '/admin/statistics/revenue', monthPeriod(month), signal)))
+export async function getRevenueSeries(accessToken, months, signal, today = vietnamToday()) {
+  if (!months.length) return []
+  const last = months.at(-1)
+  const data = await getAdminData(accessToken, '/admin/statistics/reports/revenue', {
+    date_from: months[0] + '-01', date_to: last === today.slice(0, 7) ? today : monthPeriod(last).date_to,
+    page: 1, page_size: 1,
+  }, signal)
   signal?.throwIfAborted()
-  // Session failures must reach AuthProvider so it can refresh and retry.
-  for (const result of results) if (result.status === 'rejected' && [401, 403].includes(result.reason.status)) throw result.reason
-  return months.map((month, index) => results[index].status === 'fulfilled'
-    ? { month, data: results[index].value, error: '' }
-    : { month, data: null, error: results[index].reason.message })
+  return months.map((month) => ({ month, error: '', data: months.length === 1 ? data.Summary :
+    data.Chart.find((point) => point.DateFrom.slice(0, 7) === month) ?? null }))
 }
 
 export async function getDashboardStock(accessToken, signal) {
-  const result = await getAdminData(accessToken, '/admin/inventory/low-stock', { page: 1, page_size: 4 }, signal)
-  const ids = [...new Set(result.Items.map((item) => item.ProductId))]
-  const products = await Promise.allSettled(ids.map((id) => getAdminData(accessToken, `/admin/products/${id}`, {}, signal)))
+  const [empty, low] = await Promise.all(['out_of_stock', 'low_stock'].map((stock) =>
+    getAdminData(accessToken, '/admin/variants', { status: 'Active', stock, page: 1, page_size: 4 }, signal)))
   signal?.throwIfAborted()
-  for (const product of products) if (product.status === 'rejected' && product.reason.status === 401) throw product.reason
-  const names = new Map(ids.map((id, index) => [id, products[index].status === 'fulfilled' ? products[index].value.Name : null]))
-  return { ...result, Items: result.Items.map((item) => ({ ...item, ProductName: names.get(item.ProductId) || item.VariantName || item.Sku })) }
+  return { OutOfStockTotal: empty.Total, LowStockTotal: low.Total,
+    Items: [...empty.Items, ...low.Items].slice(0, 4).map((item) => ({ ...item, ProductName: item.Name })) }
 }
 
 export function markNotificationRead(accessToken, notificationId) {

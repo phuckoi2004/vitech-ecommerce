@@ -215,6 +215,9 @@ class CreateReturnRequestTest(ReturnTestBase):
                          ("Pending", "Exchange", None, 2))
         self.assertEqual((self.serial.Status, self.phone.StockQuantity, self.cable.StockQuantity), ("Sold", 5, 10))
         self.assertEqual(len(self.f.notifications_for(self.customer)), 2)
+        for user in (self.staff, self.admin):
+            self.assertEqual([n.Title for n in self.f.notifications_for(user)],
+                             ["Yêu cầu trả hàng mới", "Yêu cầu đổi hàng mới"])
 
     def test_missing_policy_refuses_without_inventing_a_deadline(self):
         svc = self.service(None)
@@ -645,9 +648,9 @@ class GatewayRefundTest(ReturnTestBase):
         self.assertEqual(sorted(t.Status for t in self.refunds()), ["Failed", "Success"])
         success = next(t for t in self.refunds() if t.Status == "Success")
         self.assertEqual((done.Status, done.RefundPaymentTransactionId), ("Completed", success.PaymentTransactionId))
-        created = [h for h in self.histories(rid) if (h.InternalNote or "").startswith("Giao dịch Refund")]
+        created = [h for h in self.histories(rid) if (h.InternalNote or "").startswith("Giao dịch hoàn tiền")]
         self.assertEqual(len(created), 2)  # cả hai lần tạo giao dịch đều có lịch sử
-        self.assertTrue(any("Failed" in (h.InternalNote or "") and h.IsInternal for h in self.histories(rid)))
+        self.assertTrue(any("Thất bại" in (h.InternalNote or "") and h.IsInternal for h in self.histories(rid)))
 
 
 class ManualRefundTest(ReturnTestBase):

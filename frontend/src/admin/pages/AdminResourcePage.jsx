@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { formatDate, formatMoney } from '../../lib/format.js'
+import { formatStatus } from '../../lib/status-labels.js'
 import { Pagination as SharedPagination } from '../../components/shared/index.js'
 import useInternalAuth from '../../hooks/useInternalAuth.js'
 import { useSearchParams } from 'react-router-dom'
@@ -14,7 +15,7 @@ const STATUS_LABELS = {
   Draft: 'Bản nháp', Active: 'Hoạt động', Inactive: 'Tạm ẩn', Discontinued: 'Ngừng kinh doanh', Scheduled: 'Đã lên lịch',
   Expired: 'Hết hạn', Published: 'Đã xuất bản', Hidden: 'Đã ẩn', Paid: 'Đã thanh toán', Success: 'Thành công', Failed: 'Thất bại', Refunded: 'Đã hoàn tiền',
 }
-const statusLabel = (value) => STATUS_LABELS[value] ?? value
+const statusLabel = (value) => formatStatus(value, STATUS_LABELS)
 
 // Read-only section tables use existing APIs; workflow forms can be added independently.
 const SECTIONS = {

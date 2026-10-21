@@ -1,3 +1,5 @@
+import { formatStatus } from '../../lib/status-labels.js'
+
 export const ORDER_PAGE_SIZE = 5
 
 export const ORDER_STATUSES = [
@@ -31,7 +33,8 @@ export function orderFilters(params) {
   }
 }
 
-export const orderStatusLabel = (value) => ORDER_STATUSES.find(([status]) => status === value)?.[1] ?? value
+export const orderStatusLabel = (value) => ORDER_STATUSES.find(([status]) => status && status === value)?.[1] ?? formatStatus(value)
+export const paymentStatusLabel = (value) => formatStatus(value, PAYMENT_LABELS)
 export const canCancelOrder = (order) => ['Pending', 'Confirmed', 'Processing', 'Shipping'].includes(order.OrderStatus)
 
 // Preserve only list filters in detail/back links; a direct link never supplies an external redirect.

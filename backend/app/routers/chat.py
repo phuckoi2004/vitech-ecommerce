@@ -87,6 +87,12 @@ def list_unassigned_conversations(service: Chat, actor: CurrentActor, page: Page
     return service.list_unassigned_conversations(actor, page=page, page_size=page_size)
 
 
+@admin_router.get("/conversations/active", response_model=PageResponse[AdminConversationResponse])
+def list_active_conversations(service: Chat, actor: CurrentActor, page: Page = 1, page_size: PageSize = 20):
+    """Customers currently being helped by any staff member, with who is helping (Admin only)."""
+    return service.list_active_conversations(actor, page=page, page_size=page_size)
+
+
 @admin_router.get("/conversations/assigned", response_model=PageResponse[AdminConversationResponse])
 def list_assigned_conversations(service: Chat, actor: CurrentActor, status_filter: StatusFilter = None,
                                 page: Page = 1, page_size: PageSize = 20):

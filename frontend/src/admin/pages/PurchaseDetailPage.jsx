@@ -1,6 +1,7 @@
 import { Navigate, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { ErrorState, LoadingState } from '../../components/shared/index.js'
 import { formatDateTime, formatMoney } from '../../lib/format.js'
+import { formatStatus } from '../../lib/status-labels.js'
 import AdminTable from '../components/AdminTable.jsx'
 import PurchaseActionModal from '../components/PurchaseActionModal.jsx'
 import PurchaseDialog from '../components/PurchaseDialogs.jsx'
@@ -24,6 +25,7 @@ export default function PurchaseDetailPage() {
   const { purchaseId } = useParams()
   const navigate = useNavigate()
   const location = useLocation()
+  const reportSearch = location.state?.reportOrigin?.search
   const [params, setParams] = useSearchParams()
   const action = params.get('dialog') ?? ''
   const workflow = usePurchaseDetail(purchaseId, false, location.state?.purchaseNotice ?? '')
@@ -57,7 +59,7 @@ export default function PurchaseDetailPage() {
   ]
   if (action === 'edit' && allowed.edit) return <Navigate replace to={'/admin/purchases/' + encodeURIComponent(purchaseId) + '/edit' + purchaseListSearch(params)} />
   return <section aria-label="Chi tiết phiếu nhập" className="-mt-1 flex min-w-0 flex-col gap-3.5">
-    <div className="flex items-center gap-0"><div className="mr-auto"><h2 className="m-0 text-xl leading-6 font-bold">{po ? 'Phiếu nhập ' + po.PurchaseOrderCode : 'Chi tiết phiếu nhập'}</h2>{po && <p className="mt-[3px] mb-0 text-[11px] leading-[13px] text-admin-muted">{DESCRIPTIONS[po.Status] ?? PURCHASE_STATUSES[po.Status]}</p>}</div>{po && <PurchaseStatus status={po.Status} />}<PurchaseButton secondary className="shrink-0" disabled={busy} onClick={() => navigate('/admin/purchases' + purchaseListSearch(params))}>← Danh sách phiếu nhập</PurchaseButton></div>
+    <div className="flex items-center gap-0"><div className="mr-auto"><h2 className="m-0 text-xl leading-6 font-bold">{po ? 'Phiếu nhập ' + po.PurchaseOrderCode : 'Chi tiết phiếu nhập'}</h2>{po && <p className="mt-[3px] mb-0 text-[11px] leading-[13px] text-admin-muted">{DESCRIPTIONS[po.Status] ?? PURCHASE_STATUSES[po.Status]}</p>}</div>{po && <PurchaseStatus status={po.Status} />}<PurchaseButton secondary className="shrink-0" disabled={busy} onClick={() => navigate(reportSearch ? '/admin/reports' + reportSearch : '/admin/purchases' + purchaseListSearch(params))}>{reportSearch ? '← Quay lại báo cáo' : '← Danh sách phiếu nhập'}</PurchaseButton></div>
     {notice && <p role="status" className="m-0 rounded-[9px] bg-green-50 p-3 text-xs text-green-700">{notice}</p>}
     {error && !action && <p role="alert" className="m-0 rounded-[9px] bg-red-50 p-3 text-xs text-red-700">{error}</p>}
     {detail.loading && !po ? <LoadingState label="Đang tải chi tiết phiếu nhập…" /> : detail.error && !po ? <ErrorState title="Không tải được phiếu nhập" message={detail.error} onRetry={detail.refresh} /> : po && <>
@@ -69,7 +71,7 @@ export default function PurchaseDetailPage() {
           <Info label="Mã phiếu">{po.PurchaseOrderCode}</Info><Info label="Nhà cung cấp">{suppliers.data?.find((supplier) => supplier.SupplierId === po.SupplierId)?.Name ?? (suppliers.loading ? 'Đang tải…' : '—')}</Info><Info label="Người tạo">{po.CreatedByName ?? account(po.CreatedByUserId)}</Info><Info label="Ngày lập phiếu">{formatDateTime(po.CreatedAt)}</Info><Info label="Ghi chú">{po.Note || '—'}</Info>
         </dl></section>
         <section aria-label="Xử lý của quản trị viên" className={CARD}><h3 className={TITLE}>Xử lý của quản trị viên</h3><dl className="mt-[9px] mb-0 flex flex-col gap-[9px]">
-          <Info label="Trạng thái">{PURCHASE_STATUSES[po.Status] ?? po.Status}</Info><Info label="Người duyệt">{approver}</Info>{po.RejectReason && <Info label="Người từ chối">{po.DecidedByName ?? account(po.DecidedByUserId)}</Info>}<Info label="Thời điểm xử lý">{formatDateTime(po.DecidedAt ?? (automaticApproval ? po.CreatedAt : null))}</Info><Info label="Lý do từ chối">{po.RejectReason || '—'}</Info><Info label="Tổng tiền">{formatMoney(po.TotalAmount)}</Info>
+          <Info label="Trạng thái">{formatStatus(po.Status, PURCHASE_STATUSES)}</Info><Info label="Người duyệt">{approver}</Info>{po.RejectReason && <Info label="Người từ chối">{po.DecidedByName ?? account(po.DecidedByUserId)}</Info>}<Info label="Thời điểm xử lý">{formatDateTime(po.DecidedAt ?? (automaticApproval ? po.CreatedAt : null))}</Info><Info label="Lý do từ chối">{po.RejectReason || '—'}</Info><Info label="Tổng tiền">{formatMoney(po.TotalAmount)}</Info>
           {po.Status === 'Closed' && <><Info label="Người đóng phiếu">{account(po.ClosedByUserId)}</Info><Info label="Thời điểm đóng">{formatDateTime(po.ClosedAt)}</Info><Info label="Lý do đóng phiếu">{po.CloseReason || '—'}</Info></>}
         </dl></section>
       </div>

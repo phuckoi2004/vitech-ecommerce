@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useLocation, useSearchParams } from 'react-router-dom'
 import { getSupportInbox, getSupportPage } from '../services/support.js'
 import useSupportPoll from '../hooks/useSupportPoll.js'
-import { supportName, supportPreview, supportTime } from '../lib/support.js'
+import { supportAgent, supportName, supportPreview, supportTime } from '../lib/support.js'
 import { SupportError, SupportStatus } from '../components/SupportUi.jsx'
 import SupportConversation from '../components/SupportConversation.jsx'
 import useInternalAuth from '../../hooks/useInternalAuth.js'
@@ -41,7 +41,7 @@ export default function SupportPage() {
   const requestedPage = Number(params.get('page'))
   const page = Number.isSafeInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1
   const load = useCallback(async (token, signal) => {
-    const inbox = await getSupportInbox(token, signal)
+    const inbox = await getSupportInbox(token, signal, user.Role)
     if (page > 1 || ['closed', 'all'].includes(tab)) inbox[tab] = await getSupportPage(token, tab, page, signal, user.Role)
     return inbox
   }, [tab, page, user.Role])
@@ -75,13 +75,15 @@ export default function SupportPage() {
     {state.error && <SupportError message={state.error} onRetry={state.refresh} />}
     <div id="support-workspace" role="tabpanel" aria-labelledby={'support-tab-' + tab} data-mobile-view={listOpen ? 'list' : 'thread'} className="support-workspace flex min-w-0 overflow-hidden rounded-xl border border-admin-border bg-white">
       <aside aria-label="Danh sách cuộc trò chuyện" className="support-sidebar flex h-full w-[300px] shrink-0 flex-col gap-2.5 border-r border-admin-border p-3.5">
-        <h3 className="m-0 shrink-0 text-sm font-semibold">{tab === 'waiting' ? 'Yêu cầu đang chờ' : tab === 'closed' ? 'Lịch sử hỗ trợ' : tab === 'all' ? 'Tất cả hội thoại' : 'Cuộc trò chuyện đang hỗ trợ'}</h3>
+        <h3 className="m-0 shrink-0 text-sm font-semibold">{tab === 'waiting' ? 'Yêu cầu đang chờ' : tab === 'closed' ? 'Lịch sử hỗ trợ' : tab === 'all' ? 'Tất cả hội thoại' : user.Role === 'Admin' ? 'Khách hàng đang được hỗ trợ' : 'Cuộc trò chuyện đang hỗ trợ'}</h3>
         <div className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto">
           {!state.data && !state.error && <p role="status" className="text-[11px] text-admin-muted">Đang tải danh sách…</p>}
-          {state.data && !rows.length && <p className="text-[11px] text-admin-muted">{tab === 'waiting' ? 'Không có cuộc trò chuyện đang chờ.' : tab === 'active' ? 'Bạn chưa có cuộc trò chuyện đang hỗ trợ.' : 'Chưa có cuộc trò chuyện.'}</p>}
+          {state.data && !rows.length && <p className="text-[11px] text-admin-muted">{tab === 'waiting' ? 'Không có cuộc trò chuyện đang chờ.' : tab === 'active' ? (user.Role === 'Admin' ? 'Chưa có khách hàng nào đang được hỗ trợ.' : 'Bạn chưa có cuộc trò chuyện đang hỗ trợ.') : 'Chưa có cuộc trò chuyện.'}</p>}
           {rows.map((conversation) => <button type="button" key={conversation.ConversationId} aria-label={'Mở cuộc trò chuyện với ' + supportName(conversation)} aria-current={selected === conversation.ConversationId ? 'true' : undefined} onClick={() => { setListOpen(false); navigate({ conversation: conversation.ConversationId }) }} className={'flex min-h-[105px] min-w-0 shrink-0 cursor-pointer flex-col items-start gap-1.5 rounded-[10px] border p-3 text-left ' + (selected === conversation.ConversationId ? 'border-admin-blue bg-admin-soft' : 'border-transparent bg-white hover:bg-admin-page')}>
             <span className="flex h-5 w-full items-center justify-between gap-2"><span className="truncate text-xs leading-[normal] font-semibold">{supportName(conversation)}</span><time className="shrink-0 text-[10px] leading-[normal] text-admin-muted" dateTime={conversation.LastMessage?.SentAt || conversation.CreatedAt}>{supportTime(conversation.LastMessage?.SentAt || conversation.CreatedAt)}</time></span>
-            <span className="block w-full truncate text-[11px] leading-[normal] text-admin-muted">{supportPreview(conversation)}</span><span className="flex w-full items-center justify-between gap-2"><SupportStatus status={conversation.Status === 'Closed' ? 'closed' : conversation.Mode === 'AI' ? 'ai' : conversation.AssignedStaffId ? 'active' : 'waiting'} />{conversation.UnreadCount > 0 && <span className="rounded-full bg-admin-blue px-2 py-0.5 text-xs font-semibold text-white" aria-label={conversation.UnreadCount + ' tin nhắn chưa đọc'}>{conversation.UnreadCount} mới</span>}</span>
+            <span className="block w-full truncate text-[11px] leading-[normal] text-admin-muted">{supportPreview(conversation)}</span>
+            {supportAgent(conversation, user) && <span className="block w-full truncate text-[10px] leading-[normal] text-admin-muted">Người hỗ trợ: <span className="font-semibold text-admin-text">{supportAgent(conversation, user)}</span></span>}
+            <span className="flex w-full items-center justify-between gap-2"><SupportStatus status={conversation.Status === 'Closed' ? 'closed' : conversation.Mode === 'AI' ? 'ai' : conversation.AssignedStaffId ? 'active' : 'waiting'} />{conversation.UnreadCount > 0 && <span className="rounded-full bg-admin-blue px-2 py-0.5 text-xs font-semibold text-white" aria-label={conversation.UnreadCount + ' tin nhắn chưa đọc'}>{conversation.UnreadCount} mới</span>}</span>
           </button>)}
         </div>
         {state.data && state.data[tab].Total > 100 && <nav aria-label="Trang hội thoại" className="flex items-center justify-between gap-2 text-[10px]"><button disabled={page === 1 || state.loading} onClick={() => navigate({ page: String(page - 1), conversation: '' })} className="cursor-pointer disabled:opacity-40">Trước</button><span>Trang {page} / {Math.ceil(state.data[tab].Total / 100)}</span><button disabled={page * 100 >= state.data[tab].Total || state.loading} onClick={() => navigate({ page: String(page + 1), conversation: '' })} className="cursor-pointer disabled:opacity-40">Sau</button></nav>}

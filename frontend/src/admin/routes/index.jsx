@@ -45,6 +45,7 @@ export const adminRoutes = [
     element: <RequireInternal><AdminHomePage /></RequireInternal>,
     children: [
       { index: true, element: <DashboardPage /> },
+      { path: 'notifications', element: <div id="admin-notifications-page" /> },
       { path: 'users', element: <AdminUsersSection /> },
       { path: 'profile', element: <AdminProfileSection /> },
       { path: 'content', element: <LegacyContentRedirect /> },

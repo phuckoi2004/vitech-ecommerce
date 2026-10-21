@@ -59,12 +59,13 @@ class CatalogProductWrite(RequestSchema):
 class CatalogVariantWrite(RequestSchema):
     """No parent metadata, ProductId, stock or cost may be changed by a variant edit."""
 
-    NULLABLE_FIELDS = frozenset({"Storage", "VariantImageUrls", "DefaultImageUrl"})
+    NULLABLE_FIELDS = frozenset({"Storage", "CompareAtPrice", "VariantImageUrls", "DefaultImageUrl"})
 
     Sku: varchar(50)
     Color: varchar(50)
     Storage: varchar(50) | None = None
     Price: VndAmount
+    CompareAtPrice: VndAmount | None = None
     MinStockLevel: NonNegativeInt = 0
     IsActive: bool = True
     IsSerialTracked: bool = False
@@ -75,6 +76,8 @@ class CatalogVariantWrite(RequestSchema):
 
     @model_validator(mode="after")
     def valid_image_selection(self):
+        if self.CompareAtPrice is not None and self.CompareAtPrice < self.Price:
+            raise ValueError("Giá niêm yết phải lớn hơn hoặc bằng giá bán")
         if self.VariantImageUrls is not None and len(set(self.VariantImageUrls)) != len(self.VariantImageUrls):
             raise ValueError("Không chọn trùng ảnh cho biến thể")
         if self.DefaultImageUrl is not None and (self.VariantImageUrls is None or self.DefaultImageUrl not in self.VariantImageUrls):

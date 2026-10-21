@@ -119,6 +119,8 @@ def _apply_server_defaults(obj) -> None:
             value = expr == "true"
         elif expr == "0":
             value = Decimal("0") if isinstance(column.type, Numeric) else 0
+        elif expr.startswith("'") and expr.endswith("'"):
+            value = expr[1:-1]
         else:
             raise AssertionError(f"Server default chưa hỗ trợ trong fake: {expr}")
         setattr(obj, attr.key, value)
@@ -484,6 +486,10 @@ class FakeOrderRepo(FakeRepo):
     def exists_by_code(self, order_code):
         return bool(self._rows(lambda o: o.OrderCode == order_code))
 
+    def customer_used_coupon(self, customer_id, coupon_id):
+        return bool(self._rows(lambda o: o.CustomerId == customer_id and o.CouponId == coupon_id
+                               and o.OrderStatus != "Cancelled"))
+
     def exists_by_shipping_method(self, shipping_method_id):
         return bool(self._rows(lambda o: o.ShippingMethodId == shipping_method_id))
 
@@ -499,20 +505,24 @@ class FakeOrderRepo(FakeRepo):
         return [o.OrderId for o in sorted(rows, key=lambda o: o.OrderedAt)[:limit]]
 
 
-    def _filtered(self, order_status=None, payment_status=None):
+    def _filtered(self, order_status=None, payment_status=None, product_id=None):
+        # order_status: một giá trị hoặc danh sách (lịch sử mua hàng lọc nhiều trạng thái), như repository thật.
+        statuses = {order_status} if isinstance(order_status, str) else set(order_status or ())
         return sorted(
             self._rows(
-                lambda o: (order_status is None or o.OrderStatus == order_status)
+                lambda o: (not statuses or o.OrderStatus in statuses)
                 and (payment_status is None or o.PaymentStatus == payment_status)
+                and (product_id is None or any(self.db.get(ProductVariant, i.ProductVariantId).ProductId == product_id
+                                               for i in o.items))
             ),
             key=lambda o: o.OrderCode,
         )
 
-    def list_orders(self, *, order_status=None, payment_status=None, offset=None, limit=None, **_):
-        return self._filtered(order_status, payment_status)
+    def list_orders(self, *, order_status=None, payment_status=None, product_id=None, offset=None, limit=None, **_):
+        return self._filtered(order_status, payment_status, product_id)
 
-    def count_orders(self, *, order_status=None, payment_status=None, **_):
-        return len(self._filtered(order_status, payment_status))
+    def count_orders(self, *, order_status=None, payment_status=None, product_id=None, **_):
+        return len(self._filtered(order_status, payment_status, product_id))
 
 
 class FakeConversationRepo(FakeRepo):
@@ -528,7 +538,8 @@ class FakeConversationRepo(FakeRepo):
             messages = sorted(self.db.rows(Message), key=lambda m: (m.SentAt, str(m.MessageId)))
             latest = next((m for m in reversed(messages) if m.ConversationId == id_), None)
             unread = sum(m.ConversationId == id_ and m.SenderType == 'Customer' and not m.IsRead for m in messages)
-            context[id_] = (customer.FullName, customer.Email, latest, unread)
+            staff = self.db.get(User, conversation.AssignedStaffId) if conversation.AssignedStaffId else None
+            context[id_] = (customer.FullName, customer.Email, latest, unread, staff.FullName if staff else None)
         return context
 
     def create(self, values):
@@ -544,7 +555,8 @@ class FakeConversationRepo(FakeRepo):
         rows = self._rows(lambda c: c.CustomerId == customer_id and c.Status == "Open")
         return rows[0] if rows else None
 
-    def _filtered(self, customer_id=None, assigned_staff_id=None, status=None, mode=None, unassigned=False):
+    def _filtered(self, customer_id=None, assigned_staff_id=None, status=None, mode=None, unassigned=False,
+                  assigned=False):
         return sorted(
             self._rows(
                 lambda c: (customer_id is None or c.CustomerId == customer_id)
@@ -552,6 +564,7 @@ class FakeConversationRepo(FakeRepo):
                 and (status is None or c.Status == status)
                 and (mode is None or c.Mode == mode)
                 and (not unassigned or c.AssignedStaffId is None)
+                and (not assigned or c.AssignedStaffId is not None)
             ),
             key=lambda c: (c.CreatedAt, str(c.ConversationId)),
             reverse=True,
@@ -772,6 +785,15 @@ class FakePromotionRepo(FakeRepo):
         from app.services.promotion_state import promotion_status
         for row in self._rows(lambda p: promotion_id is None or p.PromotionId == promotion_id):
             row.Status = promotion_status(row, now)
+
+    def list_automatic(self, now, *, product=None):
+        from app.core.product_pricing import matches_product
+        from app.services.pricing import in_period
+        rows = self._rows(lambda p: p.ApplyMode == "Automatic" and in_period(p, now))
+        for row in rows:  # phạm vi lấy từ bảng liên kết, như selectinload của repository thật
+            row.promotion_products = [r for r in self.db.rows(PromotionProduct) if r.PromotionId == row.PromotionId]
+            row.promotion_categories = [r for r in self.db.rows(PromotionCategory) if r.PromotionId == row.PromotionId]
+        return [row for row in rows if product is None or matches_product(row, product)]
 
 
 class FakePromotionProductRepo(FakeRepo):
@@ -1442,6 +1464,7 @@ def order_service(db, session, clock=fixed_clock) -> OrderService:
     svc.shipping_methods = FakeShippingMethodRepo(db)
     svc.payment_methods = FakePaymentMethodRepo(db)
     svc.payment_transactions = FakePaymentTransactionRepo(db)
+    svc.promotions = FakePromotionRepo(db)
     svc.coupon_service = coupon_service(db, session)
     svc.variant_service = variant_service(db, session)
     svc.notifications = notification_service(db, session)
@@ -1721,6 +1744,7 @@ class Factory:
                     LineTotal=variant.Price * quantity,
                 )
             )
+            item.product_variant = variant
             order.items.append(item)
         return order
 

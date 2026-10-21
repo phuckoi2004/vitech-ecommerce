@@ -105,7 +105,9 @@ def test_price_query_compiles_for_postgres_using_active_non_deleted_variants():
     repo = ProductRepository(session)
     repo.list_products(min_price=Decimal("5000000"), max_price=Decimal("9999999.99"))
     sql = str(session.statements[-1].compile(dialect=postgresql.dialect(), compile_kwargs={"literal_binds": True}))
-    assert 'min("ProductVariants"."Price")' in sql
+    assert 'min(coalesce(' in sql
+    assert '"Promotions"."ApplyMode" = \'Automatic\'' in sql
+    assert '"ProductVariants"."CostPrice"' in sql
     assert '"ProductVariants"."IsActive" IS true' in sql
     assert '"ProductVariants"."IsDeleted" IS false' in sql
     assert '>= 5000000' in sql and '<= 9999999.99' in sql

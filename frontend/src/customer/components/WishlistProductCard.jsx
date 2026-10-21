@@ -45,7 +45,7 @@ export default function WishlistProductCard({ product, unavailable = false }) {
         <label htmlFor={`wishlist-variant-${product.ProductId}`}>Phiên bản sản phẩm</label>
         <select id={`wishlist-variant-${product.ProductId}`} value={selectedId} disabled={busy} onChange={(event) => setSelectedId(event.target.value)}>
           {variants.map((variant) => <option key={variant.ProductVariantId} value={variant.ProductVariantId} disabled={!canPurchase(variant)}>
-            {variant.VariantName || [variant.Color, variant.Storage].filter(Boolean).join(' · ') || 'Tiêu chuẩn'} · {formatMoney(variant.Price)}{!canPurchase(variant) ? ' · Hết hàng' : ''}
+            {variant.VariantName || [variant.Color, variant.Storage].filter(Boolean).join(' · ') || 'Tiêu chuẩn'} · {formatMoney(variant.SalePrice ?? variant.Price)}{!canPurchase(variant) ? ' · Hết hàng' : ''}
           </option>)}
         </select>
         {notice && <p className="wishlist-notice" role="alert">{notice.text}</p>}
