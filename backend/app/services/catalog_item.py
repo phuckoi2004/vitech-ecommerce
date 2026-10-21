@@ -140,7 +140,10 @@ class CatalogItemService(BaseService):
             _, parent = self._get(variant_id)
             product = self._product(parent.ProductId, lock=True)
             variant, _ = self._get(variant_id, lock=True)
-            values = {field: value for field, value in self._variant_values(data).items()
+            variant_values = self._variant_values(data)
+            if "IsSerialTracked" not in data.model_fields_set:
+                variant_values.pop("IsSerialTracked", None)
+            values = {field: value for field, value in variant_values.items()
                       if value != getattr(variant, field)}
             if values:
                 self.stock_items.update_variant(actor, variant_id, ProductVariantUpdate(**values))

@@ -94,7 +94,7 @@ function ProductFormPage({ item, presetProductId, editShared, categories, brands
   const [shared, setShared] = useState(() => sharedForm(item))
   const [galleries, setGalleries] = useState({}), [selections, setSelections] = useState({})
   const [makeDefault, setMakeDefault] = useState(item?.IsDefaultVariant ?? false)
-  const [form, setForm] = useState(() => ({ Sku: item?.Sku ?? '', Color: item?.Color ?? '', Storage: item?.Storage ?? '', Price: item?.Price ?? '', MinStockLevel: item?.MinStockLevel ?? 0, IsActive: item?.IsActive ?? true, IsSerialTracked: item?.IsSerialTracked ?? false }))
+  const [form, setForm] = useState(() => ({ Sku: item?.Sku ?? '', Color: item?.Color ?? '', Storage: item?.Storage ?? '', Price: item?.Price ?? '', MinStockLevel: item?.MinStockLevel ?? 0, IsActive: item?.IsActive ?? true, IsSerialTracked: item?.IsSerialTracked ?? true }))
   const stockPending = stockDirty || (canEditStock && !editingShared && form.IsSerialTracked !== savedSerialTracking)
   const [busy, setBusy] = useState(false), [uploading, setUploading] = useState(false), [error, setError] = useState(''), [pending, setPending] = useState(null)
   const writing = useRef(false), mounted = useRef(true)

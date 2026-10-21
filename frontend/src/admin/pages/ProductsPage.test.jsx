@@ -347,7 +347,7 @@ describe('product variant list', () => {
     expect(within(dialog).getByRole('img', { name: 'Ảnh sản phẩm 2' })).toHaveAttribute('src', 'https://example.com/back.png')
     fireEvent.click(within(dialog).getByRole('button', { name: 'Thêm sản phẩm' }))
     await waitFor(() => expect(api.createCatalogItem).toHaveBeenCalledWith('access-for-test', {
-      Sku: 'MY-WHITE', Color: 'Trắng', Storage: null, Price: '12000000', MinStockLevel: 0, IsSerialTracked: false, IsActive: true,
+      Sku: 'MY-WHITE', Color: 'Trắng', Storage: null, Price: '12000000', MinStockLevel: 0, IsSerialTracked: true, IsActive: true,
       VariantImageUrls: ['https://example.com/white.png', 'https://example.com/back.png'], DefaultImageUrl: 'https://example.com/white.png', IsDefaultVariant: true,
       Product: { Name: 'Điện thoại mới', CategoryId: 'c1', BrandId: 'b1', WarrantyMonths: 12, Status: 'Draft',
         Description: null, Specifications: { RAM: '16GB', Pin: '5000 mAh', 'Màn hình': '6.7 inch', 'Tần số quét': '120 Hz' },
@@ -497,7 +497,7 @@ describe('product variant list', () => {
     fireEvent.click(within(dialog).getByRole('button', { name: 'Thêm sản phẩm' }))
     await waitFor(() => expect(api.createCatalogItem).toHaveBeenCalledWith('access-for-test', {
       ProductId: productId, Sku: 'PHONE-PINK', Color: 'Hồng', Storage: null, Price: '11000000',
-      MinStockLevel: 0, IsActive: true, IsSerialTracked: false,
+      MinStockLevel: 0, IsActive: true, IsSerialTracked: true,
       VariantImageUrls: [], DefaultImageUrl: null, IsDefaultVariant: false, AdditionalImages: [],
     }))
     expect(api.createCatalogItem.mock.calls[0][1]).not.toHaveProperty('Product')

@@ -55,6 +55,37 @@ def test_new_product_always_has_its_first_variant_and_one_customer_entry(catalog
     assert client.get("/admin/variants", params={"keyword": "MY-"}).json()["Total"] == 3
 
 
+def test_new_variant_defaults_to_serial_tracking(catalog):
+    client, _, products, _ = catalog
+    payload = variant_payload(ProductId=str(products[0].ProductId))
+    payload.pop('IsSerialTracked')
+    response = client.post('/admin/catalog-items', json=payload)
+    assert response.status_code == 201, response.text
+    assert response.json()['IsSerialTracked'] is True
+    assert response.json()['StockQuantity'] == 0
+
+
+def test_direct_variant_api_also_defaults_to_serial_tracking(catalog):
+    client, _, products, _ = catalog
+    response = client.post('/admin/variants', json={
+        'ProductId': str(products[0].ProductId), 'Sku': 'DEFAULT-SERIAL',
+        'VariantName': 'Default serial tracking', 'Price': '100000',
+    })
+    assert response.status_code == 201, response.text
+    assert response.json()['IsSerialTracked'] is True
+
+
+def test_editing_an_existing_variant_without_tracking_field_preserves_its_saved_setting(catalog):
+    client, session, products, _ = catalog
+    variant = selected(session, products[2])
+    assert not variant.IsSerialTracked
+    payload = variant_payload()
+    payload.pop('IsSerialTracked')
+    response = client.put(f'/admin/catalog-items/{variant.ProductVariantId}', json=payload)
+    assert response.status_code == 200, response.text
+    assert response.json()['IsSerialTracked'] is False
+
+
 def test_existing_product_without_variants_can_receive_its_first_variant(catalog):
     client, session, products, _ = catalog
     bare = Product(CategoryId=products[0].CategoryId, BrandId=products[0].BrandId, Name="Một màu",
