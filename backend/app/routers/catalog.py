@@ -13,7 +13,7 @@ from fastapi import APIRouter, Depends, Query, Request, Response, status
 from fastapi.concurrency import run_in_threadpool
 
 from app.core.errors import AuthError
-from app.services.actor import ADMIN_ONLY, require_role
+from app.services.actor import STAFF_OR_ADMIN, require_role
 from app.services.product_media import PRODUCT_IMAGE_MAX_BYTES, ProductMediaService
 
 from app.schemas import (
@@ -83,7 +83,7 @@ ProductMedia = Annotated[ProductMediaService, Depends(get_product_media_service)
 @admin_router.post("/product-image-uploads", status_code=status.HTTP_201_CREATED)
 async def stage_product_image(request: Request, actor: CurrentActor, service: ProductMedia):
     """Raw file body. Returns an image URL; catalog changes remain a separate confirmed save."""
-    require_role(actor, *ADMIN_ONLY)  # refuse Staff before reading the body; the Service checks again
+    require_role(actor, *STAFF_OR_ADMIN)  # shared media for products/news/banners; checked again in Service
     declared = request.headers.get("Content-Length", "")
     if declared.isdigit() and int(declared) > PRODUCT_IMAGE_MAX_BYTES:
         raise AuthError(413, "Ảnh sản phẩm tối đa 2 MB.")

@@ -43,11 +43,13 @@ def test_403_roles(api, admin, staff, customer):
     line = api.delivered_line(customer, staff, api.shop())
     created = expect(review(api, customer, line["order_item_id"]), 201)
     expect_forbidden(review(api, staff, line["order_item_id"]))  # only customers write reviews
-    expect_forbidden(api.client.post(f"/admin/reviews/{created['ReviewId']}/hide", headers=staff.headers,
-                                     json={"DeleteReason": "x"}))  # Staff has no review moderation (Stage 4)
+    expect_validation(api.client.post(f"/admin/reviews/{created['ReviewId']}/hide", headers=staff.headers,
+                                      json={"DeleteReason": "  "}), "DeleteReason")
+    expect(api.client.post(f"/admin/reviews/{created['ReviewId']}/hide", headers=staff.headers,
+                           json={"DeleteReason": "x"}), 200)
     expect_forbidden(api.client.post(f"/admin/reviews/{created['ReviewId']}/hide", headers=customer.headers,
                                      json={"DeleteReason": "x"}))
-    expect_forbidden(api.client.get(f"/admin/reviews/{created['ReviewId']}", headers=staff.headers))
+    expect(api.client.get(f"/admin/reviews/{created['ReviewId']}", headers=staff.headers), 200)
 
 
 def test_404_unknown_or_foreign(api, admin, staff, customer, other_customer):

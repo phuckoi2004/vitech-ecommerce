@@ -14,6 +14,7 @@ import { ParentPicker, ProductDeleteDialog } from './ProductDialogs.jsx'
 import { SPECIFICATION_EDITOR, sharedBody, sharedForm, specificationEntries } from '../lib/product-form.js'
 import { ProductButton } from './ProductUi.jsx'
 import StockQuantity from './StockQuantity.jsx'
+import ProductStockDialog from './ProductStockDialog.jsx'
 import RichTextContent from '../../components/shared/RichTextContent.jsx'
 import RichTextEditor from './RichTextEditor.jsx'
 
@@ -70,17 +71,31 @@ function ProductDetailsPage({ item, onClose, onDone, onEdit, onEditShared, onAdd
   </section>
 }
 
-function ProductFormPage({ item, presetProductId, editShared, categories, brands, onClose, onDone }) {
+function ProductFormPage({ item, presetProductId, editShared, categories, brands, onClose, onDone, onStockChanged, onStockRefresh }) {
   const auth = useInternalAuth()
   const [target, setTarget] = useState(presetProductId ? 'existing' : 'new'), [parentId, setParentId] = useState(presetProductId ?? '')
   const [keyword, setKeyword] = useState(''), [page, setPage] = useState(1)
   const [editingShared, setEditingShared] = useState(Boolean(editShared))
+  const [savedStock, setSavedStock] = useState(item?.StockQuantity ?? 0)
+  const [savedSerialTracking, setSavedSerialTracking] = useState(item?.IsSerialTracked ?? false)
+  const [stockDirty, setStockDirty] = useState(false), [stockBusy, setStockBusy] = useState(false), [stockNotice, setStockNotice] = useState('')
+  const canEditStock = Boolean(item) && auth.user?.Role === 'Admin' && auth.permissions.includes('inventory:update')
+  function stockSaved(record) {
+    setSavedStock(record.QuantityAfter)
+    if (typeof record.IsSerialTracked === 'boolean') {
+      setSavedSerialTracking(record.IsSerialTracked)
+      setForm(previous => ({ ...previous, IsSerialTracked: record.IsSerialTracked }))
+    }
+    setStockNotice('Đã cập nhật tồn kho từ ' + record.QuantityBefore + ' thành ' + record.QuantityAfter + '.')
+    onStockChanged?.()
+  }
   const lookup = useAdminQuery('/admin/products', { keyword, page, page_size: 20 }, !item && target === 'existing')
   const parent = useAdminQuery('/admin/products/' + encodeURIComponent(parentId), {}, !item && target === 'existing' && Boolean(parentId))
   const [shared, setShared] = useState(() => sharedForm(item))
   const [galleries, setGalleries] = useState({}), [selections, setSelections] = useState({})
   const [makeDefault, setMakeDefault] = useState(item?.IsDefaultVariant ?? false)
   const [form, setForm] = useState(() => ({ Sku: item?.Sku ?? '', Color: item?.Color ?? '', Storage: item?.Storage ?? '', Price: item?.Price ?? '', MinStockLevel: item?.MinStockLevel ?? 0, IsActive: item?.IsActive ?? true, IsSerialTracked: item?.IsSerialTracked ?? false }))
+  const stockPending = stockDirty || (canEditStock && !editingShared && form.IsSerialTracked !== savedSerialTracking)
   const [busy, setBusy] = useState(false), [uploading, setUploading] = useState(false), [error, setError] = useState(''), [pending, setPending] = useState(null)
   const writing = useRef(false), mounted = useRef(true)
   useEffect(() => { mounted.current = true; return () => { mounted.current = false } }, [])
@@ -117,7 +132,7 @@ function ProductFormPage({ item, presetProductId, editShared, categories, brands
   }
   function submit(event) {
     event.preventDefault()
-    if (busy || uploading || blocked) return
+    if (busy || uploading || blocked || stockBusy || stockPending) return
     let body
     try {
       if (editingShared) body = sharedBody(shared)
@@ -143,13 +158,13 @@ function ProductFormPage({ item, presetProductId, editShared, categories, brands
     <form onSubmit={submit} className="flex flex-col gap-5">
       {(error || lookupsError || parent.error) && <p role="alert" className="m-0 rounded-[10px] bg-admin-red/5 p-3 text-xs text-admin-red">{error || lookupsError || parent.error}</p>}
       {lookupsError && <ProductButton secondary onClick={() => { categories.refresh(); brands.refresh() }}>Thử lại danh mục / thương hiệu</ProductButton>}
-      <fieldset disabled={busy || uploading || Boolean(pending)} className="m-0 min-w-0 border-0 p-0">
+      <fieldset disabled={busy || uploading || stockBusy || Boolean(pending)} className="m-0 min-w-0 border-0 p-0">
         <div className="grid grid-cols-[minmax(0,1fr)_360px] items-start gap-5 max-[1100px]:grid-cols-1">
           <div className="flex min-w-0 flex-col gap-[18px]">
             <section className={CARD + ' flex flex-col gap-3.5'}><h3 className="m-0 text-[15px] font-semibold">Thông tin chung</h3>
               {!item && <div role="radiogroup" aria-label="Cách thêm sản phẩm" className="flex gap-4 text-xs"><label className="flex items-center gap-2"><input type="radio" name="product-target" checked={target === 'new'} onChange={() => setTarget('new')} />Sản phẩm mới</label><label className="flex items-center gap-2"><input type="radio" name="product-target" checked={target === 'existing'} onChange={() => setTarget('existing')} />Biến thể của sản phẩm đã có</label></div>}
               {!item && target === 'existing' && <ParentPicker value={parentId} onChange={setParentId} selected={parent.data} lookup={{ ...lookup, keyword, page, setPage, search: (value) => { setKeyword(value); setPage(1) } }} />}
-              {item && <div className="flex gap-2 text-xs"><button type="button" className={'cursor-pointer rounded-lg px-3 py-2 ' + (!editingShared ? 'bg-admin-soft text-admin-blue' : 'bg-admin-page text-admin-muted')} onClick={() => { setEditingShared(false); setError('') }}>Sửa biến thể</button><button type="button" className={'cursor-pointer rounded-lg px-3 py-2 ' + (editingShared ? 'bg-admin-soft text-admin-blue' : 'bg-admin-page text-admin-muted')} onClick={() => { setEditingShared(true); setError('') }}>Sửa thông tin chung</button></div>}
+              {item && <div className="flex gap-2 text-xs"><button type="button" className={'cursor-pointer rounded-lg px-3 py-2 ' + (!editingShared ? 'bg-admin-soft text-admin-blue' : 'bg-admin-page text-admin-muted')} disabled={stockBusy || stockPending} onClick={() => { setEditingShared(false); setError('') }}>Sửa biến thể</button><button type="button" className={'cursor-pointer rounded-lg px-3 py-2 ' + (editingShared ? 'bg-admin-soft text-admin-blue' : 'bg-admin-page text-admin-muted')} disabled={stockBusy || stockPending} onClick={() => { setEditingShared(true); setError('') }}>Sửa thông tin chung</button></div>}
               <div className="flex w-full max-w-[520px] flex-col gap-3.5">
                 {!editingShared && <label className="flex items-center gap-2 text-xs"><input type="checkbox" aria-label="Biến thể mặc định" checked={newProduct || makeDefault} disabled={newProduct || Boolean(item?.IsDefaultVariant)} onChange={(event) => setMakeDefault(event.target.checked)} />{newProduct ? 'Biến thể đầu tiên là biến thể mặc định' : 'Đặt làm biến thể mặc định của sản phẩm'}</label>}
                 <ProductField id="product-name" label="Tên sản phẩm" required maxLength={255} disabled={!commonEditable} placeholder="Nhập tên sản phẩm" value={common.Name} onChange={(event) => changeShared('Name', event.target.value)} />
@@ -162,22 +177,23 @@ function ProductFormPage({ item, presetProductId, editShared, categories, brands
               <details className="text-xs"><summary className="cursor-pointer text-admin-blue">Thông tin bổ sung</summary><div className="mt-3 flex max-w-[520px] flex-col gap-3.5"><ProductField id="product-warranty" label="Bảo hành (tháng)" type="number" required min={0} step={1} disabled={!commonEditable} value={common.WarrantyMonths} onChange={(event) => changeShared('WarrantyMonths', event.target.value)} /></div></details>
             </section>
             {!editingShared && <VariantImageSelection images={gallery} selected={selectedUrls} defaultUrl={defaultUrl} sku={form.Sku} color={form.Color} onChange={(urls, selectedDefault) => setSelections((previous) => ({ ...previous, [galleryKey]: { urls, defaultUrl: selectedDefault } }))} />}
-            <section className={CARD + ' flex flex-col gap-3.5'}><h3 className="m-0 text-[15px] font-semibold">Giá và tồn kho</h3><div className="grid max-w-[520px] grid-cols-2 gap-3.5"><ProductField id="product-price" label="Giá bán (đồng)" type="number" required min={0} max="9999999999999" step="1" placeholder="Nhập giá bán" disabled={editingShared} value={form.Price} onChange={(event) => change('Price', event.target.value)} /><ProductField id="product-stock" label="Số lượng tồn kho" type="number" readOnly value={item?.StockQuantity ?? 0} /></div><p className="m-0 text-[11px] text-admin-muted">Tồn kho được cập nhật qua nhập hàng; biến thể mới có tồn kho bằng 0.</p><details className="text-xs"><summary className="cursor-pointer text-admin-blue">Thiết lập biến thể</summary><div className="mt-3 flex max-w-[520px] flex-col gap-3"><ProductField id="product-min" label="Ngưỡng cảnh báo tồn" type="number" min={0} step={1} required disabled={editingShared} value={form.MinStockLevel} onChange={(event) => change('MinStockLevel', event.target.value)} /><label className="flex gap-2"><input type="checkbox" disabled={editingShared} checked={form.IsActive} onChange={(event) => change('IsActive', event.target.checked)} />Đang hoạt động</label><label className="flex gap-2"><input type="checkbox" disabled={editingShared} checked={form.IsSerialTracked} onChange={(event) => change('IsSerialTracked', event.target.checked)} />Quản lý Serial / IMEI</label></div></details></section>
+            <section className={CARD + ' flex flex-col gap-3.5'}><h3 className="m-0 text-[15px] font-semibold">Giá và tồn kho</h3><div className="grid max-w-[520px] grid-cols-2 gap-3.5"><ProductField id="product-price" label="Giá bán (đồng)" type="number" required min={0} max="9999999999999" step="1" placeholder="Nhập giá bán" disabled={editingShared} value={form.Price} onChange={(event) => change('Price', event.target.value)} />{canEditStock && !editingShared ? <ProductStockDialog inline item={{ ...item, StockQuantity: savedStock, IsSerialTracked: savedSerialTracking }} serialTracking={form.IsSerialTracked} onResetTracking={() => setForm(previous => ({ ...previous, IsSerialTracked: savedSerialTracking }))} onSaved={stockSaved} onRefresh={onStockRefresh} onDirtyChange={setStockDirty} onBusyChange={setStockBusy} /> : <ProductField id="product-stock" label="Số lượng tồn kho" type="number" readOnly value={savedStock} />}</div><p className="m-0 text-[11px] text-admin-muted">{canEditStock && !editingShared ? 'Nhập số lượng hoặc bấm ▲/▼, sau đó bấm “Lưu tồn kho” trước khi lưu thông tin biến thể.' : 'Tồn kho được cập nhật qua nhập hàng; biến thể mới có tồn kho bằng 0.'}</p>{stockNotice && <p role="status" className="m-0 text-xs text-green-700">{stockNotice}</p>}<details className="text-xs"><summary className="cursor-pointer text-admin-blue">Thiết lập biến thể</summary><div className="mt-3 flex max-w-[520px] flex-col gap-3"><ProductField id="product-min" label="Ngưỡng cảnh báo tồn" type="number" min={0} step={1} required disabled={editingShared} value={form.MinStockLevel} onChange={(event) => change('MinStockLevel', event.target.value)} /><label className="flex gap-2"><input type="checkbox" disabled={editingShared} checked={form.IsActive} onChange={(event) => change('IsActive', event.target.checked)} />Đang hoạt động</label><label className="flex gap-2"><input type="checkbox" disabled={editingShared} checked={form.IsSerialTracked} onChange={(event) => change('IsSerialTracked', event.target.checked)} />Quản lý Serial / IMEI</label></div></details></section>
           </div>
           <aside className="flex min-w-0 flex-col gap-[18px]"><AdminImagePicker title="Bộ ảnh sản phẩm" images={gallery} onChange={changeGallery} disabled={busy || uploading || Boolean(pending) || (!item && !newProduct && !parent.data)} onUploadBusy={setUploading} showDefault={commonEditable} canRemove={(image) => commonEditable || !originalImages.some((original) => original.ImageUrl === image.ImageUrl)} hint={editingShared ? 'Quản lý bộ ảnh chung. Bỏ ảnh ở đây cũng bỏ ảnh đó khỏi các biến thể đang dùng.' : 'Ảnh tải từ máy hoặc thêm bằng đường dẫn được đưa vào bộ ảnh Product và tự chọn cho biến thể này. Bỏ hoặc chọn thêm ở mục “Ảnh của biến thể”.'} /><div className={CARD + ' flex flex-col gap-2 p-[18px]'}><h3 className="m-0 text-sm font-semibold">{item ? 'Lưu ý xử lý' : 'Lưu ý khi thêm mới'}</h3><p className="m-0 text-[11px] leading-normal text-admin-muted">{editingShared ? 'Thay đổi tên, danh mục, thương hiệu, mô tả, bảo hành, trạng thái và bộ ảnh áp dụng cho sản phẩm chung.' : item ? 'SKU, màu sắc, dung lượng, giá và ảnh đã chọn chỉ áp dụng cho biến thể này. Thông tin chung được chỉnh ở “Sửa thông tin chung”.' : 'Mỗi biến thể có một SKU, một màu sắc và những ảnh được chọn từ bộ ảnh Product. Biến thể đầu tiên là mặc định.'}</p></div></aside>
         </div>
       </fieldset>
-      <footer className="flex items-center gap-2.5"><p className="m-0 flex-1 text-[11px] text-admin-muted">{item ? 'Thay đổi được lưu sau khi bạn xác nhận.' : 'Sản phẩm chỉ được tạo sau khi bấm “Thêm sản phẩm”.'}</p><ProductButton secondary className="text-admin-text!" disabled={busy || uploading} onClick={onClose}>Hủy</ProductButton><ProductButton type="submit" loading={busy} disabled={uploading || blocked || Boolean(pending)}>{item ? 'Lưu thay đổi' : 'Thêm sản phẩm'}</ProductButton></footer>
+      <footer className="flex items-center gap-2.5"><p className="m-0 flex-1 text-[11px] text-admin-muted">{item ? 'Thay đổi được lưu sau khi bạn xác nhận.' : 'Sản phẩm chỉ được tạo sau khi bấm “Thêm sản phẩm”.'}</p><ProductButton secondary className="text-admin-text!" disabled={busy || uploading || stockBusy} onClick={onClose}>Hủy</ProductButton><ProductButton type="submit" loading={busy} disabled={uploading || blocked || stockBusy || stockPending || Boolean(pending)}>{item ? 'Lưu thay đổi' : 'Thêm sản phẩm'}</ProductButton></footer>
     </form>
     {pending && <Modal open variant="product-save" className="w-[366px] min-h-[177px]" title="Xác nhận những thay đổi?" busy={busy} onClose={() => setPending(null)}><div className="flex justify-center gap-[43px]"><Button variant="secondary" className="h-[42px]! w-[100px] rounded-[9px]! border-[#dbe3ed]! bg-white! px-0! font-admin! text-sm text-admin-red!" disabled={busy} onClick={() => setPending(null)}>Hủy</Button><Button className="h-[42px]! w-[100px] rounded-[9px]! border-0 bg-admin-red! px-0! font-admin! text-sm text-white" loading={busy} onClick={() => void write(pending)}>Xác nhận</Button></div></Modal>}
   </section>
 }
 
-export default function ProductWorkspace({ mode, variantId, productId, editShared, categories, brands, onClose, onDone, onEdit, onEditShared, onAddVariant, onNew }) {
+export default function ProductWorkspace({ mode, variantId, productId, editShared, categories, brands, onClose, onDone, onEdit, onEditShared, onAddVariant, onNew, onStockChanged }) {
   const detail = useAdminQuery('/admin/catalog-items/' + encodeURIComponent(variantId ?? ''), {}, mode !== 'new')
+  function refreshStock() { detail.refresh(); onStockChanged?.() }
   if (mode !== 'new' && detail.loading) return <LoadingState label="Đang tải sản phẩm…" />
   if (mode !== 'new' && detail.error) return <><ProductButton secondary onClick={onClose}>Quay lại</ProductButton><ErrorState message={detail.error} onRetry={detail.refresh} /></>
   if (mode !== 'new' && !detail.data) return <p role="status">Không tìm thấy sản phẩm. <ProductButton secondary onClick={onClose}>Quay lại</ProductButton></p>
   if (mode === 'view') return <ProductDetailsPage item={detail.data} onClose={onClose} onDone={onDone} onEdit={onEdit} onEditShared={onEditShared} onAddVariant={onAddVariant} onNew={onNew} />
-  return <ProductFormPage item={mode === 'edit' ? detail.data : null} presetProductId={productId} editShared={editShared} categories={categories} brands={brands} onClose={onClose} onDone={onDone} />
+  return <ProductFormPage item={mode === 'edit' ? detail.data : null} presetProductId={productId} editShared={editShared} categories={categories} brands={brands} onClose={onClose} onDone={onDone} onStockChanged={onStockChanged} onStockRefresh={refreshStock} />
 }

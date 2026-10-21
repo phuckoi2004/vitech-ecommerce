@@ -2,7 +2,7 @@ import { ErrorState, LoadingState } from '../../components/shared/index.js'
 import { formatDateTime, formatMoney } from '../../lib/format.js'
 import useOrderWorkflow from '../hooks/useOrderWorkflow.js'
 import { canCancelOrder, orderStatusLabel, PAYMENT_LABELS } from '../lib/orders.js'
-import { releaseOrderSerial, updateOrderNote } from '../services/orders.js'
+import { updateOrderNote } from '../services/orders.js'
 import AdminTable from './AdminTable.jsx'
 import Modal from './Modal.jsx'
 import OrderActionForm from './OrderActionForm.jsx'
@@ -16,7 +16,7 @@ function DetailField({ label, children }) {
 
 export default function OrderDialog({ orderId, initialAction, onClose, onDone }) {
   const workflow = useOrderWorkflow(orderId, initialAction, onDone)
-  const { detail, order, payment, needsSerials, serials, intent, busy, error, notice, canUpdate, next, codDelivery, awaitingPayment, serialItems, blocked, write, assign, choose, reason, collected, setNotice, setCollected } = workflow
+  const { detail, order, payment, needsSerials, serials, intent, busy, error, notice, canUpdate, next, codDelivery, awaitingPayment, serialItems, blocked, write, choose, reason, collected, setNotice } = workflow
   const confirming = canUpdate && Boolean(intent)
   const title = confirming ? intent === 'cancel' ? 'Hủy đơn hàng' : 'Cập nhật trạng thái đơn hàng' : 'Chi tiết đơn hàng'
   const itemColumns = [
@@ -63,8 +63,8 @@ export default function OrderDialog({ orderId, initialAction, onClose, onDone })
       </dl>
       {needsSerials && <section aria-label="Serial/IMEI của đơn" className="flex flex-col gap-3"><h3 className="m-0 text-sm font-semibold">Serial/IMEI của đơn</h3>
         {serials.loading ? <LoadingState label="Đang tải Serial/IMEI…" /> : serials.error ? <ErrorState message={serials.error} onRetry={serials.refresh} /> : <>
-          {serialItems.filter((item) => item.IsSerialTracked).map((item) => <SerialRow key={item.OrderItemId} item={item} busy={busy} editable={canUpdate && order.OrderStatus === 'Processing'} onAssign={assign} onRelease={(number) => write((token) => releaseOrderSerial(token, orderId, number), () => { serials.refresh(); setNotice('Đã gỡ Serial/IMEI.'); setCollected(false) })} />)}
-          {!serialItems.some((item) => item.IsSerialTracked) && <p className="m-0 text-xs text-admin-muted">Các sản phẩm trong đơn không yêu cầu quản lý Serial/IMEI.</p>}
+          {serialItems.map((item) => <SerialRow key={item.OrderItemId} item={item} />)}
+          {!serialItems.length && <p className="m-0 text-xs text-admin-muted">Chưa có sản phẩm trong đơn.</p>}
         </>}
       </section>}
       {!confirming && (canUpdate ? <InternalNote key={order.InternalNote ?? ''} order={order} busy={busy} onSave={(value) => write((token) => updateOrderNote(token, orderId, { InternalNote: value }), () => { detail.refresh(); setNotice('Đã lưu ghi chú nội bộ.') })} /> : <dl className="m-0"><DetailField label="Ghi chú nội bộ">{order.InternalNote}</DetailField></dl>)}

@@ -3,20 +3,17 @@ export const ORDER_PAGE_SIZE = 5
 export const ORDER_STATUSES = [
   ['', 'Tất cả', 'w-20'],
   ['Pending', 'Chờ xác nhận', 'w-[122px]'],
-  ['Confirmed', 'Đã xác nhận', 'w-[112px]'],
   ['Processing', 'Đang xử lý', 'w-[112px]'],
   ['Shipping', 'Đang giao', 'w-[102px]'],
   ['Delivered', 'Đã giao', 'w-[90px]'],
-  ['Completed', 'Hoàn tất', 'w-[88px]'],
   ['Cancelled', 'Đã hủy', 'w-[88px]'],
 ]
 
 export const ORDER_NEXT = {
-  Pending: ['Confirmed', 'Xác nhận đơn'],
-  Confirmed: ['Processing', 'Bắt đầu xử lý'],
-  Processing: ['Shipping', 'Chuyển đang giao'],
-  Shipping: ['Delivered', 'Xác nhận đã giao'],
-  Delivered: ['Completed', 'Hoàn tất'],
+  Pending: ['Processing', 'Xác nhận'],
+  Confirmed: ['Processing', 'Xác nhận'], // Existing records remain actionable without generating this status.
+  Processing: ['Shipping', 'Giao hàng'],
+  Shipping: ['Delivered', 'Giao hoàn tất'],
 }
 
 export const PAYMENT_LABELS = { Pending: 'Chưa thanh toán', Paid: 'Đã thanh toán', Failed: 'Thanh toán thất bại', Refunded: 'Đã hoàn tiền', Cancelled: 'Đã hủy thanh toán' }
@@ -31,7 +28,10 @@ export function orderFilters(params) {
   }
 }
 
-export const orderStatusLabel = (value) => ORDER_STATUSES.find(([status]) => status === value)?.[1] ?? value
+export const orderStatusLabel = (value) => ORDER_STATUSES.find(([status]) => status === value)?.[1] ?? ({ Confirmed: 'Đã xác nhận (cũ)', Completed: 'Hoàn tất' })[value] ?? value
+export const canOperateOrder = (order, auth) => Boolean(order && auth.permissions.includes('orders:update') && (
+  auth.user.Role === 'Admin' || (auth.user.Role === 'Staff' && (order.OrderStatus === 'Pending' || order.AssignedStaffId === auth.user.UserId))
+))
 export const canCancelOrder = (order) => ['Pending', 'Confirmed', 'Processing', 'Shipping'].includes(order.OrderStatus)
 
 // Preserve only list filters in detail/back links; a direct link never supplies an external redirect.

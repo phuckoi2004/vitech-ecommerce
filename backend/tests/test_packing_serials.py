@@ -1,167 +1,183 @@
-"""Gán Serial/IMEI thực tế khi đóng gói (đợt 5.1 nhóm C2).
-
-Fake trong bộ nhớ: khóa dòng chỉ được ghi lại (db.locks); không chứng minh concurrency thật của PostgreSQL.
-"""
-
+"""Automatic immutable order serial allocation; all tests use an isolated in-memory database."""
 import unittest
-import uuid
-
-from app.models import ProductSerial
-from app.schemas import OrderItemSerialAssign, OrderSerialAssign, OrderStatusUpdate
-from app.services import BusinessRuleError, NotFoundError, PermissionDeniedError
-
-from tests.fakes import FakeSession, Factory, InMemoryDB, order_service
-
-
-class PackingTestBase(unittest.TestCase):
-    def setUp(self) -> None:
-        self.db = InMemoryDB()
-        self.session = FakeSession(self.db)
-        self.f = Factory(self.db)
-        self.svc = order_service(self.db, self.session)
-        self.customer = self.f.user()
-        self.staff = self.f.user("Staff")
-        self.cod = self.f.payment_method("COD")
-        self.phone = self.f.variant(stock=5, serial_tracked=True)
-        self.case = self.f.variant(stock=5)
-        self.order = self.f.order(self.customer, self.cod, status="Processing", lines=((self.phone, 2), (self.case, 1)))
-        self.phone_item = next(i for i in self.order.items if i.ProductVariantId == self.phone.ProductVariantId)
-        self.case_item = next(i for i in self.order.items if i.ProductVariantId == self.case.ProductVariantId)
-        self.s = {n: self.serial(n) for n in ("S1", "S2", "S3")}
-
-    def serial(self, number, *, variant=None, status="Available", order_item_id=None):
-        return self.db.add(ProductSerial(ProductVariantId=(variant or self.phone).ProductVariantId, SerialNumber=number,
-                                         Status=status, OrderItemId=order_item_id))
-
-    def assign(self, *numbers, item=None, order=None, by=None):
-        data = OrderSerialAssign(Items=[OrderItemSerialAssign(OrderItemId=(item or self.phone_item).OrderItemId,
-                                                              SerialNumbers=list(numbers))])
-        return self.svc.assign_order_serials(self.f.actor(by or self.staff), (order or self.order).OrderId, data)
-
-    def ship(self, order=None):
-        return self.svc.update_order_status(self.f.actor(self.staff), (order or self.order).OrderId,
-                                            OrderStatusUpdate(OrderStatus="Shipping"))
-
-    def states(self):
-        return {n: (s.Status, s.OrderItemId) for n, s in sorted((s.SerialNumber, s) for s in self.db.rows(ProductSerial))}
+from unittest.mock import Mock
+from app.models import ProductSerial, Order, Notification, ShipmentReturnItem
+from app.schemas import OrderItemSerialAssign, OrderSerialAssign, OrderStatusUpdate, ShipmentReturnReceive, ShipmentReturnItemReceive
+from app.services import BusinessRuleError, ConflictError, PermissionDeniedError
+from tests.test_order import OrderTestBase
+from tests.test_router_flows import flow
 
 
-class AssignTest(PackingTestBase):
-    def test_assign_scanned_serials(self):
-        summary = self.assign(" S1 ", "S2")
-        self.assertEqual((self.s["S1"].Status, self.s["S1"].OrderItemId), ("Reserved", self.phone_item.OrderItemId))
-        self.assertEqual(self.s["S3"].Status, "Available")
-        phone_line = next(l for l in summary if l.OrderItemId == self.phone_item.OrderItemId)
-        self.assertEqual((phone_line.SerialNumbers, phone_line.IsSerialTracked), (["S1", "S2"], True))
+class AutomaticSerialTest(OrderTestBase):
+    def setUp(self):
+        super().setUp()
+        self.phone = self.f.variant(stock=4, serial_tracked=True)
+        self.codes = [self.db.add(ProductSerial(ProductVariantId=self.phone.ProductVariantId,
+                      SerialNumber=f"PHONE-{i}", Status="Available")) for i in range(4)]
 
-    def test_shipping_requires_full_assignment_and_scanning_can_be_incremental(self):
-        self.assign("S1")
-        with self.assertRaises(BusinessRuleError) as ctx:
-            self.ship()
-        self.assertEqual(ctx.exception.code, "order_serials_not_assigned")
-        self.assertEqual(self.order.OrderStatus, "Processing")
-        self.assign("S2")
-        self.assertEqual(self.ship().OrderStatus, "Shipping")
-        self.svc.confirm_cod_delivery(self.f.actor(self.staff), self.order.OrderId)
-        self.assertEqual({self.s["S1"].Status, self.s["S2"].Status}, {"Sold"})  # đúng máy đã quét được bán
+    def checkout(self, quantity=2, customer=None):
+        customer = customer or self.customer
+        self.f.cart_with(customer, (self.phone, quantity))
+        response = self.svc.create_order(self.f.actor(customer), self.order_input(PaymentMethodId=self.cod.PaymentMethodId))
+        return self.db.get(Order, response.OrderId)
 
-    def test_invalid_requests_change_nothing(self):
-        other_order = self.f.order(self.customer, self.cod, status="Processing", lines=((self.phone, 1),))
-        foreign = self.serial("X-1", variant=self.f.variant(stock=1, serial_tracked=True))
-        taken = self.serial("T-1", status="Reserved", order_item_id=other_order.items[0].OrderItemId)
-        for status in ("Sold", "WrittenOff", "Returned", "Warranty"):
-            self.serial(f"Z-{status}", status=status)
-        line = OrderItemSerialAssign
-        cases = [
-            (BusinessRuleError, "too_many_serials", lambda: self.assign("S1", "S2", "S3")),
-            (BusinessRuleError, "serial_variant_mismatch", lambda: self.assign("S1", "X-1")),
-            (BusinessRuleError, "serial_not_available", lambda: self.assign("S1", "T-1")),
-            (NotFoundError, "serial_not_found", lambda: self.assign("S1", "NOPE")),
-            (BusinessRuleError, "duplicate_serial_in_request", lambda: self.assign("S1", "S1")),
-            (BusinessRuleError, "serials_not_allowed", lambda: self.assign("S1", item=self.case_item)),
-            (NotFoundError, "order_item_not_found", lambda: self.assign("S1", item=other_order.items[0])),
-            (BusinessRuleError, "duplicate_assign_line", lambda: self.svc.assign_order_serials(
-                self.f.actor(self.staff), self.order.OrderId, OrderSerialAssign(Items=[
-                    line(OrderItemId=self.phone_item.OrderItemId, SerialNumbers=["S1"]),
-                    line(OrderItemId=self.phone_item.OrderItemId, SerialNumbers=["S2"])]))),
-        ] + [(BusinessRuleError, "serial_not_available", lambda st=st: self.assign("S1", f"Z-{st}"))
-             for st in ("Sold", "WrittenOff", "Returned", "Warranty")]
-        before = self.states()
-        for error, code, call in cases:
-            with self.subTest(code=code), self.assertRaises(error) as ctx:
-                call()
-            self.assertEqual(ctx.exception.code, code)
-            self.assertEqual(self.states(), before)  # không gán dở dang
-        self.assertEqual((taken.Status, foreign.Status), ("Reserved", "Available"))
+    def confirm(self, order):
+        return self.set_status(order.OrderId, "Processing")
 
-    def test_only_while_packing(self):
-        for status in ("Confirmed", "Shipping", "Delivered", "Cancelled"):
-            with self.subTest(status=status):
-                self.order.OrderStatus = status
-                with self.assertRaises(BusinessRuleError) as ctx:
-                    self.assign("S1")
-                self.assertEqual(ctx.exception.code, "order_not_packing")
-        self.assertEqual(self.s["S1"].Status, "Available")
+    def test_confirmation_automatically_allocates_exact_quantity_and_keeps_stock(self):
+        order = self.checkout()
+        self.assertEqual(self.phone.StockQuantity, 2)
+        self.assertTrue(all(s.Status == "Available" for s in self.codes))
+        self.confirm(order)
+        summary = self.svc.get_order_serials(self.f.actor(self.staff), order.OrderId)[0]
+        self.assertEqual(summary.SerialNumbers, ["PHONE-0", "PHONE-1"])
+        self.assertEqual(self.phone.StockQuantity, 2)
+        self.assertTrue(all(s.OrderItemId == order.items[0].OrderItemId for s in self.codes[:2]))
+        names = [n for n, _ in self.db.locks]
+        self.assertIn("ProductVariant", names)
+        self.assertIn("ProductSerial", names)
 
-    def test_two_staff_cannot_assign_the_same_serial(self):
-        second = self.f.order(self.customer, self.cod, status="Processing", lines=((self.phone, 1),))
-        self.db.locks.clear()
-        self.assign("S1")
-        self.assertEqual([name for name, _ in self.db.locks][:1], ["Order"])  # khóa đơn rồi mới khóa serial
-        self.assertIn(("ProductSerial", self.s["S1"].ProductSerialId), self.db.locks)
-        with self.assertRaises(BusinessRuleError) as ctx:  # nhân viên khác chờ khóa rồi thấy serial đã Reserved
-            self.assign("S1", item=second.items[0], order=second)
-        self.assertEqual(ctx.exception.code, "serial_not_available")
-        self.assertEqual(self.s["S1"].OrderItemId, self.phone_item.OrderItemId)
+    def test_other_orders_never_get_a_device_already_reserved(self):
+        first, second = self.checkout(), self.checkout(customer=self.other)
+        self.confirm(first)
+        self.confirm(second)
+        self.assertEqual({s.OrderItemId for s in self.codes}, {first.items[0].OrderItemId, second.items[0].OrderItemId})
+        self.assertTrue(all(s.Status == "Reserved" for s in self.codes))
+        self.assertEqual(self.phone.StockQuantity, 0)
 
-    def test_failure_midway_leaves_no_partial_assignment(self):
-        def broken(order_id):
-            raise RuntimeError("lỗi sau khi ghi")
+    def test_manual_assignment_and_release_rejected_for_both_internal_roles(self):
+        order = self.checkout()
+        self.confirm(order)
+        before = [(s.Status, s.OrderItemId) for s in self.codes]
+        body = OrderSerialAssign(Items=[OrderItemSerialAssign(OrderItemId=order.items[0].OrderItemId,
+                                                             SerialNumbers=["PHONE-3"])])
+        for user in (self.staff, self.admin):
+            for call in (lambda: self.svc.assign_order_serials(self.f.actor(user), order.OrderId, body),
+                         lambda: self.svc.release_order_serial(self.f.actor(user), order.OrderId, "PHONE-0")):
+                with self.subTest(role=user.Role), self.assertRaises(BusinessRuleError) as error:
+                    call()
+                self.assertEqual(error.exception.code, "order_serials_read_only")
+        self.assertEqual(before, [(s.Status, s.OrderItemId) for s in self.codes])
 
-        self.svc._serial_summary = broken
-        before = self.states()
+    def test_customer_cannot_use_serial_endpoints(self):
+        order = self.checkout()
+        with self.assertRaises(PermissionDeniedError):
+            self.svc.release_order_serial(self.f.actor(self.customer), order.OrderId, "PHONE-0")
+
+    def test_codes_are_allocated_before_using_legacy_stock_and_delivery_allows_missing_codes(self):
+        order = self.checkout()
+        for s in self.codes[1:]:
+            s.Status = "WrittenOff"
+        self.confirm(order)
+        self.assertEqual(self.svc.get_order_serials(self.f.actor(self.staff), order.OrderId)[0].SerialNumbers, ['PHONE-0'])
+        self.set_status(order.OrderId, 'Shipping')
+        self.svc.confirm_cod_delivery(self.f.actor(self.staff), order.OrderId)
+        self.assertEqual((order.OrderStatus, self.codes[0].Status, self.phone.StockQuantity), ('Delivered', 'Sold', 2))
+
+    def test_locked_codes_do_not_silently_fall_back_to_legacy_and_failure_rolls_back(self):
+        order = self.checkout()
+        self.svc.serials.list_available_for_update = Mock(return_value=[])
+        before = [(s.Status, s.OrderItemId) for s in self.codes]
+        with self.assertRaises(ConflictError) as error:
+            self.confirm(order)
+        self.assertEqual(error.exception.code, "serial_not_available")
+        self.assertEqual((order.OrderStatus, order.AssignedStaffId), ("Pending", None))
+        self.assertEqual(before, [(s.Status, s.OrderItemId) for s in self.codes])
+        self.assertTrue(all(not n.IsRead for n in self.db.rows(Notification) if n.NotificationType == "NewOrder"))
+
+    def test_second_line_lock_conflict_rolls_back_first_line_assignments(self):
+        other = self.f.variant(stock=1, serial_tracked=True)
+        self.f.cart_with(self.customer, (self.phone, 1), (other, 1))
+        response = self.svc.create_order(self.f.actor(self.customer), self.order_input(PaymentMethodId=self.cod.PaymentMethodId))
+        order = self.db.get(Order, response.OrderId)
+        self.db.add(ProductSerial(ProductVariantId=other.ProductVariantId, SerialNumber='OTHER', Status='Available'))
+        select = self.svc.serials.list_available_for_update
+        last_variant = max(other.ProductVariantId, self.phone.ProductVariantId)
+        self.svc.serials.list_available_for_update = lambda variant_id, **kwargs: [] if variant_id == last_variant else select(variant_id, **kwargs)
+        before = [(s.Status, s.OrderItemId) for s in self.db.rows(ProductSerial)]
+        with self.assertRaises(ConflictError):
+            self.confirm(order)
+        self.assertEqual(before, [(s.Status, s.OrderItemId) for s in self.db.rows(ProductSerial)])
+        self.assertEqual(order.OrderStatus, "Pending")
+
+    def test_entirely_unnumbered_old_stock_can_be_sold(self):
+        order = self.checkout()
+        for serial in self.codes:
+            serial.Status = 'WrittenOff'
+        self.confirm(order)
+        self.assertEqual(self.svc.get_order_serials(self.f.actor(self.staff), order.OrderId)[0].SerialNumbers, [])
+        self.set_status(order.OrderId, 'Shipping')
+        self.svc.confirm_cod_delivery(self.f.actor(self.staff), order.OrderId)
+        self.assertEqual(order.OrderStatus, 'Delivered')
+
+    def test_mixed_shipping_cancellation_preserves_both_kinds_of_returned_devices(self):
+        order = self.checkout()
+        for serial in self.codes[1:]: serial.Status = 'WrittenOff'
+        self.confirm(order)
+        self.set_status(order.OrderId, 'Shipping')
+        self.set_status(order.OrderId, 'Cancelled')
+        rows = self.db.rows(ShipmentReturnItem)
+        self.assertEqual(sorted(r.ExpectedQuantity for r in rows), [1, 1])
+        self.assertEqual(sum(r.ProductSerialId is None for r in rows), 1)
+        self.svc.receive_shipment_return(self.f.actor(self.staff), order.OrderId,
+            ShipmentReturnReceive(Items=[ShipmentReturnItemReceive(OrderItemId=order.items[0].OrderItemId,
+                RestockedQuantity=1, DamagedQuantity=0)], RestockedSerialNumbers=['PHONE-0']))
+        self.assertEqual((self.phone.StockQuantity, self.codes[0].Status), (4, 'Available'))
+
+    def test_flush_failure_rolls_back_allocation_and_confirmation(self):
+        order = self.checkout()
+        self.svc.serials.flush = Mock(side_effect=RuntimeError("write failure"))
         with self.assertRaises(RuntimeError):
-            self.assign("S1", "S2")
-        self.assertEqual(self.states(), before)
+            self.confirm(order)
+        self.assertEqual(order.OrderStatus, "Pending")
+        self.assertTrue(all(s.Status == "Available" and s.OrderItemId is None for s in self.codes))
 
-    def test_only_staff_or_admin(self):
-        with self.assertRaises(PermissionDeniedError):
-            self.assign("S1", by=self.customer)
-        with self.assertRaises(PermissionDeniedError):
-            self.svc.release_order_serial(self.f.actor(self.customer), self.order.OrderId, "S1")
-        with self.assertRaises(PermissionDeniedError):
-            self.svc.get_order_serials(self.f.actor(self.customer), self.order.OrderId)
+    def test_delivery_preserves_order_codes_and_does_not_deduct_stock_again(self):
+        order = self.checkout()
+        self.confirm(order)
+        assigned = self.svc.get_order_serials(self.f.actor(self.staff), order.OrderId)[0].SerialNumbers
+        self.set_status(order.OrderId, "Shipping")
+        self.svc.confirm_cod_delivery(self.f.actor(self.staff), order.OrderId)
+        self.assertEqual(self.phone.StockQuantity, 2)
+        self.assertEqual(self.svc.get_order_serials(self.f.actor(self.staff), order.OrderId)[0].SerialNumbers, assigned)
+        self.assertTrue(all(s.Status == "Sold" and s.OrderItemId == order.items[0].OrderItemId for s in self.codes[:2]))
 
+    def test_cancel_before_shipping_returns_exact_devices_and_stock(self):
+        order = self.checkout()
+        self.confirm(order)
+        self.set_status(order.OrderId, "Cancelled")
+        self.assertEqual(self.phone.StockQuantity, 4)
+        self.assertTrue(all(s.Status == "Available" and s.OrderItemId is None for s in self.codes))
 
-class ReleaseTest(PackingTestBase):
-    def test_release_wrongly_scanned_serial(self):
-        self.assign("S1", "S2")
-        summary = self.svc.release_order_serial(self.f.actor(self.staff), self.order.OrderId, "S2")
-        self.assertEqual((self.s["S2"].Status, self.s["S2"].OrderItemId), ("Available", None))
-        self.assertEqual(next(l for l in summary if l.OrderItemId == self.phone_item.OrderItemId).SerialNumbers, ["S1"])
-        self.assign("S3")  # gán lại đúng máy
-        self.assertEqual(self.ship().OrderStatus, "Shipping")
+    def test_shipping_cancellation_keeps_devices_until_returned(self):
+        order = self.checkout()
+        self.confirm(order)
+        self.set_status(order.OrderId, "Shipping")
+        self.set_status(order.OrderId, "Cancelled")
+        self.assertEqual(self.phone.StockQuantity, 2)
+        self.assertTrue(all(s.Status == "Reserved" for s in self.codes[:2]))
 
-    def test_release_rules(self):
-        other_order = self.f.order(self.customer, self.cod, status="Processing", lines=((self.phone, 1),))
-        self.serial("T-1", status="Reserved", order_item_id=other_order.items[0].OrderItemId)
-        self.assign("S1", "S2")
-        for number, code in (("S3", "serial_not_assigned_to_order"), ("T-1", "serial_not_assigned_to_order")):
-            with self.subTest(number=number), self.assertRaises(BusinessRuleError) as ctx:
-                self.svc.release_order_serial(self.f.actor(self.staff), self.order.OrderId, number)
-            self.assertEqual(ctx.exception.code, code)
-        with self.assertRaises(NotFoundError):
-            self.svc.release_order_serial(self.f.actor(self.staff), self.order.OrderId, "NOPE")
-        self.ship()
-        with self.assertRaises(BusinessRuleError) as ctx:  # đã giao đi: xử lý qua hồ sơ hàng hoàn kho
-            self.svc.release_order_serial(self.f.actor(self.staff), self.order.OrderId, "S1")
-        self.assertEqual(ctx.exception.code, "order_not_packing")
-        self.assertEqual(self.s["S1"].Status, "Reserved")
-
-    def test_unknown_order(self):
-        with self.assertRaises(NotFoundError):
-            self.svc.get_order_serials(self.f.actor(self.staff), uuid.uuid4())
+    def test_legacy_confirmed_orders_get_allocation_when_processing(self):
+        order = self.checkout()
+        order.OrderStatus = "Confirmed"
+        order.AssignedStaffId = self.staff.UserId
+        self.confirm(order)
+        self.assertEqual(sum(s.Status == "Reserved" for s in self.codes), 2)
 
 
-if __name__ == "__main__":
-    unittest.main()
+def test_http_confirmation_allocates_and_all_internal_roles_cannot_change_serials(flow):
+    _, db, factory, as_user = flow
+    customer, staff, admin = factory.user(), factory.user('Staff'), factory.user('Admin')
+    variant = factory.variant(stock=0, serial_tracked=True)
+    order = factory.order(customer, factory.payment_method('COD'), status='Pending', lines=((variant, 1),))
+    serial = db.add(ProductSerial(ProductVariantId=variant.ProductVariantId, SerialNumber='AUTO-HTTP', Status='Available'))
+    base = f'/admin/orders/{order.OrderId}'
+    assert as_user(staff).post(base + '/status', json={'OrderStatus': 'Processing'}).status_code == 200
+    for user in (staff, admin):
+        client = as_user(user)
+        assert client.get(base + '/serials').json()[0]['SerialNumbers'] == ['AUTO-HTTP']
+        assert client.post(base + '/serials', json={'Items': [{
+            'OrderItemId': str(order.items[0].OrderItemId), 'SerialNumbers': ['AUTO-HTTP'],
+        }]}).status_code == 400
+        assert client.delete(base + '/serials/AUTO-HTTP').status_code == 400
+    assert (serial.Status, serial.OrderItemId) == ('Reserved', order.items[0].OrderItemId)

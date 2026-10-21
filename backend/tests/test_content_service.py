@@ -185,7 +185,7 @@ class ArticleTest(ContentTestBase):
                      lambda: self.svc.hide_article(admin, missing)):
             self.assert_error(NotFoundError, "news_article_not_found", call)
 
-    def test_only_admin_manages_articles(self):
+    def test_customers_cannot_manage_articles(self):
         article = self.article()
         rid = article.NewsArticleId
         calls = [
@@ -196,7 +196,7 @@ class ArticleTest(ContentTestBase):
             lambda a: self.svc.admin_list_articles(a),
             lambda a: self.svc.admin_get_article(a, rid),
         ]
-        for user in (self.staff, self.customer):
+        for user in (self.customer,):
             for index, call in enumerate(calls):
                 with self.subTest(role=user.Role, call=index):
                     self.assert_error(PermissionDeniedError, "permission_denied", lambda c=call, u=user: c(self.a(u)))
@@ -316,7 +316,7 @@ class BannerTest(ContentTestBase):
             lambda a: self.svc.admin_list_banners(a),
             lambda a: self.svc.admin_get_banner(a, rid),
         ]
-        for user in (self.staff, self.customer):
+        for user in (self.customer,):
             for index, call in enumerate(calls):
                 with self.subTest(role=user.Role, call=index):
                     self.assert_error(PermissionDeniedError, "permission_denied", lambda c=call, u=user: c(self.a(u)))

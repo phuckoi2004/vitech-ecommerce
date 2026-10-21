@@ -304,7 +304,7 @@ def test_cod_order_delivery_review_status_only_return_and_statistics(pg, team, m
                      'join "Users" u on u."UserId" = c."UserId" where u."Role" = \'Customer\' '
                      'and ci."ProductVariantId" = :v', v=item["variant"]["ProductVariantId"]) == 0
 
-    for target in ("Confirmed", "Processing", "Shipping"):
+    for target in ("Processing", "Shipping"):
         moved = ok(client.post(f"/admin/orders/{order_id}/status", headers=staff, json={"OrderStatus": target}))
         assert moved["OrderStatus"] == target
     # COD cannot be marked Delivered without recording the collection.
@@ -319,7 +319,7 @@ def test_cod_order_delivery_review_status_only_return_and_statistics(pg, team, m
     assert client.post(f"/admin/orders/{order_id}/confirm-cod-delivery", headers=staff, json={}).status_code == 400
     assert Decimal(ok(client.get(f"/admin/orders/{order_id}/cogs", headers=admin))["Cogs"]) == Decimal("140000")
     history = ok(client.get(f"/orders/{order_id}/history", headers=customer))
-    assert len(history) >= 5
+    assert len(history) >= 4
 
     review = ok(client.post("/reviews", headers=customer, json={
         "OrderItemId": line["OrderItemId"], "Rating": 5, "Content": "Máy chạy tốt"}), 201)
@@ -342,9 +342,9 @@ def test_cod_order_delivery_review_status_only_return_and_statistics(pg, team, m
                          ("approve", {"CompensationAmount": "100000.00"}), ("refund", None), ("confirm-refund", None)):
         paused = client.post(f"{base}/{action}", headers=admin, json=body)
         assert paused.status_code == 400 and paused.json()["code"] == "service_workflow_paused", action
-    # The order cannot be completed while its return request is still open.
+    # Delivery already closed the order; there is no separate completion step.
     blocked = client.post(f"/admin/orders/{order_id}/status", headers=staff, json={"OrderStatus": "Completed"})
-    assert blocked.status_code == 400 and blocked.json()["code"] == "order_has_open_returns"
+    assert blocked.status_code == 400 and blocked.json()["code"] == "invalid_status_transition"
     completed_request = ok(client.post(f"{base}/advance", headers=staff, json={"ExpectedStatus": "Processing"}))
     assert completed_request["Status"] == "Completed"
     assert completed_request["CompensationAmount"] is None and completed_request["RefundPaymentTransactionId"] is None
@@ -352,8 +352,8 @@ def test_cod_order_delivery_review_status_only_return_and_statistics(pg, team, m
     payments = ok(client.get(f"/admin/orders/{order_id}/payments", headers=staff))
     assert [(p["TransactionType"], p["Status"]) for p in payments] == [("Payment", "Success")]  # no refund created
 
-    completed = ok(client.post(f"/admin/orders/{order_id}/status", headers=staff, json={"OrderStatus": "Completed"}))
-    assert completed["OrderStatus"] == "Completed" and completed["CompletedAt"]
+    completed = ok(client.get(f"/admin/orders/{order_id}", headers=staff))
+    assert completed["OrderStatus"] == "Delivered" and completed["CompletedAt"]
 
     today = datetime.now(VN).date()
     period = {"date_from": (today - timedelta(days=1)).isoformat(), "date_to": today.isoformat()}
@@ -364,7 +364,7 @@ def test_cod_order_delivery_review_status_only_return_and_statistics(pg, team, m
         "OrderValue": Decimal("230000"), "ShippingFee": Decimal("30000"), "CollectedAmount": Decimal("230000"),
         "RefundedAmount": Decimal("0"), "NetRevenue": Decimal("230000"), "PendingRefundAmount": Decimal("0")}
     orders = ok(client.get("/admin/statistics/orders", headers=staff, params=period))
-    assert orders["Completed"] >= 1
+    assert orders["Delivered"] >= 1
     notifications = ok(client.get("/users/me/notifications/unread-count", headers=customer))
     assert notifications["Count"] > 0
 

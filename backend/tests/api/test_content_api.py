@@ -48,11 +48,11 @@ def test_401_without_token(api):
     expect_unauthorized(api.client.get("/admin/news"))
 
 
-def test_403_content_is_admin_only(api, admin, staff, customer):
+def test_403_customers_are_denied_while_internal_roles_manage_content(api, admin, staff, customer):
     article_id = expect(article(api, admin), 201)["NewsArticleId"]
-    expect_forbidden(article(api, staff))  # Staff has no news permission (Stage 4)
-    expect_forbidden(api.client.post(f"/admin/news/{article_id}/publish", headers=staff.headers))
-    expect_forbidden(banner(api, staff))
+    expect(article(api, staff), 201)
+    expect(api.client.post(f"/admin/news/{article_id}/publish", headers=staff.headers), 200)
+    expect(banner(api, staff), 201)
     expect_forbidden(api.client.get("/admin/news", headers=customer.headers))
 
 

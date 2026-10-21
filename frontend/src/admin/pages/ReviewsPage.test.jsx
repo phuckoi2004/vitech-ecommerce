@@ -183,10 +183,26 @@ test('a lost response is rechecked after closing the error; an already hidden re
   expect(within(dialog).getByRole('button', { name: 'Xác nhận xóa' })).toBeDisabled()
   expect(api.hideReview).toHaveBeenCalledTimes(1)
 })
-test.each([['Staff', permissions], ['Admin', ['admin.portal']]])('%s without admin review access never calls the domain endpoints', async (role, granted) => {
+test.each([['Staff', ['admin.portal']], ['Admin', ['admin.portal']]])('%s without review access never calls the domain endpoints', async (role, granted) => {
   renderPage('/admin/reviews', granted, role)
   await screen.findByText('Không có quyền truy cập')
   expect(api.getAdminData.mock.calls.some(([, path]) => path.startsWith('/admin/'))).toBe(false)
+})
+
+test.each(['Staff', 'Admin'])('%s must enter a reason before deleting a review', async (role) => {
+  reviews = [structuredClone(base)]
+  renderPage('/admin/reviews?dialog=delete&review=r1', permissions, role)
+  const dialog = await screen.findByRole('dialog', { name: 'Xóa đánh giá?' })
+  const reason = await within(dialog).findByRole('textbox', { name: 'Lý do xóa' })
+  const submit = within(dialog).getByRole('button', { name: 'Xác nhận xóa' })
+  expect(submit).toBeDisabled()
+  fireEvent.change(reason, { target: { value: '   ' } })
+  fireEvent.submit(dialog.querySelector('form'))
+  expect(submit).toBeDisabled()
+  expect(api.hideReview).not.toHaveBeenCalled()
+  fireEvent.change(reason, { target: { value: '  Spam nội dung  ' } })
+  fireEvent.click(submit)
+  await waitFor(() => expect(api.hideReview).toHaveBeenCalledWith('access-for-test', 'r1', 'Spam nội dung'))
 })
 test('read errors remain distinct from zero reviews and can be retried', async () => {
   const original = api.getAdminData.getMockImplementation()

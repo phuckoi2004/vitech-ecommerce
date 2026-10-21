@@ -25,6 +25,7 @@ class CancelPendingQrTestBase(PaymentTestBase):
         self.variant = self.f.variant(stock=5, price="100000.00")
         self.order = self.f.order(self.customer, self.qr, status="Pending", payment_status="Pending",
                                   total="100000.00", lines=((self.variant, 1),), ordered_at=NOW)
+        self.order.AssignedStaffId = self.staff.UserId  # Later manually advanced fixtures belong to this operator.
         self.qr_tx = self.db.get(PaymentTransaction,
                                  self.svc.create_qr_payment(self.f.actor(self.customer), self.order.OrderId).PaymentTransactionId)
 

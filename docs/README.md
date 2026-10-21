@@ -57,3 +57,7 @@ Giữ nguyên các biên bản này. Số test đạt, head migration và mô t�
 
 - Đề xuất bổ sung nhận hàng nhiều đợt vào báo cáo: [bản Word](updates/2026-10-20-purchase-receiving-spec.docx) và [bản Markdown](updates/2026-10-20-purchase-receiving-spec.md). Đây là tài liệu đề xuất riêng, chưa thay nội dung báo cáo gốc.
 
+## Bổ sung ngày 21/10/2026
+
+- [Tìm đơn, luồng trạng thái, quyền người phụ trách, thông báo đơn mới và quyền đánh giá/tin tức/banner](updates/2026-10-21-admin-orders-content.md). Bổ sung hiện hành cho 3.26, 3.29 và 3.33–3.36; ghi rõ phần bảo hành/đổi trả giữ lại và giới hạn phía khách.
+

@@ -11,6 +11,8 @@ const api = vi.hoisted(() => ({ getAdminData: vi.fn(), uploadProductImage: vi.fn
 vi.mock('../../services/api/admin.js', () => ({ getAdminData: api.getAdminData }))
 vi.mock('../../services/api/products.js', () => api)
 vi.mock('../services/product-media.js', () => ({ uploadProductImage: api.uploadProductImage }))
+const stockApi = vi.hoisted(() => ({ setStockQuantity: vi.fn() }))
+vi.mock('../services/inventory.js', () => stockApi)
 
 const productId = '12345678-1111-4111-8111-111111111111'
 const variant = { ProductVariantId: 'v1', ProductId: productId, Sku: 'PHONE-256', VariantName: '256GB đen', Price: '10000000.00', StockQuantity: 3, MinStockLevel: 5, Color: 'Đen', Storage: '256GB', IsActive: true, IsSerialTracked: false, IsDeleted: false }
@@ -87,6 +89,89 @@ test.each([
   // Stock quantity shows its own label, so check the badge in the "Trạng thái" field.
   const status = within(detail.getByText('Trạng thái', { selector: 'dt' }).nextElementSibling)
   expect(status.getByText(label)).toHaveClass(color)
+})
+
+test('Admin edits stock directly in the variant input; the misplaced detail button is removed', async () => {
+  seedVariants()
+  stockApi.setStockQuantity.mockImplementation(async (_, id, body) => {
+    const saved = { ...variantDetails.get(id), StockQuantity: body.StockQuantity, IsLowStock: false }
+    variantDetails.set(id, saved)
+    items = items.map((item) => item.ProductVariantId === id ? { ...item, StockQuantity: body.StockQuantity, IsLowStock: false } : item)
+    return { ProductVariantId: id, StockQuantity: body.StockQuantity }
+  })
+  const router = renderPage('/admin/products?dialog=view&variant=v1', [...permissions, 'inventory:update'])
+  const detail = within(await screen.findByRole('region', { name: 'Chi tiết sản phẩm' }))
+  expect(detail.queryByRole('button', { name: 'Điều chỉnh tồn kho' })).not.toBeInTheDocument()
+  fireEvent.click(detail.getByRole('button', { name: 'Sửa chi tiết sản phẩm' }))
+  const form = within(await screen.findByRole('region', { name: 'Cập nhật sản phẩm' }))
+  const quantity = form.getByRole('spinbutton', { name: 'Số lượng tồn kho', exact: true })
+  expect(quantity).not.toHaveAttribute('readonly')
+  fireEvent.click(form.getByRole('button', { name: 'Tăng tồn kho 1' }))
+  expect(quantity).toHaveValue(4)
+  fireEvent.change(quantity, { target: { value: '8' } })
+  fireEvent.change(form.getByLabelText('Mã sản phẩm (SKU)'), { target: { value: 'UNSAVED-SKU' } })
+  expect(form.getByRole('button', { name: 'Lưu thay đổi' })).toBeDisabled()
+  fireEvent.click(form.getByRole('button', { name: 'Lưu tồn kho' }))
+  await screen.findByText('Đã cập nhật tồn kho từ 3 thành 8.')
+  expect(router.state.location.search).toBe('?dialog=edit&variant=v1')
+  expect(quantity).toHaveValue(8)
+  expect(form.getByLabelText('Mã sản phẩm (SKU)')).toHaveValue('UNSAVED-SKU')
+  expect(form.getByRole('button', { name: 'Lưu thay đổi' })).toBeEnabled()
+  expect(api.updateCatalogItem).not.toHaveBeenCalled()
+  expect(stockApi.setStockQuantity).toHaveBeenCalledExactlyOnceWith('access-for-test', 'v1', { StockQuantity: 8, ExpectedStockQuantity: 3 })
+  fireEvent.click(form.getByRole('button', { name: 'Hủy', exact: true }))
+  await screen.findByRole('table')
+  const row = screen.getByRole('button', { name: 'Xem PHONE-256' }).closest('tr')
+  expect(within(row).getAllByRole('cell')[5]).toHaveTextContent('8')
+})
+
+test('ticking tracking immediately requires serials on stock save without saving variant changes or backfilling old stock', async () => {
+  stockApi.setStockQuantity.mockImplementation(async (_, id, body) => ({ ProductVariantId: id, StockQuantity: body.StockQuantity, IsSerialTracked: true }))
+  renderPage('/admin/products?dialog=edit&variant=v1', [...permissions, 'inventory:update'])
+  const form = within(await screen.findByRole('region', { name: 'Cập nhật sản phẩm' }))
+  fireEvent.click(form.getByText('Thiết lập biến thể'))
+  fireEvent.click(form.getByRole('checkbox', { name: 'Quản lý Serial / IMEI' }))
+  fireEvent.click(form.getByRole('button', { name: 'Tăng tồn kho 1' }))
+  fireEvent.click(form.getByRole('button', { name: 'Tăng tồn kho 1' }))
+  fireEvent.click(form.getByRole('button', { name: 'Lưu tồn kho' }))
+  const dialog = within(await screen.findByRole('dialog', { name: 'Nhập Serial/IMEI cho hàng thêm mới' }))
+  expect(stockApi.setStockQuantity).not.toHaveBeenCalled()
+  expect(api.updateCatalogItem).not.toHaveBeenCalled()
+  expect(dialog.getByText(/Cần nhập 2 mã thực tế/)).toBeInTheDocument()
+  fireEvent.change(dialog.getByRole('textbox'), { target: { value: 'NEW-1' } })
+  fireEvent.click(dialog.getByRole('button', { name: 'Xác nhận sửa' }))
+  expect(dialog.getByRole('alert')).toHaveTextContent('đúng 2')
+  expect(stockApi.setStockQuantity).not.toHaveBeenCalled()
+  fireEvent.change(dialog.getByRole('textbox'), { target: { value: 'NEW-1\nNEW-2' } })
+  fireEvent.click(dialog.getByRole('button', { name: 'Xác nhận sửa' }))
+  await screen.findByText('Đã cập nhật tồn kho từ 3 thành 5.')
+  expect(stockApi.setStockQuantity).toHaveBeenCalledExactlyOnceWith('access-for-test', 'v1', {
+    StockQuantity: 5, ExpectedStockQuantity: 3, IsSerialTracked: true, ExpectedIsSerialTracked: false, SerialNumbers: ['NEW-1', 'NEW-2'],
+  })
+  expect(form.getByRole('button', { name: 'Lưu thay đổi' })).toBeEnabled()
+  expect(api.updateCatalogItem).not.toHaveBeenCalled()
+})
+
+test('serial input opens only after increasing stock in the variant editor and does not submit the product form', async () => {
+  variantDetails.set('v1', { ...variantDetails.get('v1'), IsSerialTracked: true })
+  stockApi.setStockQuantity.mockImplementation(async (_, id, body) => ({ ProductVariantId: id, StockQuantity: body.StockQuantity }))
+  renderPage('/admin/products?dialog=edit&variant=v1', [...permissions, 'inventory:update'])
+  const form = within(await screen.findByRole('region', { name: 'Cập nhật sản phẩm' }))
+  fireEvent.click(form.getByRole('button', { name: 'Giảm tồn kho 1' }))
+  fireEvent.click(form.getByRole('button', { name: 'Lưu tồn kho' }))
+  await screen.findByText('Đã cập nhật tồn kho từ 3 thành 2.')
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  fireEvent.click(form.getByRole('button', { name: 'Tăng tồn kho 1' }))
+  fireEvent.click(form.getByRole('button', { name: 'Lưu tồn kho' }))
+  const serialDialog = within(await screen.findByRole('dialog', { name: 'Nhập Serial/IMEI cho hàng thêm mới' }))
+  expect(serialDialog.getAllByRole('textbox')).toHaveLength(1)
+  expect(screen.getByRole('region', { name: 'Cập nhật sản phẩm' }).querySelector('form form')).toBeNull()
+  fireEvent.change(serialDialog.getByRole('textbox', { name: 'Serial/IMEI' }), { target: { value: 'NEW-REAL-1' } })
+  fireEvent.click(serialDialog.getByRole('button', { name: 'Xác nhận sửa' }))
+  await screen.findByText('Đã cập nhật tồn kho từ 2 thành 3.')
+  expect(stockApi.setStockQuantity).toHaveBeenNthCalledWith(1, 'access-for-test', 'v1', { StockQuantity: 2, ExpectedStockQuantity: 3 })
+  expect(stockApi.setStockQuantity).toHaveBeenNthCalledWith(2, 'access-for-test', 'v1', { StockQuantity: 3, ExpectedStockQuantity: 2, SerialNumbers: ['NEW-REAL-1'] })
+  expect(api.updateCatalogItem).not.toHaveBeenCalled()
 })
 
 describe('product variant list', () => {

@@ -5,12 +5,12 @@ trường/trạng thái hiện có; chỉ hiển thị nội dung đang hoạt �
 xuất bản), docs/database-schema.md 3.35–3.36.
 
 Tin tức (Status: Draft = nháp, Published = đã đăng, Hidden = đã ẩn):
-- Chỉ Admin tạo/sửa/đổi trạng thái và xem bài chưa đăng. Form lưu nội dung + Status nguyên khối; mặc định tạo Draft.
+- Staff/Admin tạo/sửa/đổi trạng thái và xem bài chưa đăng. Form lưu nội dung + Status nguyên khối; mặc định tạo Draft.
 - Đăng: Draft/Hidden → Published; PublishedAt = thời điểm đăng lần đầu (đăng lại sau khi ẩn giữ nguyên PublishedAt).
 - Ẩn: Published → Hidden. Không đưa bài đã đăng về Draft, không hẹn giờ đăng.
 - Công khai (không cần đăng nhập): chỉ bài Published, xem theo Slug.
 Banner:
-- Chỉ Admin tạo/sửa/kích hoạt/ngừng và xem toàn bộ. Form lưu nội dung + IsActive nguyên khối; mặc định tạo true.
+- Staff/Admin tạo/sửa/kích hoạt/ngừng và xem toàn bộ. Form lưu nội dung + IsActive nguyên khối; mặc định tạo true.
 - Công khai: IsActive và thời điểm hiện tại nằm trong [StartDate, EndDate] (mốc để trống = không giới hạn; cùng quy
   ước với khuyến mãi), sắp theo DisplayOrder. Xóa chỉ thực hiện qua lệnh xóa riêng.
 Kiểm tra dữ liệu (kỹ thuật): Title/Slug/Content không rỗng; Slug không chứa khoảng trắng, không trùng (UNIQUE);
@@ -44,7 +44,7 @@ from app.schemas import (
 )
 from app.schemas.content import NewsArticleViewResponse
 
-from .actor import ADMIN_ONLY, Actor, require_role
+from .actor import STAFF_OR_ADMIN, Actor, require_role
 from .base import BaseService, utc_now
 from .exceptions import BusinessRuleError, ConflictError, NotFoundError
 
@@ -97,7 +97,7 @@ class ContentService(BaseService):
     def admin_list_articles(
         self, actor: Actor, *, status: str | None = None, page: int = 1, page_size: int = 20
     ) -> PageResponse[AdminNewsArticleSummary]:
-        require_role(actor, *ADMIN_ONLY)
+        require_role(actor, *STAFF_OR_ADMIN)
         if status is not None and status not in NEWS_ARTICLE_STATUSES:
             raise BusinessRuleError("Trạng thái bài viết không hợp lệ", code="invalid_article_status")
         offset, limit = self._page_args(page, page_size)
@@ -110,12 +110,12 @@ class ContentService(BaseService):
         )
 
     def admin_get_article(self, actor: Actor, article_id: uuid.UUID) -> AdminNewsArticleResponse:
-        require_role(actor, *ADMIN_ONLY)
+        require_role(actor, *STAFF_OR_ADMIN)
         return AdminNewsArticleResponse.model_validate(self._get_article(article_id))
 
     def create_article(self, actor: Actor, data: NewsArticleCreate) -> AdminNewsArticleResponse:
         """Admin tạo nội dung cùng trạng thái; ngày đăng lấy từ thời gian server."""
-        require_role(actor, *ADMIN_ONLY)
+        require_role(actor, *STAFF_OR_ADMIN)
         raw = _allowed(data, ARTICLE_FIELDS, code="article_field_not_allowed")
         target = raw.pop("Status", ARTICLE_DRAFT)
         values = self._article_values(raw, creating=True)
@@ -130,7 +130,7 @@ class ContentService(BaseService):
 
     def update_article(self, actor: Actor, article_id: uuid.UUID, data: NewsArticleUpdate) -> AdminNewsArticleResponse:
         """Lock and save content + optional status in one transaction; a failure rolls back both."""
-        require_role(actor, *ADMIN_ONLY)
+        require_role(actor, *STAFF_OR_ADMIN)
         raw = _allowed(data, ARTICLE_FIELDS, code="article_field_not_allowed")
         has_status = "Status" in raw
         target = raw.pop("Status", None)
@@ -149,7 +149,7 @@ class ContentService(BaseService):
 
     def publish_article(self, actor: Actor, article_id: uuid.UUID) -> AdminNewsArticleResponse:
         """Đăng bài: Draft/Hidden → Published. PublishedAt = thời điểm đăng lần đầu (đăng lại giữ nguyên)."""
-        require_role(actor, *ADMIN_ONLY)
+        require_role(actor, *STAFF_OR_ADMIN)
         with self.transaction():
             article = self._lock_article(article_id)
             if article.Status not in PUBLISHABLE_STATUSES:
@@ -162,7 +162,7 @@ class ContentService(BaseService):
 
     def hide_article(self, actor: Actor, article_id: uuid.UUID) -> AdminNewsArticleResponse:
         """Ẩn bài đang đăng: Published → Hidden (không xóa, giữ PublishedAt)."""
-        require_role(actor, *ADMIN_ONLY)
+        require_role(actor, *STAFF_OR_ADMIN)
         with self.transaction():
             article = self._lock_article(article_id)
             if article.Status != ARTICLE_PUBLISHED:
@@ -173,7 +173,7 @@ class ContentService(BaseService):
 
     def delete_article(self, actor: Actor, article_id: uuid.UUID) -> None:
         """Admin explicitly deletes an article; storage files and the author's account remain intact."""
-        require_role(actor, *ADMIN_ONLY)
+        require_role(actor, *STAFF_OR_ADMIN)
         with self.transaction():
             article = self._lock_article(article_id)
             self.articles.delete(article)
@@ -188,16 +188,16 @@ class ContentService(BaseService):
     # ================================================================== Banner: Admin
 
     def admin_list_banners(self, actor: Actor, *, is_active: bool | None = None) -> list[AdminBannerResponse]:
-        require_role(actor, *ADMIN_ONLY)
+        require_role(actor, *STAFF_OR_ADMIN)
         return [AdminBannerResponse.model_validate(b) for b in self.banners.list_banners(is_active=is_active)]
 
     def admin_get_banner(self, actor: Actor, banner_id: uuid.UUID) -> AdminBannerResponse:
-        require_role(actor, *ADMIN_ONLY)
+        require_role(actor, *STAFF_OR_ADMIN)
         return AdminBannerResponse.model_validate(self._get_banner(banner_id))
 
     def create_banner(self, actor: Actor, data: BannerCreate) -> AdminBannerResponse:
         """Admin creates the banner and selected availability together, with no temporary public state."""
-        require_role(actor, *ADMIN_ONLY)
+        require_role(actor, *STAFF_OR_ADMIN)
         raw = _allowed(data, BANNER_FIELDS, code="banner_field_not_allowed")
         active = raw.pop("IsActive", True)
         values = self._banner_values(raw, creating=True)
@@ -210,7 +210,7 @@ class ContentService(BaseService):
 
     def update_banner(self, actor: Actor, banner_id: uuid.UUID, data: BannerUpdate) -> AdminBannerResponse:
         """Admin saves content, time window and optional IsActive in a single transaction."""
-        require_role(actor, *ADMIN_ONLY)
+        require_role(actor, *STAFF_OR_ADMIN)
         raw = _allowed(data, BANNER_FIELDS, code="banner_field_not_allowed")
         has_active = "IsActive" in raw
         active = raw.pop("IsActive", None)
@@ -234,7 +234,7 @@ class ContentService(BaseService):
 
     def delete_banner(self, actor: Actor, banner_id: uuid.UUID) -> None:
         """Admin deletes only the selected banner; storage images and creator remain intact."""
-        require_role(actor, *ADMIN_ONLY)
+        require_role(actor, *STAFF_OR_ADMIN)
         with self.transaction():
             banner = self._lock_banner(banner_id)
             self.banners.delete(banner)
@@ -259,7 +259,7 @@ class ContentService(BaseService):
         return active
 
     def _set_banner_active(self, actor: Actor, banner_id: uuid.UUID, active: bool) -> AdminBannerResponse:
-        require_role(actor, *ADMIN_ONLY)
+        require_role(actor, *STAFF_OR_ADMIN)
         with self.transaction():
             banner = self._lock_banner(banner_id)
             if banner.IsActive == active:

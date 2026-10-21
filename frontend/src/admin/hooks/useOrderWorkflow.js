@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import useInternalAuth from '../../hooks/useInternalAuth.js'
 import useAdminQuery from './useAdminQuery.js'
-import { canCancelOrder, ORDER_NEXT, orderStatusLabel, parseSerialNumbers, PAYMENT_LABELS } from '../lib/orders.js'
-import { assignOrderSerials, confirmCodDelivery, updateOrderStatus } from '../services/orders.js'
+import { canCancelOrder, canOperateOrder, ORDER_NEXT, orderStatusLabel, PAYMENT_LABELS } from '../lib/orders.js'
+import { confirmCodDelivery, updateOrderStatus } from '../services/orders.js'
 
 // Shared by the full detail page and quick actions: one set of payment, serial and status rules.
 export default function useOrderWorkflow(orderId, initialAction, onDone) {
@@ -12,7 +12,7 @@ export default function useOrderWorkflow(orderId, initialAction, onDone) {
   const payment = useAdminQuery('/payment-methods/' + encodeURIComponent(order?.PaymentMethodId ?? ''), {}, Boolean(order?.PaymentMethodId))
   const needsSerials = Boolean(order && ['Processing', 'Shipping', 'Delivered', 'Completed'].includes(order.OrderStatus))
   const serials = useAdminQuery('/admin/orders/' + encodeURIComponent(orderId) + '/serials', {}, needsSerials)
-  const [intent, setIntent] = useState(initialAction)
+  const [requestedIntent, setIntent] = useState(initialAction)
   const [note, setNote] = useState('')
   const [reason, setReason] = useState('')
   const [collected, setCollected] = useState(false)
@@ -22,8 +22,9 @@ export default function useOrderWorkflow(orderId, initialAction, onDone) {
   const writing = useRef(false)
   const mounted = useRef(true)
   useEffect(() => { mounted.current = true; return () => { mounted.current = false } }, [])
-  const canUpdate = auth.permissions.includes('orders:update')
+  const canUpdate = canOperateOrder(order, auth)
   const next = order ? ORDER_NEXT[order.OrderStatus] : null
+  const intent = canUpdate && (requestedIntent === 'advance' ? Boolean(next) : requestedIntent === 'cancel' && canCancelOrder(order)) ? requestedIntent : null
   const cod = payment.data?.Code === 'COD'
   const codDelivery = order?.OrderStatus === 'Shipping' && cod
   // A transfer (non-COD) order is confirmed only once paid (backend OrderService: order_not_paid); COD before collection.
@@ -40,7 +41,6 @@ export default function useOrderWorkflow(orderId, initialAction, onDone) {
     if (payment.loading || !payment.data) blocked = 'Cần tải được phương thức thanh toán trước khi chuyển trạng thái.'
     else if (order.OrderStatus === 'Processing') {
       if (serials.loading || !Array.isArray(serials.data)) blocked = 'Cần tải được danh sách Serial/IMEI trước khi giao hàng.'
-      else if (serialItems.some((item) => item.IsSerialTracked && item.SerialNumbers.length !== item.Quantity)) blocked = 'Cần gán đủ Serial/IMEI thực tế cho các sản phẩm trước khi giao hàng.'
       else if (!cod && order.PaymentStatus !== 'Paid') blocked = 'Đơn thanh toán trực tuyến phải được thanh toán trước khi giao hàng.'
     } else if (cod && order.PaymentStatus !== 'Pending') blocked = 'Trạng thái thanh toán hiện tại không cho phép xác nhận thu tiền COD.'
   }
@@ -51,10 +51,11 @@ export default function useOrderWorkflow(orderId, initialAction, onDone) {
     setBusy(true); setError(''); setNotice('')
     try {
       const result = await auth.withAccessToken(call)
+      window.dispatchEvent(new Event('admin-order-updated'))
       if (mounted.current) after?.(result)
       return true
     } catch (failure) {
-      if (mounted.current) setError(failure.message)
+      if (mounted.current) { setError(failure.message); detail.refresh() }
       return false
     } finally {
       writing.current = false
@@ -76,15 +77,6 @@ export default function useOrderWorkflow(orderId, initialAction, onDone) {
     }
   }
 
-  function assign(item, text) {
-    let numbers
-    try {
-      numbers = parseSerialNumbers(text)
-      if (numbers.length + item.SerialNumbers.length > item.Quantity) throw new Error('Số Serial/IMEI vượt quá số lượng sản phẩm của dòng đơn.')
-    } catch (failure) { setError(failure.message); return false }
-    return write((token) => assignOrderSerials(token, orderId, { Items: [{ OrderItemId: item.OrderItemId, SerialNumbers: numbers }] }), () => { serials.refresh(); setNotice('Đã gán Serial/IMEI.'); setCollected(false) })
-  }
-
   function choose(action) { setIntent(action); setError(''); setNote(''); setReason(''); setCollected(false) }
-  return { detail, order, payment, needsSerials, serials, intent, note, reason, collected, busy, error, notice, canUpdate, next, codDelivery, awaitingPayment, serialItems, blocked, write, submitStatus, assign, choose, setNote, setReason, setCollected, setNotice }
+  return { detail, order, payment, needsSerials, serials, intent, note, reason, collected, busy, error, notice, canUpdate, next, codDelivery, awaitingPayment, serialItems, blocked, write, submitStatus, choose, setNote, setReason, setCollected, setNotice }
 }

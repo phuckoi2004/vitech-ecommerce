@@ -440,3 +440,41 @@ Luồng đổi trả hiện hành không bắt kiểm tra thiệt hại, duyệt
 - Hai màn hình báo cáo có lựa chọn từng tháng trong 12 tháng của năm hoặc 5 tháng gần nhất. Từng tháng hiển thị một cột, 5 tháng hiển thị 5 cột; nhãn là tháng cụ thể. Bộ lọc tác động đồng thời biểu đồ và bảng; kỳ bảng là tháng/năm, không chia tuần.
 - Tạm bỏ lọc tài khoản, lọc nhà cung cấp và xuất báo cáo trên UI. Không suy ra giá trị bằng 0 khi API báo lỗi.
 - Báo cáo doanh số theo sản phẩm dùng OrderItems.LineTotal của đơn Delivered/Completed theo DeliveredAt, có giao dịch Payment Success; không tính lặp doanh số khi một đơn có nhiều giao dịch. Báo cáo này không đồng nghĩa mọi chỉ số doanh thu thuần của StatisticsService: phí giao, hoàn tiền và giá vốn cần phân biệt theo từng API.
+
+
+## Bổ sung ngày 21/10/2026 — đơn hàng và nội dung admin
+
+- `GET /admin/orders?keyword=...`: tìm chuỗi liên tiếp trong mã đơn, tên tài khoản khách hoặc SĐT tài khoản, tối đa 255 ký tự. Bộ lọc cũ vẫn dùng được; không thêm tham số này vào API danh sách đơn của khách.
+- POST đổi trạng thái dùng luồng mới `Pending → Processing → Shipping → Delivered` và đóng tại Delivered. COD vẫn qua `confirm-cod-delivery`; ghi doanh số và thời điểm đóng cùng giao dịch giao hàng thành công.
+- Người xác nhận đầu tiên sở hữu bước tiếp theo; Admin có thể làm thay. Không cho PATCH thay người phụ trách để lách quyền. Các giá trị Confirmed/Completed cũ được giữ để đọc lịch sử.
+- Tạo đơn gửi `NewOrder` cho Staff/Admin; mỗi người đọc riêng. Xác nhận/hủy đơn giải quyết thông báo NewOrder của tất cả người nhận trong cùng giao dịch. Tham chiếu mở thẳng `/admin/orders/{id}`.
+- Các API đánh giá nội bộ, tin tức và banner cho Staff/Admin; `ReviewDeleteRequest.DeleteReason` bắt buộc, không trắng, tối đa 2.000 ký tự. API tin tức nội bộ trả thêm `CreatedByName`.
+- API `POST /admin/product-image-uploads` cho Staff/Admin để dùng kho ảnh chung cho tin tức/banner; chỉ tải file, không cấp quyền sửa catalog.
+
+Phạm vi, phần giữ lại và kết quả xác minh: [bản bổ sung](updates/2026-10-21-admin-orders-content.md).
+
+### Bổ sung tiếp 21/10/2026 — sửa chay số tồn trong chi tiết sản phẩm
+
+`PATCH /admin/variants/{variant_id}/stock` chỉ Admin: body `{"StockQuantity": 8, "ExpectedStockQuantity": 3}` đặt số tồn từ giá trị đang hiển thị 3 thành 8. Hai trường là số nguyên thực sự, không âm, tối đa 2.147.483.647. Trả `{"ProductVariantId": "...", "StockQuantity": 8}`. Không tạo lịch sử/phiếu điều chỉnh, không đổi giá vốn.
+
+409 `stock_quantity_changed` khi số tồn đã khác số cũ, phải tải lại trước khi sửa. 400 `serial_stock_edit_not_enabled` với biến thể đang quản lý Serial/IMEI (người dùng yêu cầu giữ phần Serial chờ thống nhất). 403 cho Staff/Customer; 404 cho biến thể không có/đã xóa. Các API điều chỉnh kho có lịch sử cũ vẫn giữ nguyên và không được dùng bởi nút sửa chay này.
+
+### Quyết định bổ sung 21/10/2026 — tự gán Serial và chỉnh tồn có Serial
+
+Phần này cập nhật giới hạn Serial của mục ngay trước, giữ mục cũ làm lịch sử quyết định:
+
+- Xác nhận đơn sang Processing tự chọn Serial Available chưa gắn đơn, đổi Reserved và gắn OrderItemId trong cùng giao dịch đổi trạng thái. Thiếu mã trả 400 `insufficient_available_serials`; mọi phần được hoàn tác. Delivered đổi mã sang Sold, giữ liên kết và không trừ tồn lần nữa.
+- `GET /admin/orders/{id}/serials` trả mã do hệ thống gán. `POST /admin/orders/{id}/serials` và `DELETE /admin/orders/{id}/serials/{number}` không còn cho phép sửa, service trả 400 `order_serials_read_only` cho cả Staff/Admin có quyền xử lý đơn. Customer/nhân viên không phụ trách vẫn bị chặn quyền trước đó.
+- `PATCH /admin/variants/{id}/stock` mở cho cả biến thể IsSerialTracked=true, chỉ Admin. Tăng từ 3 lên 5 gửi `{"StockQuantity":5,"ExpectedStockQuantity":3,"SerialNumbers":["REAL-1","REAL-2"]}`. Mỗi máy thêm cần một mã mới, không trùng. Sai số lượng: 400 `serial_count_mismatch`; mã đã tồn tại: 409 `serial_exists`; chuỗi rỗng/quá 100 ký tự: 422. Lỗi không lưu số lượng hoặc một phần Serial.
+- Giảm tồn không gửi mã, hệ thống chọn ngẫu nhiên đúng số mã Available chưa gắn đơn và chuyển WrittenOff. Không xóa bản ghi, không lấy mã đang giữ/đã bán. Không cho gửi mã khi giảm tồn hoặc khi biến thể không quản lý Serial.
+- Vẫn dùng ExpectedStockQuantity và khóa biến thể; dữ liệu Available/StockQuantity/đơn chưa gán mã không khớp trả 409 `serial_stock_mismatch`. Không tạo StockAdjustments hay đổi giá vốn. Không tự thay IsSerialTracked, không đổi schema và không cập nhật dữ liệu thật.
+
+### Cập nhật tiếp 21/10/2026 — checkbox và tồn cũ không Serial
+
+Quyết định mới thay điều kiện bắt đủ mã cho toàn bộ tồn của các mục trước:
+
+- PATCH `/admin/variants/{id}/stock` nhận thêm IsSerialTracked và ExpectedIsSerialTracked tùy chọn. Ví dụ từ 10 máy không mã tăng lên 12 và bật yêu cầu Serial: `{"StockQuantity":12,"ExpectedStockQuantity":10,"IsSerialTracked":true,"ExpectedIsSerialTracked":false,"SerialNumbers":["NEW-1","NEW-2"]}`. Chỉ hai máy mới cần mã; không bắt bù mười mã cũ. Trả thêm IsSerialTracked bên cạnh ProductVariantId/StockQuantity.
+- Cờ, số tồn và mã mới lưu trong một giao dịch. Cờ đã khác ExpectedIsSerialTracked trả 409 `serial_tracking_changed`; số tồn đã khác vẫn là 409 `stock_quantity_changed`. Thiếu mã mới là 400 `serial_count_mismatch`, mã đã tồn tại là 409 `serial_exists`; không lưu dở cờ hoặc số lượng.
+- Giảm tồn tự trừ phần không mã trước, chỉ loại ngẫu nhiên mã Available chưa gắn đơn khi phần không mã không đủ. Cho phép số Serial nhỏ hơn số máy để giữ tồn cũ; chặn trường hợp số mã vượt số máy. Số lượng đã giữ cho Pending/Confirmed nhưng chưa gán mã được tính riêng; Processing/Shipping đã xác nhận không còn nằm trong nhóm máy chưa phân cho đơn.
+- Xác nhận đơn ưu tiên mã khả dụng có sẵn, phần còn lại được bán không mã. GET `/admin/orders/{id}/serials` trả đúng các mã thực có trong SerialNumbers, có thể ít hơn Quantity hoặc rỗng. Không thêm chuỗi rỗng/mã giả vào API; frontend giữ nhãn Serial/IMEI: và để giá trị trống. Shipping không bắt nhập bù mã cho hàng cũ.
+- Mã vẫn chỉ đọc với NV/QTV. Hủy khi đang giao và nhận lại hàng hỗ trợ cùng dòng đơn có cả phần có mã và không mã. Không sửa CSDL/migration, không tự bật hàng loạt, không đổi quy tắc giá vốn hoặc tạo lịch sử điều chỉnh.

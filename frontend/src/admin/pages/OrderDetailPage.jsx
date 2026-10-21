@@ -11,7 +11,7 @@ import OrderStatusModal from '../components/OrderStatusModal.jsx'
 import { ProductButton } from '../components/ProductUi.jsx'
 import useOrderWorkflow from '../hooks/useOrderWorkflow.js'
 import { canCancelOrder, orderListSearch, orderStatusLabel, PAYMENT_LABELS } from '../lib/orders.js'
-import { releaseOrderSerial, updateOrderNote } from '../services/orders.js'
+import { updateOrderNote } from '../services/orders.js'
 
 const CARD = 'min-w-0 rounded-[14px] border border-admin-border bg-white px-[18px] py-4'
 const TITLE = 'm-0 text-[15px] leading-[normal] font-semibold'
@@ -27,7 +27,7 @@ export default function OrderDetailPage() {
   const [extraOpen, setExtraOpen] = useState(false)
   const { onSubPage } = useOutletContext() ?? {}
   const workflow = useOrderWorkflow(orderId, null, statusDone)
-  const { detail, order, payment, needsSerials, serials, serialItems, canUpdate, next, awaitingPayment, blocked, busy, error, notice, intent, write, assign, choose, setNotice, setCollected } = workflow
+  const { detail, order, payment, needsSerials, serials, serialItems, canUpdate, next, awaitingPayment, blocked, busy, error, notice, intent, write, choose, setNotice } = workflow
   useEffect(() => {
     onSubPage?.(order?.OrderCode ?? null)
     return () => onSubPage?.(null)
@@ -64,8 +64,8 @@ export default function OrderDetailPage() {
           </section>
           {needsSerials && <section aria-label="Serial/IMEI của đơn" className={CARD + ' flex flex-col gap-3'}><h3 className={TITLE}>Serial/IMEI của đơn</h3>
             {serials.loading ? <LoadingState label="Đang tải Serial/IMEI…" /> : serials.error ? <ErrorState message={serials.error} onRetry={serials.refresh} /> : <>
-              {serialItems.filter((item) => item.IsSerialTracked).map((item) => <SerialRow key={item.OrderItemId} item={item} busy={busy} editable={canUpdate && order.OrderStatus === 'Processing'} onAssign={assign} onRelease={(number) => write((token) => releaseOrderSerial(token, orderId, number), () => { serials.refresh(); setNotice('Đã gỡ Serial/IMEI.'); setCollected(false) })} />)}
-              {!serialItems.some((item) => item.IsSerialTracked) && <p className="m-0 text-xs text-admin-muted">Các sản phẩm trong đơn không yêu cầu quản lý Serial/IMEI.</p>}
+              {serialItems.map((item) => <SerialRow key={item.OrderItemId} item={item} />)}
+              {!serialItems.length && <p className="m-0 text-xs text-admin-muted">Chưa có sản phẩm trong đơn.</p>}
             </>}
           </section>}
         </div>

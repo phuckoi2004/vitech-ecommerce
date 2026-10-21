@@ -5,7 +5,9 @@ Quyết định đã chốt:
 - Coupon chỉ giảm trên các dòng thuộc Product/Category được gán cho Promotion (Promotion không gán
   gì = toàn đơn); tiền giảm phân bổ theo tỷ lệ vào OrderItems.DiscountAmount.
 - Customer chỉ tự hủy khi đơn Pending.
-- Staff/Admin chuyển trạng thái tuần tự từng bước; Cancelled chỉ trước Delivered
+- Luồng admin: Pending → Processing → Shipping → Delivered (đóng đơn).
+  Người xác nhận đầu tiên là AssignedStaffId; Staff khác chỉ xem, Admin được can thiệp.
+  Cancelled chỉ trước Delivered
   (sau Delivered dùng ReturnRequest).
 - Hủy đơn trước Shipping (hàng còn trong kho): hoàn tồn kho, nhả Serial/IMEI đang giữ ngay.
   Hủy khi đang Shipping (giao thất bại, hàng ở bên vận chuyển): KHÔNG hoàn tồn; mở hồ sơ ShipmentReturns chờ hàng
@@ -21,15 +23,14 @@ Quyết định đã chốt:
   trong cùng transaction). Chuyển trạng thái thông thường không được đưa đơn COD sang Delivered.
   Phương thức khác COD: phải Paid mới được chuyển Shipping
   (PaymentStatus Paid do PaymentService ghi nhận khi có xác nhận thanh toán).
-- Serial/IMEI: KHÔNG tự chọn serial. Khi đóng gói (Processing), Staff quét/chọn serial của thiết bị thực tế
-  (``assign_order_serials``: Available → Reserved, gắn OrderItemId; ``release_order_serial`` gỡ serial gán nhầm);
-  chỉ chuyển Shipping khi mọi dòng quản lý serial đã gán đủ. Delivered → Sold + thời hạn bảo hành theo
+- Serial/IMEI: ưu tiên mã Available chưa gắn đơn khi xác nhận sang Processing; giữ Reserved + OrderItemId.
+  NV/QTV chỉ xem mã, không được gán/gỡ thủ công (các endpoint cũ trả order_serials_read_only);
+  Phần tồn cũ không mã không bị bắt nhập bù hay chặn giao hàng. Delivered → Sold + thời hạn bảo hành theo
   ``warranty_period``: bắt đầu = ngày lịch Việt Nam của thời điểm Delivered (UTC), hết hạn = bắt đầu + WarrantyMonths
   (OrderItems, chụp lúc mua) − 1 ngày (vượt cuối tháng đích thì lấy ngày cuối tháng); 0 tháng = không bảo hành.
-- Completed → cập nhật Users.TotalSpent/TotalOrders và Products.SoldQuantity (số liệu lịch sử theo giá trị đơn, cộng
+- Delivered → cập nhật Users.TotalSpent/TotalOrders và Products.SoldQuantity (số liệu lịch sử theo giá trị đơn, cộng
   một lần; trả hàng/hoàn tiền không điều chỉnh — chưa có quyết định về số liệu thuần).
-  Không chuyển Completed khi đơn còn yêu cầu đổi/trả đang xử lý (RETURN_OPEN_STATUSES, đợt 5.9); ReturnService khóa
-  Order trước khi tạo/chuyển trạng thái yêu cầu nên kiểm tra dưới khóa Order là nhất quán.
+  Không còn bước Delivered → Completed trong luồng mới; giữ giá trị enum cũ để đọc lịch sử.
 Quyền: thao tác Staff/Admin nhận Actor (do Router dựng từ JWT) và kiểm tra role tại Service;
 thao tác của Customer kiểm tra quyền sở hữu đơn.
 """
@@ -87,7 +88,7 @@ from app.schemas import (
 from .actor import ADMIN_ONLY, CUSTOMER_ONLY, STAFF_OR_ADMIN, Actor, require_role
 from .base import BaseService, utc_now
 from .catalog import ProductVariantService, is_variant_sellable, normalize_serial_number
-from .exceptions import BusinessRuleError, NotFoundError
+from .exceptions import BusinessRuleError, ConflictError, NotFoundError, PermissionDeniedError
 from .internal_jobs import JobRun, run_job
 from .promotion import CouponService, money as _money
 from .user import NotificationService
@@ -117,9 +118,10 @@ SERIAL_SOLD = "Sold"
 # Hàng trả về bị hỏng khi kiểm tra: đã về kho nhưng không nhập tồn khả dụng (không tự WrittenOff).
 SERIAL_RETURNED = "Returned"
 
-# Luồng xử lý tuần tự (Pending → Confirmed → Processing → Shipping → Delivered → Completed).
-_FORWARD_FLOW = tuple(status for status in ORDER_STATUSES if status != ORDER_CANCELLED)
-NEXT_STATUS = dict(zip(_FORWARD_FLOW, _FORWARD_FLOW[1:]))
+# Active workflow closes at Delivered. Keep old enum values readable without creating new ones.
+_FORWARD_FLOW = (ORDER_PENDING, ORDER_PROCESSING, ORDER_SHIPPING, ORDER_DELIVERED)
+NEXT_STATUS = {ORDER_PENDING: ORDER_PROCESSING, ORDER_CONFIRMED: ORDER_PROCESSING,
+               ORDER_PROCESSING: ORDER_SHIPPING, ORDER_SHIPPING: ORDER_DELIVERED}
 # Mốc thời gian ghi nhận khi chuyển sang trạng thái tương ứng.
 STATUS_TIMESTAMP = {
     "Confirmed": "ConfirmedAt",
@@ -130,7 +132,7 @@ STATUS_TIMESTAMP = {
 }
 CUSTOMER_CANCELLABLE = (ORDER_PENDING,)
 # Staff/Admin hủy trước Delivered; sau Delivered dùng ReturnRequest.
-STAFF_CANCELLABLE = _FORWARD_FLOW[: _FORWARD_FLOW.index(ORDER_DELIVERED)]
+STAFF_CANCELLABLE = (ORDER_PENDING, ORDER_CONFIRMED, ORDER_PROCESSING, ORDER_SHIPPING)
 
 STAFF_ROLES = ("Staff", "Admin")
 ORDER_NOTIFICATION_TYPE = "Order"
@@ -302,6 +304,14 @@ class OrderService(BaseService):
                 reference_type="Order",
                 reference_id=order.OrderId,
             )
+            for role in STAFF_ROLES:
+                for operator in self.users.list_users(role=role):
+                    self.notifications.notify(
+                        operator.UserId, title="Đơn hàng mới chờ xác nhận",
+                        content=f"Đơn hàng {order.OrderCode} vừa được đặt và đang chờ xác nhận.",
+                        notification_type="NewOrder", action_url=f"/admin/orders/{order.OrderId}",
+                        reference_type="Order", reference_id=order.OrderId,
+                    )
             self.orders.flush()
             return OrderDetailResponse.model_validate(self.orders.get_detail(order.OrderId))
 
@@ -398,6 +408,7 @@ class OrderService(BaseService):
         actor: Actor,
         *,
         order_code: str | None = None,
+        keyword: str | None = None,
         customer_id: uuid.UUID | None = None,
         assigned_staff_id: uuid.UUID | None = None,
         order_status: str | None = None,
@@ -418,6 +429,7 @@ class OrderService(BaseService):
             "ordered_from": ordered_from,
             "ordered_to": ordered_to,
             "order_code_contains": order_code.strip() if order_code and order_code.strip() else None,
+            "keyword": keyword.strip() if keyword and keyword.strip() else None,
         }
         orders = self.orders.list_orders(**filters, offset=offset, limit=limit)
         return PageResponse[AdminOrderResponse](
@@ -452,8 +464,8 @@ class OrderService(BaseService):
     ) -> AdminOrderDetailResponse:
         """Staff/Admin chuyển trạng thái: đi tuần tự từng bước, hoặc Cancelled khi chưa Delivered.
 
-        Kèm theo: Shipping yêu cầu đã Paid (trừ COD) và đã gán đủ Serial/IMEI (``assign_order_serials``);
-        Delivered bán Serial/IMEI; Completed cần không còn yêu cầu đổi/trả đang xử lý, rồi cập nhật thống kê.
+        Kèm theo: Shipping yêu cầu đã Paid (trừ COD) và đủ Serial/IMEI tự gán khi xác nhận;
+        Delivered bán Serial/IMEI, cập nhật bộ đếm bán hàng và đóng đơn ngay trong giao dịch này.
         Đơn COD sang Delivered phải dùng ``confirm_cod_delivery`` (xác nhận đã thu tiền).
         """
         require_role(actor, *STAFF_OR_ADMIN)
@@ -462,6 +474,7 @@ class OrderService(BaseService):
             if order is None:
                 raise NotFoundError("Không tìm thấy đơn hàng", code="order_not_found")
             current, target = order.OrderStatus, data.OrderStatus
+            self._require_order_operator(actor, order)
             if target == ORDER_CANCELLED:
                 if current not in STAFF_CANCELLABLE:
                     raise BusinessRuleError(f"Không thể hủy đơn ở trạng thái {current}", code="order_not_cancellable")
@@ -478,6 +491,8 @@ class OrderService(BaseService):
                         "Đơn COD chỉ chuyển Delivered khi xác nhận giao hàng và đã thu tiền",
                         code="cod_delivery_requires_collection",
                     )
+                if current == ORDER_PENDING:
+                    order.AssignedStaffId = actor.user_id
                 self._move_to(order, target, changed_by=actor.user_id, note=data.Note)
             self.orders.flush()
             return AdminOrderDetailResponse.model_validate(self.orders.get_detail(order_id))
@@ -497,6 +512,7 @@ class OrderService(BaseService):
             order = self.orders.get_by_id_for_update(order_id)
             if order is None:
                 raise NotFoundError("Không tìm thấy đơn hàng", code="order_not_found")
+            self._require_order_operator(actor, order)
             if not self._is_cod(order):
                 raise BusinessRuleError("Đơn không thanh toán khi nhận hàng (COD)", code="payment_method_not_cod")
             if order.OrderStatus != ORDER_SHIPPING:
@@ -526,24 +542,23 @@ class OrderService(BaseService):
             return AdminOrderDetailResponse.model_validate(self.orders.get_detail(order_id))
 
     def update_order_admin_info(self, actor: Actor, order_id: uuid.UUID, data: OrderAdminUpdate) -> AdminOrderDetailResponse:
-        """Staff/Admin phân công nhân viên phụ trách và ghi chú nội bộ."""
+        """Only the confirming operator/Admin edits notes; ownership is assigned at confirmation."""
         require_role(actor, *STAFF_OR_ADMIN)
         with self.transaction():
-            order = self.orders.get_by_id(order_id)
+            order = self.orders.get_by_id_for_update(order_id)
             if order is None:
                 raise NotFoundError("Không tìm thấy đơn hàng", code="order_not_found")
             values = data.model_dump(exclude_unset=True)
-            staff_id = values.get("AssignedStaffId")
-            if staff_id is not None:
-                staff = self.users.get_by_id(staff_id)
-                if staff is None or staff.IsDeleted or staff.Role not in STAFF_ROLES:
-                    raise BusinessRuleError("Nhân viên phụ trách không hợp lệ", code="invalid_assigned_staff")
+            self._require_order_operator(actor, order)
+            if "AssignedStaffId" in values and values["AssignedStaffId"] != order.AssignedStaffId:
+                raise BusinessRuleError("Người phụ trách được ghi nhận khi xác nhận đơn, không được thay đổi",
+                                        code="order_assignment_read_only")
             self.orders.update(order, values)
             self.orders.flush()
             return AdminOrderDetailResponse.model_validate(self.orders.get_detail(order_id))
 
     # ==================================================================
-    # Đóng gói: gán Serial/IMEI thực tế
+    # Serial/IMEI: tự gán khi xác nhận, chỉ đọc ở các API nội bộ
     # ==================================================================
 
     def get_order_serials(self, actor: Actor, order_id: uuid.UUID) -> list[OrderItemSerialsResponse]:
@@ -555,95 +570,50 @@ class OrderService(BaseService):
     def assign_order_serials(
         self, actor: Actor, order_id: uuid.UUID, data: OrderSerialAssign
     ) -> list[OrderItemSerialsResponse]:
-        """Staff/Admin quét/chọn Serial/IMEI của thiết bị thực tế khi đóng gói (đơn Processing).
-
-        Có thể quét dần nhiều lần nhưng mỗi lần là nguyên tử: kiểm tra toàn bộ (đúng dòng đơn, biến thể quản lý serial,
-        không vượt số lượng, serial đúng biến thể, Available và chưa gắn đơn) rồi mới ghi; lỗi thì không gán serial nào.
-        Khóa đơn rồi khóa serial (thứ tự SerialNumber): hai nhân viên gán cùng serial → người sau thấy serial không
-        còn Available. Không tự chọn serial thay cho bước xác nhận thiết bị vật lý.
-        """
-        require_role(actor, *STAFF_OR_ADMIN)
-        requested: dict[uuid.UUID, list[str]] = {}
-        for entry in data.Items:
-            if entry.OrderItemId in requested:
-                raise BusinessRuleError("Một dòng đơn chỉ khai một lần", code="duplicate_assign_line")
-            requested[entry.OrderItemId] = [normalize_serial_number(s) for s in entry.SerialNumbers]
-        numbers = [n for values in requested.values() for n in values]
-        repeated = sorted({n for n in numbers if numbers.count(n) > 1})
-        if repeated:
-            raise BusinessRuleError(f"Serial/IMEI bị trùng trong yêu cầu: {repeated}", code="duplicate_serial_in_request")
-
-        with self.transaction():
-            order = self.orders.get_by_id_for_update(order_id)
-            if order is None:
-                raise NotFoundError("Không tìm thấy đơn hàng", code="order_not_found")
-            if order.OrderStatus != ORDER_PROCESSING:
-                raise BusinessRuleError(
-                    "Chỉ gán Serial/IMEI khi đơn đang đóng gói (Processing)", code="order_not_packing"
-                )
-            items = {i.OrderItemId: i for i in self.order_items.list_by_order(order_id)}
-            unknown = [str(i) for i in requested if i not in items]
-            if unknown:
-                raise NotFoundError(f"Dòng đơn không thuộc đơn hàng: {sorted(unknown)}", code="order_item_not_found")
-            for order_item_id, values in requested.items():
-                item = items[order_item_id]
-                variant = self.variants.get_by_id(item.ProductVariantId)
-                if variant is None or not variant.IsSerialTracked:
-                    raise BusinessRuleError(f"Sản phẩm {item.Sku} không quản lý Serial/IMEI", code="serials_not_allowed")
-                assigned = sum(
-                    1 for s in self.serials.list_by_order_item(order_item_id) if s.Status == SERIAL_RESERVED
-                )
-                if assigned + len(values) > item.Quantity:
-                    raise BusinessRuleError(
-                        f"Dòng {item.Sku} cần {item.Quantity} Serial/IMEI (đã gán {assigned})", code="too_many_serials"
-                    )
-            locked = {s.SerialNumber: s for s in self.serials.list_by_serial_numbers_for_update(numbers)}
-            missing = sorted(n for n in numbers if n not in locked)
-            if missing:
-                raise NotFoundError(f"Không tìm thấy Serial/IMEI: {missing}", code="serial_not_found")
-            for order_item_id, values in requested.items():
-                for number in values:
-                    serial = locked[number]
-                    if serial.ProductVariantId != items[order_item_id].ProductVariantId:
-                        raise BusinessRuleError(
-                            f"Serial/IMEI {number} không thuộc sản phẩm của dòng đơn", code="serial_variant_mismatch"
-                        )
-                    if serial.Status != SERIAL_AVAILABLE or serial.OrderItemId is not None:
-                        raise BusinessRuleError(
-                            f"Serial/IMEI {number} không còn khả dụng (đã gán hoặc rời kho)", code="serial_not_available"
-                        )
-            for order_item_id, values in requested.items():
-                for number in values:
-                    locked[number].Status = SERIAL_RESERVED
-                    locked[number].OrderItemId = order_item_id
-            self.serials.flush()
-            return self._serial_summary(order_id)
+        """Legacy endpoint: serial allocation is exclusively performed at confirmation."""
+        self._reject_manual_serial_change(actor, order_id)
 
     def release_order_serial(self, actor: Actor, order_id: uuid.UUID, serial_number: str) -> list[OrderItemSerialsResponse]:
-        """Gỡ Serial/IMEI gán nhầm khi đơn còn đóng gói (Processing): Reserved → Available, bỏ gắn dòng đơn.
+        self._reject_manual_serial_change(actor, order_id)
 
-        Sau khi đã giao (Shipping) không gỡ được: hàng hủy khi đang giao xử lý qua hồ sơ ShipmentReturns.
-        """
+    def _reject_manual_serial_change(self, actor: Actor, order_id: uuid.UUID) -> None:
         require_role(actor, *STAFF_OR_ADMIN)
-        number = normalize_serial_number(serial_number)
-        with self.transaction():
-            order = self.orders.get_by_id_for_update(order_id)
-            if order is None:
-                raise NotFoundError("Không tìm thấy đơn hàng", code="order_not_found")
-            if order.OrderStatus != ORDER_PROCESSING:
-                raise BusinessRuleError(
-                    "Chỉ gỡ Serial/IMEI khi đơn đang đóng gói (Processing)", code="order_not_packing"
-                )
-            item_ids = {i.OrderItemId for i in self.order_items.list_by_order(order_id)}
-            locked = self.serials.list_by_serial_numbers_for_update([number])
-            if not locked:
-                raise NotFoundError("Không tìm thấy Serial/IMEI", code="serial_not_found")
-            serial = locked[0]
-            if serial.Status != SERIAL_RESERVED or serial.OrderItemId not in item_ids:
-                raise BusinessRuleError("Serial/IMEI không được gán cho đơn này", code="serial_not_assigned_to_order")
-            serial.Status, serial.OrderItemId = SERIAL_AVAILABLE, None
+        order = self.orders.get_by_id(order_id)
+        if order is None:
+            raise NotFoundError("Không tìm thấy đơn hàng", code="order_not_found")
+        self._require_order_operator(actor, order)
+        raise BusinessRuleError("Serial/IMEI do hệ thống tự gán khi xác nhận đơn, không được chỉnh sửa",
+                                code="order_serials_read_only")
+
+    def _auto_assign_order_serials(self, order: Order) -> None:
+        """Called inside confirmation's transaction; lock variants, then reserve unbound devices."""
+        items = sorted(self.order_items.list_by_order(order.OrderId),
+                       key=lambda i: (i.ProductVariantId, i.OrderItemId))
+        locked = {v.ProductVariantId: v for v in self.variants.get_many_by_ids_for_update(
+            sorted({i.ProductVariantId for i in items}))}
+        for item in items:
+            variant = locked.get(item.ProductVariantId)
+            if variant is None:
+                raise NotFoundError("Không tìm thấy biến thể", code="variant_not_found")
+            existing = self.serials.list_by_order_item_for_update(item.OrderItemId)
+            if any(s.Status != SERIAL_RESERVED or s.ProductVariantId != item.ProductVariantId for s in existing):
+                raise ConflictError("Serial/IMEI đã gán cho đơn không hợp lệ", code="order_serials_invalid")
+            needed = item.Quantity - len(existing)
+            if needed < 0:
+                raise ConflictError("Số Serial/IMEI đã gán vượt số lượng đơn", code="order_serials_invalid")
+            if not needed:
+                continue
+            # Real codes are always allocated first; the remainder may be old unnumbered stock.
+            needed = min(needed, self.serials.count_available(item.ProductVariantId))
+            selected = self.serials.list_available_for_update(item.ProductVariantId, limit=needed) if needed else []
+            if len(selected) != needed:
+                raise ConflictError(f"Serial/IMEI của SKU {item.Sku} đang được xử lý. Vui lòng thử lại",
+                                    code="serial_not_available")
+            for serial in selected:
+                serial.Status = SERIAL_RESERVED
+                serial.OrderItemId = item.OrderItemId
+            # Also makes repeated lines of the same SKU see assignments within this transaction.
             self.serials.flush()
-            return self._serial_summary(order_id)
 
     # ==================================================================
     # Giao hàng thất bại: hàng quay về kho
@@ -911,6 +881,7 @@ class OrderService(BaseService):
         if reason is not None:
             order.CancelReason = reason
         self._record_history(order, previous, ORDER_CANCELLED, changed_by=changed_by, note=note)
+        self.notifications.resolve_new_order(order.OrderId)
         self._notify_status(order)
         if order.PaymentStatus == PAYMENT_PAID:
             self._notify_staff_refund_needed(order)
@@ -939,20 +910,14 @@ class OrderService(BaseService):
         )
         self.shipment_returns.flush()
         for item in sorted(items, key=lambda i: i.OrderItemId):
-            variant = self.variants.get_by_id(item.ProductVariantId)
-            if variant is not None and variant.IsSerialTracked:
-                serials = [
-                    s for s in self.serials.list_by_order_item_for_update(item.OrderItemId) if s.Status == SERIAL_RESERVED
-                ]
-                if len(serials) != item.Quantity:
-                    raise BusinessRuleError(
-                        f"Dòng đơn {item.OrderItemId} đang giao nhưng thiếu Serial/IMEI ({len(serials)}/{item.Quantity})",
-                        code="shipment_serials_incomplete",
-                    )
-                for serial in serials:
-                    self._add_return_item(record, item, serial.ProductSerialId, 1)
-            else:
-                self._add_return_item(record, item, None, item.Quantity)
+            serials = [s for s in self.serials.list_by_order_item_for_update(item.OrderItemId)
+                       if s.Status == SERIAL_RESERVED]
+            if len(serials) > item.Quantity:
+                raise BusinessRuleError("Số Serial/IMEI vượt số lượng đã giao", code="shipment_serials_incomplete")
+            for serial in serials:
+                self._add_return_item(record, item, serial.ProductSerialId, 1)
+            if len(serials) < item.Quantity:
+                self._add_return_item(record, item, None, item.Quantity - len(serials))
 
     def _add_return_item(self, record, item: OrderItem, serial_id: uuid.UUID | None, quantity: int) -> None:
         self.shipment_return_items.create(
@@ -993,6 +958,11 @@ class OrderService(BaseService):
         order.OrderStatus = target
         if target in STATUS_TIMESTAMP:
             setattr(order, STATUS_TIMESTAMP[target], moved_at)
+        if current == ORDER_PENDING and target == ORDER_PROCESSING:
+            order.ConfirmedAt = moved_at
+            self.notifications.resolve_new_order(order.OrderId)
+        if target == ORDER_DELIVERED:
+            order.CompletedAt = moved_at
         self._record_history(order, current, target, changed_by=changed_by, note=note)
         self._notify_status(order)
 
@@ -1000,26 +970,34 @@ class OrderService(BaseService):
         """Tác động nghiệp vụ khi Staff/Admin chuyển đơn sang trạng thái kế tiếp.
 
         Không thay đổi PaymentStatus: COD được ghi nhận Paid riêng trong ``confirm_cod_delivery``.
-        Đơn không phải COD chỉ được xác nhận (Confirmed) khi đã Paid: đơn chưa thanh toán ở lại Pending, nơi tác vụ hết
-        hạn QR hủy nó sau 15 phút (đơn đã Confirmed không còn hết hạn). Kiểm tra Shipping giữ lại cho dữ liệu cũ.
+        Đơn không phải COD chỉ xác nhận Pending → Processing khi đã Paid: đơn chưa thanh toán ở lại Pending để
+        tác vụ hết hạn QR xử lý. Kiểm tra Shipping giữ lại cho dữ liệu cũ.
         """
-        if target == ORDER_CONFIRMED:
+        if target == ORDER_PROCESSING and order.OrderStatus == ORDER_PENDING:
             if not self._is_cod(order) and order.PaymentStatus != PAYMENT_PAID:
                 raise BusinessRuleError(
                     "Đơn thanh toán chuyển khoản chỉ được xác nhận sau khi đã thanh toán", code="order_not_paid"
                 )
+        if target == ORDER_PROCESSING:
+            self._auto_assign_order_serials(order)
         elif target == ORDER_SHIPPING:
             if not self._is_cod(order) and order.PaymentStatus != PAYMENT_PAID:
                 raise BusinessRuleError("Đơn hàng chưa được thanh toán", code="order_not_paid")
             self._ensure_serials_assigned(order)
         elif target == ORDER_DELIVERED:
             self._sell_reserved_serials(order, delivered_at=moved_at)
-        elif target == ORDER_COMPLETED:
-            self._ensure_no_open_returns(order)
             self._update_sales_counters(order)
 
+    @staticmethod
+    def _require_order_operator(actor: Actor, order: Order) -> None:
+        if actor.role == "Admin" or order.OrderStatus == ORDER_PENDING:
+            return
+        if order.AssignedStaffId != actor.user_id:
+            raise PermissionDeniedError("Chỉ nhân viên đã xác nhận đơn hoặc quản trị viên được xử lý đơn này",
+                                        code="order_not_assigned_to_you")
+
     def _ensure_no_open_returns(self, order: Order) -> None:
-        """Completed: đơn không còn yêu cầu đổi/trả đang xử lý (gồm yêu cầu có Refund Pending/Failed chưa hoàn tất)."""
+        """Retired completion rule, retained for consultation; not called by the active delivery workflow."""
         codes = self.returns.list_open_request_codes_for_order(order.OrderId)
         if codes:
             raise BusinessRuleError(
@@ -1048,18 +1026,15 @@ class OrderService(BaseService):
                 serial.WarrantyEndDate = period.end if period else None
 
     def _ensure_serials_assigned(self, order: Order) -> None:
-        """Shipping: mọi dòng đơn của biến thể quản lý serial phải được gán đủ Serial/IMEI thực tế (Reserved)."""
+        """Shipping preserves automatic allocations; old unnumbered units do not require backfilling."""
         missing = []
         for item in sorted(self.order_items.list_by_order(order.OrderId), key=lambda i: i.OrderItemId):
-            variant = self.variants.get_by_id(item.ProductVariantId)
-            if variant is None or not variant.IsSerialTracked:
-                continue
-            reserved = sum(1 for s in self.serials.list_by_order_item(item.OrderItemId) if s.Status == SERIAL_RESERVED)
-            if reserved != item.Quantity:
-                missing.append(f"{item.Sku}: {reserved}/{item.Quantity}")
+            assigned = self.serials.list_by_order_item(item.OrderItemId)
+            if len(assigned) > item.Quantity or any(s.Status != SERIAL_RESERVED or s.ProductVariantId != item.ProductVariantId for s in assigned):
+                missing.append(item.Sku)
         if missing:
             raise BusinessRuleError(
-                f"Chưa gán đủ Serial/IMEI thực tế khi đóng gói: {missing}", code="order_serials_not_assigned"
+                f"Serial/IMEI đã gán không hợp lệ: {missing}", code="order_serials_not_assigned"
             )
 
     def _serial_summary(self, order_id: uuid.UUID) -> list[OrderItemSerialsResponse]:
@@ -1079,7 +1054,7 @@ class OrderService(BaseService):
         return summary
 
     def _update_sales_counters(self, order: Order) -> None:
-        """Completed: TotalSpent += TotalAmount, TotalOrders += 1, SoldQuantity += số lượng (có khóa dòng)."""
+        """Delivered: TotalSpent += TotalAmount, TotalOrders += 1, SoldQuantity += số lượng (có khóa dòng)."""
         customer = self.users.get_by_id_for_update(order.CustomerId)
         customer.TotalSpent += order.TotalAmount
         customer.TotalOrders += 1

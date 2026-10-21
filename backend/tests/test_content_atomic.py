@@ -186,10 +186,25 @@ def test_omitted_status_remains_compatible_and_explicit_null_is_rejected(content
 
 
 @pytest.mark.parametrize("kind", ["news", "banners"])
-@pytest.mark.parametrize("role", ["staff", "customer"])
-def test_combined_save_still_requires_admin(content, kind, role):
+@pytest.mark.parametrize("role", ["customer"])
+def test_combined_save_rejects_customers(content, kind, role):
     original, path = create(content, kind)
     content["actor"]["value"] = content["factory"].actor(content[role])
     fields = {"Status": "Published"} if kind == "news" else {"IsActive": False}
     assert content["client"].post("/admin/" + kind, json=body(kind, **fields)).status_code == 403
     assert content["client"].patch(path, json={"Title": "Changed", **fields}).status_code == 403
+
+
+@pytest.mark.parametrize("kind", ["news", "banners"])
+def test_staff_can_create_edit_read_and_delete_content(content, kind):
+    content["actor"]["value"] = content["factory"].actor(content["staff"])
+    row, path = create(content, kind)
+    assert row["CreatedByUserId"] == str(content["staff"].UserId)
+    if kind == "news":
+        assert row["CreatedByName"] == content["staff"].FullName
+        listing = ok(content["client"].get("/admin/news"))
+        assert listing["Items"][0]["CreatedByName"] == content["staff"].FullName
+    assert ok(content["client"].patch(path, json={"Title": "Staff edited"}))["Title"] == "Staff edited"
+    assert ok(content["client"].get(path))["Title"] == "Staff edited"
+    assert content["client"].delete(path).status_code == 204
+    assert content["client"].get(path).status_code == 404

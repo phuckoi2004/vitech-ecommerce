@@ -118,11 +118,12 @@ def cancel_my_order(order_id: uuid.UUID, data: OrderCancelRequest, service: Orde
 
 @admin_router.get("/orders", response_model=PageResponse[AdminOrderResponse])
 def admin_list_orders(service: Orders, actor: CurrentActor, order_code: str | None = None,
+                      keyword: Annotated[str | None, Query(max_length=255)] = None,
                       customer_id: uuid.UUID | None = None, assigned_staff_id: uuid.UUID | None = None,
                       order_status: str | None = None, payment_status: str | None = None,
                       ordered_from: AwareDatetime | None = None, ordered_to: AwareDatetime | None = None,
                       page: Page = 1, page_size: PageSize = 20):
-    return service.admin_list_orders(actor, order_code=order_code, customer_id=customer_id,
+    return service.admin_list_orders(actor, order_code=order_code, keyword=keyword, customer_id=customer_id,
                                      assigned_staff_id=assigned_staff_id, order_status=order_status,
                                      payment_status=payment_status, ordered_from=ordered_from,
                                      ordered_to=ordered_to, page=page, page_size=page_size)

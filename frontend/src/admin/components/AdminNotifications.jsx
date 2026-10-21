@@ -20,14 +20,15 @@ export default function AdminNotifications({ icon = bell }) {
   useEffect(() => { currentLocation.current = location.key }, [location.key])
   useEffect(() => { mounted.current = true; return () => { mounted.current = false } }, [])
   const { withAccessToken, permissions } = useInternalAuth()
-  const count = useAdminQuery('/users/me/notifications/unread-count')
+  const count = useAdminQuery('/users/me/notifications/unread-count', {}, true, { keepDataOnRefresh: true })
   const list = useAdminQuery('/users/me/notifications', { page, page_size: 5 }, open)
   const refreshCount = count.refresh, refreshList = list.refresh
   useEffect(() => {
     const refresh = () => { refreshCount(); if (open) refreshList() }
-    const timer = window.setInterval(refresh, 60000)
+    const timer = window.setInterval(refresh, 5000)
     window.addEventListener('focus', refresh)
-    return () => { window.clearInterval(timer); window.removeEventListener('focus', refresh) }
+    window.addEventListener('admin-order-updated', refresh)
+    return () => { window.clearInterval(timer); window.removeEventListener('focus', refresh); window.removeEventListener('admin-order-updated', refresh) }
   }, [refreshCount, refreshList, open])
   useEffect(() => {
     if (!open) return
@@ -89,7 +90,7 @@ export default function AdminNotifications({ icon = bell }) {
       className="relative grid size-[42px] cursor-pointer place-items-center rounded-[10px] border border-admin-border bg-admin-page hover:bg-admin-soft"
       aria-busy={busy || undefined} onClick={() => { setOpen((value) => !value); if (!open) count.refresh() }}>
       <img src={icon} width="24" height="24" alt="" />
-      {count.data?.Count > 0 && <span className="absolute top-1.5 right-2 size-2 rounded-full bg-admin-red"><span className="sr-only">{count.data.Count} thông báo chưa đọc</span></span>}
+      {count.data?.Count > 0 && <span className="absolute top-1.5 right-2 size-2 animate-pulse rounded-full bg-admin-red"><span className="sr-only">{count.data.Count} thông báo chưa đọc</span></span>}
     </button>
     {open && <section id="admin-notifications" aria-label="Danh sách thông báo" className="absolute top-[52px] right-0 z-30 w-[360px] max-w-[calc(100vw-32px)] rounded-[14px] border border-admin-border bg-white p-4 text-admin-text shadow-lg max-[600px]:fixed max-[600px]:top-4 max-[600px]:right-4 max-[600px]:max-h-[calc(100dvh-32px)] max-[600px]:overflow-y-auto">
       <header className="flex items-center justify-between gap-3"><h2 className="text-base font-semibold">Thông báo</h2>

@@ -1,4 +1,4 @@
-"""Review service: khách hàng đánh giá dòng đơn đã giao, chỉnh sửa trong 7 ngày; Admin kiểm duyệt (ẩn/xóa mềm).
+"""Review service: khách hàng đánh giá dòng đơn đã giao, chỉnh sửa trong 7 ngày; Staff/Admin kiểm duyệt (ẩn/xóa mềm).
 
 Nguồn nghiệp vụ: docs/business-requirements.md mục 11 và quyết định đợt 5.2:
 - Chỉ Customer sở hữu đơn được đánh giá; đơn phải đang Delivered (trạng thái khác, kể cả Completed, bị từ chối).
@@ -6,7 +6,7 @@ Nguồn nghiệp vụ: docs/business-requirements.md mục 11 và quyết địn
   ProductId suy ra từ OrderItem → ProductVariant (không nhận từ client).
 - Chỉnh sửa: chủ sở hữu, trong 7 ngày tính từ CreatedAt — được sửa khi now < CreatedAt + 7 ngày (đúng tại hạn là
   hết hạn). Chỉ sửa Rating/Content; review đã ẩn không sửa được và không tự khôi phục.
-- Khách hàng không xóa review. Chỉ Admin ẩn/xóa mềm (IsDeleted, DeleteReason, DeletedByUserId, DeletedAt); không
+- Khách hàng không xóa review. Staff/Admin ẩn/xóa mềm (IsDeleted, DeleteReason, DeletedByUserId, DeletedAt); không
   xóa dòng; không có nghiệp vụ khôi phục.
 - Products.ReviewCount/AverageRating luôn TÍNH LẠI từ các review đang hiển thị (COUNT/AVG ở database) sau mỗi thay
   đổi, trên dòng Product đã khóa (FOR UPDATE) — không cộng/trừ dồn, nên gọi lặp không trừ hai lần. Không còn review:
@@ -41,7 +41,7 @@ from app.schemas import (
     ReviewUpdate,
 )
 
-from .actor import ADMIN_ONLY, CUSTOMER_ONLY, Actor, require_role
+from .actor import STAFF_OR_ADMIN, CUSTOMER_ONLY, Actor, require_role
 from .base import BaseService, utc_now
 from .exceptions import BusinessRuleError, ConflictError, NotFoundError
 from .promotion import money
@@ -173,8 +173,10 @@ class ReviewService(BaseService):
 
         Review đã ẩn thì từ chối (không ghi đè thông tin kiểm duyệt trước, không trừ chỉ số lần nữa).
         """
-        require_role(actor, *ADMIN_ONLY)
-        reason = (getattr(data, "DeleteReason", None) or "").strip() or None
+        require_role(actor, *STAFF_OR_ADMIN)
+        reason = (getattr(data, "DeleteReason", None) or "").strip()
+        if not reason:
+            raise BusinessRuleError("Vui lòng nhập lý do xóa đánh giá", code="review_delete_reason_required")
         with self.transaction():
             review, product = self._lock_review(review_id)
             if review.IsDeleted:
@@ -190,7 +192,7 @@ class ReviewService(BaseService):
     def admin_list_product_reviews(
         self, actor: Actor, product_id: uuid.UUID, *, include_deleted: bool = True, page: int = 1, page_size: int = 20
     ) -> PageResponse[AdminReviewResponse]:
-        require_role(actor, *ADMIN_ONLY)
+        require_role(actor, *STAFF_OR_ADMIN)
         offset, limit = self._page_args(page, page_size)
         items = self.reviews.list_by_product(product_id, include_deleted=include_deleted, offset=offset, limit=limit)
         return PageResponse[AdminReviewResponse](
@@ -201,7 +203,7 @@ class ReviewService(BaseService):
         )
 
     def admin_get_review(self, actor: Actor, review_id: uuid.UUID) -> AdminReviewResponse:
-        require_role(actor, *ADMIN_ONLY)
+        require_role(actor, *STAFF_OR_ADMIN)
         review = self.reviews.get_detail(review_id)
         if review is None:
             raise NotFoundError("Không tìm thấy đánh giá", code="review_not_found")

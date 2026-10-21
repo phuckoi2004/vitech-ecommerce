@@ -17,9 +17,9 @@ beforeAll(async () => { await import('./NewsWorkspacePage.jsx') })
 function setNewsContent(scope, value) {
   act(() => { scope.getByRole('textbox', { name: 'Nội dung' }).editor.commands.setContent(value) })
 }
-function renderPage(path = '/admin/news', granted = permissions) {
+function renderPage(path = '/admin/news', granted = permissions, role = 'Admin') {
   const router = createMemoryRouter(adminRoutes, { initialEntries: [path] })
-  render(<AuthContext.Provider value={makeAuth({ role: 'Admin', permissions: granted })}><RouterProvider router={router} /></AuthContext.Provider>)
+  render(<AuthContext.Provider value={makeAuth({ role, permissions: granted })}><RouterProvider router={router} /></AuthContext.Provider>)
   return router
 }
 beforeEach(() => {
@@ -60,6 +60,14 @@ test('empty news retains six columns, accurate zero counts and the new dropdown 
   fireEvent.click(menu.getByRole('button', { name: 'Banner', exact: true }))
   await screen.findByRole('heading', { level: 1, name: 'Quản lý banner quảng cáo' })
   expect(router.state.location.pathname).toBe('/admin/banners')
+})
+
+test('Staff sees the author supplied by the content API without account lookup permissions', async () => {
+  articles = [{ ...article, CreatedByName: 'Tác giả từ API nội dung' }]
+  renderPage('/admin/news', permissions.filter((value) => value !== 'users:read'), 'Staff')
+  await screen.findByText('Tác giả từ API nội dung')
+  expect(screen.getByRole('button', { name: /Thêm tin tức/ })).toBeInTheDocument()
+  expect(api.getAdminData.mock.calls.some(([, path]) => path.startsWith('/admin/users'))).toBe(false)
 })
 
 test('typing searches every API page, combines status and resets pagination automatically', async () => {

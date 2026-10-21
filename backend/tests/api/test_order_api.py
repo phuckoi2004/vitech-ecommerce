@@ -108,7 +108,7 @@ def test_business_rules_order_workflow(api, staff, customer):
     expect(client.post(f"/admin/orders/{order_id}/status", headers=staff.headers, json={"OrderStatus": "Shipping"}),
            400, "invalid_status_transition")  # steps cannot be skipped
     expect(client.post(f"/admin/orders/{order_id}/status", headers=staff.headers,
-                       json={"OrderStatus": "Confirmed", "CancelReason": "x"}), 400, "cancel_reason_not_allowed")
+                       json={"OrderStatus": "Processing", "CancelReason": "x"}), 400, "cancel_reason_not_allowed")
     api.ship(order_id, staff)
     expect(client.post(f"/orders/{order_id}/cancel", headers=customer.headers, json={"CancelReason": "Muộn"}), 400,
            "order_not_cancellable")  # already shipping

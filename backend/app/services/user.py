@@ -359,6 +359,11 @@ class NotificationService(BaseService):
         self.require_enclosing_use_case()
         self.notifications.resolve_chat_queue(conversation_id, self.now())
 
+    def resolve_new_order(self, order_id: uuid.UUID) -> None:
+        """The order's claim/cancellation and all alert acknowledgements commit together."""
+        self.require_enclosing_use_case()
+        self.notifications.resolve_new_order(order_id, self.now())
+
     def notify(
         self,
         user_id: uuid.UUID,

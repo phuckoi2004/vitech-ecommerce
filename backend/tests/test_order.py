@@ -134,7 +134,7 @@ class OwnershipAndCancelTest(OrderTestBase):
         with self.assertRaises(BusinessRuleError) as ctx:
             self.svc.cancel_customer_order(self.f.actor(self.customer), self.order.OrderId, OrderCancelRequest())
         self.assertEqual(ctx.exception.code, "order_not_cancellable")
-        with self.assertRaises(BusinessRuleError):
+        with self.assertRaises(PermissionDeniedError):
             self.svc.update_order_status(
                 self.f.actor(self.staff), self.order.OrderId, OrderStatusUpdate(OrderStatus="Cancelled")
             )
@@ -143,7 +143,7 @@ class OwnershipAndCancelTest(OrderTestBase):
 
     def test_customer_can_cancel_only_pending(self):
         self.order.PaymentStatus = "Paid"  # đơn QR chỉ được xác nhận khi đã thanh toán
-        self.set_status(self.order.OrderId, "Confirmed")
+        self.set_status(self.order.OrderId, "Processing")
         with self.assertRaises(BusinessRuleError) as ctx:
             self.svc.cancel_customer_order(self.f.actor(self.customer), self.order.OrderId, OrderCancelRequest())
         self.assertEqual(ctx.exception.code, "order_not_cancellable")
@@ -177,9 +177,9 @@ class StatusTransitionTest(OrderTestBase):
             self.set_status(order.OrderId, "Shipping")
         self.assertEqual(ctx.exception.code, "invalid_status_transition")
         order.PaymentStatus = "Paid"  # đơn QR chỉ được xác nhận khi đã thanh toán
-        self.assertEqual(self.set_status(order.OrderId, "Confirmed").ConfirmedAt is not None, True)
+        self.assertEqual(self.set_status(order.OrderId, "Processing").ConfirmedAt is not None, True)
         with self.assertRaises(BusinessRuleError):
-            self.set_status(order.OrderId, "Confirmed")  # gọi lặp
+            self.set_status(order.OrderId, "Processing")  # gọi lặp
 
     def test_non_cod_must_be_paid_before_shipping(self):
         order = self.f.order(self.customer, self.qr, status="Processing", lines=((self.variant, 1),))
@@ -288,20 +288,20 @@ class RolePermissionTest(OrderTestBase):
 
 
 class SerialReservationTest(OrderTestBase):
-    def test_processing_does_not_pick_serials_automatically(self):
-        # Quyết định đợt 5.1 (C2): serial do Staff quét khi đóng gói; Processing không tự chọn serial.
+    def test_processing_picks_serials_automatically(self):
         variant = self.f.variant(stock=3, serial_tracked=True)
         order = self.f.order(self.customer, self.qr, status="Confirmed", lines=((variant, 2),))
         serial = self.db.add(ProductSerial(ProductVariantId=variant.ProductVariantId, SerialNumber="S1", Status="Available"))
+        self.db.add(ProductSerial(ProductVariantId=variant.ProductVariantId, SerialNumber="S2", Status="Available"))
         self.set_status(order.OrderId, "Processing")
-        self.assertEqual((serial.Status, serial.OrderItemId), ("Available", None))
+        self.assertEqual((serial.Status, serial.OrderItemId), ("Reserved", order.items[0].OrderItemId))
 
-    def test_untracked_variant_ignores_serials(self):
+    def test_existing_serial_is_used_even_if_tracking_new_receipts_is_not_enabled(self):
         variant = self.f.variant(stock=3, serial_tracked=False)
         order = self.f.order(self.customer, self.qr, status="Confirmed", lines=((variant, 1),))
         serial = self.db.add(ProductSerial(ProductVariantId=variant.ProductVariantId, SerialNumber="S1", Status="Available"))
         self.set_status(order.OrderId, "Processing")
-        self.assertEqual(serial.Status, "Available")
+        self.assertEqual((serial.Status, serial.OrderItemId), ("Reserved", order.items[0].OrderItemId))
 
 
 class QrExpiryTest(OrderTestBase):

@@ -3,7 +3,7 @@ import { useLocation, useNavigationType } from 'react-router-dom'
 
 // Draft fields stay responsive while URL-backed filters apply after typing pauses.
 // Navigation resets the draft; automatic page clamping preserves ongoing input.
-export default function useAutoFilters(values, onApply, { validate = () => true } = {}) {
+export default function useAutoFilters(values, onApply, { validate = () => true, delay = 400 } = {}) {
   const location = useLocation()
   const navigation = useNavigationType()
   const source = JSON.stringify(values)
@@ -22,9 +22,9 @@ export default function useAutoFilters(values, onApply, { validate = () => true 
 
   useEffect(() => {
     if (composing || !valid || pending === source) return
-    const timer = window.setTimeout(() => applyPending(), 400)
+    const timer = window.setTimeout(() => applyPending(), delay)
     return () => window.clearTimeout(timer)
-  }, [sourceKey, location.key, source, pending, composing, valid])
+  }, [sourceKey, location.key, source, pending, composing, valid, delay])
 
   function setDraft(next) {
     setState((previous) => ({ ...previous, values: typeof next === 'function' ? next(previous.values) : next }))

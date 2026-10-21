@@ -55,12 +55,19 @@ def test_upload_returns_unique_product_url_and_ignores_spoofed_content_type(uplo
     state["storage"].delete.assert_not_called()
 
 
-@pytest.mark.parametrize("role", ["Staff", "Customer"])
+@pytest.mark.parametrize("role", ["Customer"])
 def test_only_catalog_writers_can_upload(uploads, role):
     client, state, _ = uploads
     state["role"] = role
     assert client.post("/admin/product-image-uploads", content=PNG).status_code == 403
     state["storage"]._call.assert_not_called()
+
+
+def test_staff_can_stage_images_for_news_and_banners(uploads):
+    client, state, _ = uploads
+    state["role"] = "Staff"
+    assert client.post("/admin/product-image-uploads", content=PNG).status_code == 201
+    state["storage"]._call.assert_called_once()
 
 
 @pytest.mark.parametrize("body,headers,status", [

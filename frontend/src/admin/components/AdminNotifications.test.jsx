@@ -28,6 +28,32 @@ beforeEach(() => {
   })
   api.markNotificationRead.mockImplementation(async (_, id) => { notifications.find((n) => n.NotificationId === id).IsRead = true })
 })
+
+test.each(['Staff', 'Admin'])('%s opens a new order directly and its dot clears after acknowledgement', async (role) => {
+  notifications = [{ ...alert(0), Title: 'Đơn hàng mới chờ xác nhận', NotificationType: 'NewOrder',
+    ReferenceType: 'Order', ReferenceId: ids[0], ActionUrl: '/admin/orders/' + ids[0] }]
+  const router = createMemoryRouter([
+    { path: '/', element: <AdminNotifications /> },
+    { path: '/admin/orders/:orderId', element: <><AdminNotifications /><p>Chi tiết đúng đơn</p></> },
+  ])
+  render(<AuthContext.Provider value={makeAuth({ role, permissions: ['orders:view'] })}><RouterProvider router={router} /></AuthContext.Provider>)
+  await screen.findByText('1 thông báo chưa đọc')
+  fireEvent.click(screen.getByRole('button', { name: 'Thông báo' }))
+  fireEvent.click(await screen.findByRole('link', { name: 'Mở thông báo: Đơn hàng mới chờ xác nhận' }))
+  await screen.findByText('Chi tiết đúng đơn')
+  expect(router.state.location.pathname).toBe('/admin/orders/' + ids[0])
+  await waitFor(() => expect(api.markNotificationRead).toHaveBeenCalledWith('access-for-test', 'n0'))
+  await waitFor(() => expect(screen.queryByText('1 thông báo chưa đọc')).not.toBeInTheDocument())
+})
+
+test('a shared acknowledgement on the server refreshes the dot after another operator confirms', async () => {
+  render(<AuthContext.Provider value={makeAuth({ role: 'Staff', permissions })}><MemoryRouter><AdminNotifications /></MemoryRouter></AuthContext.Provider>)
+  await screen.findByText('2 thông báo chưa đọc')
+  notifications.forEach((note) => { note.IsRead = true })
+  act(() => window.dispatchEvent(new Event('focus')))
+  await waitFor(() => expect(screen.queryByText('2 thông báo chưa đọc')).not.toBeInTheDocument())
+  expect(api.markNotificationRead).not.toHaveBeenCalled()
+})
 function open(role = 'Admin', path = '/admin/products?stock=low_stock') {
   const router = createMemoryRouter(adminRoutes, { initialEntries: [path] })
   render(<AuthContext.Provider value={makeAuth({ role, permissions })}><RouterProvider router={router} /></AuthContext.Provider>)

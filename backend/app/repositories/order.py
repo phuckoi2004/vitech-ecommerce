@@ -6,10 +6,10 @@ Không tính tiền, không đổi trạng thái, không kiểm tra quyền.
 import uuid
 from datetime import datetime
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import joinedload, selectinload
 
-from app.models import Order, OrderItem, OrderStatusHistory, PaymentMethod, ShippingMethod
+from app.models import Order, OrderItem, OrderStatusHistory, PaymentMethod, ShippingMethod, User
 
 from .base import BaseRepository
 
@@ -65,8 +65,19 @@ class OrderRepository(BaseRepository[Order]):
         ordered_from: datetime | None,
         ordered_to: datetime | None,
         order_code_contains: str | None = None,
+        keyword: str | None = None,
     ) -> list:
         conditions = []
+        if keyword:
+            escaped = keyword.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+            pattern = f"%{escaped}%"
+            conditions.append(or_(
+                Order.OrderCode.ilike(pattern, escape="\\"),
+                Order.customer.has(or_(
+                    User.FullName.ilike(pattern, escape="\\"),
+                    User.PhoneNumber.ilike(pattern, escape="\\"),
+                )),
+            ))
         if order_code_contains:
             # Tìm theo mã đơn, không phân biệt hoa thường; escape ký tự đặc biệt của LIKE.
             escaped = order_code_contains.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
@@ -95,13 +106,14 @@ class OrderRepository(BaseRepository[Order]):
         ordered_from: datetime | None = None,
         ordered_to: datetime | None = None,
         order_code_contains: str | None = None,
+        keyword: str | None = None,
         offset: int | None = None,
         limit: int | None = None,
     ) -> list[Order]:
         """ordered_from bao gồm, ordered_to không bao gồm (khoảng [from, to))."""
         return self.get_all(
             *self._filters(
-                customer_id, assigned_staff_id, order_status, payment_status, ordered_from, ordered_to, order_code_contains
+                customer_id, assigned_staff_id, order_status, payment_status, ordered_from, ordered_to, order_code_contains, keyword
             ),
             order_by=(Order.OrderedAt.desc(), Order.OrderId),
             offset=offset,
@@ -118,10 +130,11 @@ class OrderRepository(BaseRepository[Order]):
         ordered_from: datetime | None = None,
         ordered_to: datetime | None = None,
         order_code_contains: str | None = None,
+        keyword: str | None = None,
     ) -> int:
         return self.count(
             *self._filters(
-                customer_id, assigned_staff_id, order_status, payment_status, ordered_from, ordered_to, order_code_contains
+                customer_id, assigned_staff_id, order_status, payment_status, ordered_from, ordered_to, order_code_contains, keyword
             )
         )
 
