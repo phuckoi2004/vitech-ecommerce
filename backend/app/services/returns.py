@@ -21,7 +21,7 @@ Chính sách được truyền vào qua ``ReturnPolicy`` (không hard-code trong
 Luồng (Status; mỗi bước ghi ServiceRequestHistories — người thực hiện, thời điểm, ghi chú):
 1. Customer gửi (Pending): dòng đơn của mình, đơn Delivered/Completed, trong thời hạn đã cấu hình. Hàng quản lý serial:
    serial thực tế của dòng đơn, đang ở khách (Sold), Quantity = 1. Hàng không serial: Quantity <= số còn có thể trả
-   (Quantity dòng đơn − các yêu cầu không bị từ chối/hủy). Không trùng yêu cầu đổi/trả hoặc bảo hành đang xử lý.
+   (Quantity dòng đơn − các yêu cầu không bị từ chối/hủy). Không trùng yêu cầu đổi trả hoặc bảo hành đang xử lý.
 2. Staff/Admin tiếp nhận (Approved) hoặc từ chối (Rejected, bắt buộc lý do). Customer hủy khi còn Pending.
 3. Điều phối nhận hàng (Receiving) → Staff xác nhận hàng thực tế đã về (Processing, ReceivedAt; quét đúng serial;
    serial Sold → Returned: đã về cửa hàng, chưa nhập tồn).
@@ -220,7 +220,7 @@ class ReturnService(BaseService):
         if order is None:
             raise NotFoundError("Không tìm thấy đơn hàng", code="order_not_found")
         if order.OrderStatus not in DELIVERED_ORDER_STATUSES:
-            raise BusinessRuleError("Chỉ đổi/trả sản phẩm thuộc đơn hàng đã giao", code="return_order_not_delivered")
+            raise BusinessRuleError("Chỉ đổi trả sản phẩm thuộc đơn hàng đã giao", code="return_order_not_delivered")
         window_reason = None
         try:
             self._check_window(order)
@@ -246,7 +246,7 @@ class ReturnService(BaseService):
                 can_request = any(serial["CanRequest"] for serial in serials)
                 state = {"MaxQuantity": 1 if serials else 0, "CanRequest": can_request,
                          "Reason": None if can_request else window_reason or
-                         "Chưa có thiết bị đủ điều kiện đổi/trả. Vui lòng kiểm tra Serial/IMEI hoặc liên hệ VieTech."}
+                         "Chưa có thiết bị đủ điều kiện đổi trả. Vui lòng kiểm tra Serial/IMEI hoặc liên hệ VieTech."}
             else:
                 state = self._customer_return_option(item, None)
                 state["CanRequest"] = state["CanRequest"] and window_reason is None
@@ -264,7 +264,7 @@ class ReturnService(BaseService):
         if serial is not None:
             existing = self.requests.get_open_by_product_serial(serial.ProductSerialId)
             if existing is not None:
-                reason = f"Serial/IMEI đang có yêu cầu đổi/trả {existing.RequestCode}"
+                reason = f"Serial/IMEI đang có yêu cầu đổi trả {existing.RequestCode}"
             elif self.warranty_requests.get_open_by_product_serial(serial.ProductSerialId) is not None:
                 reason = "Serial/IMEI đang có yêu cầu bảo hành chưa xử lý xong"
             elif serial.Status != SERIAL_SOLD:
@@ -272,11 +272,11 @@ class ReturnService(BaseService):
         elif self.warranty_requests.get_open_by_order_item_without_serial(item.OrderItemId) is not None:
             reason = "Sản phẩm đang có yêu cầu bảo hành chưa xử lý xong"
         elif maximum == 0:
-            reason = "Toàn bộ số lượng sản phẩm đã nằm trong các yêu cầu đổi/trả."
+            reason = "Toàn bộ số lượng sản phẩm đã nằm trong các yêu cầu đổi trả."
         return {"MaxQuantity": maximum, "CanRequest": reason is None, "Reason": reason}
 
     def create_return_request(self, actor: Actor, data: ReturnRequestCreate) -> ReturnRequestDetailResponse:
-        """Customer gửi yêu cầu đổi/trả cho hàng thuộc đơn đã giao của mình, trong thời hạn đã cấu hình."""
+        """Customer gửi yêu cầu đổi trả cho hàng thuộc đơn đã giao của mình, trong thời hạn đã cấu hình."""
         require_role(actor, *CUSTOMER_ONLY)
         values = allowed_values(data, CREATE_FIELDS, code="return_field_not_allowed")
         request_type = values.get("RequestType")
@@ -285,7 +285,7 @@ class ReturnService(BaseService):
         quantity = values.get("Quantity", 1)
         if isinstance(quantity, bool) or not isinstance(quantity, int) or quantity < 1:
             raise BusinessRuleError("Số lượng phải là số nguyên dương", code="invalid_return_quantity")
-        reason = required_text(values.get("Reason"), code="return_reason_required", message="Cần ghi lý do đổi/trả")
+        reason = required_text(values.get("Reason"), code="return_reason_required", message="Cần ghi lý do đổi trả")
         attachments = validate_attachments(values.get("Attachments"))
         order_item_id = values.get("OrderItemId")
         serial_id = values.get("ProductSerialId")
@@ -295,7 +295,7 @@ class ReturnService(BaseService):
                 raise NotFoundError("Không tìm thấy dòng đơn hàng", code="order_item_not_found")
             order = self.orders.get_by_id_for_update(item.OrderId)
             if order is None or order.OrderStatus not in DELIVERED_ORDER_STATUSES:
-                raise BusinessRuleError("Chỉ đổi/trả sản phẩm thuộc đơn hàng đã giao", code="return_order_not_delivered")
+                raise BusinessRuleError("Chỉ đổi trả sản phẩm thuộc đơn hàng đã giao", code="return_order_not_delivered")
             self._check_window(order)
             variant = self.variants.get_by_id(item.ProductVariantId)
             if variant is None:
@@ -306,7 +306,7 @@ class ReturnService(BaseService):
                     raise BusinessRuleError("Mỗi serial là một đơn vị hàng (Quantity = 1)", code="invalid_return_quantity")
                 existing = self.requests.get_open_by_product_serial(serial.ProductSerialId)
                 if existing is not None:
-                    raise ConflictError(f"Serial/IMEI đang có yêu cầu đổi/trả {existing.RequestCode}",
+                    raise ConflictError(f"Serial/IMEI đang có yêu cầu đổi trả {existing.RequestCode}",
                                         code="return_request_open")
                 if self.warranty_requests.get_open_by_product_serial(serial.ProductSerialId) is not None:
                     raise ConflictError("Serial/IMEI đang có yêu cầu bảo hành chưa xử lý xong",
@@ -320,7 +320,7 @@ class ReturnService(BaseService):
                                         code="item_has_open_warranty")
                 remaining = item.Quantity - self._held_quantity(item)
                 if quantity > remaining:
-                    raise BusinessRuleError(f"Số lượng vượt số còn có thể đổi/trả của dòng đơn ({max(remaining, 0)})",
+                    raise BusinessRuleError(f"Số lượng vượt số còn có thể đổi trả của dòng đơn ({max(remaining, 0)})",
                                             code="return_quantity_exceeded")
             now = self.now()
             request = self.requests.create(
@@ -343,7 +343,7 @@ class ReturnService(BaseService):
                                          "FileType": file_type, "UploadedAt": now})
             self._history(request, actor.user_id, None, PENDING,
                           f"Khách hàng gửi yêu cầu {_TYPE_LABELS[request_type]} ({quantity} sản phẩm).")
-            self._notify_customer(request, "Đã nhận yêu cầu đổi/trả",
+            self._notify_customer(request, "Đã nhận yêu cầu đổi trả",
                                   f"Yêu cầu {request.RequestCode} đã được ghi nhận và chờ xem xét.")
             self._notify_operators(request, f"Yêu cầu {_TYPE_LABELS[request_type]} mới",
                                    f"Khách hàng gửi yêu cầu {request.RequestCode} ({quantity} sản phẩm); chờ xem xét.")
@@ -379,7 +379,7 @@ class ReturnService(BaseService):
     def get_my_return_request(self, actor: Actor, request_id: uuid.UUID) -> ReturnRequestDetailResponse:
         require_role(actor, *CUSTOMER_ONLY)
         if self.requests.get_by_id_and_customer(request_id, actor.user_id) is None:
-            raise NotFoundError("Không tìm thấy yêu cầu đổi/trả", code="return_request_not_found")
+            raise NotFoundError("Không tìm thấy yêu cầu đổi trả", code="return_request_not_found")
         return ReturnRequestDetailResponse.model_validate(self.requests.get_detail(request_id))
 
     # ================================================================== Staff / Admin: xem
@@ -399,7 +399,7 @@ class ReturnService(BaseService):
         note, internal_note = step_notes(notes, allowed=ADVANCE_NOTE_FIELDS, code=FIELD_CODE)
         transitions = {PENDING: APPROVED, APPROVED: RECEIVING, RECEIVING: PROCESSING, PROCESSING: COMPLETED}
         labels = {APPROVED: "Đã tiếp nhận yêu cầu", RECEIVING: "Đang điều phối", PROCESSING: "Đang đánh giá hư hại",
-                  COMPLETED: "Đã hoàn tất yêu cầu đổi/trả"}
+                  COMPLETED: "Đã hoàn tất yêu cầu đổi trả"}
         with self.transaction():
             request, _, _ = self._lock(request_id)
             if request.Status != expected_status:
@@ -436,7 +436,7 @@ class ReturnService(BaseService):
                 request.AssignedStaffId = actor.user_id
             self._history(request, actor.user_id, old, REJECTED, f"Yêu cầu bị từ chối. Lý do: {reason}",
                           internal_note=internal_note)
-            self._notify_customer(request, "Yêu cầu đổi/trả bị từ chối", f"Yêu cầu {request.RequestCode}. Lý do: {reason}")
+            self._notify_customer(request, "Yêu cầu đổi trả bị từ chối", f"Yêu cầu {request.RequestCode}. Lý do: {reason}")
             self.requests.flush()
             return self.get_return_request(actor, request_id)
 
@@ -470,7 +470,7 @@ class ReturnService(BaseService):
         require_role(actor, *STAFF_OR_ADMIN)
         request = self.requests.get_detail(request_id)
         if request is None:
-            raise NotFoundError("Không tìm thấy yêu cầu đổi/trả", code="return_request_not_found")
+            raise NotFoundError("Không tìm thấy yêu cầu đổi trả", code="return_request_not_found")
         context = self.requests.get_admin_context([request_id])
         return AdminReturnRequestDetailResponse.model_validate(request).model_copy(update=context.get(request_id, {}))
 
@@ -488,9 +488,9 @@ class ReturnService(BaseService):
             request.Status = APPROVED
             if request.AssignedStaffId is None:
                 request.AssignedStaffId = actor.user_id
-            self._history(request, actor.user_id, PENDING, APPROVED, compose_note("Tiếp nhận yêu cầu đổi/trả.", note),
+            self._history(request, actor.user_id, PENDING, APPROVED, compose_note("Tiếp nhận yêu cầu đổi trả.", note),
                           internal_note=internal_note)
-            self._notify_customer(request, "Yêu cầu đổi/trả được tiếp nhận",
+            self._notify_customer(request, "Yêu cầu đổi trả được tiếp nhận",
                                   f"Yêu cầu {request.RequestCode} đã được tiếp nhận; cửa hàng sẽ liên hệ nhận hàng.")
             return self._admin_detail(request)
 
@@ -521,7 +521,7 @@ class ReturnService(BaseService):
             request.Status = REJECTED
             request.DecisionReason = reason
             self._history(request, actor.user_id, old, REJECTED, event, internal_note=internal_note)
-            self._notify_customer(request, "Yêu cầu đổi/trả bị từ chối",
+            self._notify_customer(request, "Yêu cầu đổi trả bị từ chối",
                                   f"Yêu cầu {request.RequestCode} bị từ chối. Lý do: {reason}")
             return self._admin_detail(request)
 
@@ -537,7 +537,7 @@ class ReturnService(BaseService):
             request.Status = RECEIVING
             self._history(request, actor.user_id, APPROVED, RECEIVING, compose_note("Điều phối nhận hàng.", note),
                           internal_note=internal_note)
-            self._notify_customer(request, "Đang điều phối nhận hàng đổi/trả",
+            self._notify_customer(request, "Đang điều phối nhận hàng đổi trả",
                                   f"Yêu cầu {request.RequestCode}: cửa hàng đang điều phối nhận hàng.")
             return self._admin_detail(request)
 
@@ -566,7 +566,7 @@ class ReturnService(BaseService):
             self._history(request, actor.user_id, RECEIVING, PROCESSING,
                           compose_note(f"Đã nhận hàng thực tế ({request.Quantity} sản phẩm), chờ kiểm tra.", note),
                           internal_note=internal_note)
-            self._notify_customer(request, "Cửa hàng đã nhận hàng đổi/trả",
+            self._notify_customer(request, "Cửa hàng đã nhận hàng đổi trả",
                                   f"Yêu cầu {request.RequestCode}: cửa hàng đã nhận hàng và đang kiểm tra.")
             return self._admin_detail(request)
 
@@ -607,7 +607,7 @@ class ReturnService(BaseService):
             for admin in self.users.list_users(role="Admin", account_status="Active"):
                 self.notifications.notify(
                     admin.UserId,
-                    title="Yêu cầu đổi/trả chờ duyệt",
+                    title="Yêu cầu đổi trả chờ duyệt",
                     content=f"Yêu cầu {request.RequestCode}: {summary}",
                     notification_type=RETURN_NOTIFICATION_TYPE,
                     reference_type=REFERENCE_TYPE,
@@ -741,7 +741,7 @@ class ReturnService(BaseService):
 
     def _check_window(self, order: Order) -> None:
         if self.policy.window_days is None:
-            raise BusinessRuleError("Chưa cấu hình chính sách thời hạn đổi/trả; chưa thể tiếp nhận yêu cầu",
+            raise BusinessRuleError("Chưa cấu hình chính sách thời hạn đổi trả; chưa thể tiếp nhận yêu cầu",
                                     code="return_policy_not_configured")
         if order.DeliveredAt is None:
             raise BusinessRuleError("Chưa ghi nhận thời điểm giao hàng thành công", code="delivery_not_recorded")
@@ -750,7 +750,7 @@ class ReturnService(BaseService):
                                     "cần kiểm tra dữ liệu đơn hàng", code="invalid_delivery_time")
         deadline = return_deadline(order.DeliveredAt, self.policy.window_days)
         if vietnam_date(self.now()) > deadline:
-            raise BusinessRuleError(f"Đã quá thời hạn đổi/trả (ngày cuối: {deadline.strftime(_DATE_FORMAT)})",
+            raise BusinessRuleError(f"Đã quá thời hạn đổi trả (ngày cuối: {deadline.strftime(_DATE_FORMAT)})",
                                     code="return_window_expired")
 
     def _customer_serial(self, item: OrderItem, serial_id: uuid.UUID | None, *, serial_tracked: bool
@@ -760,7 +760,7 @@ class ReturnService(BaseService):
                 raise BusinessRuleError("Sản phẩm không quản lý Serial/IMEI", code="serial_not_applicable")
             return None
         if serial_id is None:
-            raise BusinessRuleError("Cần chọn Serial/IMEI của thiết bị cần đổi/trả", code="return_serial_required")
+            raise BusinessRuleError("Cần chọn Serial/IMEI của thiết bị cần đổi trả", code="return_serial_required")
         serial = self.serials.get_by_id_for_update(serial_id)
         if (serial is None or serial.OrderItemId != item.OrderItemId
                 or serial.ProductVariantId != item.ProductVariantId):
@@ -768,7 +768,7 @@ class ReturnService(BaseService):
         return serial
 
     def _held_quantity(self, item: OrderItem) -> int:
-        """Số lượng của dòng đơn đã nằm trong yêu cầu đổi/trả (trừ yêu cầu bị từ chối/hủy)."""
+        """Số lượng của dòng đơn đã nằm trong yêu cầu đổi trả (trừ yêu cầu bị từ chối/hủy)."""
         return sum(r.Quantity for r in self.requests.list_by_order_item(item.OrderItemId)
                    if r.Status not in RELEASED_STATUSES)
 
@@ -841,7 +841,7 @@ class ReturnService(BaseService):
         request.CompletedAt = self.now()
         request.Status = COMPLETED
         self._history(request, changed_by, PROCESSING, COMPLETED, event)
-        self._notify_customer(request, "Yêu cầu đổi/trả đã hoàn tất", f"Yêu cầu {request.RequestCode}: {event}")
+        self._notify_customer(request, "Yêu cầu đổi trả đã hoàn tất", f"Yêu cầu {request.RequestCode}: {event}")
 
     def _complete_if_refunded(self, actor: Actor, request_id: uuid.UUID) -> None:
         """Sau khi cổng xác nhận hoàn tiền thành công: hoàn tất yêu cầu (transaction riêng, gọi lặp không đổi gì)."""
@@ -866,7 +866,7 @@ class ReturnService(BaseService):
         request = (self.requests.get_by_id_and_customer(request_id, customer_id) if customer_id is not None
                    else self.requests.get_by_id(request_id))
         if request is None:
-            raise NotFoundError("Không tìm thấy yêu cầu đổi/trả", code="return_request_not_found")
+            raise NotFoundError("Không tìm thấy yêu cầu đổi trả", code="return_request_not_found")
         item = self.order_items.get_by_id(request.OrderItemId)
         if item is None:
             raise NotFoundError("Không tìm thấy dòng đơn hàng", code="order_item_not_found")
@@ -875,7 +875,7 @@ class ReturnService(BaseService):
             raise NotFoundError("Không tìm thấy đơn hàng", code="order_not_found")
         request = self.requests.get_by_id_for_update(request_id)
         if request is None:
-            raise NotFoundError("Không tìm thấy yêu cầu đổi/trả", code="return_request_not_found")
+            raise NotFoundError("Không tìm thấy yêu cầu đổi trả", code="return_request_not_found")
         return request, item, order
 
     @staticmethod

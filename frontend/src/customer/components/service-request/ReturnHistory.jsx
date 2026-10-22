@@ -23,7 +23,7 @@ function ReturnDetail({ id }) {
   const [cancelling, setCancelling] = useState(false)
   const [error, setError] = useState('')
   const lock = useRef(false)
-  useEffect(() => { document.title = 'Chi tiết đổi/trả | VieTech' }, [])
+  useEffect(() => { document.title = 'Chi tiết đổi trả | VieTech' }, [])
   useEffect(() => {
     window.addEventListener('focus', detail.reload)
     return () => window.removeEventListener('focus', detail.reload)
@@ -43,9 +43,9 @@ function ReturnDetail({ id }) {
 
   const item = detail.data
   return <>
-    <Link className="cw-text-link" to={RETURN_HISTORY_PATH}>← Danh sách yêu cầu đổi/trả</Link>
-    {detail.loading ? <WarrantyLoading label="Đang tải yêu cầu đổi/trả…" /> : detail.error ? <WarrantyError message={detail.error} retry={detail.reload} /> : <>
-      {location.state?.returnCreated === id && <p className="cacc-notice is-success" role="status">Đã gửi yêu cầu đổi/trả. VieTech sẽ xem xét và liên hệ để hướng dẫn bạn.</p>}
+    <Link className="cw-text-link" to={RETURN_HISTORY_PATH}>← Danh sách yêu cầu đổi trả</Link>
+    {detail.loading ? <WarrantyLoading label="Đang tải yêu cầu đổi trả…" /> : detail.error ? <WarrantyError message={detail.error} retry={detail.reload} /> : <>
+      {location.state?.returnCreated === id && <p className="cacc-notice is-success" role="status">Đã gửi yêu cầu đổi trả. VieTech sẽ xem xét và liên hệ để hướng dẫn bạn.</p>}
       <div className="cw-heading cw-detail-heading"><div><h1>Yêu cầu {item.RequestCode}</h1><p>Ngày gửi: {formatDateTime(item.RequestedAt)}</p></div><ReturnStatus item={item} /></div>
       <div className="cw-detail-actions"><button className="cw-secondary" type="button" onClick={detail.reload} disabled={cancelling}>Làm mới tiến trình</button>
         {item.OrderId && <Link className="cw-text-link" to={orderPath(item.OrderId)}>Xem đơn {item.OrderCode} →</Link>}</div>
@@ -69,7 +69,7 @@ function ReturnDetail({ id }) {
       {canCancelReturn(item) && <div className="cw-cancel">{confirming ? <><p>Hủy yêu cầu {item.RequestCode}? Số lượng của yêu cầu sẽ được giải phóng để bạn có thể gửi lại nếu còn trong thời hạn.</p>
         <div className="cw-actions"><button className="cw-secondary" type="button" disabled={cancelling} onClick={() => setConfirming(false)}>Giữ yêu cầu</button>
           <button className="cw-primary" type="button" disabled={cancelling} onClick={cancel}>{cancelling ? 'Đang hủy…' : 'Xác nhận hủy'}</button></div></>
-        : <button className="cw-secondary" type="button" onClick={() => setConfirming(true)}>Hủy yêu cầu đổi/trả</button>}</div>}
+        : <button className="cw-secondary" type="button" onClick={() => setConfirming(true)}>Hủy yêu cầu đổi trả</button>}</div>}
     </>}
   </>
 }
@@ -83,7 +83,7 @@ export default function ReturnHistory() {
   const status = RETURN_STATUSES.some(([key]) => key === params.get('returnStatus')) ? params.get('returnStatus') : ''
   const list = useApiData(requestId ? null : `my-returns:${user?.UserId}:${page}:${status}`, (signal) =>
     withAccessToken((token) => listMyReturns(token, { page, page_size: PAGE_SIZE, status }, { signal })))
-  useEffect(() => { if (!requestId) document.title = 'Đổi/trả | VieTech' }, [requestId])
+  useEffect(() => { if (!requestId) document.title = 'Đổi trả | VieTech' }, [requestId])
   useEffect(() => {
     if (requestId) return undefined
     window.addEventListener('focus', list.reload)
@@ -103,22 +103,22 @@ export default function ReturnHistory() {
 
   if (requestId) return <ReturnDetail key={requestId} id={requestId} />
   return <>
-    <div className="cw-heading cw-history-heading"><div><h1>Bảo hành và đổi trả</h1><p>Theo dõi yêu cầu đổi/trả và phản hồi từ VieTech.</p></div>
-      <Link className="cw-primary" to={RETURN_CREATE_PATH}>+ Tạo yêu cầu đổi/trả</Link></div>
-    <div className="cw-history-filter"><label htmlFor="cr-status-filter">Trạng thái đổi/trả</label>
+    <div className="cw-heading cw-history-heading"><div><h1>Bảo hành và đổi trả</h1><p>Theo dõi yêu cầu đổi trả và phản hồi từ VieTech.</p></div>
+      <Link className="cw-primary" to={RETURN_CREATE_PATH}>+ Tạo yêu cầu đổi trả</Link></div>
+    <div className="cw-history-filter"><label htmlFor="cr-status-filter">Trạng thái đổi trả</label>
       <select id="cr-status-filter" className="cacc-input" value={status} onChange={(event) => update({ returnStatus: event.target.value, returnPage: '' })}>
         <option value="">Tất cả trạng thái</option>{RETURN_STATUSES.map(([key, label]) => <option key={key} value={key}>{label}</option>)}
       </select><button type="button" className="cw-secondary" onClick={list.reload}>Làm mới</button></div>
-    {list.loading ? <WarrantyLoading label="Đang tải yêu cầu đổi/trả…" /> : list.error ? <WarrantyError message={list.error} retry={list.reload} /> : !list.data.Items.length ?
-      <EmptyState headingLevel={2} title={list.data.Total > 0 ? 'Trang này không còn yêu cầu' : status ? 'Không có yêu cầu ở trạng thái này' : 'Bạn chưa có yêu cầu đổi/trả'}
+    {list.loading ? <WarrantyLoading label="Đang tải yêu cầu đổi trả…" /> : list.error ? <WarrantyError message={list.error} retry={list.reload} /> : !list.data.Items.length ?
+      <EmptyState headingLevel={2} title={list.data.Total > 0 ? 'Trang này không còn yêu cầu' : status ? 'Không có yêu cầu ở trạng thái này' : 'Bạn chưa có yêu cầu đổi trả'}
         description="Chọn sản phẩm từ đơn hàng đã giao để gửi yêu cầu cho VieTech." action={page > 1 || status ? <button type="button" className="cw-secondary" onClick={() => update({ returnPage: '', returnStatus: '' })}>Xem tất cả yêu cầu</button>
-          : <Link className="cw-primary" to={RETURN_CREATE_PATH}>Tạo yêu cầu đổi/trả</Link>} /> : <>
-        <ul className="cw-requests" aria-label="Danh sách yêu cầu đổi/trả">{list.data.Items.map((item) => <li key={item.ReturnRequestId}>
+          : <Link className="cw-primary" to={RETURN_CREATE_PATH}>Tạo yêu cầu đổi trả</Link>} /> : <>
+        <ul className="cw-requests" aria-label="Danh sách yêu cầu đổi trả">{list.data.Items.map((item) => <li key={item.ReturnRequestId}>
           <div className="cw-request-heading"><Link to={returnRequestPath(item.ReturnRequestId)}>{item.RequestCode}</Link><ReturnStatus item={item} /></div>
           <strong>{item.ProductName || 'Sản phẩm trong đơn hàng'}</strong>{item.VariantInfo && <p>{item.VariantInfo}</p>}
           <p>{returnTypeLabel(item.RequestType)} sản phẩm · Số lượng: {item.Quantity}</p>{item.SerialNumber && <p>Serial / IMEI: {item.SerialNumber}</p>}
           <p className="cw-request-issue">{item.Reason}</p><div className="cw-request-footer"><small>Ngày gửi: {formatDateTime(item.RequestedAt)}</small><Link className="cw-text-link" to={returnRequestPath(item.ReturnRequestId)}>Xem chi tiết →</Link></div>
-        </li>)}</ul><Pagination page={page} pageSize={PAGE_SIZE} total={list.data.Total} label="Phân trang yêu cầu đổi/trả" onPageChange={(next) => update({ returnPage: next > 1 ? next : '' })} />
+        </li>)}</ul><Pagination page={page} pageSize={PAGE_SIZE} total={list.data.Total} label="Phân trang yêu cầu đổi trả" onPageChange={(next) => update({ returnPage: next > 1 ? next : '' })} />
       </>}
   </>
 }

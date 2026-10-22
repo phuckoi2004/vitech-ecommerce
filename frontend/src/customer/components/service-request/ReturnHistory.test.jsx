@@ -26,7 +26,7 @@ beforeEach(() => {
 test('lists and opens the customer return detail, preserving its request type in the route', async () => {
   const router = mount()
   await screen.findByText('DT-001')
-  expect(screen.getByRole('link', { name: '+ Tạo yêu cầu đổi/trả' })).toHaveAttribute('href', '/doi-tra/tao-yeu-cau')
+  expect(screen.getByRole('link', { name: '+ Tạo yêu cầu đổi trả' })).toHaveAttribute('href', '/doi-tra/tao-yeu-cau')
   await userEvent.click(screen.getByRole('link', { name: 'Xem chi tiết →' }))
   expect(await screen.findByRole('heading', { name: 'Yêu cầu DT-001' })).toBeInTheDocument()
   expect(router.state.location.search).toBe('?section=service&type=return&request=r1')
@@ -38,7 +38,7 @@ test('cancels only after confirmation and reloads the saved state', async () => 
   api.cancelReturn.mockResolvedValue({ ...request, Status: 'Cancelled' })
   api.getMyReturn.mockResolvedValueOnce(request).mockResolvedValueOnce({ ...request, Status: 'Cancelled' })
   mount('&request=r1')
-  await userEvent.click(await screen.findByRole('button', { name: 'Hủy yêu cầu đổi/trả' }))
+  await userEvent.click(await screen.findByRole('button', { name: 'Hủy yêu cầu đổi trả' }))
   expect(api.cancelReturn).not.toHaveBeenCalled()
   await userEvent.click(screen.getByRole('button', { name: 'Xác nhận hủy' }))
   expect(await screen.findByText('Đã hủy')).toBeInTheDocument()
@@ -49,18 +49,18 @@ test.each(['Approved', 'Receiving', 'Processing', 'Completed', 'Rejected', 'Canc
   api.getMyReturn.mockResolvedValue({ ...request, Status })
   mount('&request=r1')
   await screen.findByRole('heading', { name: 'Yêu cầu DT-001' })
-  expect(screen.queryByRole('button', { name: 'Hủy yêu cầu đổi/trả' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: 'Hủy yêu cầu đổi trả' })).not.toBeInTheDocument()
 })
 
 test('concurrent admin acceptance refreshes the request and removes the cancellation action', async () => {
   api.cancelReturn.mockRejectedValue(Object.assign(new Error('Yêu cầu đã được tiếp nhận.'), { code: 'return_not_cancellable' }))
   api.getMyReturn.mockResolvedValueOnce(request).mockResolvedValueOnce({ ...request, Status: 'Approved' })
   mount('&request=r1')
-  await userEvent.click(await screen.findByRole('button', { name: 'Hủy yêu cầu đổi/trả' }))
+  await userEvent.click(await screen.findByRole('button', { name: 'Hủy yêu cầu đổi trả' }))
   await userEvent.click(screen.getByRole('button', { name: 'Xác nhận hủy' }))
   expect(await screen.findByText('Đã tiếp nhận')).toBeInTheDocument()
   expect(screen.getByRole('alert')).toHaveTextContent('Yêu cầu đã được tiếp nhận.')
-  expect(screen.queryByRole('button', { name: 'Hủy yêu cầu đổi/trả' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: 'Hủy yêu cầu đổi trả' })).not.toBeInTheDocument()
 })
 
 test('completion never implies a refund and unapproved amounts remain hidden', async () => {
@@ -77,7 +77,7 @@ test('filters and pagination use server statuses and reset the page on filter ch
   await screen.findByText('DT-001')
   await userEvent.click(screen.getByRole('button', { name: 'Sau' }))
   await waitFor(() => expect(api.listMyReturns).toHaveBeenLastCalledWith('access-for-test', expect.objectContaining({ page: 2 }), expect.anything()))
-  await userEvent.selectOptions(screen.getByLabelText('Trạng thái đổi/trả'), 'Rejected')
+  await userEvent.selectOptions(screen.getByLabelText('Trạng thái đổi trả'), 'Rejected')
   await waitFor(() => expect(api.listMyReturns).toHaveBeenLastCalledWith('access-for-test', expect.objectContaining({ page: 1, status: 'Rejected' }), expect.anything()))
   expect(router.state.location.search).not.toContain('returnPage')
 })

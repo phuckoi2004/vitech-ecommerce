@@ -49,7 +49,7 @@ class CustomerReturnOptionsTest(ReturnTestBase):
         phone = next(row for row in self.options() if row.OrderItemId == self.item.OrderItemId)
         devices = {row.ProductSerialId: row for row in phone.Serials}
         assert not devices[self.serial.ProductSerialId].CanRequest
-        assert 'đang có yêu cầu đổi/trả' in devices[self.serial.ProductSerialId].Reason
+        assert 'đang có yêu cầu đổi trả' in devices[self.serial.ProductSerialId].Reason
         assert devices[other.ProductSerialId].CanRequest and phone.CanRequest
 
     def test_deadline_is_inclusive_in_vietnam_and_expiry_is_explained(self):

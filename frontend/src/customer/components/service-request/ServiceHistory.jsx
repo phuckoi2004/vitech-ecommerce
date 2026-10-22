@@ -9,7 +9,7 @@ export default function ServiceHistory() {
   return <>
     <nav className="cw-service-tabs" aria-label="Loại yêu cầu">
       <Link to={WARRANTY_HISTORY_PATH} aria-current={!isReturn ? 'page' : undefined}>Bảo hành</Link>
-      <Link to={RETURN_HISTORY_PATH} aria-current={isReturn ? 'page' : undefined}>Đổi/trả</Link>
+      <Link to={RETURN_HISTORY_PATH} aria-current={isReturn ? 'page' : undefined}>Đổi trả</Link>
     </nav>
     {isReturn ? <ReturnHistory /> : <WarrantyHistory />}
   </>

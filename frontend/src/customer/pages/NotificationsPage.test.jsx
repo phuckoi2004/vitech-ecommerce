@@ -197,7 +197,7 @@ test('a return notification opens its request inside the return history and mark
   await userEvent.click(await screen.findByRole('link', { name: notice.Title, exact: true }))
   expect(await screen.findByRole('heading', { name: 'Yêu cầu DT-001' })).toBeInTheDocument()
   expect(router.state.location.search).toBe('?section=service&type=return&request=' + id)
-  expect(within(screen.getByRole('navigation', { name: 'Loại yêu cầu' })).getByRole('link', { name: 'Đổi/trả' })).toHaveAttribute('aria-current', 'page')
+  expect(within(screen.getByRole('navigation', { name: 'Loại yêu cầu' })).getByRole('link', { name: 'Đổi trả' })).toHaveAttribute('aria-current', 'page')
   expect(state.notes[0].IsRead).toBe(true)
   expect(state.calls.some(call => call.path === '/return-requests/' + id)).toBe(true)
   expect(state.calls.some(call => call.path.startsWith('/admin/'))).toBe(false)

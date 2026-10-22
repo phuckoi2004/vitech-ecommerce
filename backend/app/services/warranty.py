@@ -710,14 +710,14 @@ class WarrantyService(BaseService):
                                 code="warranty_request_open")
 
     def _ensure_not_being_returned(self, item: OrderItem, serial: ProductSerial | None) -> None:
-        """Không nhận bảo hành sản phẩm đang trong yêu cầu đổi/trả chưa xử lý xong, hoặc dòng đơn đã trả hết."""
+        """Không nhận bảo hành sản phẩm đang trong yêu cầu đổi trả chưa xử lý xong, hoặc dòng đơn đã trả hết."""
         if serial is not None:
             if self.returns.get_open_by_product_serial(serial.ProductSerialId) is not None:
-                raise ConflictError("Serial/IMEI đang có yêu cầu đổi/trả chưa xử lý xong", code="serial_has_open_return")
+                raise ConflictError("Serial/IMEI đang có yêu cầu đổi trả chưa xử lý xong", code="serial_has_open_return")
             return
         returns = self.returns.list_by_order_item(item.OrderItemId)
         if any(r.Status in RETURN_OPEN_STATUSES for r in returns):
-            raise ConflictError("Sản phẩm đang có yêu cầu đổi/trả chưa xử lý xong", code="item_has_open_return")
+            raise ConflictError("Sản phẩm đang có yêu cầu đổi trả chưa xử lý xong", code="item_has_open_return")
         returned = sum(r.Quantity for r in returns if r.RequestType == "Return" and r.Status == COMPLETED)
         if returned >= item.Quantity:
             raise BusinessRuleError("Toàn bộ sản phẩm của dòng đơn đã được trả lại", code="item_fully_returned")

@@ -300,7 +300,7 @@ export default function AccountPage() {
 
   useEffect(() => {
     const section = params.get('section')
-    document.title = section === 'service' ? `${params.get('request') ? params.get('type') === 'return' ? 'Chi tiết đổi/trả' : 'Chi tiết bảo hành' : 'Bảo hành và đổi trả'} | VieTech`
+    document.title = section === 'service' ? `${params.get('request') ? params.get('type') === 'return' ? 'Chi tiết đổi trả' : 'Chi tiết bảo hành' : 'Bảo hành và đổi trả'} | VieTech`
       : section === 'orders' ? 'Lịch sử mua hàng | VieTech' : 'Tài khoản | VieTech'
   }, [params])
 
@@ -327,7 +327,7 @@ export default function AccountPage() {
           {SECTIONS.map((item) => <div key={item.id} className={item.id === 'service' ? 'cacc-menu-group' : 'cacc-menu-entry'}><button type="button" className={`cacc-menu-item ${item === current ? 'is-active' : ''}`}
             aria-current={item === current ? 'page' : undefined}
             onClick={() => setParams(item === SECTIONS[0] ? {} : { section: item.id })}>{item.label}{item.id === 'service' && <span className="cacc-menu-chevron" aria-hidden="true">›</span>}</button>
-            {item.id === 'service' && <div className="cacc-submenu"><Link to={WARRANTY_CREATE_PATH}>Tạo yêu cầu bảo hành</Link><Link to={RETURN_CREATE_PATH}>Tạo yêu cầu đổi/trả</Link></div>}
+            {item.id === 'service' && <div className="cacc-submenu"><Link to={WARRANTY_CREATE_PATH}>Tạo yêu cầu bảo hành</Link><Link to={RETURN_CREATE_PATH}>Tạo yêu cầu đổi trả</Link></div>}
           </div>)}
           <button type="button" className="cacc-menu-item is-logout" onClick={logout} disabled={signingOut}>
             {signingOut ? 'Đang đăng xuất…' : 'Đăng xuất'}

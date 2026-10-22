@@ -80,7 +80,7 @@ test('account navigation uses the new warranty label and exposes the creation su
   const create = screen.getByRole('link', { name: 'Tạo yêu cầu bảo hành' })
   assert.equal(create.getAttribute('href'), '/bao-hanh/tao-yeu-cau')
   assert.ok(service.closest('.cacc-menu-group').contains(create))
-  const createReturn = screen.getByRole('link', { name: 'Tạo yêu cầu đổi/trả' })
+  const createReturn = screen.getByRole('link', { name: 'Tạo yêu cầu đổi trả' })
   assert.equal(createReturn.getAttribute('href'), '/doi-tra/tao-yeu-cau')
   assert.ok(service.closest('.cacc-menu-group').contains(createReturn))
 })
