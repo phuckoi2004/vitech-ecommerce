@@ -346,6 +346,17 @@ class OrderService(BaseService):
         order = self.orders.get_detail(order_id)
         if order is None or order.CustomerId != actor.user_id:
             raise NotFoundError("Không tìm thấy đơn hàng", code="order_not_found")
+        # The exchange payment page polls this endpoint. Expired replacement stock must be released even when
+        # the external expiry job has not run yet; a verified payment that won the row lock is never cancelled.
+        if (order.SourceReturnRequestId and order.OrderStatus == ORDER_PENDING
+                and order.PaymentStatus in UNPAID_PAYMENT_STATUSES and self.now() >= qr_payment_deadline(order)):
+            with self.transaction():
+                locked = self.orders.get_by_id_for_update(order_id)
+                if (locked.OrderStatus == ORDER_PENDING and locked.PaymentStatus in UNPAID_PAYMENT_STATUSES
+                        and self.now() >= qr_payment_deadline(locked)):
+                    self._cancel(locked, changed_by=None, reason=QR_EXPIRED_REASON, note=None)
+                    self.orders.flush()
+                order = self.orders.get_detail(order_id)
         return OrderDetailResponse.model_validate(order)
 
     def list_customer_orders(
@@ -414,6 +425,8 @@ class OrderService(BaseService):
             order = self.orders.get_by_id_for_update(order_id)
             if order is None or order.CustomerId != actor.user_id:
                 raise NotFoundError("Không tìm thấy đơn hàng", code="order_not_found")
+            if order.SourceReturnRequestId:
+                raise BusinessRuleError("Đơn đổi trả phải được hủy qua phiếu đổi trả", code="exchange_cancel_via_request")
             if order.OrderStatus not in CUSTOMER_CANCELLABLE:
                 raise BusinessRuleError(
                     f"Không thể hủy đơn ở trạng thái {status_label(order.OrderStatus, ORDER_STATUS_LABELS)}", code="order_not_cancellable"
@@ -506,6 +519,8 @@ class OrderService(BaseService):
             current, target = order.OrderStatus, data.OrderStatus
             self._require_order_operator(actor, order)
             if target == ORDER_CANCELLED:
+                if order.SourceReturnRequestId:
+                    raise BusinessRuleError("Đơn đổi trả chỉ được khách hủy trước khi chốt hoặc tự hủy khi hết hạn QR", code="exchange_order_not_cancellable_by_staff")
                 if current not in STAFF_CANCELLABLE:
                     raise BusinessRuleError(f"Không thể hủy đơn ở trạng thái {status_label(current, ORDER_STATUS_LABELS)}", code="order_not_cancellable")
                 self._cancel(order, changed_by=actor.user_id, reason=data.CancelReason, note=data.Note)
@@ -635,7 +650,8 @@ class OrderService(BaseService):
                 continue
             # Real codes are always allocated first; the remainder may be old unnumbered stock.
             needed = min(needed, self.serials.count_available(item.ProductVariantId))
-            selected = self.serials.list_available_for_update(item.ProductVariantId, limit=needed) if needed else []
+            selected = self.serials.list_available_for_update(
+                item.ProductVariantId, limit=needed, random=bool(order.SourceReturnRequestId)) if needed else []
             if len(selected) != needed:
                 raise ConflictError(f"Serial/IMEI của SKU {item.Sku} đang được xử lý. Vui lòng thử lại",
                                     code="serial_not_available")
@@ -897,6 +913,8 @@ class OrderService(BaseService):
         Trước Shipping: hoàn tồn kho + nhả serial đang giữ ngay. Đang Shipping: hàng ở bên vận chuyển → không hoàn
         tồn, serial giữ Reserved, mở hồ sơ ShipmentReturns chờ nhận lại. Đơn đã Paid: không coi là đã hoàn tiền.
         """
+        if order.SourceReturnRequestId and order.PaymentStatus == PAYMENT_PAID:
+            raise BusinessRuleError("Đơn đổi trả đã chốt, không thể hủy", code="exchange_order_committed")
         previous = order.OrderStatus
         items = self.order_items.list_by_order(order.OrderId)
         if previous == ORDER_SHIPPING:

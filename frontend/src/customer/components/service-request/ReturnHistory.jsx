@@ -11,6 +11,8 @@ import { canCancelReturn, RETURN_STATUSES, returnStatusLabel, returnTypeLabel } 
 import { orderPath, RETURN_CREATE_PATH, RETURN_HISTORY_PATH, returnRequestPath } from '../../routes/paths.js'
 import { WarrantyError, WarrantyLoading } from '../warranty/WarrantyCommon.jsx'
 import '../../pages/WarrantyPage.css'
+import { exchangePath } from '../../hooks/useExchange.js'
+import { SEARCH_PATH } from '../../routes/paths.js'
 
 const PAGE_SIZE = 6
 const ReturnStatus = ({ item }) => <span className="cw-status" data-stage={item.Status}>{returnStatusLabel(item.Status)}</span>
@@ -57,7 +59,10 @@ function ReturnDetail({ id }) {
       <section className="cw-detail-section"><h2>Lý do và tình trạng đã gửi</h2><p className="cw-description">{item.Reason}</p></section>
       {item.DecisionReason && <p className="cacc-notice" role="status">{item.DecisionReason}</p>}
       {item.CompensationApprovedAt && item.CompensationAmount != null && <div className="cw-result"><h2>Số tiền được xác nhận: <Money value={item.CompensationAmount} /></h2></div>}
-      <div className="cw-policy cw-history-note"><p>VieTech cập nhật tiến trình sau mỗi bước xử lý. Việc hoàn tiền (nếu áp dụng) được xác nhận riêng; trạng thái hoàn tất yêu cầu không có nghĩa đã hoàn tiền.</p></div>
+      <div className="cw-policy cw-history-note"><p>Phiếu hoàn tất khi đơn đổi đã chốt và nhân viên xử lý xong. Máy cũ chỉ được nhập lại tồn khi phiếu hoàn tất.</p></div>
+      {item.Exchange?.OrderId && <div className="cw-result"><h2>Đơn đổi trả {item.Exchange.OrderCode}</h2>
+        <p>{item.Exchange.Committed ? 'Đã chốt đơn đổi.' : 'Chưa thanh toán phần bù. Mở đơn đổi trả để tiếp tục thanh toán; nếu QR hết hạn, tải lại phiếu để tiếp tục.'}</p>
+        <Link className="cw-primary" to={orderPath(item.Exchange.OrderId)}>Xem đơn đổi trả</Link></div>}
       {item.Attachments?.length > 0 && <section className="cw-detail-section"><h2>Minh chứng đã gửi</h2><ul className="cw-attachments">
         {item.Attachments.filter((entry) => /^https:\/\//i.test(entry.FileUrl)).map((entry, index) => <li key={entry.ServiceRequestAttachmentId}>
           <a href={entry.FileUrl} target="_blank" rel="noreferrer">{entry.FileType === 'Image' ? <img src={entry.FileUrl} alt={`Ảnh minh chứng ${index + 1}`} loading="lazy" /> : `Xem video minh chứng ${index + 1}`}</a></li>)}
@@ -66,6 +71,8 @@ function ReturnDetail({ id }) {
         {item.Histories?.map((entry) => <li key={entry.ServiceRequestHistoryId}><time>{formatDateTime(entry.ChangedAt)}</time><p className="cw-description">{entry.Note || returnStatusLabel(entry.NewStatus)}</p></li>)}
       </ol></section>
       {error && <p className="cacc-notice" role="alert">{error}</p>}
+      {['Approved', 'Receiving', 'Processing'].includes(item.Status) && item.Exchange?.CanChoose && !item.Exchange.OriginalInStock && !item.Exchange.OrderId &&
+        <div className="my-4"><Link className="cw-primary" to={exchangePath(SEARCH_PATH, id)}>Chọn sản phẩm đổi</Link></div>}
       {canCancelReturn(item) && <div className="cw-cancel">{confirming ? <><p>Hủy yêu cầu {item.RequestCode}? Số lượng của yêu cầu sẽ được giải phóng để bạn có thể gửi lại nếu còn trong thời hạn.</p>
         <div className="cw-actions"><button className="cw-secondary" type="button" disabled={cancelling} onClick={() => setConfirming(false)}>Giữ yêu cầu</button>
           <button className="cw-primary" type="button" disabled={cancelling} onClick={cancel}>{cancelling ? 'Đang hủy…' : 'Xác nhận hủy'}</button></div></>

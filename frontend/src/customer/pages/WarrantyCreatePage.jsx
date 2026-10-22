@@ -14,7 +14,6 @@ import './AccountPage.css'
 import './WarrantyPage.css'
 
 const PAGE_SIZE = 50
-const ACCESSORIES = ['Hộp sản phẩm', 'Cáp sạc', 'Củ sạc', 'Phụ kiện khác']
 
 export default function WarrantyCreatePage() {
   const { user, withAccessToken } = useCustomerSession()
@@ -27,7 +26,6 @@ export default function WarrantyCreatePage() {
   const [issue, setIssue] = useState('')
   const [issueType, setIssueType] = useState('')
   const [occurredOn, setOccurredOn] = useState('')
-  const [accessories, setAccessories] = useState([])
   const [entries, setEntries] = useState([])
   const [consent, setConsent] = useState(false)
   const [uploading, setUploading] = useState(false)
@@ -72,7 +70,7 @@ export default function WarrantyCreatePage() {
     if (entries.some((entry) => !entry.attachment)) return setError('Hãy tải lại hoặc xóa ảnh chưa tải thành công trước khi gửi.')
     if (!consent) return setError('Vui lòng xác nhận thông tin và chính sách bảo hành trước khi gửi.')
     const description = [issueType && `Loại lỗi: ${issueType}`, occurredOn && `Phát sinh ngày: ${formatDate(occurredOn)}`,
-      issue.trim(), accessories.length && `Phụ kiện dự kiến gửi kèm: ${accessories.join(', ')}`].filter(Boolean).join('\n')
+      issue.trim()].filter(Boolean).join('\n')
     submitLock.current = true
     setSaving(true)
     try {
@@ -144,10 +142,6 @@ export default function WarrantyCreatePage() {
           </div>
           <Field id="cw-issue" label="Mô tả tình trạng lỗi *"><textarea id="cw-issue" className="cacc-input cw-textarea" required maxLength={5000} rows={5}
             placeholder="Vui lòng mô tả rõ tình trạng, thời điểm xảy ra lỗi và các thao tác đã thử…" value={issue} disabled={busy} onChange={(event) => setIssue(event.target.value)} /></Field>
-          <fieldset className="cw-accessories" disabled={busy}><legend>Phụ kiện dự kiến gửi kèm</legend>
-            {ACCESSORIES.map((value) => <label key={value}><input type="checkbox" checked={accessories.includes(value)} onChange={(event) =>
-              setAccessories((current) => event.target.checked ? [...current, value] : current.filter((entry) => entry !== value))} />{value}</label>)}
-          </fieldset>
         </WarrantyCard>
         <WarrantyCard id="warranty-evidence" number="03" title="Hình ảnh minh chứng (không bắt buộc)">
           <EvidenceImages entries={entries} setEntries={setEntries} busy={busy} setBusy={setUploading} withAccessToken={withAccessToken} uploadImage={uploadWarrantyImage} />

@@ -45,16 +45,16 @@ test('cancels only after confirmation and reloads the saved state', async () => 
   expect(api.cancelReturn).toHaveBeenCalledWith('access-for-test', 'r1')
 })
 
-test.each(['Approved', 'Receiving', 'Processing', 'Completed', 'Rejected', 'Cancelled'])('prevents customer cancellation at %s', async (Status) => {
+test.each(['Completed', 'Rejected', 'Cancelled'])('prevents customer cancellation at %s', async (Status) => {
   api.getMyReturn.mockResolvedValue({ ...request, Status })
   mount('&request=r1')
   await screen.findByRole('heading', { name: 'Yêu cầu DT-001' })
   expect(screen.queryByRole('button', { name: 'Hủy yêu cầu đổi trả' })).not.toBeInTheDocument()
 })
 
-test('concurrent admin acceptance refreshes the request and removes the cancellation action', async () => {
+test('concurrent exchange commitment refreshes the request and removes cancellation', async () => {
   api.cancelReturn.mockRejectedValue(Object.assign(new Error('Yêu cầu đã được tiếp nhận.'), { code: 'return_not_cancellable' }))
-  api.getMyReturn.mockResolvedValueOnce(request).mockResolvedValueOnce({ ...request, Status: 'Approved' })
+  api.getMyReturn.mockResolvedValueOnce(request).mockResolvedValueOnce({ ...request, Status: 'Approved', Exchange: { Committed: true } })
   mount('&request=r1')
   await userEvent.click(await screen.findByRole('button', { name: 'Hủy yêu cầu đổi trả' }))
   await userEvent.click(screen.getByRole('button', { name: 'Xác nhận hủy' }))
@@ -66,9 +66,9 @@ test('concurrent admin acceptance refreshes the request and removes the cancella
 test('completion never implies a refund and unapproved amounts remain hidden', async () => {
   api.getMyReturn.mockResolvedValue({ ...request, Status: 'Completed', CompensationAmount: '999999999.00' })
   mount('&request=r1')
-  await screen.findByText('Đã trả máy')
+  await screen.findByText('Hoàn tất')
   expect(screen.queryByText(/999/)).not.toBeInTheDocument()
-  expect(screen.getByText(/không có nghĩa đã hoàn tiền/)).toBeInTheDocument()
+  expect(screen.getByText(/Máy cũ chỉ được nhập lại tồn khi phiếu hoàn tất/)).toBeInTheDocument()
 })
 
 test('filters and pagination use server statuses and reset the page on filter changes', async () => {
@@ -80,4 +80,32 @@ test('filters and pagination use server statuses and reset the page on filter ch
   await userEvent.selectOptions(screen.getByLabelText('Trạng thái đổi trả'), 'Rejected')
   await waitFor(() => expect(api.listMyReturns).toHaveBeenLastCalledWith('access-for-test', expect.objectContaining({ page: 1, status: 'Rejected' }), expect.anything()))
   expect(router.state.location.search).not.toContain('returnPage')
+})
+
+test.each([true, false])('automatic order is visible without a choose button, even if remaining stock is %s', async (OriginalInStock) => {
+  api.getMyReturn.mockResolvedValue({ ...request, Status: 'Approved', Exchange: {
+    OriginalInStock, CanChoose: false, Committed: true, OrderId: 'auto-order', OrderCode: 'AUTO-01',
+  } })
+  mount('&request=r1')
+  expect(await screen.findByRole('link', { name: 'Xem đơn đổi trả' })).toHaveAttribute('href', '/don-hang/auto-order')
+  expect(screen.queryByRole('link', { name: 'Chọn sản phẩm đổi' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: 'Hủy yêu cầu đổi trả' })).not.toBeInTheDocument()
+})
+
+test('out-of-stock request offers category-restricted choice only when no replacement exists', async () => {
+  api.getMyReturn.mockResolvedValue({ ...request, Status: 'Approved', Exchange: {
+    OriginalInStock: false, CanChoose: true, Committed: false, OrderId: null,
+  } })
+  mount('&request=r1')
+  expect(await screen.findByRole('link', { name: 'Chọn sản phẩm đổi' })).toHaveAttribute('href', '/tim-kiem?exchange=r1')
+})
+
+test('pending automatic order offers payment through the saved order, never another choice', async () => {
+  api.getMyReturn.mockResolvedValue({ ...request, Status: 'Approved', Exchange: {
+    OriginalInStock: true, CanChoose: false, Committed: false, OrderId: 'auto-order', OrderCode: 'AUTO-02',
+  } })
+  mount('&request=r1')
+  await screen.findByRole('link', { name: 'Xem đơn đổi trả' })
+  expect(screen.queryByRole('link', { name: 'Chọn sản phẩm đổi' })).not.toBeInTheDocument()
+  expect(screen.getByText(/Chưa thanh toán phần bù/)).toBeInTheDocument()
 })

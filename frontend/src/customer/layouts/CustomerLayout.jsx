@@ -20,7 +20,8 @@ const FOOTER_COLUMNS = [
 // Shared frame of the customer site: header (logo, search, cart, account, notifications, wishlist), page
 // content, footer. Used as a layout route (page content in <Outlet />) or around explicit children.
 export default function CustomerLayout({ children }) {
-  const { pathname } = useLocation()
+  const { pathname, search } = useLocation()
+  const exchanging = new URLSearchParams(search).has('exchange') && (pathname === '/tim-kiem' || pathname === '/dat-hang' || pathname.startsWith('/san-pham/'))
   return <ChatDraftProvider><div className="shop-shell">
     <header className="shop-header">
       <div className="shop-header-inner">
@@ -28,7 +29,7 @@ export default function CustomerLayout({ children }) {
           <img className="shop-logo-mark" src={logoMark} alt="" width="112" height="68" />
           <img className="shop-logo-wordmark" src={logoName} alt="VieTech" width="160" height="41" />
         </Link>
-        <SearchBox />
+        {exchanging ? <input className="cacc-input" aria-label="Tìm kiếm" placeholder="Đang chọn sản phẩm đổi trong cùng danh mục" disabled /> : <SearchBox />}
         <nav className="shop-actions" aria-label="Tài khoản">
           <CartLink />
           <AccountButton />

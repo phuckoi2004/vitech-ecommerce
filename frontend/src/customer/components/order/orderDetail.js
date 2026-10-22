@@ -62,6 +62,13 @@ export const canCancel = (order) => order.OrderStatus === 'Pending' && order.Pay
 
 // Under "Cần hỗ trợ về đơn hàng?": whether the customer can cancel, and why not.
 export function cancelNote(order) {
+  if (order.SourceReturnRequestId) {
+    return order.PaymentStatus === 'Paid'
+      ? 'Đơn đổi đã chốt nên không thể hủy phiếu. Vui lòng chat với VieTech nếu cần hỗ trợ.'
+      : order.OrderStatus === 'Cancelled'
+        ? 'Đơn đổi đã hủy. Xem phiếu đổi trả để theo dõi tiến trình.'
+        : 'Bạn có thể hủy phiếu trước khi chốt đơn đổi. Hủy phiếu sẽ hủy cả đơn đổi và giải phóng hàng đang giữ.'
+  }
   if (order.OrderStatus === 'Cancelled') return 'Đơn hàng đã được huỷ. Bạn có thể chat với VieTech nếu cần hỗ trợ thêm.'
   if (order.OrderStatus !== 'Pending') {
     return `Đơn ${formatStatus(order.OrderStatus, ORDER_STATUS).toLowerCase()}, nên chức năng hủy đơn không khả dụng ở trạng thái này.`

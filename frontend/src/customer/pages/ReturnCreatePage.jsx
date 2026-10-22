@@ -15,7 +15,6 @@ import './WarrantyPage.css'
 
 const PAGE_SIZE = 50
 const REASONS = ['Sản phẩm bị lỗi', 'Giao sai sản phẩm', 'Hư hỏng khi nhận hàng', 'Thiếu phụ kiện', 'Lý do khác']
-const CONDITIONS = ['Còn hộp', 'Còn phụ kiện', 'Đã sử dụng', 'Còn tem/phiếu bảo hành']
 
 export default function ReturnCreatePage() {
   const { user, withAccessToken } = useCustomerSession()
@@ -26,11 +25,9 @@ export default function ReturnCreatePage() {
   const [itemId, setItemId] = useState('')
   const [serialId, setSerialId] = useState('')
   const [quantity, setQuantity] = useState('1')
-  const [requestType, setRequestType] = useState('Return')
   const [reason, setReason] = useState('')
   const [description, setDescription] = useState('')
   const [usage, setUsage] = useState('')
-  const [conditions, setConditions] = useState([])
   const [entries, setEntries] = useState([])
   const [consent, setConsent] = useState(false)
   const [uploading, setUploading] = useState(false)
@@ -45,7 +42,7 @@ export default function ReturnCreatePage() {
   const selectedOrder = orders.data?.Items.find((row) => row.OrderId === orderId)
   const item = items.data?.find((row) => row.OrderItemId === itemId)
   const serial = item?.Serials.find((row) => row.ProductSerialId === serialId)
-  const eligibility = item?.IsSerialTracked ? serial : item
+  const eligibility = serial ?? (item?.CanRequestWithoutSerial ? { CanRequest: true } : item?.IsSerialTracked ? null : item)
   const busy = saving || uploading
   const count = Number(quantity)
   const validQuantity = Number.isSafeInteger(count) && count > 0 && count <= (item?.MaxQuantity ?? 0) && (!item?.IsSerialTracked || count === 1)
@@ -67,21 +64,19 @@ export default function ReturnCreatePage() {
     if (lock.current || busy) return
     setError('')
     if (!item) return setError('Vui lòng chọn đơn hàng và sản phẩm cần đổi trả.')
-    if (item.IsSerialTracked && !serial) return setError('Vui lòng chọn Serial/IMEI của thiết bị cần đổi trả.')
+    if (item.IsSerialTracked && !serial && !item.CanRequestWithoutSerial) return setError('Vui lòng chọn Serial/IMEI của thiết bị cần đổi trả.')
     if (!eligibility?.CanRequest) return setError(eligibility?.Reason || item.Reason || 'Sản phẩm chưa đủ điều kiện gửi yêu cầu.')
     if (!validQuantity) return setError(`Số lượng phải là số nguyên từ 1 đến ${item.IsSerialTracked ? 1 : item.MaxQuantity}.`)
-    if (!['Return', 'Exchange'].includes(requestType)) return setError('Vui lòng chọn hình thức đổi hoặc trả sản phẩm.')
     if (!reason) return setError('Vui lòng chọn lý do đổi trả.')
     if (!description.trim()) return setError('Vui lòng mô tả chi tiết lý do đổi trả và tình trạng sản phẩm.')
     if (entries.some((entry) => !entry.attachment)) return setError('Hãy tải lại hoặc xóa ảnh chưa tải thành công trước khi gửi.')
     if (!consent) return setError('Vui lòng xác nhận thông tin và chính sách đổi trả trước khi gửi.')
-    const details = [`Lý do: ${reason}`, description.trim(), usage && `Tình trạng sử dụng: ${usage}`,
-      conditions.length && `Tình trạng sản phẩm và phụ kiện: ${conditions.join(', ')}`].filter(Boolean).join('\n')
+    const details = [`Lý do: ${reason}`, description.trim(), usage && `Tình trạng sử dụng: ${usage}`].filter(Boolean).join('\n')
     lock.current = true; setSaving(true)
     try {
       const created = await withAccessToken((token) => createReturn(token, {
         OrderItemId: item.OrderItemId, ProductSerialId: serial?.ProductSerialId ?? null, Quantity: count,
-        RequestType: requestType, Reason: details, Attachments: entries.map((entry) => entry.attachment),
+        RequestType: 'Exchange', Reason: details, Attachments: entries.map((entry) => entry.attachment),
       }))
       navigate(returnRequestPath(created.ReturnRequestId), { replace: true, state: { returnCreated: created.ReturnRequestId } })
     } catch (failure) {
@@ -92,10 +87,10 @@ export default function ReturnCreatePage() {
 
   return <div className="cw-page shop-container">
     <Breadcrumb current="Tạo yêu cầu đổi trả" backTo={RETURN_HISTORY_PATH} />
-    <div className="cw-heading"><div><h1>Tạo yêu cầu đổi trả</h1><p>Gửi yêu cầu đổi hoặc trả sản phẩm theo chính sách VieTech và theo dõi kết quả xử lý.</p></div>
+    <div className="cw-heading"><div><h1>Tạo yêu cầu đổi trả</h1><p>Gửi yêu cầu đổi mới một sản phẩm và theo dõi kết quả xử lý.</p></div>
       <Link className="cw-secondary" to={RETURN_HISTORY_PATH}>← Quay lại đổi trả</Link></div>
     <ol className="cw-guide" aria-label="Các bước tạo yêu cầu đổi trả">
-      {['Chọn đơn hàng đã nhận', 'Chọn lý do & phương án xử lý', 'Kiểm tra & gửi yêu cầu'].map((text, index) =>
+      {['Chọn đơn hàng đã nhận', 'Mô tả lý do đổi trả', 'Kiểm tra & gửi yêu cầu'].map((text, index) =>
         <li key={text} className={index === (ready ? 2 : item ? 1 : 0) ? 'is-active' : ''}><span>{index + 1}</span>{text}</li>)}
     </ol>
     {error && <p ref={errorBox} tabIndex={-1} className="cacc-notice" role="alert">{error}</p>}
@@ -123,10 +118,10 @@ export default function ReturnCreatePage() {
             <RequestProduct item={item} orderCode={selectedOrder?.OrderCode || 'Đơn hàng đã chọn'} badge="CẦN KIỂM TRA" subtitle="Trạng thái đơn hàng: Đã nhận hàng" />
             <div className="cw-fields">
               <Field id="cr-quantity" label="Số lượng yêu cầu *"><input id="cr-quantity" className="cacc-input" type="number" min="1" step="1" max={item.MaxQuantity}
-                value={quantity} readOnly={item.IsSerialTracked} disabled={busy} onChange={(event) => setQuantity(event.target.value)} /></Field>
+                value={quantity} readOnly disabled={busy} /></Field>
               <Field id="cr-serial" label={item.IsSerialTracked ? 'Serial / IMEI *' : 'Serial / IMEI'}>
                 {item.IsSerialTracked ? <select id="cr-serial" className="cacc-input" value={serialId} disabled={busy} onChange={(event) => setSerialId(event.target.value)}>
-                  <option value="">Chọn thiết bị thuộc đơn hàng</option>{item.Serials.map((row) => <option key={row.ProductSerialId} value={row.ProductSerialId}>{row.SerialNumber}</option>)}
+                  <option value="">{item.CanRequestWithoutSerial ? 'Thiết bị cũ không có Serial / IMEI' : 'Chọn thiết bị thuộc đơn hàng'}</option>{item.Serials.map((row) => <option key={row.ProductSerialId} value={row.ProductSerialId}>{row.SerialNumber}</option>)}
                 </select> : <input id="cr-serial" className="cacc-input" value="Sản phẩm không quản lý Serial/IMEI" readOnly />}
               </Field>
             </div>
@@ -136,11 +131,7 @@ export default function ReturnCreatePage() {
           </>}
         </RequestCard>
         <RequestCard id="return-reason" number="02" title="Thông tin yêu cầu đổi trả">
-          <fieldset className="cr-request-types" disabled={busy}><legend>Hình thức yêu cầu *</legend>
-            {[['Exchange', 'Đổi sản phẩm', 'Đề nghị đổi cùng phiên bản đã mua'], ['Return', 'Trả hàng', 'Đề nghị trả lại sản phẩm đã nhận']].map(([value, title, text]) =>
-              <label key={value} className={requestType === value ? 'is-selected' : ''}><input type="radio" name="return-request-type" value={value} checked={requestType === value} onChange={() => setRequestType(value)} />
-                <span><strong>{title}</strong><small>{text}</small></span></label>)}
-          </fieldset>
+          <p>Đổi mới 1 sản phẩm. Còn hàng sẽ đổi đúng phiên bản đã mua; hết hàng có thể chọn sản phẩm cùng danh mục.</p>
           <div className="cw-fields">
             <Field id="cr-reason" label="Lý do đổi trả *"><select id="cr-reason" className="cacc-input" value={reason} disabled={busy} onChange={(event) => setReason(event.target.value)}>
               <option value="">Chọn lý do đổi trả</option>{REASONS.map((value) => <option key={value}>{value}</option>)}</select></Field>
@@ -149,19 +140,14 @@ export default function ReturnCreatePage() {
           </div>
           <Field id="cr-description" label="Mô tả chi tiết lý do đổi trả *"><textarea id="cr-description" className="cacc-input cw-textarea" rows={5} maxLength={5000} required
             placeholder="Mô tả vấn đề gặp phải, tình trạng sản phẩm và đề xuất xử lý của bạn…" value={description} disabled={busy} onChange={(event) => setDescription(event.target.value)} /></Field>
-          <fieldset className="cw-accessories" disabled={busy}><legend>Tình trạng sản phẩm và phụ kiện</legend>
-            {CONDITIONS.map((value) => <label key={value}><input type="checkbox" checked={conditions.includes(value)} onChange={(event) =>
-              setConditions((current) => event.target.checked ? [...current, value] : current.filter((entry) => entry !== value))} />{value}</label>)}
-          </fieldset>
         </RequestCard>
         <RequestCard id="return-evidence" number="03" title="Hình ảnh minh chứng (không bắt buộc)">
           <EvidenceImages entries={entries} setEntries={setEntries} busy={busy} setBusy={setUploading} withAccessToken={withAccessToken} uploadImage={uploadReturnImage} />
         </RequestCard>
-        <RequestCard id="return-resolution" number="04" title="Phương án xử lý mong muốn">
-          <div className="cw-policy"><strong>{requestType === 'Exchange' ? 'Bạn đang chọn: Đổi sản phẩm' : 'Bạn đang chọn: Trả hàng'}</strong>
-            <p>{requestType === 'Exchange' ? 'Đề nghị đổi sản phẩm cùng phiên bản đã mua. VieTech sẽ kiểm tra và xác nhận phương án cụ thể với bạn.'
-              : 'Đề nghị trả lại sản phẩm đã chọn. VieTech sẽ kiểm tra điều kiện và phản hồi phương án xử lý.'}</p></div>
-          <p className="cw-help">Việc hoàn tiền (nếu áp dụng) được VieTech xác nhận riêng sau khi kiểm tra. Trạng thái hoàn tất yêu cầu không phải xác nhận đã hoàn tiền.</p>
+        <RequestCard id="return-resolution" number="04" title="Phương án xử lý">
+          <div className="cw-policy"><strong>Đổi sản phẩm mới</strong>
+            <p>Đổi mới sang sản phẩm tương tự. Bạn chỉ được chọn một sản phẩm khác trong cùng danh mục khi sản phẩm cần đổi đã hết hàng.</p></div>
+          <p className="cw-help">Miễn phí giao hàng tiêu chuẩn. Sản phẩm đổi vẫn được áp dụng khuyến mãi. Nếu chọn sản phẩm có giá cao hơn, bạn thanh toán thêm phần chênh lệch; phần chênh lệch còn dư không được hoàn lại.</p>
         </RequestCard>
       </div><aside className="cw-sidebar">
         <RequestCard id="return-contact" number="05" title="Thông tin liên hệ">
@@ -179,9 +165,13 @@ export default function ReturnCreatePage() {
           <li>Yêu cầu được xét theo thời hạn, tình trạng và chính sách của sản phẩm đã mua.</li>
           <li>Gửi yêu cầu trong hạn được hiển thị sau khi chọn sản phẩm.</li>
           <li>VieTech sẽ kiểm tra thực tế trước khi xác nhận phương án xử lý.</li>
-          <li>Theo dõi kết quả tại mục Bảo hành và đổi trả. Chỉ có thể hủy khi yêu cầu đang chờ xem xét.</li>
+          <li>Theo dõi kết quả tại mục Bảo hành và đổi trả. Có thể hủy trước khi chốt đơn đổi; sau khi chốt sẽ không được hủy.</li>
         </ul></div>
       </aside></div>
+      {item && item.OriginalInStock === false && <p className="my-4 text-sm font-medium text-red-600">
+        * Bạn được dùng giá trị {Number(item.ExchangeCreditLimit || 0).toLocaleString('vi-VN')}đ để đổi một sản phẩm cùng danh mục.
+        Chọn máy giá cao hơn sẽ thanh toán phần bù; giá bằng hoặc thấp hơn không cần trả thêm. Phần dư không hoàn lại.
+      </p>}
       <div className="cw-card cw-confirm">
         <label><input type="checkbox" checked={consent} disabled={busy} onChange={(event) => setConsent(event.target.checked)} />
           <span>Tôi cam kết cung cấp thông tin đúng tình trạng sản phẩm và đồng ý với <Link to={INFO_PATHS.returns} target="_blank" rel="noreferrer">chính sách đổi trả</Link> VieTech.</span></label>

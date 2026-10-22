@@ -31,7 +31,8 @@ PROMOTION_HEAD = "82d6f1a9b407"
 PRICING_HEAD = "93e7a2b0c518"
 CATALOG_DELETE_HEAD = "a6d2e8f4b190"
 CATALOG_MERGE_HEAD = "b2f8c6d4e901"
-HEAD = "c3a9f5e7d206"
+CATALOG_PRICING_HEAD = "c3a9f5e7d206"
+HEAD = "e6a2c9d4b810"
 COUPON_REVISION = "213feab4a632"
 STATUS_REVISION = "dd773e03e503"
 TRANSACTION_TYPE_REVISION = "9b10f42fc70d"
@@ -91,10 +92,11 @@ def test_unique_revision_ids_and_one_complete_canonical_graph():
     duplicates = {revision: [name for name, identifier in identifiers if identifier == revision]
                   for revision, count in counts.items() if count > 1}
     assert duplicates == {}, f"Duplicate Alembic revision identifiers: {duplicates}"
-    assert len(identifiers) == 30
+    assert len(identifiers) == 31
     graph = scripts()
     assert graph.get_heads() == [HEAD]
-    assert graph.get_revision(HEAD).down_revision == (PRICING_HEAD, CATALOG_MERGE_HEAD)
+    assert graph.get_revision(HEAD).down_revision == CATALOG_PRICING_HEAD
+    assert graph.get_revision(CATALOG_PRICING_HEAD).down_revision == (PRICING_HEAD, CATALOG_MERGE_HEAD)
     assert graph.get_revision(PRICING_HEAD).down_revision == PROMOTION_HEAD
     assert graph.get_revision(PROMOTION_HEAD).down_revision == NEWS_VIEWS_HEAD
     assert graph.get_revision(NEWS_VIEWS_HEAD).down_revision == CATEGORY_IMAGE_HEAD
@@ -130,16 +132,16 @@ def test_old_local_head_receives_all_domain_migrations_then_repair_merge():
 
 def test_pricing_database_receives_catalog_migrations_without_replaying_pricing():
     path = list(scripts().iterate_revisions(HEAD, PRICING_HEAD, implicit_base=True))
-    assert {revision.revision for revision in path} == {CATALOG_DELETE_HEAD, CATALOG_MERGE_HEAD, HEAD}
+    assert {revision.revision for revision in path} == {CATALOG_DELETE_HEAD, CATALOG_MERGE_HEAD, CATALOG_PRICING_HEAD, HEAD}
 
 
 def test_catalog_database_receives_pricing_migrations_without_replaying_catalog():
     path = list(scripts().iterate_revisions(HEAD, CATALOG_MERGE_HEAD, implicit_base=True))
-    assert {revision.revision for revision in path} == {PROMOTION_HEAD, PRICING_HEAD, HEAD}
+    assert {revision.revision for revision in path} == {PROMOTION_HEAD, PRICING_HEAD, CATALOG_PRICING_HEAD, HEAD}
 
 
 def test_pricing_catalog_merge_has_no_schema_or_data_operations():
-    module = scripts().get_revision(HEAD).module
+    module = scripts().get_revision(CATALOG_PRICING_HEAD).module
     for operation in (module.upgrade, module.downgrade):
         statements = [statement.strip() for statement in render(operation).split(";") if statement.strip()]
         assert statements == ["BEGIN", "COMMIT"]
@@ -190,6 +192,20 @@ def test_category_image_migration_adds_only_an_optional_column():
     assert 'NOT NULL' not in sql
     assert not re.search(r'\b(?:UPDATE|DELETE|INSERT|DROP)\b', sql)
     assert 'DROP COLUMN "ImageUrl"' in render(module.downgrade)
+
+
+def test_exchange_migration_adds_two_columns_one_fk_no_business_data_rewrites():
+    module = scripts().get_revision(HEAD).module
+    sql = render(module.upgrade)
+    assert sql.count('ADD COLUMN') == 2
+    assert '"SourceReturnRequestId" UUID' in sql
+    assert '"ExchangeCreditAmount" NUMERIC(15, 2) DEFAULT \'0\' NOT NULL' in sql
+    assert 'REFERENCES "ReturnRequests" ("ReturnRequestId") ON DELETE RESTRICT' in sql
+    assert sql.count('FOREIGN KEY') == 1
+    assert 'CREATE UNIQUE INDEX "UX_Orders_SourceReturn_Active"' in sql
+    assert '"OrderStatus" <> \'Cancelled\'' in sql
+    assert 'CREATE TABLE' not in sql
+    assert not re.search(r'^\s*(?:UPDATE|DELETE|INSERT)\b', sql, re.MULTILINE)
 
 
 def test_shared_guard_upgrades_adopt_matching_checks_reject_bad_definitions_and_validate_data():

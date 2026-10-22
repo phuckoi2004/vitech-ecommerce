@@ -11,6 +11,7 @@ from sqlalchemy import or_, select
 from sqlalchemy.orm import joinedload, selectinload
 
 from app.models import Order, OrderItem, OrderStatusHistory, PaymentMethod, ProductVariant, ShippingMethod, User
+from app.models import ReturnRequest
 
 from .base import BaseRepository
 
@@ -34,6 +35,12 @@ class ShippingMethodRepository(BaseRepository[ShippingMethod]):
 
 class OrderRepository(BaseRepository[Order]):
     model = Order
+
+    def exchange_order(self, request_id: uuid.UUID, *, for_update: bool = False) -> Order | None:
+        stmt = select(Order).where(Order.SourceReturnRequestId == request_id, Order.OrderStatus != "Cancelled")
+        if for_update:
+            stmt = stmt.with_for_update().execution_options(populate_existing=True)
+        return self.session.scalars(stmt).one_or_none()
 
     def exists_by_shipping_method(self, shipping_method_id: uuid.UUID) -> bool:
         """Có đơn hàng (mọi trạng thái) tham chiếu phương thức vận chuyển (FK RESTRICT)."""
@@ -60,6 +67,8 @@ class OrderRepository(BaseRepository[Order]):
             .options(
                 selectinload(Order.items).selectinload(OrderItem.product_variant),
                 selectinload(Order.items).selectinload(OrderItem.review),
+                selectinload(Order.items).selectinload(OrderItem.product_serials),
+                selectinload(Order.items).selectinload(OrderItem.return_requests).selectinload(ReturnRequest.product_serial),
                 selectinload(Order.status_histories),
             )
         )

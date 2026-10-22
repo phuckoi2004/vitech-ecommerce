@@ -9,6 +9,8 @@ import { hasAllWords } from '../../lib/search-text.js'
 import ProductCard, { ProductCardSkeleton } from '../components/ProductCard.jsx'
 import StoreImage from '../components/StoreImage.jsx'
 import useProductPages from '../hooks/useProductPages.js'
+import useExchange from '../hooks/useExchange.js'
+import { orderPath, returnRequestPath } from '../routes/paths.js'
 import { HOME_PATH, NEWS_PATH, SEARCH_PATH, newsPath } from '../routes/paths.js'
 import './ShoppingPages.css'
 import './CatalogPage.css'
@@ -38,9 +40,10 @@ function RelatedArticles({ keyword }) {
 // Search results and brand pages, laid out like CellphoneS: what was found, category chips from the results, a short
 // sort row and "Xem thêm" instead of page numbers. Category pages have their own layout (CategoryPage).
 function Results({ title, fixedBrandId }) {
+  const exchange = useExchange()
   const [params, setParams] = useSearchParams()
-  const keyword = (params.get('q') ?? '').trim()
-  const categoryId = params.get('category') || ''
+  const keyword = exchange.active ? '' : (params.get('q') ?? '').trim()
+  const categoryId = exchange.active ? exchange.data?.CategoryId || '' : params.get('category') || ''
   const defaultSort = keyword ? 'relevance' : 'newest'
   const sorts = [{ value: defaultSort, label: keyword ? 'Liên quan' : 'Mới nhất' },
     { value: 'price_desc', label: 'Giá cao' }, { value: 'price_asc', label: 'Giá thấp' }]
@@ -49,9 +52,9 @@ function Results({ title, fixedBrandId }) {
   const choices = useApiData(JSON.stringify(['search-filters', fixedBrandId, keyword]),
     (signal) => getSearchFilters({ keyword, brandId: fixedBrandId, signal }))
   const categories = choices.data?.Categories ?? []
-  const results = useProductPages(JSON.stringify(['search', fixedBrandId, categoryId, keyword, sort]), async (page, signal) => {
+  const results = useProductPages(exchange.active && (!exchange.data?.CanChoose || exchange.data.OriginalInStock) ? null : JSON.stringify(['search', fixedBrandId, categoryId, keyword, sort]), async (page, signal) => {
     const response = await searchProducts({ keyword, brandId: fixedBrandId, categoryId: categoryId || undefined,
-      includeDescendants: !!categoryId, sort: sort === defaultSort ? undefined : sort, page, pageSize: PAGE_SIZE, signal })
+      includeDescendants: !exchange.active && !!categoryId, inStock: exchange.active, sort: sort === defaultSort ? undefined : sort, page, pageSize: PAGE_SIZE, signal })
     return { ...response, cards: await loadProductCards(response.Items, { signal }) }
   })
   const firstLoad = results.loading && !results.products.length
@@ -65,16 +68,29 @@ function Results({ title, fixedBrandId }) {
     setParams(next)
   }
 
+  if (exchange.active) {
+    if (exchange.loading) return <LoadingState label="Đang kiểm tra phiếu đổi trả…" />
+    if (exchange.error) return <ErrorState message={exchange.error} onRetry={exchange.reload} />
+    if (exchange.data?.OrderId) return <div className="shopping-page"><h1>Đơn đổi trả đã tạo</h1><Link className="cw-primary" to={orderPath(exchange.data.OrderId)}>Tiếp tục đơn {exchange.data.OrderCode}</Link></div>
+    if (!exchange.data?.CanChoose) return <div className="shopping-page"><p>Phiếu chưa cho phép chọn máy đổi hoặc đã đóng.</p><Link to={returnRequestPath(exchange.id)}>Quay lại phiếu</Link></div>
+    if (exchange.data.OriginalInStock) return <div className="shopping-page"><h1>Đổi đúng phiên bản đã mua</h1>
+      <p>Sản phẩm ban đầu còn hàng. Hệ thống tự tạo đơn đổi khi tiếp nhận phiếu.</p>
+      <Link className="cw-primary" to={returnRequestPath(exchange.id)}>Xem phiếu đổi trả</Link></div>
+  }
+
   return <div className="shopping-page customer-catalog">
     <nav className="search-breadcrumb" aria-label="Đường dẫn trang sản phẩm"><ol>
       <li><Link to={HOME_PATH}>Trang chủ</Link></li>
       <li aria-current="page">{heading}</li>
     </ol></nav>
     <h1 className={title ? 'search-title' : 'sr-only'}>{heading}</h1>
+    {exchange.active && <div className="my-4 rounded-lg border border-red-200 bg-red-50 p-4"><h2>Chọn sản phẩm đổi · {exchange.data.RequestCode}</h2>
+      <p>Chỉ hiển thị danh mục của máy đã mua. Đổi 1 máy; giá trị dùng đổi tối đa {Number(exchange.data.CreditLimit).toLocaleString('vi-VN')}đ.</p>
+      <Link to={returnRequestPath(exchange.id)}>← Quay lại phiếu</Link></div>}
     <p className="search-summary" role="status">{firstLoad ? 'Đang tìm sản phẩm…' : results.error && !results.products.length
       ? 'Chưa tải được kết quả' : <>Tìm thấy <strong>{results.total}</strong> sản phẩm{keyword && <> cho từ khoá <strong>'{keyword}'</strong></>}</>}</p>
 
-    {(categories.length > 1 || categoryId) && <div className="search-chips" role="group" aria-label="Danh mục">
+    {!exchange.active && (categories.length > 1 || categoryId) && <div className="search-chips" role="group" aria-label="Danh mục">
       <button type="button" aria-pressed={!categoryId} onClick={() => change('category', '')}>Tất cả</button>
       {categories.map((category) => <button key={category.CategoryId} type="button" aria-pressed={category.CategoryId === categoryId}
         onClick={() => change('category', category.CategoryId === categoryId ? '' : category.CategoryId)}>{category.Name}</button>)}
@@ -88,16 +104,16 @@ function Results({ title, fixedBrandId }) {
     <div className="search-layout">
       <section className="search-results" aria-label="Kết quả sản phẩm" aria-busy={results.loading}>
         {results.products.length > 0 || firstLoad ? <ul className="shopping-products">
-          {results.products.map((product) => <li key={product.id}><ProductCard product={product} /></li>)}
+          {results.products.map((product) => <li key={product.id}><ProductCard product={product} exchangeId={exchange.id} /></li>)}
           {results.loading && Array.from({ length: firstLoad ? 10 : 5 }, (_, index) => <li key={`loading-${index}`}><ProductCardSkeleton /></li>)}
-        </ul> : !results.error && <EmptyState title="Không có sản phẩm phù hợp" description="Hãy thử từ khóa ngắn hơn hoặc chọn danh mục khác."
-          action={<Link className="search-all-products" to={SEARCH_PATH}>Xem tất cả sản phẩm</Link>} />}
+        </ul> : !results.error && <EmptyState title={exchange.active ? 'Danh mục chưa có sản phẩm để đổi' : 'Không có sản phẩm phù hợp'} description={exchange.active ? 'Bạn cần chờ hàng trong cùng danh mục. Phiếu vẫn được giữ mở.' : 'Hãy thử từ khóa ngắn hơn hoặc chọn danh mục khác.'}
+          action={exchange.active ? <button className="cw-secondary" onClick={results.retry}>Kiểm tra lại</button> : <Link className="search-all-products" to={SEARCH_PATH}>Xem tất cả sản phẩm</Link>} />}
         {results.error && <ErrorState message={results.error} onRetry={results.retry} />}
         {results.remaining > 0 && !results.error && <button type="button" className="search-more" onClick={results.more} disabled={results.loading}>
           {results.loading ? 'Đang tải…' : <>Xem thêm {results.remaining} sản phẩm <span aria-hidden="true">↓</span></>}
         </button>}
       </section>
-      <RelatedArticles keyword={keyword} />
+      {!exchange.active && <RelatedArticles keyword={keyword} />}
     </div>
   </div>
 }

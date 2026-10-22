@@ -28,6 +28,7 @@ _NOT_NULL_VIOLATION = "23502"
 
 # Mã lỗi trùng theo tên constraint/unique index (giữ đúng code mà Service đang dùng khi kiểm tra trước).
 UNIQUE_CONSTRAINT_CODES = {
+    "UX_Orders_SourceReturn_Active": "exchange_order_exists",
     "UX_Users_Email_Lower": "email_exists",
     "UQ_Users_PhoneNumber": "phone_number_exists",
     "UQ_Categories_Slug": "category_slug_exists",

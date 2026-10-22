@@ -64,3 +64,7 @@ Giữ nguyên các biên bản này. Số test đạt, head migration và mô t�
 - [Tìm đơn, luồng trạng thái, quyền người phụ trách, thông báo đơn mới và quyền đánh giá/tin tức/banner](updates/2026-10-21-admin-orders-content.md). Bổ sung hiện hành cho 3.26, 3.29 và 3.33–3.36; ghi rõ phần bảo hành/đổi trả giữ lại và giới hạn phía khách.
 
 - Báo cáo hai chức năng bảo hành và đổi trả phía khách hàng: [bản Word](updates/2026-10-21-customer-warranty-returns-report.docx) và [bản Markdown](updates/2026-10-21-customer-warranty-returns-report.md). Gồm nội dung triển khai, kết nối admin, kết quả kiểm thử và phạm vi bàn giao.
+
+## Bổ sung ngày 22/10/2026
+
+- [Đổi sản phẩm theo phiếu, đơn đổi 0đ/bù tiền, tồn kho, Serial và hai cột CSDL mới](updates/2026-10-22-exchange-orders.md). Ghi rõ quyết định thay luồng Đổi/Trả cũ bằng đổi 1–1, cách tính giá tự động, quyền hủy/từ chối, điều kiện hoàn tất và tình trạng đã áp dụng lên CSDL thật; giữ nguyên tài liệu lịch sử.

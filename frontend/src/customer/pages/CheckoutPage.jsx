@@ -23,6 +23,7 @@ import OrderProblem from '../components/checkout/OrderProblem.jsx'
 import { orderFailure } from '../components/checkout/orderErrors.js'
 import { CART_PATH, HOME_PATH, LOGIN_PATH, orderPath } from '../routes/paths.js'
 import './CheckoutPage.css'
+import ExchangeCheckout from './ExchangeCheckout.jsx'
 
 // Fields in the order they appear, to focus the first one with an error.
 const FIELD_ORDER = ['address', 'ReceiverName', 'ReceiverPhone', 'Province', 'Ward', 'DetailAddress', 'shipping', 'payment']
@@ -35,6 +36,11 @@ const STEPS = [['✓', 'Giỏ hàng'], ['2', 'Xác nhận đặt hàng'], ['3', 
 // checked again with the preview API. The customer picks an address, a shipping and a payment method from the API;
 // the form is checked here, then POST /orders places the order (the server prices it). Payment starts on the order page.
 export default function CheckoutPage() {
+  const location = useLocation()
+  return new URLSearchParams(location.search).has('exchange') ? <ExchangeCheckout /> : <NormalCheckoutPage />
+}
+
+function NormalCheckoutPage() {
   const { user, withAccessToken } = useCustomerSession()
   const navigate = useNavigate()
   const location = useLocation()

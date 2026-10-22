@@ -36,7 +36,7 @@ export const paymentStatusLabel = (value) => formatStatus(value, PAYMENT_LABELS)
 export const canOperateOrder = (order, auth) => Boolean(order && auth.permissions.includes('orders:update') && (
   auth.user.Role === 'Admin' || (auth.user.Role === 'Staff' && (order.OrderStatus === 'Pending' || order.AssignedStaffId === auth.user.UserId))
 ))
-export const canCancelOrder = (order) => ['Pending', 'Confirmed', 'Processing', 'Shipping'].includes(order.OrderStatus)
+export const canCancelOrder = (order) => !order.SourceReturnRequestId && ['Pending', 'Confirmed', 'Processing', 'Shipping'].includes(order.OrderStatus)
 
 // Preserve only list filters in detail/back links; a direct link never supplies an external redirect.
 export function orderListSearch(params) {

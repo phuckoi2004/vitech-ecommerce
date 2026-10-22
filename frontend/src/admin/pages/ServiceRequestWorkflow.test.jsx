@@ -50,7 +50,7 @@ test('rejection only sends a trimmed public reason and closes the request', asyn
   expect(api.request).not.toHaveBeenCalled()
   fireEvent.change(within(dialog).getByRole('textbox',{name:'Lý do từ chối'}),{target:{value:'  Sai sản phẩm  '}})
   fireEvent.click(within(dialog).getByRole('button',{name:'Xác nhận từ chối'}))
-  await screen.findByText('Đóng phiếu')
+  await screen.findByText('Đã đóng phiếu')
   expect(api.request).toHaveBeenCalledExactlyOnceWith('/admin/return-requests/id/reject',{method:'POST',accessToken:'access-for-test',body:{Reason:'Sai sản phẩm'}})
   expect(screen.getByText('Sai sản phẩm')).toBeInTheDocument()
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
@@ -71,7 +71,7 @@ test.each(['returns','warranties'])('repeated clicks in %s cannot skip stages wh
 test.each(['Completed','Rejected','Cancelled'])('closed %s return has no mutation actions',async(status)=>{
   returned.Status=status
   renderPage()
-  await screen.findByText('Đóng phiếu')
+  await screen.findByText('Đã đóng phiếu')
   expect(within(screen.getByLabelText('Thao tác phiếu')).queryByRole('button')).not.toBeInTheDocument()
   expect(api.request).not.toHaveBeenCalled()
 })
@@ -104,7 +104,7 @@ test('stale response is shown in a dialog; reload fetches the actual terminal st
   expect(screen.queryByRole('button',{name:'Giai đoạn kế tiếp'})).not.toBeInTheDocument()
   returned.Status='Cancelled'
   fireEvent.click(within(dialog).getByRole('button',{name:'Tải lại phiếu'}))
-  await screen.findByText('Đóng phiếu')
+  await screen.findByText('Đã đóng phiếu')
   expect(api.request).toHaveBeenCalledTimes(1)
 })
 
@@ -132,6 +132,6 @@ test('pending rejection prevents duplicate submissions and closing the dialog',a
   expect(dialog).toBeInTheDocument()
   expect(within(dialog).getByRole('button',{name:'Đang xử lý…'})).toBeDisabled()
   await act(async()=>complete({...returned,Status:'Rejected',DecisionReason:'Lý do thực tế'}))
-  await screen.findByText('Đóng phiếu')
+  await screen.findByText('Đã đóng phiếu')
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
 })

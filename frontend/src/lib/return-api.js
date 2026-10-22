@@ -12,3 +12,7 @@ export const getReturnItems = (accessToken, orderId, { signal } = {}) =>
   request(`/orders/${encodeURIComponent(orderId)}/return-items`, { accessToken, signal })
 export const uploadReturnImage = (accessToken, file) =>
   request('/service-request-image-uploads', { method: 'POST', accessToken, file })
+export const getExchange = (accessToken, id, { signal } = {}) =>
+  request(`/return-requests/${encodeURIComponent(id)}/exchange`, { accessToken, signal })
+export const createExchangeOrder = (accessToken, id, body) =>
+  request(`/return-requests/${encodeURIComponent(id)}/exchange-order`, { method: 'POST', accessToken, body })

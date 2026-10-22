@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useLocation, useNavigate, useOutletContext, useParams, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useOutletContext, useParams, useSearchParams } from 'react-router-dom'
 import { ErrorState, LoadingState } from '../../components/shared/index.js'
 import { formatDate, formatDateTime, formatMoney } from '../../lib/format.js'
 import historyDot from '../assets/order-history-dot.svg'
@@ -32,6 +32,7 @@ export default function OrderDetailPage() {
   const { onSubPage } = useOutletContext() ?? {}
   const workflow = useOrderWorkflow(orderId, null, statusDone)
   const { detail, order, payment, needsSerials, serials, serialItems, canUpdate, next, awaitingPayment, blocked, busy, error, notice, intent, write, choose, setNotice } = workflow
+  const zeroExchange = Boolean(order?.SourceReturnRequestId) && Number(order.TotalAmount) === 0
   useEffect(() => {
     onSubPage?.(order?.OrderCode ?? null)
     return () => onSubPage?.(null)
@@ -60,6 +61,9 @@ export default function OrderDetailPage() {
           <section aria-label="Sản phẩm trong đơn" className={CARD + ' admin-table-inset min-h-[250px]'}><h3 className={TITLE + ' mb-2.5'}>Sản phẩm trong đơn</h3>
             <AdminTable variant="products" columns={columns} rows={order.Items ?? []} rowKey="OrderItemId" label="Sản phẩm trong đơn" emptyText="Đơn hàng chưa có sản phẩm." className="min-w-[570px] table-fixed [&_th]:h-[38px]! [&_th]:font-semibold! [&_td]:h-[58px]! [&_td]:py-2" />
           </section>
+          {order.SourceReturnRequestId && <section className={CARD}><h3 className={TITLE}>Đơn đổi trả</h3>
+            <p className="text-xs">Giá trị dùng đổi: {formatMoney(order.ExchangeCreditAmount)} · Bù thêm: {formatMoney(order.TotalAmount)}</p>
+            <Link className="text-xs text-admin-blue" to={'/admin/returns/' + order.SourceReturnRequestId}>Xem phiếu đổi trả</Link></section>}
           <section aria-label="Lịch sử trạng thái" className={CARD + ' min-h-[230px]'}><h3 className={TITLE + ' mb-2.5'}>Lịch sử trạng thái</h3>
             {order.StatusHistories?.length ? <ol className="m-0 flex list-none flex-col gap-2.5 p-0">{order.StatusHistories.map((entry) => <li key={entry.OrderStatusHistoryId} className="flex items-start gap-3.5">
               <img src={historyDot} width="8" height="8" alt="" className="mt-1 shrink-0" />
@@ -83,7 +87,7 @@ export default function OrderDetailPage() {
             </> : <p className="m-0 text-xs text-admin-muted">Bạn có quyền xem đơn hàng.</p>}
           </section>
           <details className={CARD} open={extraOpen} onToggle={(event) => setExtraOpen(event.currentTarget.open)}><summary className="cursor-pointer text-xs font-semibold text-admin-blue">Giao hàng, thanh toán & ghi chú</summary><div className="mt-4 flex flex-col gap-4">
-            <dl className="m-0 flex flex-col gap-4"><Info label="Địa chỉ giao hàng">{order.ShippingAddress}</Info><Info label="Ghi chú khách hàng">{order.CustomerNote}</Info><Info label="Thanh toán">{paymentStatusLabel(order.PaymentStatus)}</Info><Info label="Phương thức thanh toán">{payment.loading ? 'Đang tải…' : payment.data?.Name ?? 'Chưa tải được'}</Info>{order.CancelReason && <Info label="Lý do hủy">{order.CancelReason}</Info>}</dl>
+            <dl className="m-0 flex flex-col gap-4"><Info label="Địa chỉ giao hàng">{order.ShippingAddress}</Info><Info label="Ghi chú khách hàng">{order.CustomerNote}</Info><Info label="Thanh toán">{zeroExchange ? 'Đơn đổi 0đ · Đã chốt' : paymentStatusLabel(order.PaymentStatus)}</Info><Info label="Phương thức thanh toán">{zeroExchange ? 'Không cần thanh toán' : payment.loading ? 'Đang tải…' : payment.data?.Name ?? 'Chưa tải được'}</Info>{order.CancelReason && <Info label="Lý do hủy">{order.CancelReason}</Info>}</dl>
             {payment.error && <ErrorState title="Chưa tải được phương thức thanh toán" message={payment.error} onRetry={payment.refresh} className="py-2" />}
             <dl className="m-0 grid grid-cols-2 gap-x-3 gap-y-2 text-[11px]"><dt className="text-admin-muted">Tiền hàng</dt><dd className="m-0 text-right">{formatMoney(order.Subtotal)}</dd><dt className="text-admin-muted">Phí vận chuyển</dt><dd className="m-0 text-right">{formatMoney(order.ShippingFee)}</dd><dt className="text-admin-muted">Giảm giá đơn hàng</dt><dd className="m-0 text-right">{formatMoney(order.DiscountAmount)}</dd><dt className="border-t border-admin-border pt-2 font-semibold">Tổng thanh toán</dt><dd className="m-0 border-t border-admin-border pt-2 text-right font-semibold text-admin-blue">{formatMoney(order.TotalAmount)}</dd></dl>
             {canUpdate ? <InternalNote key={order.InternalNote ?? ''} order={order} busy={busy} onSave={(value) => write((token) => updateOrderNote(token, orderId, { InternalNote: value }), () => { detail.refresh(); setNotice('Đã lưu ghi chú nội bộ.') })} /> : <dl className="m-0"><Info label="Ghi chú nội bộ">{order.InternalNote}</Info></dl>}

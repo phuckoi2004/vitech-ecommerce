@@ -10,7 +10,8 @@ export default function useOrderWorkflow(orderId, initialAction, onDone) {
   const detail = useAdminQuery('/admin/orders/' + encodeURIComponent(orderId))
   const order = detail.data
   const payment = useAdminQuery('/payment-methods/' + encodeURIComponent(order?.PaymentMethodId ?? ''), {}, Boolean(order?.PaymentMethodId))
-  const needsSerials = Boolean(order && ['Confirmed', 'Processing', 'Shipping', 'Delivered', 'Completed'].includes(order.OrderStatus))
+  const needsSerials = Boolean(order && (['Confirmed', 'Processing', 'Shipping', 'Delivered', 'Completed'].includes(order.OrderStatus)
+    || (order.SourceReturnRequestId && order.OrderStatus === 'Pending')))
   const serials = useAdminQuery('/admin/orders/' + encodeURIComponent(orderId) + '/serials', {}, needsSerials)
   const [requestedIntent, setIntent] = useState(initialAction)
   const [note, setNote] = useState('')

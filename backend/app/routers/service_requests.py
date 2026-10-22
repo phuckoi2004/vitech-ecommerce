@@ -38,6 +38,8 @@ from app.schemas import (
     WarrantyResultRejection,
 )
 from app.services.returns import ReturnService
+from app.schemas.exchange import ExchangeOrderCreate
+from app.schemas.order import OrderDetailResponse
 from app.services.warranty import WarrantyService
 from app.schemas.service_request import CustomerReturnItemOption, CustomerWarrantyItemOption, ReturnProgressRequest, WarrantyProgressRequest
 from app.services.actor import CUSTOMER_ONLY, require_role
@@ -225,6 +227,16 @@ def list_my_return_requests(service: Returns, actor: CurrentActor, status_filter
 @router.get("/return-requests/{request_id}", response_model=ReturnRequestDetailResponse)
 def get_my_return_request(request_id: uuid.UUID, service: Returns, actor: CurrentActor):
     return service.get_my_return_request(actor, request_id)
+
+
+@router.get("/return-requests/{request_id}/exchange")
+def exchange_context(request_id: uuid.UUID, service: Returns, actor: CurrentActor):
+    return service.exchange_context(actor, request_id)
+
+
+@router.post("/return-requests/{request_id}/exchange-order", response_model=OrderDetailResponse)
+def place_exchange_order(request_id: uuid.UUID, data: ExchangeOrderCreate, service: Returns, actor: CurrentActor):
+    return service.create_exchange_order(actor, request_id, data)
 
 
 @router.post("/return-requests/{request_id}/cancel", response_model=ReturnRequestDetailResponse)

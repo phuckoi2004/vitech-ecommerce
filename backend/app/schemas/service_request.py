@@ -286,6 +286,9 @@ class CustomerReturnItemOption(ResponseSchema):
     Quantity: int
     MaxQuantity: int
     IsSerialTracked: bool
+    OriginalInStock: bool = False
+    ExchangeCreditLimit: Money = 0
+    CanRequestWithoutSerial: bool = False
     ReturnDeadline: date | None = None
     WindowDays: int | None = None
     CanRequest: bool
@@ -391,6 +394,7 @@ class ReturnRequestResponse(_ReturnRequestFields):
 
 
 class ReturnRequestDetailResponse(ReturnRequestResponse):
+    Exchange: dict[str, Any] | None = None
     Attachments: list[ServiceRequestAttachmentResponse] = relation_field("attachments")
     # Chỉ lịch sử công khai (bỏ dòng nội bộ); schema không có InternalNote.
     Histories: list[ServiceRequestHistoryResponse] = relation_field("public_histories")
@@ -411,6 +415,7 @@ class AdminReturnRequestResponse(_ReturnRequestFields):
 
 
 class AdminReturnRequestDetailResponse(AdminReturnRequestResponse):
+    Exchange: dict[str, Any] | None = None
     Attachments: list[ServiceRequestAttachmentResponse] = relation_field("attachments")
     Histories: list[AdminServiceRequestHistoryResponse] = relation_field("histories")
 

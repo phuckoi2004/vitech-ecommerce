@@ -18,9 +18,11 @@ import ProductReviews from '../components/product/ProductReviews.jsx'
 import RelatedProducts from '../components/product/RelatedProducts.jsx'
 import { CART_PATH, HOME_PATH, LOGIN_PATH, productPath } from '../routes/paths.js'
 import './ProductPage.css'
+import useExchange, { exchangePath } from '../hooks/useExchange.js'
+import { CHECKOUT_PATH, SEARCH_PATH, returnRequestPath } from '../routes/paths.js'
 
-function ProductDetails({ product }) {
-  const variants = productVariants(product)
+function ProductDetails({ product, exchange }) {
+  const variants = productVariants(product).filter((item) => !exchange?.data?.OriginalInStock || item.ProductVariantId === exchange.data.OriginalVariantId)
   const [variantId, setVariantId] = useState(initialVariant(variants, product.DefaultVariantId)?.ProductVariantId ?? '')
   const [busy, setBusy] = useState('')
   const [notice, setNotice] = useState(null)
@@ -38,6 +40,10 @@ function ProductDetails({ product }) {
   async function act(kind) {
     if (pending.current || !ready || !canPurchase(variant)) return
     if (!user) return session ? navigate(`${LOGIN_PATH}?next=${encodeURIComponent(productPath(product.Slug))}`) : setLoginPrompt(true)
+    if (exchange?.active) {
+      navigate(exchangePath(CHECKOUT_PATH, exchange.id, { variant: variant.ProductVariantId, product: product.ProductId }))
+      return
+    }
     pending.current = true
     setBusy(kind); setNotice(null)
     try {
@@ -61,7 +67,7 @@ function ProductDetails({ product }) {
   }
 
   return <div className="pd-page">
-    <ProductBreadcrumb product={product} />
+    {exchange?.active ? <div><Link to={exchangePath(SEARCH_PATH, exchange.id)}>← Chọn sản phẩm đổi</Link><p>Đơn đổi trả · Số lượng cố định: 1</p></div> : <ProductBreadcrumb product={product} />}
     <header className="pd-heading"><h1>{product.Name}</h1>
       <div className="pd-meta"><span className="pd-stars" aria-label={`Đánh giá ${formatRating(rating)} trên 5 sao`}>
         {Array.from({ length: 5 }, (_, index) => <span key={index} aria-hidden="true">{index < Math.round(rating) ? '★' : '☆'}</span>)}
@@ -72,26 +78,32 @@ function ProductDetails({ product }) {
     <div className="pd-main-grid grid grid-cols-1 items-start gap-5 min-[1000px]:grid-cols-[520fr_750fr]">
       <ProductGallery key={variant?.ProductVariantId} product={product} variant={variant} />
       <ProductPurchasePanel variants={variants} variant={variant} onSelect={select} busy={busy} notice={notice} ready={ready}
+        exchanging={exchange?.active}
         onCart={() => act('cart')} onBuy={() => act('buy')}
         onConsult={consult} />
     </div>
     <ProductInformation product={product} variant={variant} />
     <ProductReviews product={product} onSummaryChange={setReviewSummary}
       onRequireLogin={() => session ? navigate(`${LOGIN_PATH}?next=${encodeURIComponent(productPath(product.Slug))}`) : setLoginPrompt(true)} />
-    <RelatedProducts product={product} />
+    {!exchange?.active && <RelatedProducts product={product} />}
     <LoginPromptDialog open={loginPrompt} next={productPath(product.Slug)} onClose={() => setLoginPrompt(false)} />
   </div>
 }
 
 export default function ProductPage() {
+  const exchange = useExchange()
   const { slug } = useParams()
   const product = useApiData(`product:${slug}`, async (signal) => {
     try { return await getProductBySlug(slug, { signal }) }
     catch (error) { if (error.status === 404) return null; throw error }
   })
-  if (product.loading) return <div className="pd-page"><LoadingState label="Đang tải sản phẩm…" /></div>
+  if (product.loading || (exchange.active && exchange.loading)) return <div className="pd-page"><LoadingState label="Đang tải sản phẩm…" /></div>
+  if (exchange.active && exchange.error) return <ErrorState message={exchange.error} onRetry={exchange.reload} />
   if (product.error) return <div className="pd-page"><ErrorState message={product.error} onRetry={product.reload} /></div>
   if (!product.data?.ProductId) return <div className="pd-page"><h1>Không tìm thấy sản phẩm</h1>
     <p>Sản phẩm không tồn tại hoặc đã ngừng bán.</p><Link to={HOME_PATH}>Về trang chủ</Link></div>
-  return <ProductDetails key={product.data.ProductId} product={product.data} />
+  if (exchange.active && (!exchange.data?.CanChoose || product.data.CategoryId !== exchange.data.CategoryId
+    || (exchange.data.OriginalInStock && product.data.ProductId !== exchange.data.OriginalProductId))) return <div className="pd-page">
+    <p>Sản phẩm hoặc phiếu chưa cho phép đổi. Nếu đã có đơn, hãy tiếp tục đơn trong phiếu.</p><Link to={returnRequestPath(exchange.id)}>Quay lại phiếu</Link></div>
+  return <ProductDetails key={`${product.data.ProductId}:${exchange.data?.OriginalInStock}`} product={product.data} exchange={exchange} />
 }

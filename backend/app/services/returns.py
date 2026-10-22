@@ -1,5 +1,6 @@
-"""ACTIVE 15/10/2026: advance_status/reject_status update progress and notify customers only.
-No financial, inventory or serial operations run in the active HTTP workflow. The former
+"""ACTIVE 22/10/2026: new requests exchange one unit. Replacement orders are linked to the request;
+completion requires a settled replacement, then restocks the returned unit and its original serial exactly once.
+Only Pending can be rejected; the customer can cancel before replacement commitment. The former
 inspection/approval/refund implementations below are retained as deferred reference (TODO),
 with their HTTP endpoints paused; Completed no longer certifies a refund.
 
@@ -87,7 +88,7 @@ from app.schemas import (
 
 from .actor import ADMIN_ONLY, CUSTOMER_ONLY, STAFF_OR_ADMIN, Actor, require_role
 from .base import BaseService, utc_now
-from .catalog import ProductVariantService, normalize_serial_number
+from .catalog import ProductVariantService, normalize_serial_number, is_variant_sellable
 from .exceptions import BusinessRuleError, ConflictError, NotFoundError, PaymentGatewayError
 from .payment import PaymentService
 from .ports import PaymentGateway
@@ -210,8 +211,16 @@ class ReturnService(BaseService):
         self.variant_service = ProductVariantService(session, clock=clock)
         self.notifications = NotificationService(session, clock=clock)
         self.payments = PaymentService(session, gateway=gateway, clock=clock)
+        from .exchange import ExchangeService
+        self.exchange = ExchangeService(session, self, clock=clock)
 
     # ================================================================== Customer
+
+    def exchange_context(self, actor: Actor, request_id: uuid.UUID) -> dict:
+        return self.exchange.context(actor, request_id)
+
+    def create_exchange_order(self, actor: Actor, request_id: uuid.UUID, data):
+        return self.exchange.create_order(actor, request_id, data)
 
     def customer_return_items(self, actor: Actor, order_id: uuid.UUID) -> list[CustomerReturnItemOption]:
         """Preview the customer's own delivered lines using the same policy and conflicts as creation."""
@@ -235,7 +244,9 @@ class ReturnService(BaseService):
             if variant is None:
                 continue
             serials = []
-            if variant.IsSerialTracked:
+            assigned = self.serials.list_by_order_item(item.OrderItemId)
+            without_serial = item.Quantity > len(assigned)
+            if assigned:
                 for serial in self.serials.list_by_order_item(item.OrderItemId):
                     if serial.ProductVariantId != item.ProductVariantId:
                         continue
@@ -243,7 +254,8 @@ class ReturnService(BaseService):
                     serials.append({"ProductSerialId": serial.ProductSerialId, "SerialNumber": serial.SerialNumber,
                                     "CanRequest": state["CanRequest"] and window_reason is None,
                                     "Reason": window_reason or state["Reason"]})
-                can_request = any(serial["CanRequest"] for serial in serials)
+                legacy_state = self._customer_return_option(item, None)
+                can_request = any(serial["CanRequest"] for serial in serials) or (without_serial and legacy_state["CanRequest"])
                 state = {"MaxQuantity": 1 if serials else 0, "CanRequest": can_request,
                          "Reason": None if can_request else window_reason or
                          "Chưa có thiết bị đủ điều kiện đổi trả. Vui lòng kiểm tra Serial/IMEI hoặc liên hệ VieTech."}
@@ -255,11 +267,19 @@ class ReturnService(BaseService):
                 OrderItemId=item.OrderItemId, ProductId=variant.ProductId, ProductVariantId=item.ProductVariantId,
                 ProductName=item.ProductName, VariantInfo=item.VariantInfo, Quantity=item.Quantity,
                 IsSerialTracked=variant.IsSerialTracked, ReturnDeadline=deadline, WindowDays=self.policy.window_days,
+                OriginalInStock=bool(is_variant_sellable(variant) and variant.StockQuantity > 0), ExchangeCreditLimit=item.UnitPrice,
+                CanRequestWithoutSerial=without_serial and window_reason is None and self._customer_return_option(item, None)["CanRequest"],
                 Serials=serials, **state))
         return result
 
     def _customer_return_option(self, item: OrderItem, serial: ProductSerial | None) -> dict:
-        maximum = 1 if serial is not None else max(0, item.Quantity - self._held_quantity(item))
+        bound_ids = {s.ProductSerialId for s in self.serials.list_by_order_item(item.OrderItemId)}
+        requests = self.requests.list_by_order_item(item.OrderItemId)
+        detached_returned = sum(r.Quantity for r in requests
+                                if r.ProductSerialId is not None and r.Status == COMPLETED and r.ProductSerialId not in bound_ids)
+        held = sum(r.Quantity for r in requests
+                   if r.ProductSerialId is None and r.Status not in RELEASED_STATUSES)
+        maximum = 1 if serial is not None else max(0, item.Quantity - len(bound_ids) - detached_returned - held)
         reason = None
         if serial is not None:
             existing = self.requests.get_open_by_product_serial(serial.ProductSerialId)
@@ -276,6 +296,17 @@ class ReturnService(BaseService):
         return {"MaxQuantity": maximum, "CanRequest": reason is None, "Reason": reason}
 
     def create_return_request(self, actor: Actor, data: ReturnRequestCreate) -> ReturnRequestDetailResponse:
+        """Current public workflow: exactly one unit, exchange only. Historical rows remain readable."""
+        require_role(actor, *CUSTOMER_ONLY)
+        values = allowed_values(data, CREATE_FIELDS, code="return_field_not_allowed")
+        if values.get("RequestType") != TYPE_EXCHANGE:
+            raise BusinessRuleError("Yêu cầu mới chỉ sử dụng hình thức đổi sản phẩm", code="invalid_return_type")
+        quantity = values.get("Quantity", 1)
+        if isinstance(quantity, bool) or not isinstance(quantity, int) or quantity != 1:
+            raise BusinessRuleError("Mỗi phiếu đổi đúng một sản phẩm", code="invalid_return_quantity")
+        return self._create_legacy_return_request(actor, data)
+
+    def _create_legacy_return_request(self, actor: Actor, data: ReturnRequestCreate) -> ReturnRequestDetailResponse:
         """Customer gửi yêu cầu đổi trả cho hàng thuộc đơn đã giao của mình, trong thời hạn đã cấu hình."""
         require_role(actor, *CUSTOMER_ONLY)
         values = allowed_values(data, CREATE_FIELDS, code="return_field_not_allowed")
@@ -318,7 +349,7 @@ class ReturnService(BaseService):
                 if self.warranty_requests.get_open_by_order_item_without_serial(item.OrderItemId) is not None:
                     raise ConflictError("Sản phẩm đang có yêu cầu bảo hành chưa xử lý xong",
                                         code="item_has_open_warranty")
-                remaining = item.Quantity - self._held_quantity(item)
+                remaining = self._customer_return_option(item, None)["MaxQuantity"]
                 if quantity > remaining:
                     raise BusinessRuleError(f"Số lượng vượt số còn có thể đổi trả của dòng đơn ({max(remaining, 0)})",
                                             code="return_quantity_exceeded")
@@ -352,15 +383,17 @@ class ReturnService(BaseService):
     def cancel_return_request(
         self, actor: Actor, request_id: uuid.UUID, data: ServiceRequestNote | None = None
     ) -> ReturnRequestDetailResponse:
-        """Customer hủy yêu cầu của mình khi còn Pending (chưa được tiếp nhận)."""
+        """Customer cancels an open request before settlement; release any unpaid replacement atomically."""
         require_role(actor, *CUSTOMER_ONLY)
         note, _ = step_notes(data, allowed=frozenset({"Note"}), code=FIELD_CODE)
         with self.transaction():
             request, _, _ = self._lock(request_id, customer_id=actor.user_id)
-            if request.Status != PENDING:
-                raise BusinessRuleError("Chỉ hủy được yêu cầu đang chờ xem xét", code="return_not_cancellable")
+            if request.Status not in (PENDING, APPROVED, RECEIVING, PROCESSING):
+                raise BusinessRuleError("Phiếu đã đóng, không thể hủy", code="return_not_cancellable")
+            self.exchange.cancel_pending(request, actor)
+            old = request.Status
             request.Status = CANCELLED
-            self._history(request, actor.user_id, PENDING, CANCELLED, compose_note("Khách hàng hủy yêu cầu.", note))
+            self._history(request, actor.user_id, old, CANCELLED, compose_note("Khách hàng hủy yêu cầu.", note))
             return self._customer_detail(request)
 
     def list_my_return_requests(
@@ -378,9 +411,11 @@ class ReturnService(BaseService):
 
     def get_my_return_request(self, actor: Actor, request_id: uuid.UUID) -> ReturnRequestDetailResponse:
         require_role(actor, *CUSTOMER_ONLY)
-        if self.requests.get_by_id_and_customer(request_id, actor.user_id) is None:
-            raise NotFoundError("Không tìm thấy yêu cầu đổi trả", code="return_request_not_found")
-        return ReturnRequestDetailResponse.model_validate(self.requests.get_detail(request_id))
+        with self.transaction():
+            # Refresh an accepted request after QR expiry or restocking, without requiring
+            # a customer to manually create the available original replacement.
+            self.exchange.context(actor, request_id)
+            return self._customer_detail(self.requests.get_detail(request_id))
 
     # ================================================================== Staff / Admin: xem
 
@@ -388,10 +423,9 @@ class ReturnService(BaseService):
         self, actor: Actor, request_id: uuid.UUID, expected_status: str, *,
         notes: ServiceRequestNote | ReturnGoodsReceive | None = None,
     ) -> AdminReturnRequestDetailResponse:
-        """Active workflow (15/10/2026): status only, no refund, stock or serial mutations.
+        """Forward-only workflow; closing requires a settled exchange and restocks the original unit atomically.
 
-        Financial/inspection implementations below are retained for later consultation;
-        their HTTP endpoints are paused. Completed here does NOT mean money was refunded.
+        Financial/refund implementations below remain deferred; their HTTP endpoints are paused.
         ``notes``: the operator's optional step note (Note: customer-visible, InternalNote: Staff/Admin only),
         kept in the history line of this step.
         """
@@ -401,7 +435,7 @@ class ReturnService(BaseService):
         labels = {APPROVED: "Đã tiếp nhận yêu cầu", RECEIVING: "Đang điều phối", PROCESSING: "Đang đánh giá hư hại",
                   COMPLETED: "Đã hoàn tất yêu cầu đổi trả"}
         with self.transaction():
-            request, _, _ = self._lock(request_id)
+            request, original, _ = self._lock(request_id)
             if request.Status != expected_status:
                 raise ConflictError("Phiếu đã thay đổi; hãy tải lại trước khi chuyển giai đoạn", code="service_request_stale")
             next_status = transitions.get(request.Status)
@@ -410,6 +444,8 @@ class ReturnService(BaseService):
             old = request.Status
             if request.AssignedStaffId is None:
                 request.AssignedStaffId = actor.user_id
+            if next_status == COMPLETED:
+                self.exchange.complete(request, original)
             request.Status = next_status
             if next_status == PROCESSING:
                 request.ReceivedAt = self.now()
@@ -419,17 +455,19 @@ class ReturnService(BaseService):
                           internal_note=internal_note)
             self._notify_customer(request, labels[next_status], f"Yêu cầu {request.RequestCode}: {labels[next_status]}.")
             self.requests.flush()
+            if next_status in (APPROVED, RECEIVING, PROCESSING):
+                self.exchange.ensure_original_order(request, original)
             return self.get_return_request(actor, request_id)
 
     def reject_status(self, actor: Actor, request_id: uuid.UUID, data: ServiceRequestRejection) -> AdminReturnRequestDetailResponse:
-        """Staff/Admin can reject any open status; no money, stock or serial side effects."""
+        """Only Pending may be rejected. Acceptance closes the staff rejection branch."""
         require_role(actor, *STAFF_OR_ADMIN)
         reason = required_text(data.Reason, code="rejection_reason_required", message="Cần ghi lý do từ chối")
         internal_note = optional_text(data.InternalNote)  # Staff/Admin only; never in the customer notification
         with self.transaction():
             request, _, _ = self._lock(request_id)
-            if request.Status not in (PENDING, APPROVED, RECEIVING, PROCESSING):
-                raise BusinessRuleError("Phiếu đã đóng, không thể từ chối", code="service_request_closed")
+            if request.Status != PENDING:
+                raise BusinessRuleError("Chỉ được từ chối phiếu đang chờ, chưa tiếp nhận", code="return_rejection_not_allowed")
             old = request.Status
             request.Status, request.DecisionReason = REJECTED, reason
             if request.AssignedStaffId is None:
@@ -472,7 +510,8 @@ class ReturnService(BaseService):
         if request is None:
             raise NotFoundError("Không tìm thấy yêu cầu đổi trả", code="return_request_not_found")
         context = self.requests.get_admin_context([request_id])
-        return AdminReturnRequestDetailResponse.model_validate(request).model_copy(update=context.get(request_id, {}))
+        return AdminReturnRequestDetailResponse.model_validate(request).model_copy(
+            update={**context.get(request_id, {}), "Exchange": self.exchange.describe(request)})
 
     # ================================================================== Staff: xem xét / nhận hàng / kiểm tra
 
@@ -760,6 +799,8 @@ class ReturnService(BaseService):
                 raise BusinessRuleError("Sản phẩm không quản lý Serial/IMEI", code="serial_not_applicable")
             return None
         if serial_id is None:
+            if self._customer_return_option(item, None)["MaxQuantity"] > 0:
+                return None
             raise BusinessRuleError("Cần chọn Serial/IMEI của thiết bị cần đổi trả", code="return_serial_required")
         serial = self.serials.get_by_id_for_update(serial_id)
         if (serial is None or serial.OrderItemId != item.OrderItemId
@@ -919,7 +960,8 @@ class ReturnService(BaseService):
 
     def _customer_detail(self, request: ReturnRequest) -> ReturnRequestDetailResponse:
         self.requests.flush()
-        return ReturnRequestDetailResponse.model_validate(self.requests.get_detail(request.ReturnRequestId))
+        return ReturnRequestDetailResponse.model_validate(self.requests.get_detail(request.ReturnRequestId)).model_copy(
+            update={"Exchange": self.exchange.describe(request)})
 
     def _admin_detail(self, request: ReturnRequest) -> AdminReturnRequestDetailResponse:
         self.requests.flush()

@@ -30,6 +30,7 @@ describe('order payment rules', () => {
   })
 
   test('a QR is given while the backend accepts one (not cancelled, shipped or paid)', () => {
+    expect(awaitingTransfer({ SourceReturnRequestId: 'r1', TotalAmount: '0.00', OrderStatus: 'Pending', PaymentStatus: 'Pending' })).toBe(false)
     expect(awaitingTransfer({ OrderStatus: 'Pending', PaymentStatus: 'Pending' })).toBe(true)
     expect(awaitingTransfer({ OrderStatus: 'Confirmed', PaymentStatus: 'Failed' })).toBe(true)
     expect(awaitingTransfer({ OrderStatus: 'Pending', PaymentStatus: 'Paid' })).toBe(false)

@@ -499,9 +499,16 @@ class FakeShippingMethodRepo(FakeRepo):
 class FakePaymentMethodRepo(FakeRepo):
     model = PaymentMethod
 
+    def list_methods(self, *, is_active=None):
+        return sorted(self._rows(lambda m: is_active is None or m.IsActive is is_active), key=lambda m: (m.DisplayOrder, m.Name))
+
 
 class FakeOrderRepo(FakeRepo):
     model = Order
+
+    def exchange_order(self, request_id, *, for_update=False):
+        return next((o for o in self.db.rows(Order)
+                     if o.SourceReturnRequestId == request_id and o.OrderStatus != "Cancelled"), None)
 
     def get_detail(self, order_id):
         return self.get_by_id(order_id)
@@ -1576,6 +1583,7 @@ def return_service(db, session, clock=fixed_clock, policy=None, gateway=None) ->
     payments.returns = svc.requests
     payments.notifications = notification_service(db, session)
     svc.payments = payments
+    svc.exchange.sales = order_service(db, session, clock=clock)
     return svc
 
 

@@ -49,7 +49,6 @@ test('creates a request with exact assigned serial, order line, public descripti
   expect(await screen.findByRole('img', { name: 'Điện thoại VieTech' })).toHaveAttribute('src', 'https://images.test/phone.png')
   await describe()
   await userEvent.selectOptions(screen.getByLabelText('Loại lỗi'), 'Màn hình / hiển thị')
-  await userEvent.click(screen.getByRole('checkbox', { name: 'Cáp sạc' }))
   const attachment = { FileUrl: 'https://storage.test/evidence.png', FileType: 'Image' }
   api.uploadWarrantyImage.mockResolvedValue(attachment)
   await userEvent.upload(screen.getByLabelText('Chọn ảnh minh chứng'), new File(['image'], 'loi.png', { type: 'image/png' }))
@@ -58,7 +57,7 @@ test('creates a request with exact assigned serial, order line, public descripti
   await waitFor(() => expect(router.state.location.pathname).toBe('/tai-khoan'))
   expect(router.state.location.search).toBe('?section=service&request=request1')
   expect(api.createWarranty).toHaveBeenCalledWith('access-for-test', {
-    OrderItemId: 'line1', ProductSerialId: 's2', IssueDescription: 'Loại lỗi: Màn hình / hiển thị\nMàn hình bị nhấp nháy khi sạc.\nPhụ kiện dự kiến gửi kèm: Cáp sạc', Attachments: [attachment],
+    OrderItemId: 'line1', ProductSerialId: 's2', IssueDescription: 'Loại lỗi: Màn hình / hiển thị\nMàn hình bị nhấp nháy khi sạc.', Attachments: [attachment],
   })
   expect(api.createWarranty).toHaveBeenCalledTimes(1)
 })

@@ -49,7 +49,6 @@ test('sends the selected return type, exact serial, quantity, public description
   expect(screen.getByLabelText('Số lượng yêu cầu *')).toHaveAttribute('readonly')
   expect(await screen.findByRole('img', { name: 'Điện thoại VieTech' })).toHaveAttribute('src', 'https://images.test/phone.png')
   await describe()
-  await userEvent.click(screen.getByRole('checkbox', { name: 'Còn hộp' }))
   const attachment = { FileUrl: 'https://storage.test/return.png', FileType: 'Image' }
   api.uploadReturnImage.mockResolvedValue(attachment)
   await userEvent.upload(screen.getByLabelText('Chọn ảnh minh chứng'), new File(['image'], 'loi.png', { type: 'image/png' }))
@@ -57,36 +56,30 @@ test('sends the selected return type, exact serial, quantity, public description
   await userEvent.click(screen.getByRole('button', { name: 'Gửi yêu cầu đổi trả' }))
   await waitFor(() => expect(router.state.location.search).toBe('?section=service&type=return&request=request1'))
   expect(api.createReturn).toHaveBeenCalledWith('access-for-test', {
-    OrderItemId: 'line1', ProductSerialId: 's2', Quantity: 1, RequestType: 'Return',
-    Reason: 'Lý do: Sản phẩm bị lỗi\nMàn hình bị nhấp nháy khi mở máy.\nTình trạng sản phẩm và phụ kiện: Còn hộp', Attachments: [attachment],
+    OrderItemId: 'line1', ProductSerialId: 's2', Quantity: 1, RequestType: 'Exchange',
+    Reason: 'Lý do: Sản phẩm bị lỗi\nMàn hình bị nhấp nháy khi mở máy.', Attachments: [attachment],
   })
   expect(api.createReturn).toHaveBeenCalledTimes(1)
 })
 
-test('exchange selection changes the requested action and sends Exchange without unsupported bank or replacement fields', async () => {
+test('uses exchange only without a return/exchange selector or unsupported bank fields', async () => {
   mount(); await chooseProduct(); await describe()
-  await userEvent.click(screen.getByRole('radio', { name: /Đổi sản phẩm/ }))
-  expect(screen.getByText('Bạn đang chọn: Đổi sản phẩm')).toBeInTheDocument()
+  expect(screen.queryByRole('radio')).not.toBeInTheDocument()
+  expect(screen.getByText('Đổi sản phẩm mới')).toBeInTheDocument()
   expect(screen.queryByLabelText(/Số tài khoản/)).not.toBeInTheDocument()
   await userEvent.click(screen.getByRole('button', { name: 'Gửi yêu cầu đổi trả' }))
   await waitFor(() => expect(api.createReturn).toHaveBeenCalledWith('access-for-test', expect.objectContaining({ RequestType: 'Exchange', Quantity: 1 })))
   expect(Object.keys(api.createReturn.mock.calls[0][1]).sort()).toEqual(['Attachments', 'OrderItemId', 'ProductSerialId', 'Quantity', 'Reason', 'RequestType'])
 })
 
-test('nonserial products allow a partial quantity up to the server maximum and reject fractional or excess quantities', async () => {
+test('nonserial products also exchange exactly one unit', async () => {
   api.getReturnItems.mockResolvedValue([{ ...item, IsSerialTracked: false, MaxQuantity: 2, Quantity: 4, Serials: [] }])
   mount(); await chooseProduct(null); await describe()
   const input = screen.getByLabelText('Số lượng yêu cầu *')
-  expect(input).toHaveAttribute('max', '2')
-  for (const value of ['3', '1.5', '0']) {
-    fireEvent.change(input, { target: { value } })
-    await userEvent.click(screen.getByRole('button', { name: 'Gửi yêu cầu đổi trả' }))
-    expect(screen.getByRole('alert')).toHaveTextContent('Số lượng phải là số nguyên từ 1 đến 2')
-  }
-  expect(api.createReturn).not.toHaveBeenCalled()
-  fireEvent.change(input, { target: { value: '2' } })
+  expect(input).toHaveAttribute('readonly')
+  expect(input).toHaveValue(1)
   await userEvent.click(screen.getByRole('button', { name: 'Gửi yêu cầu đổi trả' }))
-  await waitFor(() => expect(api.createReturn).toHaveBeenCalledWith('access-for-test', expect.objectContaining({ ProductSerialId: null, Quantity: 2 })))
+  await waitFor(() => expect(api.createReturn).toHaveBeenCalledWith('access-for-test', expect.objectContaining({ ProductSerialId: null, Quantity: 1 })))
 })
 
 test('requires a selected device, reason, detailed description and confirmation before posting', async () => {
@@ -152,4 +145,19 @@ test('an unavailable order list can be retried and an empty list points to order
   await userEvent.click(screen.getByRole('button', { name: 'Thử lại' }))
   expect(await screen.findByText('Chưa có đơn hàng đã giao')).toBeInTheDocument()
   expect(screen.getByRole('link', { name: 'Xem lịch sử mua hàng' })).toHaveAttribute('href', '/tai-khoan?section=orders')
+})
+
+test('out-of-stock credit notice sits immediately above and outside the confirmation footer', async () => {
+  api.getReturnItems.mockResolvedValue([{ ...item, OriginalInStock: false, ExchangeCreditLimit: '12000000' }])
+  mount(); await chooseProduct()
+  const notice = screen.getByText(/Bạn được dùng giá trị 12.000.000đ/)
+  const footer = screen.getByRole('button', { name: 'Gửi yêu cầu đổi trả' }).closest('.cw-confirm')
+  expect(footer.previousElementSibling).toBe(notice)
+  expect(footer).not.toContainElement(notice)
+})
+
+test('in-stock original shows no red exchange-credit notice', async () => {
+  api.getReturnItems.mockResolvedValue([{ ...item, OriginalInStock: true, ExchangeCreditLimit: '12000000' }])
+  mount(); await chooseProduct()
+  expect(screen.queryByText(/Bạn được dùng giá trị/)).not.toBeInTheDocument()
 })

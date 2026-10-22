@@ -3,6 +3,8 @@ import { formatDate, formatDateTime } from '../../lib/format.js'
 import { returnStatusLabel, returnTypeLabel } from '../lib/returns.js'
 import { ReturnButton, ReturnStatus } from './ReturnUi.jsx'
 import Modal from './Modal.jsx'
+import { Link } from 'react-router-dom'
+import Money from '../../components/shared/Money.jsx'
 
 function InfoRow({ label, children }) {
   return <div className="grid grid-cols-[170px_minmax(0,1fr)] text-[10px] leading-3"><dt className="font-medium text-admin-muted">{label}</dt><dd className="m-0 break-words whitespace-pre-wrap">{children ?? '—'}</dd></div>
@@ -32,6 +34,11 @@ export default function ReturnInformation({ item, assignedName }) {
         <InfoRow label="Thời điểm tiếp nhận">{acceptedAt ? formatDateTime(acceptedAt) : '—'}</InfoRow>
         {item.DecisionReason && <InfoRow label="Lý do từ chối">{item.DecisionReason}</InfoRow>}
         {item.ReceivedAt && <InfoRow label="Thời điểm nhận hàng">{formatDateTime(item.ReceivedAt)}</InfoRow>}
+        {item.Exchange?.OrderId && <>
+          <InfoRow label="Đơn đổi trả"><Link className="text-admin-blue" to={'/admin/orders/' + item.Exchange.OrderId}>{item.Exchange.OrderCode}</Link></InfoRow>
+          <InfoRow label="Tiền khách bù"><Money value={item.Exchange.TotalAmount} /></InfoRow>
+          <InfoRow label="Chốt đơn đổi">{item.Exchange.Committed ? 'Đã chốt' : 'Chờ thanh toán'}</InfoRow>
+        </>}
       </dl>
       <div className="flex items-center gap-2 [&>span]:px-2 [&>span]:text-[9px]"><ReturnStatus status={item.Status} /></div>
     </section>

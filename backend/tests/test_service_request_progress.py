@@ -12,7 +12,8 @@ from alembic.script import ScriptDirectory
 from sqlalchemy import event, select
 from sqlalchemy.orm import Session
 
-from app.models import Notification, ProductSerial, ReturnRequest, ServiceRequestHistory, WarrantyRequest
+from app.models import Notification, ProductSerial, ReturnRequest, ServiceRequestHistory, WarrantyRequest, Order, ProductVariant
+import uuid
 from tests.test_return_directory import directory as returns_directory
 from tests.test_warranty_directory import directory as warranty_directory
 
@@ -21,6 +22,9 @@ from tests.test_warranty_directory import directory as warranty_directory
 def returns(returns_directory):
     client, engine, current, rows, actors, orders = returns_directory
     Notification.__table__.create(engine)
+    with Session(engine) as session:
+        session.scalar(select(ProductVariant)).StockQuantity = 5
+        session.commit()
     return client, engine, current, rows, actors, orders
 
 
@@ -31,32 +35,52 @@ def warranty(warranty_directory):
     return client, engine, current, rows, actors, orders
 
 
-def test_return_forward_flow_finishes_without_money_or_stock_effects(returns):
-    client, engine, _, rows, _, _ = returns
+def settled_exchange(engine, request_id, source):
+    with Session(engine) as session:
+        original = session.get(Order, source.OrderId)
+        values = {column.key: getattr(original, column.key) for column in Order.__table__.columns}
+        values.update(OrderId=uuid.uuid4(), OrderCode='EX-' + uuid.uuid4().hex[:10], OrderStatus='Pending', PaymentStatus='Paid',
+                      TotalAmount=0, DiscountAmount=original.Subtotal, ExchangeCreditAmount=original.Subtotal,
+                      SourceReturnRequestId=request_id)
+        session.add(Order(**values)); session.commit()
+
+
+def test_return_forward_flow_requires_settled_exchange_before_restock(returns):
+    client, engine, _, rows, _, source = returns
+    with Session(engine) as session:
+        session.scalar(select(ProductVariant)).StockQuantity = 0
+        session.commit()
     path = '/admin/return-requests/' + str(rows[1].ReturnRequestId)
     statements = []
     def capture(_connection, _cursor, statement, _params, _context, _many):
         statements.append(statement)
     event.listen(engine, 'before_cursor_execute', capture)
     try:
-        for old, new in [('Pending', 'Approved'), ('Approved', 'Receiving'), ('Receiving', 'Processing'), ('Processing', 'Completed')]:
+        for old, new in [('Pending', 'Approved'), ('Approved', 'Receiving'), ('Receiving', 'Processing')]:
             response = client.post(path + '/advance', json={'ExpectedStatus': old})
             assert response.status_code == 200, response.text
             body = response.json()
             assert body['Status'] == new and body['CustomerName'] is not None
             assert body['CompensationAmount'] is body['CompensationApprovedAt'] is body['RefundPaymentTransactionId'] is None
-        assert body['CompletedAt'] is not None
+        blocked = client.post(path + '/advance', json={'ExpectedStatus': 'Processing'})
+        assert blocked.status_code == 400 and blocked.json()['code'] == 'exchange_order_not_settled'
+        settled_exchange(engine, rows[1].ReturnRequestId, source)
+        response = client.post(path + '/advance', json={'ExpectedStatus': 'Processing'})
+        assert response.status_code == 200 and response.json()['CompletedAt'] is not None
+        with Session(engine) as session:
+            assert session.scalar(select(ProductVariant.StockQuantity)) == 1
         assert client.post(path + '/advance', json={'ExpectedStatus': 'Completed'}).status_code == 400
         assert client.post(path + '/reject', json={'Reason': 'Không được mở lại'}).status_code == 400
         writes = [s for s in statements if s.lstrip().split(' ', 1)[0].upper() in ('INSERT', 'UPDATE', 'DELETE')]
         assert writes
-        assert all(not any(table in s for table in ('PaymentTransactions', 'ProductSerials', 'ProductVariants', 'StockAdjustments')) for s in writes)
+        assert any('ProductVariants' in s for s in writes)
+        assert all(not any(table in s for table in ('PaymentTransactions', 'StockAdjustments')) for s in writes)
     finally:
         event.remove(engine, 'before_cursor_execute', capture)
 
 
 def test_exchange_can_complete_and_stale_click_does_not_skip_a_stage(returns):
-    client, engine, _, rows, _, _ = returns
+    client, engine, _, rows, _, source = returns
     id_ = rows[1].ReturnRequestId
     with Session(engine) as session:
         session.get(ReturnRequest, id_).RequestType = 'Exchange'; session.commit()
@@ -64,22 +88,27 @@ def test_exchange_can_complete_and_stale_click_does_not_skip_a_stage(returns):
     assert client.post(path + '/advance', json={'ExpectedStatus': 'Pending'}).status_code == 200
     assert client.post(path + '/advance', json={'ExpectedStatus': 'Pending'}).status_code == 409
     assert client.get(path).json()['Status'] == 'Approved'
+    # Acceptance now creates the settled same-SKU replacement without a customer POST.
+    assert client.get(path).json()['Exchange']['Committed']
     for expected in ['Approved', 'Receiving', 'Processing']:
         response = client.post(path + '/advance', json={'ExpectedStatus': expected})
         assert response.status_code == 200, response.text
     assert response.json()['Status'] == 'Completed'
 
 
-def test_staff_rejects_processing_or_pending_with_public_reason_and_no_admin_cancel(returns):
+def test_staff_cannot_reject_after_acceptance_but_can_reject_pending(returns):
     client, engine, current, rows, actors, _ = returns
     path = '/admin/return-requests/' + str(rows[1].ReturnRequestId)
     for expected in ['Pending', 'Approved', 'Receiving']:
         assert client.post(path + '/advance', json={'ExpectedStatus': expected}).status_code == 200
     response = client.post(path + '/reject', json={'Reason': 'Không đáp ứng yêu cầu'})
+    assert response.status_code == 400 and response.json()['code'] == 'return_rejection_not_allowed'
+    path = '/admin/return-requests/' + str(rows[3].ReturnRequestId)
+    response = client.post(path + '/reject', json={'Reason': 'Không đáp ứng yêu cầu'})
     assert response.status_code == 200
     assert response.json()['Status'] == 'Rejected'
     current['actor'] = actors[0]
-    mine = client.get('/return-requests/' + str(rows[1].ReturnRequestId)).json()
+    mine = client.get('/return-requests/' + str(rows[3].ReturnRequestId)).json()
     assert mine['DecisionReason'] == 'Không đáp ứng yêu cầu'
     assert 'Không đáp ứng yêu cầu' in str(mine['Histories'])
     assert client.post(path + '/advance', json={'ExpectedStatus': 'Rejected'}).status_code == 403
@@ -99,7 +128,7 @@ def test_deferred_financial_endpoints_cannot_mutate_returns(returns, endpoint, b
     assert client.get(path).json()['Status'] == 'Pending'
 
 
-def test_return_step_endpoints_keep_their_step_notes_without_money_or_stock_effects(returns):
+def test_return_step_endpoints_keep_notes_and_reserve_automatic_replacement(returns):
     client, engine, current, rows, actors, _ = returns
     path = '/admin/return-requests/' + str(rows[1].ReturnRequestId)
     steps = [('accept', 'Approved', 'Đã gọi xác nhận với khách', 'Khách hẹn gửi chiều nay'),
@@ -121,13 +150,16 @@ def test_return_step_endpoints_keep_their_step_notes_without_money_or_stock_effe
         assert client.post(path + '/receive', json={}).status_code == 409  # already received: a repeated click is stale
         writes = [s for s in statements if s.lstrip().split(' ', 1)[0].upper() in ('INSERT', 'UPDATE', 'DELETE')]
         assert writes
-        assert all(not any(table in s for table in ('PaymentTransactions', 'ProductSerials', 'ProductVariants', 'StockAdjustments')) for s in writes)
+        assert all(not any(table in s for table in ('PaymentTransactions', 'StockAdjustments')) for s in writes)
+        assert any('ProductVariants' in s for s in writes)
+        with Session(engine) as session:
+            assert session.scalar(select(ProductVariant.StockQuantity)) == 4
     finally:
         event.remove(engine, 'before_cursor_execute', capture)
     other = '/admin/return-requests/' + str(rows[3].ReturnRequestId)
     response = client.post(other + '/accept')  # the note body is optional
     assert response.status_code == 200 and response.json()['Status'] == 'Approved'
-    assert [h['Note'] for h in response.json()['Histories'] if h['NewStatus'] == 'Approved'] == ['Đã tiếp nhận yêu cầu.']
+    assert 'Đã tiếp nhận yêu cầu.' in [h['Note'] for h in response.json()['Histories'] if h['NewStatus'] == 'Approved']
     current['actor'] = actors[0]
     mine = client.get('/return-requests/' + str(rows[1].ReturnRequestId)).json()
     for _, _, note, internal_note in steps:
@@ -220,7 +252,7 @@ def test_rejection_keeps_the_internal_note_for_staff_only(request, kind, interna
     assert 'Sản phẩm không thuộc diện hỗ trợ' in line['Note'] and line['InternalNote'] == internal_note
     assert line['ChangedByUserId'] == str(actors[1].user_id)
     response = client.post(path + '/reject', json={'Reason': 'Lần hai'})
-    assert response.status_code == 400 and response.json()['code'] == 'service_request_closed'
+    assert response.status_code == 400 and response.json()['code'] == ('return_rejection_not_allowed' if kind == 'returns' else 'service_request_closed')
     current['actor'] = actors[0]
     mine = client.get(customer_path + str(request_id)).json()
     assert mine['Status'] == 'Rejected' and mine[reason_field] == 'Sản phẩm không thuộc diện hỗ trợ'
