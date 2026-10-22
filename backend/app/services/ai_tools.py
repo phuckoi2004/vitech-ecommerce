@@ -451,6 +451,13 @@ class AiTools:
         return public
 
     def list_offers(self, args, context):
+        self._ensure(context)
+        if args.product_id is None and context.intent.references:
+            coupons = {}
+            for ref in context.intent.references:
+                result = self.list_offers(ListOffersArguments(product_id=uuid.UUID(ref["ProductId"])), context)
+                coupons.update((coupon["Code"], coupon) for coupon in result["Coupons"])
+            return {**result, "Coupons": list(coupons.values())[:5]}
         category_ids = self._offer_category_ids(context) if args.product_id is None else None
         coupons = self.pricing.public_coupons(product_id=args.product_id,
                                              **({"category_ids": category_ids} if category_ids is not None else {}))
@@ -482,6 +489,11 @@ class AiTools:
         """
         self._ensure(context)
         notes = {"AnswerIntent": decision.intent, "AnswerSource": "backend"}
+        if context.intent.clarification:
+            return context.intent.clarification, [], [], {**notes, "AnswerIntent": "clarify"}
+        if context.intent.intent == "promotion_inquiry" and not context.policy:
+            # Direct/older callers may skip prepare(); they still must answer within the customer's scope.
+            context.policy = {"Promotion": []}
         # Questions the backend answers from its own data: the model only words the answer, whatever it chose.
         if context.intent.intent == "explain_recommendation" and context.intent.references:
             return self._explanation(decision, context, {**notes, "AnswerIntent": "explain"})

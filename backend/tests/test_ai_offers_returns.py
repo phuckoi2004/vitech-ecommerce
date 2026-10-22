@@ -7,8 +7,10 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models import Coupon, Promotion, PromotionProduct, User
+from app.schemas.ai_chat import ListOffersArguments, PresentAnswerArguments
 from app.services.ai_grounding import Facts, ProductFacts, check_message
 from app.services.ai_intent import ConversationState, PastTurn, analyze
+from app.services.ai_tools import AiTools, GroundingContext
 from tests.test_ai_advisor import LIST, NOW, VOCAB, cards, store  # noqa: F401
 from tests.test_ai_policy_explain import TurnModel, answer, provider_down
 
@@ -32,6 +34,7 @@ def offer(s, code, *, product_id=None, automatic=False, amount=100000):
 @pytest.mark.parametrize("question", [
     "Khuyến mãi sản phẩm như nào",
     "Khuyến mãi các sản phẩm trên như nào",
+    "Khuyến mãi đối với sản phẩm trên như nào",
 ])
 def test_product_promotion_questions_resolve_the_shown_list(question):
     state = ConversationState((PastTurn({}, "compare", LIST[:2]),))
@@ -40,16 +43,19 @@ def test_product_promotion_questions_resolve_the_shown_list(question):
     assert [ref["ProductId"] for ref in result.references] == ["p1", "p2"]
 
 
-def test_singular_product_above_resolves_focus_or_asks_which_product():
+def test_product_above_promotions_resolve_the_latest_focus():
     state = ConversationState((PastTurn({}, "product", LIST[1:2]),))
     assert analyze("Khuyến mãi sản phẩm trên như nào", VOCAB, state).references == LIST[1:2]
     multiple = ConversationState((PastTurn({}, "compare", LIST[:2]),))
-    assert analyze("Khuyến mãi sản phẩm trên như nào", VOCAB, multiple).clarification
+    result = analyze("Khuyến mãi sản phẩm trên như nào", VOCAB, multiple)
+    assert result.references == LIST[:2] and not result.clarification
+    assert analyze("Khuyến mãi sản phẩm trên như nào", VOCAB).clarification
 
 
 @pytest.mark.parametrize("question", [
     "Khuyến mãi sản phẩm như nào",
     "Khuyến mãi các sản phẩm trên như nào",
+    "Khuyến mãi đối với sản phẩm trên như nào",
 ])
 @pytest.mark.parametrize("respond", [provider_down, lambda m: answer({"intent": "handoff"})])
 def test_offers_are_per_product_and_do_not_include_other_product_coupons(store, question, respond):
@@ -70,6 +76,30 @@ def test_offers_are_per_product_and_do_not_include_other_product_coupons(store, 
     assert "giảm 300.000 đ" in text and "giá gốc" in text
     assert recommended[2]["ProductName"] not in text
     assert cards(s.ask(svc, "Máy thứ hai pin bao nhiêu?"))[0]["ProductName"] == compared[1]["ProductName"]
+
+
+@pytest.mark.parametrize("prepared", [False, True])
+def test_unscoped_offer_tool_and_legacy_finish_keep_the_referenced_products(store, prepared):
+    s = store
+    recommended = cards(s.ask(s.service(TurnModel(s.counters, provider_down)), "Tư vấn điện thoại dưới 8 triệu."))
+    refs = tuple(recommended[:2])
+    offer(s, "FIRST100", product_id=refs[0]["ProductId"])
+    offer(s, "SECOND100", product_id=refs[1]["ProductId"])
+    offer(s, "OTHER100", product_id=recommended[2]["ProductId"])
+    context = GroundingContext("Khuyến mãi đối với sản phẩm trên như nào",
+                               state=ConversationState((PastTurn({}, "recommend", refs),)))
+    with Session(s.engine) as db:
+        tools = AiTools(db, clock=lambda: NOW)
+        if prepared:
+            tools.prepare(context)
+        coupons = tools.list_offers(ListOffersArguments(), context)["Coupons"]
+        assert {coupon["Code"] for coupon in coupons} == {"FIRST100", "SECOND100"}
+        assert set(context.offer_scopes) == {ref["ProductId"] for ref in refs}
+        context.policy = None  # The older finish path must not produce a store-wide promotion summary.
+        text, products, _, _ = tools.finish(PresentAnswerArguments(intent="offers"), context, 5)
+    assert not products and all(ref["ProductName"] in text for ref in refs)
+    assert "FIRST100" in text and "SECOND100" in text and "OTHER100" not in text
+    assert "Các mã ưu đãi công khai hiện có" not in text
 
 
 def test_category_offers_exclude_coupons_for_other_categories(store):

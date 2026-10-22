@@ -572,10 +572,13 @@ def analyze(question, vocab: Vocabulary, state: ConversationState = Conversation
     if intent == "product_description" and not refs and not clarification:
         # "Từng máy"/"3 chiếc" is the list; "Mô tả chi tiết hơn" is what the latest answer was about.
         refs = tuple(listed if listed and _LIST_REF.search(text) else state.last_focus() or listed)
-    if (intent == "promotion_inquiry" and not refs and not clarification and not (category or named or mentioned)
-            and re.search(r"\b(?:san pham|sp|may|mau)\b", text)):
-        # "Khuyến mãi sản phẩm như nào" after a recommendation is about those products.
+    if (intent == "promotion_inquiry" and not refs and not (category or named or mentioned)
+            and ((not clarification and re.search(r"\b(?:san pham|sp|may|mau)\b", text))
+                 or (not _ranks(text) and re.search(r"\b(?:san pham|sp)\s+tren\b", text)))):
+        # "Khuyến mãi đối với sản phẩm trên" refers to the latest focus, including a recommended list.
         refs = tuple(state.last_focus() or listed)
+        if refs:
+            clarification = None
     if intent in RECOMMENDING and clarification and not _REJECT.search(text):
         clarification = None  # "Còn mẫu khác không?" needs no target; only a rejection does.
 
