@@ -36,6 +36,7 @@ from app.services.order import OrderService
 from app.services.payment import PaymentService
 from app.services.ports import PaymentGateway
 from app.services.product_media import ProductMediaService
+from app.services.service_request_media import ServiceRequestMediaService
 from app.services.promotion import CouponService, PromotionService
 from app.services.pricing import PricingService
 from app.services.purchasing import PurchaseOrderService, SupplierService
@@ -83,6 +84,10 @@ def get_return_policy() -> ReturnPolicy:
 
 
 S = TypeVar("S")
+
+
+def get_service_request_media_service(storage: Annotated[AvatarStorage | None, Depends(get_avatar_storage)]):
+    return ServiceRequestMediaService(storage)
 
 
 def _session_service(cls: Callable[[Session], S]) -> Callable[[Session], S]:

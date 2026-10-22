@@ -9,7 +9,7 @@ Form tạo/sửa nhận nội dung và trạng thái trong cùng request để l
 import uuid
 from datetime import datetime
 
-from pydantic import model_validator
+from pydantic import AliasPath, Field, model_validator
 
 from .common import NewsArticleStatus, RequestSchema, ResponseSchema, check_end_after_start, varchar
 
@@ -71,10 +71,12 @@ class NewsArticleResponse(NewsArticleSummary):
 class AdminNewsArticleSummary(NewsArticleSummary):
     CreatedByUserId: uuid.UUID
     CreatedAt: datetime
+    CreatedByName: str | None = Field(default=None, validation_alias=AliasPath("created_by", "FullName"))
 
 
 class AdminNewsArticleResponse(NewsArticleResponse):
     CreatedByUserId: uuid.UUID
+    CreatedByName: str | None = Field(default=None, validation_alias=AliasPath("created_by", "FullName"))
 
 
 # ---------------------------------------------------------------------------

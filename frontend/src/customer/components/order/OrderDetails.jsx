@@ -22,6 +22,7 @@ export function OrderProgress({ order, methodLabel, children }) {
     <div className="od-order-head">
       <div>
         <h2 id="od-order-title" className="od-order-title">Đơn hàng #<span>{order.OrderCode}</span></h2>
+        {order.SourceReturnRequestId && <p className="font-semibold text-red-600">Đơn đổi trả{Number(order.TotalAmount) === 0 ? ' · 0đ · Không cần thanh toán' : ' · Thanh toán phần chênh lệch'}</p>}
         <p className="od-muted">Ngày đặt: {formatDate(order.OrderedAt)} • Phương thức: {methodLabel}</p>
       </div>
       <dl className="od-order-status">
@@ -67,6 +68,7 @@ export function OrderItems({ order }) {
             <strong>{slug ? <Link to={productPath(slug)}>{item.ProductName}</Link> : item.ProductName}</strong>
             {item.VariantInfo && <span>Phiên bản: {item.VariantInfo}</span>}
             <span>Số lượng: {item.Quantity}</span>
+            <span>Serial / IMEI: {(item.SerialNumbers ?? []).join(', ')}</span>
           </div>
           <div className="od-item-price">
             <Money value={item.LineTotal} />
@@ -93,6 +95,7 @@ export function OrderTotals({ order }) {
       <div><dt>Tạm tính</dt><dd><Money value={order.Subtotal} /></dd></div>
       <div><dt>Phí vận chuyển</dt><dd><Money value={order.ShippingFee} /></dd></div>
       <div><dt>Giảm giá</dt><dd>{discount && '−'}<Money value={order.DiscountAmount} /></dd></div>
+      {Number(order.ExchangeCreditAmount) > 0 && <div><dt>Trong đó giá trị dùng đổi</dt><dd><Money value={order.ExchangeCreditAmount} /></dd></div>}
       <div className="is-total"><dt>Tổng thanh toán</dt><dd><Money value={order.TotalAmount} /></dd></div>
     </dl>
   </section>

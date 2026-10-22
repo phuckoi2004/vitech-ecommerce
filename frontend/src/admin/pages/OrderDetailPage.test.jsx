@@ -11,7 +11,7 @@ vi.mock('../services/orders.js', () => api)
 
 const permissions = ['admin.portal', 'orders:view', 'orders:update']
 const base = {
-  OrderId: 'o1', OrderCode: 'DH-API-01', ReceiverName: 'Người nhận từ API', ReceiverPhone: '0912345678',
+  AssignedStaffId: 'Staff-id', OrderId: 'o1', OrderCode: 'DH-API-01', ReceiverName: 'Người nhận từ API', ReceiverPhone: '0912345678',
   OrderedAt: '2026-10-02T18:00:00Z', OrderStatus: 'Pending', PaymentStatus: 'Pending', PaymentMethodId: 'pm1',
   ShippingAddress: 'Địa chỉ giao hàng từ API', CustomerNote: 'Gọi trước khi giao', InternalNote: 'Ghi chú cần giữ',
   Subtotal: '2000000.00', ShippingFee: '30000.00', DiscountAmount: '100000.00', TotalAmount: '1930000.00',
@@ -64,7 +64,7 @@ test.each([['Pending', 'Chưa thanh toán'], ['Failed', 'Thanh toán thất bạ
     method = { PaymentMethodId: 'pm1', Code: 'SEPAY', Name: 'Chuyển khoản QR' }
     order = { ...order, PaymentStatus: status }
     renderPage()
-    const confirm = await screen.findByRole('button', { name: 'Xác nhận đơn', exact: true }, { timeout: 5000 })
+    const confirm = await screen.findByRole('button', { name: 'Xác nhận', exact: true }, { timeout: 5000 })
     await waitFor(() => expect(confirm).toBeDisabled())
     expect(confirm).toHaveAccessibleDescription(`Đơn thanh toán chuyển khoản chỉ được xác nhận sau khi khách đã thanh toán (hiện tại: ${label}).`)
     fireEvent.click(confirm)
@@ -78,9 +78,9 @@ test.each([['a paid transfer order', 'SEPAY', 'Paid'], ['an unpaid COD order', '
     method = { PaymentMethodId: 'pm1', Code: code, Name: code }
     order = { ...order, PaymentStatus: paymentStatus }
     renderPage()
-    fireEvent.click(await screen.findByRole('button', { name: 'Xác nhận đơn', exact: true }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Xác nhận', exact: true }))
     const dialog = screen.getByRole('dialog', { name: 'Cập nhật trạng thái đơn hàng' })
-    const submit = within(dialog).getByRole('button', { name: 'Xác nhận đơn', exact: true })
+    const submit = within(dialog).getByRole('button', { name: 'Xác nhận', exact: true })
     await waitFor(() => expect(submit).toBeEnabled())
     expect(screen.queryByText(/chỉ được xác nhận sau khi khách đã thanh toán/)).not.toBeInTheDocument()
     fireEvent.click(submit)
@@ -92,11 +92,11 @@ test('while its payment method cannot be read, an order is not confirmed', async
   api.getAdminData.mockImplementation(async (token, path, ...rest) => path === '/payment-methods/pm1'
     ? Promise.reject(new Error('Lỗi tải phương thức thanh toán.')) : answer(token, path, ...rest))
   renderPage()
-  fireEvent.click(await screen.findByRole('button', { name: 'Xác nhận đơn', exact: true }))
+  fireEvent.click(await screen.findByRole('button', { name: 'Xác nhận', exact: true }))
   const dialog = screen.getByRole('dialog', { name: 'Cập nhật trạng thái đơn hàng' })
   expect(await within(dialog).findByText('Lỗi tải phương thức thanh toán.')).toBeInTheDocument()
   expect(within(dialog).getByText('Cần tải được phương thức thanh toán trước khi xác nhận đơn.')).toBeInTheDocument()
-  expect(within(dialog).getByRole('button', { name: 'Xác nhận đơn', exact: true })).toBeDisabled()
+  expect(within(dialog).getByRole('button', { name: 'Xác nhận', exact: true })).toBeDisabled()
   fireEvent.submit(dialog.querySelector('#order-status-form'))
   expect(api.updateOrderStatus).not.toHaveBeenCalled()
 })
@@ -119,7 +119,7 @@ test('the full route renders Figma sections, live breadcrumb and active orders m
 test('different variants remain separate product rows; history contains only events actually returned', async () => {
   renderPage()
   const table = await screen.findByRole('table')
-  expect(within(table).getAllByRole('columnheader').map((cell) => cell.textContent)).toEqual(['Sản phẩm', 'SL', 'Đơn giá', 'Thành tiền', 'Lãi'])
+  expect(within(table).getAllByRole('columnheader').map((cell) => cell.textContent)).toEqual(['Sản phẩm', 'SL', 'Đơn giá', 'Thành tiền'])
   expect(within(table).getAllByRole('row')).toHaveLength(3)
   expect(within(table).getByText('SKU: PHONE-DEN')).toBeInTheDocument()
   expect(within(table).getByText('SKU: PHONE-TRANG')).toBeInTheDocument()
@@ -129,39 +129,22 @@ test('different variants remain separate product rows; history contains only eve
   expect(screen.queryByText(/Hệ thống thông báo đơn mới/)).not.toBeInTheDocument()
 })
 
-test('each line and the order show the profit after every discount, from the import price captured when sold', async () => {
-  order.Items = [{ ...order.Items[0], UnitCost: '700000.00', Quantity: 2, LineTotal: '1900000.00', DiscountAmount: '100000.00' }, order.Items[1]]
+test.each(['Pending', 'Confirmed', 'Processing', 'Shipping', 'Delivered', 'Completed', 'Cancelled'])(
+  '%s order details show sale amounts without purchase costs, profits or cost warnings', async status => {
+  order.OrderStatus = status
+  order.Items = [{ ...order.Items[0], UnitCost: '700000.00' }, { ...order.Items[1], UnitCost: '0.00' }]
   renderPage()
   const table = await screen.findByRole('table')
-  const [first, second] = within(table).getAllByRole('row').slice(1)
-  expect(first).toHaveTextContent('Giá nhập: 700.000')
-  expect(first.lastElementChild).toHaveTextContent('500.000') // 1 900 000 − 2 × 700 000
-  expect(second.lastElementChild).toHaveTextContent('Chưa có giá nhập')
-  const profit = screen.getByLabelText('Lãi của đơn hàng')
-  expect(profit).toHaveTextContent('Tiền hàng thực thu')
-  expect(profit).toHaveTextContent('2.900.000')
-  expect(profit).toHaveTextContent('Tổng giá nhập (có sản phẩm chưa có giá nhập)')
-  expect(profit).toHaveTextContent('Lãi gộp dự kiến')
-  expect(within(profit).getAllByText('Chưa đủ dữ liệu')).toHaveLength(2)
-  expect(profit).not.toHaveTextContent('1.500.000')
-  expect(profit).not.toHaveTextContent('%')
-})
-
-test('delivered orders with complete snapshots show the actual sum and margin', async () => {
-  order.OrderStatus = 'Delivered'
-  order.Items = order.Items.map((item) => ({ ...item, UnitCost: '700000.00' }))
-  renderPage()
-  const profit = await screen.findByLabelText('Lãi của đơn hàng')
-  expect(profit).toHaveTextContent('1.400.000')
-  expect(profit).toHaveTextContent('600.000')
-  expect(profit).toHaveTextContent('30%')
-  expect(profit).not.toHaveTextContent('Chưa đủ dữ liệu')
+  expect(within(table).getAllByRole('columnheader').map(cell => cell.textContent)).toEqual(['Sản phẩm', 'SL', 'Đơn giá', 'Thành tiền'])
+  expect(within(table).getAllByRole('row')[1].lastElementChild).toHaveTextContent('1.000.000')
+  expect(screen.queryByLabelText('Lãi của đơn hàng')).not.toBeInTheDocument()
+  expect(screen.queryByText(/Giá nhập|giá nhập|Lãi|lãi|Biên lãi|Chưa đủ dữ liệu|Tiền hàng thực thu/)).not.toBeInTheDocument()
 })
 
 test('the in-page back button restores a report location instead of the order list', async () => {
   const search = '?period=month&month=2026-09&brand_id=b1&sort=profit_asc&page=2&detail=p1'
   const router = renderPage({ pathname: '/admin/orders/o1', state: { reportOrigin: { search } } })
-  await screen.findByLabelText('Lãi của đơn hàng')
+  await screen.findByRole('heading', { level: 2, name: 'Đơn hàng #DH-API-01' })
   fireEvent.click(screen.getByRole('button', { name: '← Quay lại báo cáo' }))
   expect(router.state.location.pathname).toBe('/admin/reports')
   expect(router.state.location.search).toBe(search)
@@ -171,18 +154,18 @@ test('empty product and history arrays keep the table headers without inventing 
   order.Items = []; order.StatusHistories = []
   renderPage()
   await screen.findByText('Đơn hàng chưa có sản phẩm.')
-  expect(screen.getAllByRole('columnheader')).toHaveLength(5)
+  expect(screen.getAllByRole('columnheader')).toHaveLength(4)
   expect(screen.getByText('Chưa có lịch sử trạng thái.')).toBeInTheDocument()
   expect(screen.getByRole('region', { name: 'Lịch sử trạng thái' }).querySelectorAll('img')).toHaveLength(0)
   expect(screen.queryByText('iPhone 17 Pro Max 256GB')).not.toBeInTheDocument()
 })
 
-test.each([['Pending', 0, 'Chờ xác nhận'], ['Confirmed', 0, 'Đã xác nhận'], ['Processing', 1, 'Đang xử lý'], ['Shipping', 2, 'Đang giao'], ['Delivered', 3, 'Đã giao'], ['Completed', 3, 'Hoàn tất']])('progress handles backend state %s within the four design stages', async (status, index, label) => {
+test.each([['Pending', 0, 'Chờ xác nhận'], ['Confirmed', 1, 'Đã xác nhận'], ['Processing', 2, 'Đang xử lý'], ['Shipping', 3, 'Đang giao'], ['Delivered', 4, 'Đã giao'], ['Completed', 4, 'Hoàn tất']])('progress handles backend state %s within five stages', async (status, index, label) => {
   order.OrderStatus = status
   renderPage()
   const progress = await screen.findByRole('list', { name: 'Tiến trình đơn hàng' })
   const steps = within(progress).getAllByRole('listitem')
-  expect(steps).toHaveLength(4)
+  expect(steps).toHaveLength(5)
   expect(steps[index]).toHaveAttribute('aria-current', 'step')
   expect(steps[index]).toHaveTextContent(label)
   expect(steps.filter((step) => step.getAttribute('aria-current') === 'step')).toHaveLength(1)
@@ -193,52 +176,54 @@ test('cancelled orders have no active delivery stage and no cancel or forward ac
   renderPage()
   const progress = await screen.findByRole('list', { name: 'Tiến trình đơn hàng' })
   expect(progress.querySelector('[aria-current="step"]')).toBeNull()
-  expect(screen.queryByRole('button', { name: /Hủy đơn|Xác nhận đơn|Hoàn tất/ })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /Hủy đơn|Xác nhận|Hoàn tất/ })).not.toBeInTheDocument()
   expect(screen.getByText('Đơn hàng đã đóng.')).toBeInTheDocument()
 })
 
 test('confirming updates the detail page, history and next action without returning to the list', async () => {
   const router = renderPage()
-  fireEvent.click(await screen.findByRole('button', { name: 'Xác nhận đơn', exact: true }))
+  fireEvent.click(await screen.findByRole('button', { name: 'Xác nhận', exact: true }))
   const dialog = screen.getByRole('dialog', { name: 'Cập nhật trạng thái đơn hàng' })
   expect(api.updateOrderStatus).not.toHaveBeenCalled()
   fireEvent.change(within(dialog).getByRole('textbox', { name: 'Ghi chú xử lý' }), { target: { value: 'Đã gọi xác nhận' } })
-  const submit = within(dialog).getByRole('button', { name: 'Xác nhận đơn', exact: true })
+  const submit = within(dialog).getByRole('button', { name: 'Xác nhận', exact: true })
   await waitFor(() => expect(submit).toBeEnabled())
   fireEvent.click(submit)
   await waitFor(() => expect(api.updateOrderStatus).toHaveBeenCalledWith('access-for-test', 'o1', { OrderStatus: 'Confirmed', Note: 'Đã gọi xác nhận' }))
   await screen.findByRole('button', { name: 'Bắt đầu xử lý' })
+  expect(screen.queryByText(/\(cũ\)/)).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: 'Giao hàng' })).not.toBeInTheDocument()
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   expect(screen.getByText('Đã gọi xác nhận')).toBeInTheDocument()
   expect(router.state.location.pathname).toBe('/admin/orders/o1')
 })
 
-test('packing can assign serials on the page and then use the shared shipping confirmation', async () => {
+test('packing displays system assigned serials read only and permits shipping', async () => {
   order.OrderStatus = 'Processing'
+  serialItems[0].SerialNumbers = ['SERIAL-THAT']
   renderPage()
-  const serial = await screen.findByRole('textbox', { name: 'Serial/IMEI cho PHONE-DEN' })
-  fireEvent.change(serial, { target: { value: 'SERIAL-THAT' } })
-  fireEvent.click(screen.getByRole('button', { name: 'Gán mã' }))
-  await waitFor(() => expect(api.assignOrderSerials).toHaveBeenCalledWith('access-for-test', 'o1', { Items: [{ OrderItemId: 'item1', SerialNumbers: ['SERIAL-THAT'] }] }))
   await screen.findByText('SERIAL-THAT')
-  fireEvent.click(screen.getByRole('button', { name: 'Chuyển đang giao' }))
+  expect(screen.queryByRole('textbox', { name: /Serial/ })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /Gán mã|Gỡ Serial/ })).not.toBeInTheDocument()
+  expect(api.assignOrderSerials).not.toHaveBeenCalled()
+  fireEvent.click(screen.getByRole('button', { name: 'Giao hàng' }))
   const dialog = screen.getByRole('dialog')
-  fireEvent.click(within(dialog).getByRole('button', { name: 'Chuyển đang giao' }))
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Giao hàng' }))
   await waitFor(() => expect(api.updateOrderStatus).toHaveBeenCalledWith('access-for-test', 'o1', { OrderStatus: 'Shipping', Note: null }))
-  await screen.findByRole('button', { name: 'Xác nhận đã giao' })
+  await screen.findByRole('button', { name: 'Giao hoàn tất' })
 })
 
 test('COD confirmation on the page requires collection and refreshes the payment state', async () => {
   order.OrderStatus = 'Shipping'
   renderPage()
-  fireEvent.click(await screen.findByRole('button', { name: 'Xác nhận đã giao' }))
+  fireEvent.click(await screen.findByRole('button', { name: 'Giao hoàn tất' }))
   const dialog = screen.getByRole('dialog')
   const checkbox = await within(dialog).findByRole('checkbox', { name: /Tôi xác nhận đã giao hàng thành công/ })
   const confirm = within(dialog).getByRole('button', { name: 'Xác nhận giao và thu tiền' })
   expect(confirm).toBeDisabled()
   fireEvent.click(checkbox); fireEvent.click(confirm)
   await waitFor(() => expect(api.confirmCodDelivery).toHaveBeenCalledWith('access-for-test', 'o1', { Note: null }))
-  await screen.findByRole('button', { name: 'Hoàn tất', exact: true })
+  await screen.findByText('Đơn hàng đã hoàn tất.')
   expect(order.PaymentStatus).toBe('Paid')
   expect(api.updateOrderStatus).not.toHaveBeenCalled()
 })
@@ -270,11 +255,11 @@ test('saving a cleared internal note preserves the expanded delivery panel after
 test('failed confirmation retains typed notes and can be dismissed without a second write', async () => {
   api.updateOrderStatus.mockRejectedValueOnce(new Error('Đơn đã thay đổi, vui lòng tải lại.'))
   renderPage()
-  fireEvent.click(await screen.findByRole('button', { name: 'Xác nhận đơn', exact: true }))
+  fireEvent.click(await screen.findByRole('button', { name: 'Xác nhận', exact: true }))
   const dialog = screen.getByRole('dialog')
   const note = within(dialog).getByRole('textbox', { name: 'Ghi chú xử lý' })
   fireEvent.change(note, { target: { value: 'Giữ ghi chú này' } })
-  const submit = within(dialog).getByRole('button', { name: 'Xác nhận đơn', exact: true })
+  const submit = within(dialog).getByRole('button', { name: 'Xác nhận', exact: true })
   await waitFor(() => expect(submit).toBeEnabled())
   fireEvent.click(submit)
   expect(await within(dialog).findByRole('alert')).toHaveTextContent('Đơn đã thay đổi')
@@ -315,8 +300,8 @@ test('view-only sessions see the same detail page but cannot edit or mutate an o
   order.OrderStatus = 'Processing'
   renderPage('/admin/orders/o1?action=advance', ['admin.portal', 'orders:view'])
   await screen.findByText('Đơn hàng #DH-API-01')
-  await screen.findByText('Chưa gán Serial/IMEI.')
-  expect(screen.queryByRole('button', { name: /Hủy đơn|Chuyển đang giao|Gán mã/ })).not.toBeInTheDocument()
+  await screen.findByText('Serial/IMEI:')
+  expect(screen.queryByRole('button', { name: /Hủy đơn|Giao hàng|Gán mã/ })).not.toBeInTheDocument()
   fireEvent.click(screen.getByText('Giao hàng, thanh toán & ghi chú'))
   expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
@@ -332,7 +317,7 @@ test('missing orders:view denies a direct detail URL without reading the order',
 test('changing order URLs resets confirmation and COD collection state', async () => {
   order.OrderStatus = 'Shipping'
   const router = renderPage()
-  fireEvent.click(await screen.findByRole('button', { name: 'Xác nhận đã giao' }))
+  fireEvent.click(await screen.findByRole('button', { name: 'Giao hoàn tất' }))
   const dialog = screen.getByRole('dialog')
   fireEvent.click(await within(dialog).findByRole('checkbox', { name: /Tôi xác nhận đã giao hàng thành công/ }))
   order = { ...order, OrderId: 'o2', OrderCode: 'DH-API-02' }
@@ -340,7 +325,7 @@ test('changing order URLs resets confirmation and COD collection state', async (
   await screen.findByText('Đơn hàng #DH-API-02')
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   expect(within(screen.getByRole('banner')).queryByText('/ DH-API-01')).not.toBeInTheDocument()
-  fireEvent.click(screen.getByRole('button', { name: 'Xác nhận đã giao' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Giao hoàn tất' }))
   const nextDialog = screen.getByRole('dialog')
   expect(await within(nextDialog).findByRole('checkbox', { name: /Tôi xác nhận đã giao hàng thành công/ })).not.toBeChecked()
   expect(api.confirmCodDelivery).not.toHaveBeenCalled()

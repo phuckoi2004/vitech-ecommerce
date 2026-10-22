@@ -308,6 +308,13 @@ class FakeAddressRepo(FakeRepo):
 class FakeNotificationRepo(FakeRepo):
     model = Notification
 
+    def resolve_new_order(self, order_id, now):
+        for note in self.db.rows(Notification):
+            if (note.NotificationType == 'NewOrder' and note.ReferenceType == 'Order'
+                    and note.ReferenceId == order_id and not note.IsRead):
+                note.IsRead = True
+                note.ReadAt = now
+
     def get_conversation(self, conversation_id):
         return self.db.get(Conversation, conversation_id)
 
@@ -383,6 +390,26 @@ class FakeVariantRepo(FakeRepo):
 
 class FakeSerialRepo(FakeRepo):
     model = ProductSerial
+
+    def count_available(self, variant_id):
+        return len(self._rows(lambda s: s.ProductVariantId == variant_id and s.Status == 'Available'
+                              and s.OrderItemId is None))
+
+    def count_unassigned_order_units(self, variant_id):
+        active = {o.OrderId for o in self.db.rows(Order)
+                  if o.OrderStatus == 'Pending'}
+        return sum(max(0, i.Quantity - sum(s.Status == 'Reserved' for s in self.list_by_order_item(i.OrderItemId)))
+                   for i in self.db.rows(OrderItem) if i.ProductVariantId == variant_id and i.OrderId in active)
+
+    def list_available_for_update(self, variant_id, *, limit, random=False):
+        rows = sorted(self._rows(lambda s: s.ProductVariantId == variant_id and s.Status == 'Available'
+                                 and s.OrderItemId is None), key=lambda s: s.SerialNumber)
+        if random:
+            import secrets
+            rows = secrets.SystemRandom().sample(rows, len(rows))
+        rows = rows[:limit]
+        self.db.locks.extend(('ProductSerial', s.ProductSerialId) for s in rows)
+        return rows
 
     def has_return_history(self, product_serial_id):
         return any(r.ProductSerialId == product_serial_id for r in self.db.rows(ReturnRequest)) or any(
@@ -472,9 +499,16 @@ class FakeShippingMethodRepo(FakeRepo):
 class FakePaymentMethodRepo(FakeRepo):
     model = PaymentMethod
 
+    def list_methods(self, *, is_active=None):
+        return sorted(self._rows(lambda m: is_active is None or m.IsActive is is_active), key=lambda m: (m.DisplayOrder, m.Name))
+
 
 class FakeOrderRepo(FakeRepo):
     model = Order
+
+    def exchange_order(self, request_id, *, for_update=False):
+        return next((o for o in self.db.rows(Order)
+                     if o.SourceReturnRequestId == request_id and o.OrderStatus != "Cancelled"), None)
 
     def get_detail(self, order_id):
         return self.get_by_id(order_id)
@@ -505,24 +539,41 @@ class FakeOrderRepo(FakeRepo):
         return [o.OrderId for o in sorted(rows, key=lambda o: o.OrderedAt)[:limit]]
 
 
-    def _filtered(self, order_status=None, payment_status=None, product_id=None):
-        # order_status: một giá trị hoặc danh sách (lịch sử mua hàng lọc nhiều trạng thái), như repository thật.
+    def _filtered(self, order_status=None, payment_status=None, keyword=None, customer_id=None,
+                  assigned_staff_id=None, ordered_from=None, ordered_to=None, order_code_contains=None,
+                  product_id=None):
         statuses = {order_status} if isinstance(order_status, str) else set(order_status or ())
+        def matches(order):
+            customer = self.db.get(User, order.CustomerId)
+            text = (keyword or '').casefold()
+            return (
+                (not text or any(text in (value or '').casefold() for value in
+                                 (order.OrderCode, customer.FullName, customer.PhoneNumber)))
+                and (customer_id is None or order.CustomerId == customer_id)
+                and (assigned_staff_id is None or order.AssignedStaffId == assigned_staff_id)
+                and (ordered_from is None or order.OrderedAt >= ordered_from)
+                and (ordered_to is None or order.OrderedAt < ordered_to)
+                and (not order_code_contains or order_code_contains.casefold() in order.OrderCode.casefold())
+            )
         return sorted(
             self._rows(
                 lambda o: (not statuses or o.OrderStatus in statuses)
                 and (payment_status is None or o.PaymentStatus == payment_status)
+                and matches(o)
                 and (product_id is None or any(self.db.get(ProductVariant, i.ProductVariantId).ProductId == product_id
                                                for i in o.items))
             ),
             key=lambda o: o.OrderCode,
         )
 
-    def list_orders(self, *, order_status=None, payment_status=None, product_id=None, offset=None, limit=None, **_):
-        return self._filtered(order_status, payment_status, product_id)
+    def list_orders(self, *, order_status=None, payment_status=None, offset=None, limit=None,
+                    with_items=False, **filters):
+        rows = self._filtered(order_status, payment_status, **filters)
+        start = offset or 0
+        return rows[start:start + limit] if limit is not None else rows[start:]
 
-    def count_orders(self, *, order_status=None, payment_status=None, product_id=None, **_):
-        return len(self._filtered(order_status, payment_status, product_id))
+    def count_orders(self, *, order_status=None, payment_status=None, **filters):
+        return len(self._filtered(order_status, payment_status, **filters))
 
 
 class FakeConversationRepo(FakeRepo):
@@ -1543,6 +1594,7 @@ def return_service(db, session, clock=fixed_clock, policy=None, gateway=None) ->
     payments.returns = svc.requests
     payments.notifications = notification_service(db, session)
     svc.payments = payments
+    svc.exchange.sales = order_service(db, session, clock=clock)
     return svc
 
 
@@ -1716,7 +1768,7 @@ class Factory:
 
     def order(self, customer: User, payment_method: PaymentMethod, *, status="Pending", payment_status="Pending",
               total="130000.00", lines: tuple = (), coupon: Coupon | None = None,
-              ordered_at: datetime | None = None) -> Order:
+              ordered_at: datetime | None = None, assigned_staff: User | None = None) -> Order:
         n = self._next()
         shipping = self.shipping_method()
         order = self.db.add(
@@ -1739,6 +1791,10 @@ class Factory:
             )
         )
         order.payment_method = payment_method
+        # Non-pending fixtures represent orders already confirmed by an operator.
+        if status != "Pending":
+            operator = assigned_staff or next((u for u in self.db.rows(User) if u.Role == "Staff"), None)
+            order.AssignedStaffId = operator.UserId if operator else None
         for variant, quantity in lines:
             item = self.db.add(
                 OrderItem(

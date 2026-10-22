@@ -5,7 +5,7 @@ import ConsultationButton from '../ConsultationButton.jsx'
 import { productColorSwatch } from '../../../lib/product-colors.js'
 import { canPurchase, colorLabel, variantPrice, versionLabel } from '../../../lib/product-detail.js'
 
-export default function ProductPurchasePanel({ variants, variant, onSelect, busy, notice, ready, onCart, onBuy, onConsult }) {
+export default function ProductPurchasePanel({ variants, variant, onSelect, busy, notice, ready, onCart, onBuy, onConsult, exchanging = false }) {
   const versions = [...new Set(variants.map(versionLabel))]
   const colors = [...new Set(variants.filter((item) => item.Color?.trim()).map(colorLabel))]
   const selectedVersion = variant ? versionLabel(variant) : ''
@@ -57,9 +57,10 @@ export default function ProductPurchasePanel({ variants, variant, onSelect, busy
       {!variant ? 'Chưa có phiên bản để đặt mua' : Number(variant.StockQuantity) <= 0 ? 'Hết hàng'
         : variantPrice(variant) === null ? 'Chưa có giá bán cho phiên bản này' : `Còn ${variant.StockQuantity} sản phẩm`}
     </p>
-    <Button className="pd-buy" disabled={disabled || !purchasable} loading={busy === 'buy'} onClick={onBuy}>MUA NGAY</Button>
+    {exchanging && <label>Số lượng <input className="cacc-input" type="number" value="1" disabled /></label>}
+    <Button className="pd-buy" disabled={disabled || !purchasable} loading={busy === 'buy'} onClick={onBuy}>{exchanging ? 'CHỌN MÁY ĐỔI' : 'MUA NGAY'}</Button>
     <div className="pd-cta-row grid grid-cols-2 gap-2.5 max-[380px]:grid-cols-1">
-      <Button variant="outline" className="pd-add" disabled={disabled || !purchasable} loading={busy === 'cart'} onClick={onCart}>Thêm vào giỏ hàng</Button>
+      {!exchanging && <Button variant="outline" className="pd-add" disabled={disabled || !purchasable} loading={busy === 'cart'} onClick={onCart}>Thêm vào giỏ hàng</Button>}
       <ConsultationButton className="pd-consult" disabled={!ready} onStaff={onConsult} />
     </div>
     {notice && <p className={`pd-notice ${notice.ok ? 'is-success' : ''}`} role={notice.ok ? 'status' : 'alert'}>{notice.text}</p>}

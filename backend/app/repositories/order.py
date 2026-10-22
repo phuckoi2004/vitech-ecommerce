@@ -7,10 +7,11 @@ import uuid
 from collections.abc import Sequence
 from datetime import datetime
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import joinedload, selectinload
 
-from app.models import Order, OrderItem, OrderStatusHistory, PaymentMethod, ProductVariant, ShippingMethod
+from app.models import Order, OrderItem, OrderStatusHistory, PaymentMethod, ProductVariant, ShippingMethod, User
+from app.models import ReturnRequest
 
 from .base import BaseRepository
 
@@ -34,6 +35,12 @@ class ShippingMethodRepository(BaseRepository[ShippingMethod]):
 
 class OrderRepository(BaseRepository[Order]):
     model = Order
+
+    def exchange_order(self, request_id: uuid.UUID, *, for_update: bool = False) -> Order | None:
+        stmt = select(Order).where(Order.SourceReturnRequestId == request_id, Order.OrderStatus != "Cancelled")
+        if for_update:
+            stmt = stmt.with_for_update().execution_options(populate_existing=True)
+        return self.session.scalars(stmt).one_or_none()
 
     def exists_by_shipping_method(self, shipping_method_id: uuid.UUID) -> bool:
         """Có đơn hàng (mọi trạng thái) tham chiếu phương thức vận chuyển (FK RESTRICT)."""
@@ -60,6 +67,8 @@ class OrderRepository(BaseRepository[Order]):
             .options(
                 selectinload(Order.items).selectinload(OrderItem.product_variant),
                 selectinload(Order.items).selectinload(OrderItem.review),
+                selectinload(Order.items).selectinload(OrderItem.product_serials),
+                selectinload(Order.items).selectinload(OrderItem.return_requests).selectinload(ReturnRequest.product_serial),
                 selectinload(Order.status_histories),
             )
         )
@@ -74,9 +83,20 @@ class OrderRepository(BaseRepository[Order]):
         ordered_from: datetime | None,
         ordered_to: datetime | None,
         order_code_contains: str | None = None,
+        keyword: str | None = None,
         product_id: uuid.UUID | None = None,
     ) -> list:
         conditions = []
+        if keyword:
+            escaped = keyword.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+            pattern = f"%{escaped}%"
+            conditions.append(or_(
+                Order.OrderCode.ilike(pattern, escape="\\"),
+                Order.customer.has(or_(
+                    User.FullName.ilike(pattern, escape="\\"),
+                    User.PhoneNumber.ilike(pattern, escape="\\"),
+                )),
+            ))
         if product_id is not None:
             # Đơn có ít nhất một dòng thuộc sản phẩm này (qua biến thể).
             conditions.append(Order.OrderId.in_(
@@ -114,6 +134,7 @@ class OrderRepository(BaseRepository[Order]):
         ordered_from: datetime | None = None,
         ordered_to: datetime | None = None,
         order_code_contains: str | None = None,
+        keyword: str | None = None,
         product_id: uuid.UUID | None = None,
         offset: int | None = None,
         limit: int | None = None,
@@ -132,7 +153,7 @@ class OrderRepository(BaseRepository[Order]):
         return self.get_all(
             *self._filters(
                 customer_id, assigned_staff_id, order_status, payment_status, ordered_from, ordered_to, order_code_contains,
-                product_id,
+                keyword=keyword, product_id=product_id,
             ),
             order_by=(Order.OrderedAt.desc(), Order.OrderId),
             offset=offset,
@@ -150,12 +171,13 @@ class OrderRepository(BaseRepository[Order]):
         ordered_from: datetime | None = None,
         ordered_to: datetime | None = None,
         order_code_contains: str | None = None,
+        keyword: str | None = None,
         product_id: uuid.UUID | None = None,
     ) -> int:
         return self.count(
             *self._filters(
                 customer_id, assigned_staff_id, order_status, payment_status, ordered_from, ordered_to, order_code_contains,
-                product_id,
+                keyword=keyword, product_id=product_id,
             )
         )
 

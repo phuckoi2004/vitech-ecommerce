@@ -5,10 +5,27 @@ Người thực hiện (AdjustedByUserId), số lượng/giá vốn trước-sau
 
 import uuid
 from datetime import datetime
+from typing import Annotated
 
 from pydantic import Field, field_validator
 
 from .common import Money, NonBlankText, NonNegativeInt, RequestSchema, ResponseSchema, SerialNumberValue
+
+
+class StockQuantityUpdate(RequestSchema):
+    """Admin sets the available count directly, without an adjustment/history record."""
+
+    StockQuantity: Annotated[int, Field(strict=True, ge=0, le=2147483647)]
+    ExpectedStockQuantity: Annotated[int, Field(strict=True, ge=0, le=2147483647)]
+    SerialNumbers: list[SerialNumberValue] = Field(default_factory=list)
+    IsSerialTracked: Annotated[bool, Field(strict=True)] | None = None
+    ExpectedIsSerialTracked: Annotated[bool, Field(strict=True)] | None = None
+
+
+class StockQuantityResponse(ResponseSchema):
+    ProductVariantId: uuid.UUID
+    StockQuantity: NonNegativeInt
+    IsSerialTracked: bool
 
 
 class StockOpeningCreate(RequestSchema):

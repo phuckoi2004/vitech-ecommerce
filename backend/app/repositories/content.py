@@ -4,6 +4,7 @@ import uuid
 from datetime import datetime
 
 from sqlalchemy import or_, update
+from sqlalchemy.orm import joinedload
 
 from app.models import Banner, NewsArticle
 
@@ -38,6 +39,7 @@ class NewsArticleRepository(BaseRepository[NewsArticle]):
         conditions = [] if status is None else [NewsArticle.Status == status]
         return self.get_all(
             *conditions,
+            options=(joinedload(NewsArticle.created_by),),
             order_by=(NewsArticle.PublishedAt.desc().nulls_last(), NewsArticle.CreatedAt.desc(), NewsArticle.NewsArticleId),
             offset=offset,
             limit=limit,

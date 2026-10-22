@@ -2,27 +2,29 @@ import { useCallback, useEffect, useState } from 'react'
 import useInternalAuth from '../../hooks/useInternalAuth.js'
 import { getAdminData } from '../../services/api/admin.js'
 
-export function useAdminLoad(load, enabled = true) {
+export function useAdminLoad(load, enabled = true, { keepDataOnRefresh = false } = {}) {
   const { withAccessToken } = useInternalAuth()
   const [version, setVersion] = useState(0)
   const [state, setState] = useState({ load, enabled, data: null, loading: enabled, error: '' })
   useEffect(() => {
     const controller = new AbortController()
-    setState({ load, enabled, data: null, loading: enabled, error: '' })
+    setState((previous) => ({ load, enabled,
+      data: keepDataOnRefresh && previous.load === load && previous.enabled === enabled ? previous.data : null,
+      loading: enabled, error: '' }))
     if (enabled) {
       withAccessToken((token) => load(token, controller.signal))
         .then((data) => { if (!controller.signal.aborted) setState({ load, enabled, data, loading: false, error: '', updatedAt: new Date() }) })
         .catch((failure) => { if (!controller.signal.aborted) setState({ load, enabled, data: null, loading: false, error: failure.message }) })
     }
     return () => controller.abort()
-  }, [withAccessToken, load, enabled, version])
+  }, [withAccessToken, load, enabled, version, keepDataOnRefresh])
   const refresh = useCallback(() => setVersion((value) => value + 1), [])
   // Never expose a previous query's rows/count during the render before its effect resets state.
   return { ...(state.load === load && state.enabled === enabled ? state : { data: null, loading: enabled, error: '' }), refresh }
 }
 
-export default function useAdminQuery(path, query = {}, enabled = true) {
+export default function useAdminQuery(path, query = {}, enabled = true, options) {
   const serialized = JSON.stringify(query)
   const load = useCallback((token, signal) => getAdminData(token, path, JSON.parse(serialized), signal), [path, serialized])
-  return useAdminLoad(load, enabled)
+  return useAdminLoad(load, enabled, options)
 }

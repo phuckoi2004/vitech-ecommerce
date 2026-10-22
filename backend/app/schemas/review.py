@@ -9,7 +9,7 @@ from typing import Annotated
 
 from pydantic import Field
 
-from .common import RequestSchema, ResponseSchema, relation_field, varchar
+from .common import NonBlankText, RequestSchema, ResponseSchema, relation_field, varchar
 from .user import UserSummary
 
 # CHECK "Rating" BETWEEN 1 AND 5
@@ -46,11 +46,9 @@ class ReviewUpdate(RequestSchema):
 
 
 class ReviewDeleteRequest(RequestSchema):
-    """Admin ẩn/xóa mềm (kiểm duyệt) đánh giá; lý do không bắt buộc."""
+    """Staff/Admin kiểm duyệt; lý do bắt buộc, không chấp nhận chuỗi trắng."""
 
-    NULLABLE_FIELDS = frozenset({"DeleteReason"})
-
-    DeleteReason: str | None = None
+    DeleteReason: Annotated[NonBlankText, Field(max_length=2000)]
 
 
 class ReviewResponse(ResponseSchema):

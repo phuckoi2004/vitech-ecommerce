@@ -213,7 +213,7 @@ class ProductVariantCreate(RequestSchema):
     CompareAtPrice: VndAmount | None = None
     MinStockLevel: NonNegativeInt | None = None
     IsActive: bool | None = None
-    IsSerialTracked: bool | None = None
+    IsSerialTracked: bool = True
 
 
 class ProductVariantUpdate(RequestSchema):

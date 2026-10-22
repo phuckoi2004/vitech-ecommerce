@@ -123,7 +123,9 @@ class ReturnTestBase(unittest.TestCase):
                   "Attachments": [ServiceRequestAttachmentCreate(FileUrl=u, FileType=t) for u, t in attachments]}
         if quantity is not None:
             values["Quantity"] = quantity
-        return (svc or self.svc).create_return_request(self.a(by or self.customer), ReturnRequestCreate(**values))
+        # Historical finance helpers are retained for old stored Return/multi-unit requests.
+        # New HTTP creation (Exchange, quantity 1) is exercised in test_exchange_orders / API tests.
+        return (svc or self.svc)._create_legacy_return_request(self.a(by or self.customer), ReturnRequestCreate(**values))
 
     def accept(self, rid, by=None):
         return self.svc.accept_return_request(self.a(by or self.staff), rid, ServiceRequestNote(Note="Hợp lệ"))
@@ -255,7 +257,7 @@ class CreateReturnRequestTest(ReturnTestBase):
     def test_quantity_must_be_positive_and_within_remaining(self):
         with self.assertRaises(ValidationError):
             ReturnRequestCreate(OrderItemId=self.cable_item.OrderItemId, RequestType="Return", Reason="x", Quantity=0)
-        base = {"OrderItemId": self.cable_item.OrderItemId, "RequestType": "Return", "Reason": "Lỗi"}
+        base = {"OrderItemId": self.cable_item.OrderItemId, "RequestType": "Exchange", "Reason": "Lỗi"}
         for bad in (0, -1, True, 1.5):
             with self.subTest(quantity=bad):
                 self.assert_error(BusinessRuleError, "invalid_return_quantity", lambda q=bad: self.svc.create_return_request(
@@ -327,7 +329,7 @@ class CreateReturnRequestTest(ReturnTestBase):
         with self.assertRaises(ValidationError):
             ReturnRequestCreate(OrderItemId=self.item.OrderItemId, RequestType="Refund", Reason="x")
         base = {"OrderItemId": self.item.OrderItemId, "ProductSerialId": self.serial.ProductSerialId,
-                "RequestType": "Return", "Reason": "Lỗi"}
+                "RequestType": "Exchange", "Reason": "Lỗi"}
         self.assert_error(BusinessRuleError, "invalid_return_type", lambda: self.svc.create_return_request(
             self.a(self.customer), bypass({**base, "RequestType": "Refund"})))
         self.assert_error(BusinessRuleError, "return_reason_required", lambda: self.create(reason="  "))
@@ -520,7 +522,7 @@ class ReturnFlowTest(ReturnTestBase):
                                             ReturnApproval(CompensationAmount=Decimal("1")))
         self.assertEqual((self.request(rid).Status, len(self.histories(rid))), ("Pending", 1))
 
-    def test_customer_cancels_only_pending_and_sees_only_own(self):
+    def test_customer_can_cancel_after_acceptance_before_exchange_is_committed(self):
         rid = self.create().ReturnRequestId
         self.assert_error(NotFoundError, "return_request_not_found",
                           lambda: self.svc.cancel_return_request(self.a(self.other), rid))
@@ -530,11 +532,10 @@ class ReturnFlowTest(ReturnTestBase):
         self.assertEqual([r.ReturnRequestId for r in self.svc.list_my_return_requests(self.a(self.customer)).Items],
                          [rid])
         self.accept(rid)
-        self.assert_error(BusinessRuleError, "return_not_cancellable",
-                          lambda: self.svc.cancel_return_request(self.a(self.customer), rid))
+        self.assertEqual(self.svc.cancel_return_request(self.a(self.customer), rid).Status, "Cancelled")
         mine = self.svc.get_my_return_request(self.a(self.customer), rid)
         self.assertFalse(hasattr(mine, "CompensationBasis"))
-        self.assertEqual(self.svc.list_return_requests(self.a(self.staff), status="Approved").Total, 1)
+        self.assertEqual(self.svc.list_return_requests(self.a(self.staff), status="Cancelled").Total, 1)
 
 
 class CompensationTest(ReturnTestBase):

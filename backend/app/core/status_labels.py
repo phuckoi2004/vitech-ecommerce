@@ -20,7 +20,7 @@ PURCHASE_STATUS_LABELS = {
 }
 RETURN_STATUS_LABELS = {
     "Pending": "Đang chờ", "Approved": "Đã tiếp nhận", "Receiving": "Đang điều phối",
-    "Processing": "Đang đánh giá hư hại", "Completed": "Đã trả máy", "Rejected": "Từ chối", "Cancelled": "Đã hủy",
+    "Processing": "Đang đánh giá hư hại", "Completed": "Hoàn tất", "Rejected": "Từ chối", "Cancelled": "Đã hủy",
 }
 WARRANTY_STATUS_LABELS = {
     "New": "Mới", "HandedOver": "Đã bàn giao trung tâm bảo hành", "Processing": "Đang xử lý",

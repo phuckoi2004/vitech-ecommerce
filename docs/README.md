@@ -31,6 +31,8 @@ Bổ sung ngày 18/10/2026. Thư mục này chứa tài liệu dùng chung cho f
 | [customer-product-detail.md](customer-product-detail.md) | Trang sản phẩm phía khách; phụ lục phân biệt dữ liệu ảnh API đã có với việc UI đã sử dụng |
 | [customer-product-reviews.md](customer-product-reviews.md) | Gửi/sửa/đọc đánh giá phía khách và giới hạn hiện có |
 | [customer-wishlist.md](customer-wishlist.md) | Yêu thích và chọn biến thể khi thêm giỏ |
+| [customer-warranty.md](customer-warranty.md) | Tạo, theo dõi và hủy yêu cầu bảo hành; liên kết admin |
+| [customer-return.md](customer-return.md) | Tạo, theo dõi và hủy yêu cầu đổi/trả; thời hạn, số lượng và liên kết admin |
 
 Tài liệu bàn giao admin chi tiết đã có tại [admin-implementation.md](../frontend/src/admin/docs/admin-implementation.md) và [bản Word](../frontend/src/admin/docs/admin-implementation.docx). Hai file vẫn được giữ nguyên vị trí. Ghi chú riêng khuyến mãi nằm ở [promotion-coupon-notes.md](../frontend/src/admin/docs/promotion-coupon-notes.md); các ghi chú lịch sử trong đó cần đọc cùng quyết định hiện hành.
 
@@ -57,8 +59,15 @@ Giữ nguyên các biên bản này. Số test đạt, head migration và mô t�
 
 - Đề xuất bổ sung nhận hàng nhiều đợt vào báo cáo: [bản Word](updates/2026-10-20-purchase-receiving-spec.docx) và [bản Markdown](updates/2026-10-20-purchase-receiving-spec.md). Đây là tài liệu đề xuất riêng, chưa thay nội dung báo cáo gốc.
 
+## Bổ sung ngày 21/10/2026
+
+- [Tìm đơn, luồng trạng thái, quyền người phụ trách, thông báo đơn mới và quyền đánh giá/tin tức/banner](updates/2026-10-21-admin-orders-content.md). Bổ sung hiện hành cho 3.26, 3.29 và 3.33–3.36; ghi rõ phần bảo hành/đổi trả giữ lại và giới hạn phía khách.
+
+- Báo cáo hai chức năng bảo hành và đổi trả phía khách hàng: [bản Word](updates/2026-10-21-customer-warranty-returns-report.docx) và [bản Markdown](updates/2026-10-21-customer-warranty-returns-report.md). Gồm nội dung triển khai, kết nối admin, kết quả kiểm thử và phạm vi bàn giao.
+
 ## Bổ sung ngày 22/10/2026
 
+- [Đổi sản phẩm theo phiếu, đơn đổi 0đ/bù tiền, tồn kho, Serial và hai cột CSDL mới](updates/2026-10-22-exchange-orders.md). Ghi rõ quyết định thay luồng Đổi/Trả cũ bằng đổi 1–1, cách tính giá tự động, quyền hủy/từ chối, điều kiện hoàn tất và tình trạng đã áp dụng lên CSDL thật; giữ nguyên tài liệu lịch sử.
 - [Tích hợp Google Gemini từng bước](stage10-gemini-integration-guide.md): cấu hình model, SDK và lộ trình AI.
 - [API chat AI bước 10.2](stage10-ai-chat.md): cách thử bằng Swagger, retry/lịch sử, kiểm thử và migration chống trùng (đã áp dụng 22/10/2026).
 - [AI đọc catalog bước 10.3](stage10-ai-tools.md): công cụ sản phẩm/giá/ưu đãi, dữ liệu thẻ và cách thử câu hỏi nối tiếp.

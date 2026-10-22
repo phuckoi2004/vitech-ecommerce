@@ -83,12 +83,13 @@ class CancellationTest(ShipmentReturnTestBase):
         self.assertEqual(ctx.exception.code, "order_not_cancellable")
         self.assertEqual(len(self.db.rows(ShipmentReturn)), 1)
 
-    def test_incomplete_serials_block_shipping_cancellation(self):
-        self.phone_item.Quantity = 2  # chỉ có 1 serial đang giữ cho 2 máy: dữ liệu không nhất quán
-        with self.assertRaises(BusinessRuleError) as ctx:
-            self.cancel()
-        self.assertEqual(ctx.exception.code, "shipment_serials_incomplete")
-        self.assertEqual((self.order.OrderStatus, self.record(), self.db.rows(ShipmentReturnItem)), ("Shipping", None, []))
+    def test_shipping_cancellation_keeps_a_separate_row_for_legacy_unnumbered_devices(self):
+        self.phone_item.Quantity = 2  # One coded device plus one old unnumbered device.
+        self.cancel()
+        phone_rows = [i for i in self.record().items if i.OrderItemId == self.phone_item.OrderItemId]
+        self.assertEqual({(i.ProductSerialId, i.ExpectedQuantity) for i in phone_rows},
+                         {(self.p1.ProductSerialId, 1), (None, 1)})
+        self.assertEqual(self.order.OrderStatus, 'Cancelled')
 
 
 class ReceiveTest(ShipmentReturnTestBase):

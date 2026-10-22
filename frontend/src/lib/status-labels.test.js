@@ -7,7 +7,7 @@ import { notificationStatus } from '../customer/notifications.js'
 
 test('status labels preserve the business meaning of each workflow in Vietnamese', () => {
   expect(orderStatusLabel('Completed')).toBe('Hoàn tất')
-  expect(returnStatusLabel('Completed')).toBe('Đã trả máy')
+  expect(returnStatusLabel('Completed')).toBe('Hoàn tất')
   expect(warrantyHistoryLabel('Completed')).toBe('Đã trả khách')
   expect(paymentStatusLabel('Pending')).toBe('Chưa thanh toán')
   expect(notificationStatus('Success')).toBe('Thành công')

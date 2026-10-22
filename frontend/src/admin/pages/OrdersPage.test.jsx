@@ -15,7 +15,7 @@ vi.mock('../services/orders.js', () => api)
 
 const permissions = ['admin.portal', 'orders:view', 'orders:update']
 const base = {
-  OrderId: 'o1', OrderCode: 'DH-THAT-01', ReceiverName: 'Người mua từ API', ReceiverPhone: '0912345678',
+  AssignedStaffId: 'Staff-id', OrderId: 'o1', OrderCode: 'DH-THAT-01', ReceiverName: 'Người mua từ API', ReceiverPhone: '0912345678',
   OrderedAt: '2026-10-02T18:00:00Z', OrderStatus: 'Pending', PaymentStatus: 'Pending', PaymentMethodId: 'pm1',
   ShippingAddress: 'Địa chỉ từ API', CustomerNote: 'Gọi trước khi giao', InternalNote: 'Đóng gói cẩn thận', CancelReason: null,
   Subtotal: '2000000.00', ShippingFee: '30000.00', DiscountAmount: '100000.00', TotalAmount: '1930000.00',
@@ -24,9 +24,9 @@ const base = {
 }
 let orders, method, serialItems
 
-function renderPage(path = '/admin/orders', granted = permissions, routes) {
+function renderPage(path = '/admin/orders', granted = permissions, routes, role = 'Staff') {
   const router = createMemoryRouter(routes ?? [{ path: '/admin/orders', element: <OrdersPage /> }, { path: '/admin/orders/:orderId', element: <OrderDetailPage /> }], { initialEntries: [path] })
-  render(<AuthContext.Provider value={makeAuth({ role: 'Staff', permissions: granted })}><RouterProvider router={router} /></AuthContext.Provider>)
+  render(<AuthContext.Provider value={makeAuth({ role, permissions: granted })}><RouterProvider router={router} /></AuthContext.Provider>)
   return router
 }
 
@@ -41,7 +41,7 @@ beforeEach(() => {
     if (path === '/users/me/notifications/unread-count') return { Count: 0 }
     if (path === '/admin/statistics/orders') return { TotalOrders: orders.length, ByStatus: {} }
     if (path === '/admin/orders') {
-      const filtered = orders.filter((order) => (!query.order_code || order.OrderCode.includes(query.order_code)) && (!query.order_status || order.OrderStatus === query.order_status))
+      const filtered = orders.filter((order) => (!query.keyword || order.OrderCode.includes(query.keyword)) && (!query.order_status || order.OrderStatus === query.order_status))
       return { Items: filtered.slice((query.page - 1) * query.page_size, query.page * query.page_size), Total: filtered.length, Page: query.page, PageSize: query.page_size }
     }
     if (path === '/payment-methods/pm1') return { ...method }
@@ -79,27 +79,57 @@ test('empty data retains the seven Figma headers, zero count and no example orde
   expect(screen.getByText('0 đơn hàng')).toBeInTheDocument()
   expect(screen.getByText('Hiển thị 0–0 trong 0 đơn hàng')).toBeInTheDocument()
   expect(screen.queryByText('DH-1028')).not.toBeInTheDocument()
-  expect(api.getAdminData).toHaveBeenCalledWith('access-for-test', '/admin/orders', { page: 1, page_size: 5, order_code: '', order_status: '' }, expect.any(AbortSignal))
+  expect(api.getAdminData).toHaveBeenCalledWith('access-for-test', '/admin/orders', { page: 1, page_size: 5, keyword: '', order_status: '' }, expect.any(AbortSignal))
+})
+
+test('search starts from one character and sends a contiguous phone fragment without submitting', async () => {
+  orders = [{ ...base }]
+  renderPage()
+  await screen.findByText('1 đơn hàng')
+  const input = screen.getByRole('searchbox')
+  for (const keyword of ['0', '098', 'An']) {
+    fireEvent.change(input, { target: { value: keyword } })
+    await waitFor(() => expect(api.getAdminData).toHaveBeenCalledWith('access-for-test', '/admin/orders',
+      { page: 1, page_size: 5, keyword, order_status: '' }, expect.any(AbortSignal)))
+  }
+})
+
+test('another staff member can view an order but cannot invoke its next step', async () => {
+  orders = [{ ...base, OrderStatus: 'Processing', AssignedStaffId: 'another-staff' }]
+  renderPage('/admin/orders?order=o1&action=advance')
+  const dialog = await screen.findByRole('dialog', { name: 'Chi tiết đơn hàng' })
+  await within(dialog).findByText('Địa chỉ từ API')
+  expect(within(dialog).queryByRole('button', { name: /Giao hàng|Hủy đơn hàng|Lưu ghi chú/ })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: 'Giao hàng DH-THAT-01' })).not.toBeInTheDocument()
+  expect(api.updateOrderStatus).not.toHaveBeenCalled()
+})
+
+test('an Admin can act on an order owned by another staff member', async () => {
+  orders = [{ ...base, OrderStatus: 'Processing', AssignedStaffId: 'another-staff' }]
+  renderPage('/admin/orders?order=o1&action=advance', permissions, undefined, 'Admin')
+  const dialog = await screen.findByRole('dialog', { name: 'Cập nhật trạng thái đơn hàng' })
+  await within(dialog).findByText('Địa chỉ từ API')
+  expect(within(dialog).getByRole('button', { name: 'Giao hàng', exact: true })).toBeInTheDocument()
 })
 
 test('typing searches a code, status filters reach the server and browser history restores controls', async () => {
-  orders = [{ ...base }, { ...base, OrderId: 'o2', OrderCode: 'DH-THAT-02', OrderStatus: 'Confirmed' }]
+  orders = [{ ...base }, { ...base, OrderId: 'o2', OrderCode: 'DH-THAT-02', OrderStatus: 'Processing' }]
   const router = renderPage('/admin/orders?page=2')
   await screen.findByText('2 đơn hàng')
-  const search = screen.getByRole('searchbox', { name: 'Tìm kiếm đơn hàng theo mã' })
+  const search = screen.getByRole('searchbox', { name: 'Tìm kiếm đơn hàng theo mã, tên tài khoản hoặc số điện thoại' })
   fireEvent.change(search, { target: { value: 'THAT-02' } })
   expect(screen.queryByRole('button', { name: 'Tìm kiếm', exact: true })).not.toBeInTheDocument()
   await screen.findByText('1 đơn hàng')
   expect(router.state.location.search).toBe('?keyword=THAT-02')
-  fireEvent.click(screen.getByRole('button', { name: 'Đã xác nhận', exact: true }))
-  await waitFor(() => expect(api.getAdminData).toHaveBeenLastCalledWith('access-for-test', '/admin/orders', { page: 1, page_size: 5, order_code: 'THAT-02', order_status: 'Confirmed' }, expect.any(AbortSignal)))
-  expect(screen.getByRole('button', { name: 'Đã xác nhận', exact: true })).toHaveAttribute('aria-pressed', 'true')
-  fireEvent.click(screen.getByRole('button', { name: 'Hoàn tất', exact: true }))
+  fireEvent.click(screen.getByRole('button', { name: 'Đang xử lý', exact: true }))
+  await waitFor(() => expect(api.getAdminData).toHaveBeenLastCalledWith('access-for-test', '/admin/orders', { page: 1, page_size: 5, keyword: 'THAT-02', order_status: 'Processing' }, expect.any(AbortSignal)))
+  expect(screen.getByRole('button', { name: 'Đang xử lý', exact: true })).toHaveAttribute('aria-pressed', 'true')
+  fireEvent.click(screen.getByRole('button', { name: 'Đã giao', exact: true }))
   await screen.findByText('Không có đơn hàng phù hợp.')
   await act(() => router.navigate(-1))
   await screen.findByText('DH-THAT-02')
   expect(search).toHaveValue('THAT-02')
-  expect(screen.getByRole('button', { name: 'Đã xác nhận', exact: true })).toHaveAttribute('aria-pressed', 'true')
+  expect(screen.getByRole('button', { name: 'Đang xử lý', exact: true })).toHaveAttribute('aria-pressed', 'true')
 })
 
 test('Vietnamese composition waits until finished and rapid typing sends only the final search', async () => {
@@ -114,7 +144,7 @@ test('Vietnamese composition waits until finished and rapid typing sends only th
   expect(router.state.location.search).toBe('')
   fireEvent.compositionEnd(search)
   await waitFor(() => expect(router.state.location.search).toBe('?keyword=THAT'))
-  expect(api.getAdminData.mock.calls.filter((call) => call[1] === '/admin/orders' && call[2].order_code === 'THAT')).toHaveLength(1)
+  expect(api.getAdminData.mock.calls.filter((call) => call[1] === '/admin/orders' && call[2].keyword === 'THAT')).toHaveLength(1)
 })
 
 test('navigation cancels an unfinished search and restores URL-backed input', async () => {
@@ -123,11 +153,11 @@ test('navigation cancels an unfinished search and restores URL-backed input', as
   await screen.findByText('1 đơn hàng')
   const search = screen.getByRole('searchbox')
   fireEvent.change(search, { target: { value: 'unfinished' } })
-  await act(async () => router.navigate('/admin/orders?status=Confirmed'))
+  await act(async () => router.navigate('/admin/orders?status=Processing'))
   await act(async () => { await new Promise((resolve) => setTimeout(resolve, 450)) })
-  expect(router.state.location.search).toBe('?status=Confirmed')
+  expect(router.state.location.search).toBe('?status=Processing')
   expect(search).toHaveValue('')
-  expect(api.getAdminData.mock.calls.some((call) => call[1] === '/admin/orders' && call[2].order_code === 'unfinished')).toBe(false)
+  expect(api.getAdminData.mock.calls.some((call) => call[1] === '/admin/orders' && call[2].keyword === 'unfinished')).toBe(false)
 })
 
 test('server pagination uses five records and clamps a now-empty deep page', async () => {
@@ -175,11 +205,23 @@ test('the detail link opens a separate page and back retains the list filters', 
   expect(router.state.location.search).toBe('?keyword=THAT')
 })
 
-test.each([['Pending', 'Confirmed', 'Xác nhận đơn'], ['Confirmed', 'Processing', 'Bắt đầu xử lý'], ['Delivered', 'Completed', 'Hoàn tất']])('advancing %s requires confirmation and sends only the next state', async (current, target, label) => {
+test('confirmed orders have their own filter and status label without the old suffix', async () => {
+  orders = [{ ...base, OrderStatus: 'Confirmed' }, { ...base, OrderId: 'o2', OrderCode: 'DH-THAT-02' }]
+  const router = renderPage()
+  await screen.findByText('2 đơn hàng')
+  fireEvent.click(within(screen.getByRole('group', { name: 'Lọc trạng thái đơn hàng' })).getByRole('button', { name: 'Đã xác nhận', exact: true }))
+  await screen.findByText('1 đơn hàng')
+  expect(router.state.location.search).toBe('?status=Confirmed')
+  expect(await screen.findByRole('button', { name: 'Bắt đầu xử lý DH-THAT-01' })).toBeInTheDocument()
+  expect(screen.queryByText(/\(cũ\)/)).not.toBeInTheDocument()
+})
+
+test.each([['Pending', 'Confirmed', 'Xác nhận'], ['Confirmed', 'Processing', 'Bắt đầu xử lý'], ['Processing', 'Shipping', 'Giao hàng']])('advancing %s requires confirmation and sends only the next state', async (current, target, label) => {
   orders = [{ ...base, OrderStatus: current }]
+  serialItems[0].SerialNumbers = ['SN-PACKED']
   renderPage()
   fireEvent.click(await screen.findByRole('button', { name: label + ' DH-THAT-01' }))
-  const dialog = screen.getByRole('dialog', { name: 'Cập nhật trạng thái đơn hàng' })
+  const dialog = await screen.findByRole('dialog', { name: 'Cập nhật trạng thái đơn hàng' })
   await within(dialog).findByText('Địa chỉ từ API')
   expect(api.updateOrderStatus).not.toHaveBeenCalled()
   fireEvent.change(within(dialog).getByRole('textbox', { name: 'Ghi chú xử lý' }), { target: { value: 'Đã kiểm tra' } })
@@ -189,25 +231,18 @@ test.each([['Pending', 'Confirmed', 'Xác nhận đơn'], ['Confirmed', 'Process
   expect(orders[0].OrderStatus).toBe(target)
 })
 
-test('packing requires real serials, rejects duplicates and permits shipping only once all are assigned', async () => {
+test.each(['Staff', 'Admin'])('old stock without codes can ship while serials stay read only for %s', async (role) => {
   orders = [{ ...base, OrderStatus: 'Processing' }]
-  renderPage()
-  fireEvent.click(await screen.findByRole('button', { name: 'Chuyển đang giao DH-THAT-01' }))
-  const dialog = screen.getByRole('dialog', { name: 'Cập nhật trạng thái đơn hàng' })
-  const input = await within(dialog).findByRole('textbox', { name: 'Serial/IMEI cho PHONE-DEN' })
-  const next = within(dialog).getByRole('button', { name: 'Chuyển đang giao', exact: true })
-  expect(next).toBeDisabled()
-  fireEvent.change(input, { target: { value: 'SN-01\nsn-01' } })
-  fireEvent.click(within(dialog).getByRole('button', { name: 'Gán mã' }))
-  expect(await within(dialog).findByRole('alert')).toHaveTextContent('bị trùng')
+  renderPage('/admin/orders', permissions, undefined, role)
+  fireEvent.click(await screen.findByRole('button', { name: 'Giao hàng DH-THAT-01' }))
+  const dialog = await screen.findByRole('dialog', { name: 'Cập nhật trạng thái đơn hàng' })
+  const label = await within(dialog).findByText('Serial/IMEI:')
+  expect(label.nextElementSibling).toBeEmptyDOMElement()
+  expect(within(dialog).getByRole('button', { name: 'Giao hàng', exact: true })).toBeEnabled()
+  expect(within(dialog).queryByRole('textbox', { name: /Serial/ })).not.toBeInTheDocument()
+  expect(within(dialog).queryByRole('button', { name: /Gán mã|Gỡ Serial/ })).not.toBeInTheDocument()
   expect(api.assignOrderSerials).not.toHaveBeenCalled()
-  fireEvent.change(input, { target: { value: 'SN-THAT-01' } })
-  fireEvent.click(within(dialog).getByRole('button', { name: 'Gán mã' }))
-  await waitFor(() => expect(api.assignOrderSerials).toHaveBeenCalledWith('access-for-test', 'o1', { Items: [{ OrderItemId: 'item1', SerialNumbers: ['SN-THAT-01'] }] }))
-  await waitFor(() => expect(next).toBeEnabled())
-  fireEvent.click(within(dialog).getByRole('button', { name: 'Gỡ Serial/IMEI SN-THAT-01' }))
-  await waitFor(() => expect(next).toBeDisabled())
-  expect(api.releaseOrderSerial).toHaveBeenCalledWith('access-for-test', 'o1', 'SN-THAT-01')
+  expect(api.releaseOrderSerial).not.toHaveBeenCalled()
   expect(api.updateOrderStatus).not.toHaveBeenCalled()
 })
 
@@ -218,7 +253,7 @@ test('an unpaid online payment cannot ship even after serial requirements are sa
   renderPage('/admin/orders?order=o1&action=advance')
   const dialog = await screen.findByRole('dialog')
   await within(dialog).findByText('Đơn thanh toán trực tuyến phải được thanh toán trước khi giao hàng.')
-  expect(within(dialog).getByRole('button', { name: 'Chuyển đang giao', exact: true })).toBeDisabled()
+  expect(within(dialog).getByRole('button', { name: 'Giao hàng', exact: true })).toBeDisabled()
   fireEvent.submit(dialog.querySelector('#order-status-form'))
   expect(api.updateOrderStatus).not.toHaveBeenCalled()
 })
@@ -229,13 +264,13 @@ test('an unpaid transfer order cannot be confirmed from the quick action; the di
   renderPage('/admin/orders?order=o1&action=advance')
   const dialog = await screen.findByRole('dialog')
   await within(dialog).findByText('Đơn thanh toán chuyển khoản chỉ được xác nhận sau khi khách đã thanh toán (hiện tại: Chưa thanh toán).')
-  expect(within(dialog).getByRole('button', { name: 'Xác nhận đơn', exact: true })).toBeDisabled()
+  expect(within(dialog).getByRole('button', { name: 'Xác nhận', exact: true })).toBeDisabled()
   fireEvent.submit(dialog.querySelector('#order-status-form'))
   expect(api.updateOrderStatus).not.toHaveBeenCalled()
 
   // Back on the details, the confirm action itself is disabled and points to the reason.
   fireEvent.click(within(dialog).getByRole('button', { name: 'Quay lại chi tiết' }))
-  const action = within(dialog).getByRole('button', { name: 'Xác nhận đơn', exact: true })
+  const action = within(dialog).getByRole('button', { name: 'Xác nhận', exact: true })
   expect(action).toBeDisabled()
   expect(action).toHaveAccessibleDescription('Đơn thanh toán chuyển khoản chỉ được xác nhận sau khi khách đã thanh toán (hiện tại: Chưa thanh toán).')
   expect(within(dialog).getByRole('button', { name: 'Hủy đơn hàng' })).toBeEnabled()
@@ -246,7 +281,7 @@ test('a paid transfer order is confirmed from the quick action as before', async
   orders = [{ ...base, PaymentStatus: 'Paid' }]
   renderPage('/admin/orders?order=o1&action=advance')
   const dialog = await screen.findByRole('dialog')
-  const confirm = within(dialog).getByRole('button', { name: 'Xác nhận đơn', exact: true })
+  const confirm = within(dialog).getByRole('button', { name: 'Xác nhận', exact: true })
   await waitFor(() => expect(confirm).toBeEnabled())
   expect(within(dialog).queryByText(/chỉ được xác nhận sau khi khách đã thanh toán/)).not.toBeInTheDocument()
   fireEvent.click(confirm)
@@ -277,11 +312,11 @@ test('paid online delivery uses a normal status change, and failed payment metad
   renderPage('/admin/orders?order=o1&action=advance')
   const dialog = await screen.findByRole('dialog')
   await within(dialog).findByText('Lỗi tải phương thức thanh toán.')
-  expect(within(dialog).getByRole('button', { name: 'Xác nhận đã giao' })).toBeDisabled()
+  expect(within(dialog).getByRole('button', { name: 'Giao hoàn tất' })).toBeDisabled()
   fail = false
   fireEvent.click(within(dialog).getByRole('button', { name: 'Thử lại' }))
-  await waitFor(() => expect(within(dialog).getByRole('button', { name: 'Xác nhận đã giao' })).toBeEnabled())
-  fireEvent.click(within(dialog).getByRole('button', { name: 'Xác nhận đã giao' }))
+  await waitFor(() => expect(within(dialog).getByRole('button', { name: 'Giao hoàn tất' })).toBeEnabled())
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Giao hoàn tất' }))
   await waitFor(() => expect(api.updateOrderStatus).toHaveBeenCalledWith('access-for-test', 'o1', { OrderStatus: 'Delivered', Note: null }))
   expect(api.confirmCodDelivery).not.toHaveBeenCalled()
 })
@@ -322,12 +357,12 @@ test('write failures retain notes for retry and a pending write disables duplica
   const dialog = await screen.findByRole('dialog')
   const note = await within(dialog).findByRole('textbox', { name: 'Ghi chú xử lý' })
   fireEvent.change(note, { target: { value: 'Ghi chú cần giữ' } })
-  fireEvent.click(within(dialog).getByRole('button', { name: 'Xác nhận đơn', exact: true }))
+  fireEvent.click(await within(dialog).findByRole('button', { name: 'Xác nhận', exact: true }))
   expect(await within(dialog).findByRole('alert')).toHaveTextContent('Đơn hàng vừa được cập nhật.')
   expect(note).toHaveValue('Ghi chú cần giữ')
   let finish
   api.updateOrderStatus.mockImplementationOnce(() => new Promise((resolve) => { finish = resolve }))
-  fireEvent.click(within(dialog).getByRole('button', { name: 'Xác nhận đơn', exact: true }))
+  fireEvent.click(await within(dialog).findByRole('button', { name: 'Xác nhận', exact: true }))
   await waitFor(() => expect(within(dialog).getByRole('button', { name: 'Đang cập nhật…' })).toBeDisabled())
   expect(within(dialog).getByRole('button', { name: 'Đóng' })).toBeDisabled()
   fireEvent.submit(dialog.querySelector('#order-status-form'))
@@ -341,10 +376,11 @@ test('fresh detail determines the next state even if the list row is stale', asy
   const original = api.getAdminData.getMockImplementation()
   api.getAdminData.mockImplementation((token, path, query) => path === '/admin/orders/o1' ? Promise.resolve({ ...base, OrderStatus: 'Delivered' }) : original(token, path, query))
   renderPage()
-  fireEvent.click(await screen.findByRole('button', { name: 'Xác nhận đơn DH-THAT-01' }))
+  fireEvent.click(await screen.findByRole('button', { name: 'Xác nhận DH-THAT-01' }))
   const dialog = await screen.findByRole('dialog')
-  fireEvent.click(await within(dialog).findByRole('button', { name: 'Hoàn tất', exact: true }))
-  await waitFor(() => expect(api.updateOrderStatus).toHaveBeenCalledWith('access-for-test', 'o1', { OrderStatus: 'Completed', Note: null }))
+  await within(dialog).findByText('Địa chỉ từ API')
+  expect(within(dialog).queryByRole('button', { name: /Xác nhận|Giao hàng|Giao hoàn tất|Hoàn tất/ })).not.toBeInTheDocument()
+  expect(api.updateOrderStatus).not.toHaveBeenCalled()
 })
 
 test('view-only sessions cannot open write actions through direct query parameters', async () => {
@@ -352,19 +388,19 @@ test('view-only sessions cannot open write actions through direct query paramete
   renderPage('/admin/orders?order=o1&action=advance', ['admin.portal', 'orders:view'])
   const dialog = await screen.findByRole('dialog', { name: 'Chi tiết đơn hàng' })
   await within(dialog).findByText('Địa chỉ từ API')
-  await within(dialog).findByText('Chưa gán Serial/IMEI.')
+  await within(dialog).findByText('Serial/IMEI:')
   expect(within(dialog).queryByRole('textbox')).not.toBeInTheDocument()
-  expect(within(dialog).queryByRole('button', { name: /Gán mã|Hủy đơn|Chuyển đang giao|Lưu ghi chú/ })).not.toBeInTheDocument()
-  expect(screen.queryByRole('button', { name: 'Chuyển đang giao DH-THAT-01' })).not.toBeInTheDocument()
+  expect(within(dialog).queryByRole('button', { name: /Gán mã|Hủy đơn|Giao hàng|Lưu ghi chú/ })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: 'Giao hàng DH-THAT-01' })).not.toBeInTheDocument()
   for (const write of [api.assignOrderSerials, api.updateOrderStatus, api.updateOrderNote, api.confirmCodDelivery]) expect(write).not.toHaveBeenCalled()
 })
 
-test.each(['Cancelled', 'Completed'])('terminal %s orders have no next-state or cancel button', async (status) => {
+test.each(['Cancelled', 'Delivered', 'Completed'])('terminal %s orders have no next-state or cancel button', async (status) => {
   orders = [{ ...base, OrderStatus: status }]
   renderPage('/admin/orders?order=o1')
   const dialog = await screen.findByRole('dialog')
   await within(dialog).findByText('Địa chỉ từ API')
-  expect(within(dialog).queryByRole('button', { name: /Hủy đơn hàng|Xác nhận|Hoàn tất|Chuyển đang giao/ })).not.toBeInTheDocument()
+  expect(within(dialog).queryByRole('button', { name: /Hủy đơn hàng|Xác nhận|Hoàn tất|Giao hàng/ })).not.toBeInTheDocument()
 })
 
 test('the actual route displays the order page and header; the breadcrumb returns to dashboard', async () => {

@@ -26,7 +26,7 @@ function ReviewFilters({ filter, onApply, onClear }) {
 export default function ReviewsPage() {
   const auth = useInternalAuth()
   const [params, setParams] = useSearchParams()
-  const canView = auth.user.Role === 'Admin' && auth.permissions.includes('reviews:view')
+  const canView = ['Admin', 'Staff'].includes(auth.user.Role) && auth.permissions.includes('reviews:view')
   const productsAllowed = auth.permissions.includes('products:view')
   const list = useAdminLoad(getReviewDirectory, canView && productsAllowed)
   const filter = reviewFilters(params)

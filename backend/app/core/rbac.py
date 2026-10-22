@@ -51,7 +51,7 @@ def _grant(name: str, *actions: str) -> set[str]:
     return {f"{name}:{action}" for action in actions}
 
 
-# Exports belong to Admin (decision 09/10/2026). Reviews, news and banners are Admin-only (Stage 4).
+# Exports belong to Admin. Staff/Admin manage reviews, news and banners (21/10/2026).
 _STAFF_DEFAULT = frozenset(set().union(
     _grant("products", "view"), _grant("categories", "view"), _grant("brands", "view"),
     _grant("suppliers", "view"), _grant("purchases", "view", "create", "update"),
@@ -60,6 +60,9 @@ _STAFF_DEFAULT = frozenset(set().union(
     _grant("payment_methods", "view"), _grant("refunds", "view", "create"),
     _grant("warranties", "view", "update"), _grant("returns", "view", "update"),
     _grant("revenue_reports", "view"), _grant("order_reports", "view"),
+    _grant("reviews", "view", "delete"),
+    _grant("news", "view", "create", "update", "delete"),
+    _grant("banners", "view", "create", "update", "delete"),
     _grant("chat", "view", "create"),
 ))
 

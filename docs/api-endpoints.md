@@ -134,7 +134,7 @@ Thông báo Admin/Staff mở chi tiết phiếu nhập, bảo hành và đổi t
   - Chỉ hủy được đơn `Pending`; trạng thái khác trả 400 `order_not_cancellable`.
   - Đơn đã thanh toán (`PaymentStatus` = `Paid`) trả 400 `order_paid_not_cancellable`: khách cần liên hệ cửa hàng để được hỗ trợ.
 - **`POST /admin/orders/{order_id}/status`** (Staff/Admin):
-  - Chỉ chuyển sang trạng thái kế tiếp: `Pending` → `Confirmed` → `Processing` → `Shipping` → `Delivered` → `Completed`; bước khác trả 400 `invalid_status_transition`. `CancelReason` chỉ dùng khi hủy (400 `cancel_reason_not_allowed`).
+  - Chỉ chuyển sang trạng thái kế tiếp: `Pending` → `Confirmed` → `Processing` → `Shipping` → `Delivered` (đóng đơn); bước khác trả 400 `invalid_status_transition`. `CancelReason` chỉ dùng khi hủy (400 `cancel_reason_not_allowed`).
   - Sang `Confirmed`: đơn không phải COD phải có `PaymentStatus` = `Paid`, nếu không trả 400 `order_not_paid`. Đơn chuyển khoản chưa thanh toán ở lại `Pending` cho tới khi được thanh toán hoặc bị tác vụ hết hạn QR hủy. Đơn COD được xác nhận trước khi thu tiền.
   - Sang `Shipping`: đơn không phải COD phải `Paid` (400 `order_not_paid`), và mọi sản phẩm quản lý Serial/IMEI phải đã được gán đủ (400 `order_serials_not_assigned`).
   - Đơn COD sang `Delivered` phải dùng `POST /admin/orders/{order_id}/confirm-cod-delivery` (400 `cod_delivery_requires_collection`).
@@ -312,10 +312,13 @@ Khi nhân viên/Admin phụ trách gửi tin trả lời, Customer nhận thông
 | Method | Đường dẫn | Quyền | Body | Query | Trả về | Service |
 |---|---|---|---|---|---|---|
 | POST | `/warranty-requests` | Đăng nhập | `WarrantyRequestCreate` |  | `WarrantyRequestDetailResponse` | `create_warranty_request` |
+| GET | `/orders/{order_id}/warranty-items` | Customer sở hữu đơn đã giao |  |  | `CustomerWarrantyItemOption[]` (Serials, CanRequest, Reason, thời hạn) | `customer_warranty_items` |
+| POST | `/service-request-image-uploads` | Customer | Raw JPG/PNG/WEBP, tối đa 2 MiB |  | `{FileUrl, FileType: "Image"}` | `ServiceRequestMediaService.upload_image` |
 | GET | `/warranty-requests` | Đăng nhập |  | status, page, page_size | `PageResponse[WarrantyRequestResponse]` | `list_my_warranty_requests` |
 | GET | `/warranty-requests/{request_id}` | Đăng nhập |  |  | `WarrantyRequestDetailResponse` | `get_my_warranty_request` |
 | POST | `/warranty-requests/{request_id}/cancel` | Đăng nhập | `ServiceRequestNote` (tùy chọn, chỉ `Note`) |  | `WarrantyRequestDetailResponse` | `cancel_warranty_request` |
 | POST | `/return-requests` | Đăng nhập | `ReturnRequestCreate` |  | `ReturnRequestDetailResponse` | `create_return_request` |
+| GET | `/orders/{order_id}/return-items` | Customer sở hữu đơn đã giao |  |  | `CustomerReturnItemOption[]` (Serials, MaxQuantity, ReturnDeadline, WindowDays, CanRequest, Reason) | `customer_return_items` |
 | GET | `/return-requests` | Đăng nhập |  | status, page, page_size | `PageResponse[ReturnRequestResponse]` | `list_my_return_requests` |
 | GET | `/return-requests/{request_id}` | Đăng nhập |  |  | `ReturnRequestDetailResponse` | `get_my_return_request` |
 | POST | `/return-requests/{request_id}/cancel` | Đăng nhập | `ServiceRequestNote` (tùy chọn, chỉ `Note`) |  | `ReturnRequestDetailResponse` | `cancel_return_request` |
@@ -472,3 +475,41 @@ Luồng đổi trả hiện hành không bắt kiểm tra thiệt hại, duyệt
 - Hai màn hình báo cáo có lựa chọn từng tháng trong 12 tháng của năm hoặc 6 tháng gần nhất. Từng tháng hiển thị một cột, 6 tháng hiển thị 6 cột; nhãn là tháng cụ thể. Bộ lọc tác động đồng thời biểu đồ và bảng; kỳ bảng là tháng/năm, không chia tuần.
 - Cập nhật 21/10/2026: tab Đơn nhập hàng dùng `/admin/statistics/reports/purchases`, bổ sung lọc nhà cung cấp kết hợp thời gian/danh mục/thương hiệu/sản phẩm. Xem cách tính hiện hành trong [admin-reporting-redesign.md](admin-reporting-redesign.md). Chưa có lọc tài khoản và xuất báo cáo; không suy ra giá trị bằng 0 khi API báo lỗi.
 - Báo cáo doanh số theo sản phẩm dùng OrderItems.LineTotal của đơn Delivered/Completed theo DeliveredAt, có giao dịch Payment Success; không tính lặp doanh số khi một đơn có nhiều giao dịch. Báo cáo này không đồng nghĩa mọi chỉ số doanh thu thuần của StatisticsService: phí giao, hoàn tiền và giá vốn cần phân biệt theo từng API.
+
+
+## Bổ sung ngày 21/10/2026 — đơn hàng và nội dung admin
+
+- `GET /admin/orders?keyword=...`: tìm chuỗi liên tiếp trong mã đơn, tên tài khoản khách hoặc SĐT tài khoản, tối đa 255 ký tự. Bộ lọc cũ vẫn dùng được; không thêm tham số này vào API danh sách đơn của khách.
+- POST đổi trạng thái dùng luồng `Pending → Confirmed → Processing → Shipping → Delivered` và đóng tại Delivered. Xác nhận dừng tại Confirmed; thao tác bắt đầu xử lý mới sang Processing. COD vẫn qua `confirm-cod-delivery`; ghi doanh số và thời điểm đóng cùng giao dịch giao hàng thành công.
+- Người xác nhận đầu tiên sở hữu bước tiếp theo; Admin có thể làm thay. Không cho PATCH thay người phụ trách để lách quyền. Confirmed là bước hoạt động bình thường; Completed vẫn được đọc cho các bản ghi đã có.
+- Tạo đơn gửi `NewOrder` cho Staff/Admin; mỗi người đọc riêng. Xác nhận/hủy đơn giải quyết thông báo NewOrder của tất cả người nhận trong cùng giao dịch. Tham chiếu mở thẳng `/admin/orders/{id}`.
+- Các API đánh giá nội bộ, tin tức và banner cho Staff/Admin; `ReviewDeleteRequest.DeleteReason` bắt buộc, không trắng, tối đa 2.000 ký tự. API tin tức nội bộ trả thêm `CreatedByName`.
+- API `POST /admin/product-image-uploads` cho Staff/Admin để dùng kho ảnh chung cho tin tức/banner; chỉ tải file, không cấp quyền sửa catalog.
+
+Phạm vi, phần giữ lại và kết quả xác minh: [bản bổ sung](updates/2026-10-21-admin-orders-content.md).
+
+### Bổ sung tiếp 21/10/2026 — sửa chay số tồn trong chi tiết sản phẩm
+
+`PATCH /admin/variants/{variant_id}/stock` chỉ Admin: body `{"StockQuantity": 8, "ExpectedStockQuantity": 3}` đặt số tồn từ giá trị đang hiển thị 3 thành 8. Hai trường là số nguyên thực sự, không âm, tối đa 2.147.483.647. Trả `{"ProductVariantId": "...", "StockQuantity": 8}`. Không tạo lịch sử/phiếu điều chỉnh, không đổi giá vốn.
+
+409 `stock_quantity_changed` khi số tồn đã khác số cũ, phải tải lại trước khi sửa. 400 `serial_stock_edit_not_enabled` với biến thể đang quản lý Serial/IMEI (người dùng yêu cầu giữ phần Serial chờ thống nhất). 403 cho Staff/Customer; 404 cho biến thể không có/đã xóa. Các API điều chỉnh kho có lịch sử cũ vẫn giữ nguyên và không được dùng bởi nút sửa chay này.
+
+### Quyết định bổ sung 21/10/2026 — tự gán Serial và chỉnh tồn có Serial
+
+Phần này cập nhật giới hạn Serial của mục ngay trước, giữ mục cũ làm lịch sử quyết định:
+
+- Xác nhận đơn sang Processing tự chọn Serial Available chưa gắn đơn, đổi Reserved và gắn OrderItemId trong cùng giao dịch đổi trạng thái. Thiếu mã trả 400 `insufficient_available_serials`; mọi phần được hoàn tác. Delivered đổi mã sang Sold, giữ liên kết và không trừ tồn lần nữa.
+- `GET /admin/orders/{id}/serials` trả mã do hệ thống gán. `POST /admin/orders/{id}/serials` và `DELETE /admin/orders/{id}/serials/{number}` không còn cho phép sửa, service trả 400 `order_serials_read_only` cho cả Staff/Admin có quyền xử lý đơn. Customer/nhân viên không phụ trách vẫn bị chặn quyền trước đó.
+- `PATCH /admin/variants/{id}/stock` mở cho cả biến thể IsSerialTracked=true, chỉ Admin. Tăng từ 3 lên 5 gửi `{"StockQuantity":5,"ExpectedStockQuantity":3,"SerialNumbers":["REAL-1","REAL-2"]}`. Mỗi máy thêm cần một mã mới, không trùng. Sai số lượng: 400 `serial_count_mismatch`; mã đã tồn tại: 409 `serial_exists`; chuỗi rỗng/quá 100 ký tự: 422. Lỗi không lưu số lượng hoặc một phần Serial.
+- Giảm tồn không gửi mã, hệ thống chọn ngẫu nhiên đúng số mã Available chưa gắn đơn và chuyển WrittenOff. Không xóa bản ghi, không lấy mã đang giữ/đã bán. Không cho gửi mã khi giảm tồn hoặc khi biến thể không quản lý Serial.
+- Vẫn dùng ExpectedStockQuantity và khóa biến thể; dữ liệu Available/StockQuantity/đơn chưa gán mã không khớp trả 409 `serial_stock_mismatch`. Không tạo StockAdjustments hay đổi giá vốn. Không tự thay IsSerialTracked, không đổi schema và không cập nhật dữ liệu thật.
+
+### Cập nhật tiếp 21/10/2026 — checkbox và tồn cũ không Serial
+
+Quyết định mới thay điều kiện bắt đủ mã cho toàn bộ tồn của các mục trước:
+
+- PATCH `/admin/variants/{id}/stock` nhận thêm IsSerialTracked và ExpectedIsSerialTracked tùy chọn. Ví dụ từ 10 máy không mã tăng lên 12 và bật yêu cầu Serial: `{"StockQuantity":12,"ExpectedStockQuantity":10,"IsSerialTracked":true,"ExpectedIsSerialTracked":false,"SerialNumbers":["NEW-1","NEW-2"]}`. Chỉ hai máy mới cần mã; không bắt bù mười mã cũ. Trả thêm IsSerialTracked bên cạnh ProductVariantId/StockQuantity.
+- Cờ, số tồn và mã mới lưu trong một giao dịch. Cờ đã khác ExpectedIsSerialTracked trả 409 `serial_tracking_changed`; số tồn đã khác vẫn là 409 `stock_quantity_changed`. Thiếu mã mới là 400 `serial_count_mismatch`, mã đã tồn tại là 409 `serial_exists`; không lưu dở cờ hoặc số lượng.
+- Giảm tồn tự trừ phần không mã trước, chỉ loại ngẫu nhiên mã Available chưa gắn đơn khi phần không mã không đủ. Cho phép số Serial nhỏ hơn số máy để giữ tồn cũ; chặn trường hợp số mã vượt số máy. Số lượng đã giữ cho Pending nhưng chưa gán mã được tính riêng; Confirmed/Processing/Shipping không còn nằm trong nhóm máy chưa phân cho đơn.
+- Xác nhận đơn ưu tiên mã khả dụng có sẵn, phần còn lại được bán không mã. GET `/admin/orders/{id}/serials` trả đúng các mã thực có trong SerialNumbers, có thể ít hơn Quantity hoặc rỗng. Không thêm chuỗi rỗng/mã giả vào API; frontend giữ nhãn Serial/IMEI: và để giá trị trống. Shipping không bắt nhập bù mã cho hàng cũ.
+- Mã vẫn chỉ đọc với NV/QTV. Hủy khi đang giao và nhận lại hàng hỗ trợ cùng dòng đơn có cả phần có mã và không mã. Không sửa CSDL/migration, không tự bật hàng loạt, không đổi quy tắc giá vốn hoặc tạo lịch sử điều chỉnh.

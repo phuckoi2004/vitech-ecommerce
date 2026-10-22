@@ -11,10 +11,11 @@ import LoginPromptDialog from './LoginPromptDialog.jsx'
 import StoreImage from './StoreImage.jsx'
 import wishlistHeartActive from '../../assets/storefront/wishlist-heart-active.svg'
 import './ProductCard.css'
+import { exchangePath } from '../hooks/useExchange.js'
 
 // Product card from toProductCard() (lib/catalog-api.js): image, name, lowest variant price, rating, sold count.
 // Original/sale prices always come from the same lowest-priced visible variant.
-export default function ProductCard({ product, headingLevel = 3, wishlistLayout = false, children }) {
+export default function ProductCard({ product, headingLevel = 3, wishlistLayout = false, children, exchangeId }) {
   const Heading = `h${headingLevel}`
   const rated = product.reviewCount > 0
   const discounted = !product.unavailable && product.originalPrice > product.price
@@ -26,7 +27,7 @@ export default function ProductCard({ product, headingLevel = 3, wishlistLayout 
   const [added, setAdded] = useWishlistProduct({ enabled: ready && !!user, productId: product.id, userId: user?.UserId, send })
   const [error, setError] = useState('')
   const [loginPrompt, setLoginPrompt] = useState(false)
-  const path = productPath(product.slug)
+  const path = exchangeId ? exchangePath(productPath(product.slug), exchangeId) : productPath(product.slug)
 
   async function toggleWishlist(event) {
     event.preventDefault()

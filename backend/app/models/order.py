@@ -11,6 +11,7 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     Integer,
+    Index,
     Numeric,
     String,
     Text,
@@ -69,6 +70,11 @@ class Order(Base):
         CheckConstraint('"ShippingFee" >= 0', name="ShippingFee_NonNegative"),
         CheckConstraint('"DiscountAmount" >= 0', name="DiscountAmount_NonNegative"),
         CheckConstraint('"TotalAmount" >= 0', name="TotalAmount_NonNegative"),
+        CheckConstraint('"ExchangeCreditAmount" >= 0 AND "ExchangeCreditAmount" <= "DiscountAmount"', name="ExchangeCredit_Valid"),
+        CheckConstraint('"SourceReturnRequestId" IS NOT NULL OR "ExchangeCreditAmount" = 0', name="ExchangeCredit_Source"),
+        Index("UX_Orders_SourceReturn_Active", "SourceReturnRequestId", unique=True,
+              postgresql_where=text('"SourceReturnRequestId" IS NOT NULL AND "OrderStatus" <> \'Cancelled\''),
+              sqlite_where=text('"SourceReturnRequestId" IS NOT NULL AND "OrderStatus" <> \'Cancelled\'')),
         check_in("OrderStatus", ORDER_STATUSES, "OrderStatus_Valid"),
         check_in("PaymentStatus", PAYMENT_STATUSES, "PaymentStatus_Valid"),
     )
@@ -99,6 +105,10 @@ class Order(Base):
     CouponId: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("Coupons.CouponId", ondelete="RESTRICT"), nullable=True
     )
+    SourceReturnRequestId: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("ReturnRequests.ReturnRequestId", ondelete="RESTRICT"), nullable=True
+    )
+    ExchangeCreditAmount: Mapped[Decimal] = mapped_column(Numeric(15, 2), nullable=False, server_default=text("0"))
     Subtotal: Mapped[Decimal] = mapped_column(Numeric(15, 2), nullable=False)
     ShippingFee: Mapped[Decimal] = mapped_column(
         Numeric(15, 2), nullable=False, server_default=text("0")
@@ -201,6 +211,13 @@ class OrderItem(Base):
     return_requests: Mapped[list[ReturnRequest]] = relationship(
         back_populates="order_item", foreign_keys="ReturnRequest.OrderItemId", passive_deletes="all"
     )
+
+    @property
+    def serial_numbers(self) -> list[str]:
+        # Returned devices are unbound for resale, but their original invoice keeps the code via ReturnRequests.
+        codes = [serial.SerialNumber for serial in self.product_serials]
+        codes.extend(request.product_serial.SerialNumber for request in self.return_requests if request.product_serial is not None)
+        return list(dict.fromkeys(codes))
 
 
 class OrderStatusHistory(Base):

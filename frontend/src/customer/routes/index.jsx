@@ -2,6 +2,9 @@ import RequireCustomer from '../../auth/RequireCustomer.jsx'
 import NotFoundPage from '../../components/shared/NotFoundPage.jsx'
 import CustomerLayout from '../layouts/CustomerLayout.jsx'
 import AccountPage from '../pages/AccountPage.jsx'
+import WarrantyCreatePage from '../pages/WarrantyCreatePage.jsx'
+import ReturnCreatePage from '../pages/ReturnCreatePage.jsx'
+import { RETURN_CREATE_PATH, WARRANTY_CREATE_PATH } from './paths.js'
 import ForgotPasswordPage from '../pages/ForgotPasswordPage.jsx'
 import HomePage from '../pages/HomePage.jsx'
 import LoginPage from '../pages/LoginPage.jsx'
@@ -29,6 +32,8 @@ export const customerRoutes = [
     children: [
       { path: HOME_PATH, element: <HomePage /> },
       { path: ACCOUNT_PATH, element: <RequireCustomer><AccountPage /></RequireCustomer> },
+      { path: WARRANTY_CREATE_PATH, element: <RequireCustomer><WarrantyCreatePage /></RequireCustomer> },
+      { path: RETURN_CREATE_PATH, element: <RequireCustomer><ReturnCreatePage /></RequireCustomer> },
       { path: SEARCH_PATH, element: <CatalogPage /> },
       { path: '/danh-muc/:slug', element: <CategoryPage /> },
       { path: '/thuong-hieu/:slug', element: <CatalogPage kind="brand" /> },

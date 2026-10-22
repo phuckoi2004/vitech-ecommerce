@@ -32,7 +32,7 @@ export default function AdminNotifications({ icon = bell, navigateToPage = false
   useEffect(() => { currentLocation.current = location.key }, [location.key])
   useEffect(() => { mounted.current = true; return () => { mounted.current = false } }, [])
   const { withAccessToken, permissions } = useInternalAuth()
-  const count = useAdminQuery('/users/me/notifications/unread-count')
+  const count = useAdminQuery('/users/me/notifications/unread-count', {}, true, { keepDataOnRefresh: true })
   const list = useAdminQuery('/users/me/notifications', { page, page_size: pageSize, is_read: pageView && filter === 'unread' ? false : undefined }, expanded)
   if (pageView && list.data && page > 1 && (page - 1) * pageSize >= list.data.Total) setPage(Math.max(1, Math.ceil(list.data.Total / pageSize)))
   const refreshCount = count.refresh, refreshList = list.refresh
@@ -40,7 +40,8 @@ export default function AdminNotifications({ icon = bell, navigateToPage = false
     const refresh = () => { refreshCount(); if (expanded) refreshList() }
     const timer = window.setInterval(refresh, 60000)
     window.addEventListener('focus', refresh)
-    return () => { window.clearInterval(timer); window.removeEventListener('focus', refresh) }
+    window.addEventListener('admin-order-updated', refresh)
+    return () => { window.clearInterval(timer); window.removeEventListener('focus', refresh); window.removeEventListener('admin-order-updated', refresh) }
   }, [refreshCount, refreshList, expanded])
   useEffect(() => {
     if (!open || pageView) return
@@ -131,8 +132,7 @@ export default function AdminNotifications({ icon = bell, navigateToPage = false
       className="relative grid size-[42px] cursor-pointer place-items-center rounded-[10px] border-0 bg-transparent"
       aria-busy={busy || undefined} onClick={() => { if (navigateToPage) { setOpen(false); count.refresh(); navigate('/admin/notifications'); return } setOpen(value => !value); if (!open) count.refresh() }}>
       <img src={icon} width="24" height="24" alt="" />
-      {count.data?.Count > 0 && (navigateToPage ? <span className="sr-only">{count.data.Count} thông báo chưa đọc</span>
-        : <span className="absolute top-1.5 right-2 size-2 rounded-full bg-admin-red"><span className="sr-only">{count.data.Count} thông báo chưa đọc</span></span>)}
+      {count.data?.Count > 0 && <span className="absolute top-1.5 right-2 size-2 rounded-full bg-admin-red"><span className="sr-only">{count.data.Count} thông báo chưa đọc</span></span>}
     </button>
     {pageView ? container && createPortal(panel, container) : open && panel}
     {failure && <section role="alert" aria-label="Không đánh dấu được thông báo" className="fixed right-4 bottom-4 z-[60] w-[360px] max-w-[calc(100vw-32px)] rounded-xl border border-red-200 bg-white p-4 text-admin-text shadow-lg">

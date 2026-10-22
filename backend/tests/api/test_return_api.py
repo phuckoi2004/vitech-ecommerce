@@ -1,7 +1,7 @@
-"""API tests — Return requests: customer request and the active status-only workflow (15/10/2026).
+"""API tests — one-unit exchange requests and the workflow active on 22/10/2026.
 
-Staff/Admin move a request Pending → Approved → Receiving → Processing → Completed or reject it; no refund, stock or
-serial operation runs. The inspection/approval/refund endpoints are paused (400 service_workflow_paused).
+Completion requires a settled replacement order, then restocks the original unit once.
+Rejection is allowed only before acceptance. Historical refund endpoints remain paused.
 """
 
 from .support import (
@@ -16,7 +16,7 @@ from .support import (
 pytestmark = requires_postgres
 
 
-def request_return(api, person, order_item_id, quantity=1, request_type="Return"):
+def request_return(api, person, order_item_id, quantity=1, request_type="Exchange"):
     return api.client.post("/return-requests", headers=person.headers, json={
         "OrderItemId": order_item_id, "RequestType": request_type, "Quantity": quantity, "Reason": "Không ưng ý"})
 
@@ -30,7 +30,7 @@ PAUSED_STEPS = (("inspect", {"RestockedQuantity": 1, "DamagedQuantity": 0}),
                 ("approve", {"CompensationAmount": "100000.00"}), ("refund", None), ("confirm-refund", None))
 
 
-def test_success_status_only_return_flow_without_money_or_stock_effects(api, admin, staff, customer):
+def test_exchange_completes_only_after_order_commit_and_restocks_original(api, admin, staff, customer):
     shop = api.shop(stock=5, price="100000.00")
     line = api.delivered_line(customer, staff, shop, quantity=2)
     request_id = expect(request_return(api, customer, line["order_item_id"]), 201)["ReturnRequestId"]
@@ -40,11 +40,15 @@ def test_success_status_only_return_flow_without_money_or_stock_effects(api, adm
     assert received["Status"] == "Processing" and received["ReceivedAt"] is not None
     for action, body in PAUSED_STEPS:  # the deferred inspection/approval/refund steps change nothing
         step(api, admin, request_id, action, body, status=400, code="service_workflow_paused")
+    step(api, admin, request_id, "advance", {"ExpectedStatus": "Processing"}, status=400, code="exchange_order_not_settled")
+    api.payment_method("QR")
+    replacement = expect(api.client.post(f"/return-requests/{request_id}/exchange-order", headers=customer.headers, json={}), 200)
+    assert replacement["TotalAmount"] == "0.00" and replacement["PaymentStatus"] == "Paid"
     done = step(api, admin, request_id, "advance", {"ExpectedStatus": "Processing"})
     assert done["Status"] == "Completed" and done["CompletedAt"] is not None
     assert done["CompensationAmount"] is None and done["RefundPaymentTransactionId"] is None  # Completed is no refund
     assert api.scalar('select "StockQuantity" from "ProductVariants" where "ProductVariantId" = :id',
-                      id=shop["variant_id"]) == 3  # 5 - 2 sold; nothing restocked
+                      id=shop["variant_id"]) == 3  # 5 - 2 sold - 1 replacement + 1 original returned
     assert api.scalar('select count(*) from "PaymentTransactions" where "TransactionType" = \'Refund\'') == 0
     mine = expect(api.client.get("/return-requests", headers=customer.headers), 200)
     assert [(r["ReturnRequestId"], r["Status"]) for r in mine["Items"]] == [(request_id, "Completed")]
@@ -106,15 +110,16 @@ def test_business_rules_return_window_quantity_and_workflow(api, admin, staff, c
     pending = api.place_order(customer, shop)
     expect(request_return(api, customer, pending["Items"][0]["OrderItemId"]), 400, "return_order_not_delivered")
     line = api.delivered_line(customer, staff, shop)
-    expect(request_return(api, customer, line["order_item_id"], quantity=2), 400, "return_quantity_exceeded")
+    expect(request_return(api, customer, line["order_item_id"], quantity=2), 400, "invalid_return_quantity")
+    expect(request_return(api, customer, line["order_item_id"], request_type="Return"), 400, "invalid_return_type")
     request_id = expect(request_return(api, customer, line["order_item_id"]), 201)["ReturnRequestId"]
     # Must be accepted and collected first; a step never skips one.
     step(api, staff, request_id, "receive", {}, status=409, code="service_request_stale")
     step(api, staff, request_id, "advance", {"ExpectedStatus": "Approved"}, status=409, code="service_request_stale")
     step(api, staff, request_id, "accept")
     step(api, staff, request_id, "accept", status=409, code="service_request_stale")  # a repeated click changes nothing
-    assert step(api, staff, request_id, "reject", {"Reason": "Không đúng mô tả"})["Status"] == "Rejected"
-    step(api, staff, request_id, "advance", {"ExpectedStatus": "Rejected"}, status=400, code="service_request_closed")
+    step(api, staff, request_id, "reject", {"Reason": "Không đúng mô tả"}, status=400, code="return_rejection_not_allowed")
+    step(api, staff, request_id, "advance", {"ExpectedStatus": "Rejected"}, status=409, code="service_request_stale")
     step(api, admin, request_id, "approve", {"CompensationAmount": "1.00"}, status=400, code="service_workflow_paused")
 
     late = api.delivered_line(customer, staff, shop)

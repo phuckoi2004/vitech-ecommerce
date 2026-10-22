@@ -59,5 +59,5 @@ def admin_get_review(review_id: uuid.UUID, service: Reviews, actor: CurrentActor
 
 @admin_router.post("/reviews/{review_id}/hide", response_model=AdminReviewResponse)
 def moderate_review(review_id: uuid.UUID, data: ReviewDeleteRequest, service: Reviews, actor: CurrentActor):
-    """Soft-deletes (hides) a review with an optional reason; product rating is recalculated."""
+    """Staff/Admin soft-delete a review with a mandatory reason; recalculate the product rating."""
     return service.moderate_review(actor, review_id, data)

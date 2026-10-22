@@ -62,7 +62,7 @@ def test_delete_only_selected_banner_and_preserve_shared_image_and_creator(banne
     assert session.get(User, author).FullName == 'Banner author'
 
 
-@pytest.mark.parametrize('role', ['Staff', 'Customer'])
+@pytest.mark.parametrize('role', ['Customer'])
 def test_other_roles_cannot_delete_banners(banners, role):
     client, session, selected, _, _, state = banners
     state['role'] = role

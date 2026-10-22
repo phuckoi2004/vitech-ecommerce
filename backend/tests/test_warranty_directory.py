@@ -109,8 +109,8 @@ def test_existing_order_pagination_and_filters_are_preserved(directory):
     assert client.get('/admin/warranty-requests?page=5').json()['Items'] == []
 
 
-def test_customer_access_and_response_contract_are_unchanged(directory):
-    client, _, current, rows, actors, _ = directory
+def test_customer_can_read_own_product_context_without_internal_fields(directory):
+    client, _, current, rows, actors, orders = directory
     current['actor'] = actors[0]
     path = '/admin/warranty-requests'
     assert client.get(path).status_code == 403
@@ -119,7 +119,12 @@ def test_customer_access_and_response_contract_are_unchanged(directory):
     detail = client.get('/warranty-requests/' + str(rows[0].WarrantyRequestId))
     assert listing.status_code == detail.status_code == 200
     for row in [*listing.json()['Items'], detail.json()]:
-        assert not {'CustomerName', 'ProductName', 'Sku', 'SerialNumber', 'OrderId', 'OrderCode', 'AssignedStaffId'} & row.keys()
+        assert not {'CustomerName', 'CustomerId', 'Sku', 'AssignedStaffId', 'AssignedStaffName',
+                    'SupplierId', 'InternalNote', 'ResultProposedByUserId', 'ResultApprovedByUserId'} & row.keys()
+        index = next(i for i, request in enumerate(rows) if str(request.WarrantyRequestId) == row['WarrantyRequestId'])
+        assert row['ProductName'] == f'Tên lúc mua {index}'
+        assert row['OrderCode'] == orders[index].OrderCode
+        assert row['SerialNumber'] == ['359812345678712', 'SN-LAPTOP-02', None][index]
 
 
 def test_context_is_batched_without_querying_an_empty_page(directory):

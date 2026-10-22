@@ -802,6 +802,7 @@ class ProductVariantService(BaseService):
         with self.transaction():
             values = data.model_dump(exclude_unset=True)
             reject_inventory_fields(values)
+            values.setdefault("IsSerialTracked", True)
             product = self.products.get_by_id(values["ProductId"])
             if product is None or product.IsDeleted:
                 raise NotFoundError("Không tìm thấy sản phẩm", code="product_not_found")

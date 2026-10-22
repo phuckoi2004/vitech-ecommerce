@@ -1,9 +1,8 @@
-// Figma groups the backend's confirmation and completion states into four delivery stages.
-const STAGES = { Pending: 0, Confirmed: 0, Processing: 1, Shipping: 2, Delivered: 3, Completed: 3 }
+const STAGES = { Pending: 0, Confirmed: 1, Processing: 2, Shipping: 3, Delivered: 4, Completed: 4 }
 
 export default function OrderProgress({ status }) {
   const current = STAGES[status] ?? -1
-  const labels = [status === 'Confirmed' ? 'Đã xác nhận' : 'Chờ xác nhận', 'Đang xử lý', 'Đang giao', status === 'Completed' ? 'Hoàn tất' : 'Đã giao']
+  const labels = ['Chờ xác nhận', 'Đã xác nhận', 'Đang xử lý', 'Đang giao', status === 'Completed' ? 'Hoàn tất' : 'Đã giao']
   return <div className="flex min-h-20 items-center overflow-x-auto rounded-[14px] border border-admin-border bg-white px-[18px]">
     <ol aria-label="Tiến trình đơn hàng" className="m-0 flex list-none items-center gap-2 p-0">
       {labels.map((label, index) => <li key={index} aria-current={index === current ? 'step' : undefined} className="flex shrink-0 items-center gap-2">

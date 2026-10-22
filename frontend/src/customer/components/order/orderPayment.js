@@ -19,6 +19,7 @@ const PAYMENT_STATUS = {
 // A cancelled order still Paid holds money to give back: it reads as recorded, without saying it was refunded.
 // An unpaid COD order is "Chưa thanh toán" (paid on delivery), a transfer order "Chờ thanh toán" (its QR).
 export function paymentStatusText(order, cod) {
+  if (order.SourceReturnRequestId && Number(order.TotalAmount) === 0) return 'Không cần thanh toán · Đã chốt đơn đổi'
   if (order.PaymentStatus === 'Pending') return cod ? 'Chưa thanh toán' : 'Chờ thanh toán'
   if (order.PaymentStatus === 'Paid' && order.OrderStatus === 'Cancelled') return 'Đã ghi nhận thanh toán'
   return formatStatus(order.PaymentStatus, PAYMENT_STATUS)
@@ -28,6 +29,7 @@ export function paymentStatusText(order, cod) {
 // công" is never shown for money that has not arrived; "Thanh toán thành công" only once PaymentStatus is Paid.
 // `code` is the order's payment method Code (null while unknown), `placed` whether the confirmation page opened it.
 export function orderTitle(order, { code, placed }) {
+  if (order?.SourceReturnRequestId && Number(order.TotalAmount) === 0) return 'Đã chốt đơn đổi trả'
   if (!order || order.OrderStatus === 'Cancelled') return 'Chi tiết đơn hàng'
   const cod = code === 'COD'
   if (code && !cod && order.PaymentStatus === 'Paid') return 'Thanh toán thành công'
@@ -37,6 +39,7 @@ export function orderTitle(order, { code, placed }) {
 
 // A transfer order the backend still gives a QR for: not cancelled, shipped or paid.
 export function awaitingTransfer(order) {
+  if (order.SourceReturnRequestId && Number(order.TotalAmount) === 0) return false
   return ['Pending', 'Confirmed', 'Processing'].includes(order.OrderStatus) && ['Pending', 'Failed'].includes(order.PaymentStatus)
 }
 

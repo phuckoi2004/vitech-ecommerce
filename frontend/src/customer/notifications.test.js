@@ -5,9 +5,21 @@ const id = '11111111-1111-4111-8111-111111111111'
 test('chat notifications open their exact conversation inside the customer portal', () => {
   expect(customerNotificationTarget({ ReferenceType: 'Conversation', ReferenceId: id })).toEqual({ kind: 'link', to: '/tu-van?conversation=' + id })
 })
-test.each(['Order', 'WarrantyRequest', 'ReturnRequest'])('validates %s references before reading a customer resource', type => {
+test.each(['Order'])('validates %s references before reading a customer resource', type => {
   expect(customerNotificationTarget({ ReferenceType: type, ReferenceId: id }).kind).toBe('detail')
   expect(customerNotificationTarget({ ReferenceType: type, ReferenceId: '../admin/users' })).toBeNull()
+})
+
+test('return notifications open the customer request and validate its id', () => {
+  expect(customerNotificationTarget({ ReferenceType: 'ReturnRequest', ReferenceId: id }))
+    .toEqual({ kind: 'link', to: '/tai-khoan?section=service&type=return&request=' + id })
+  expect(customerNotificationTarget({ ReferenceType: 'ReturnRequest', ReferenceId: '../admin/users' })).toBeNull()
+})
+
+test('warranty notifications open the customer request and validate its id', () => {
+  expect(customerNotificationTarget({ ReferenceType: 'WarrantyRequest', ReferenceId: id }))
+    .toEqual({ kind: 'link', to: '/tai-khoan?section=service&request=' + id })
+  expect(customerNotificationTarget({ ReferenceType: 'WarrantyRequest', ReferenceId: '../admin/users' })).toBeNull()
 })
 test.each(['/admin', '/admin/orders/' + id, '//evil.test/path', 'https://evil.test/', '/dang-nhap', '/does-not-exist', '/%61dmin/users'])('never links a customer notification to %s', ActionUrl => {
   expect(customerNotificationTarget({ ActionUrl })).toBeNull()

@@ -127,8 +127,9 @@ def test_chat_claim_transcript_ownership_and_close_persist_in_postgres(pg, team)
                      id=customer["id"]) == 2
 
 
-def test_news_publish_hide_republish_and_admin_permissions_persist_in_postgres(pg, team):
+def test_news_publish_hide_republish_and_internal_permissions_persist_in_postgres(pg, team):
     client, admin, staff = pg.client, team["admin"], team["staff"]
+    _, outsider = new_customer(pg)
     tag = uuid.uuid4().hex
     slug = f"postgres-news-{tag}"
     payload = {"Title": f"News {tag}", "Slug": slug, "Summary": "Initial summary",
@@ -144,11 +145,11 @@ def test_news_publish_hide_republish_and_admin_permissions_persist_in_postgres(p
                      'where "NewsArticleId" = :id', id=article_id) == team["admin_id"]
     assert client.get(public_path).status_code == 404
     assert article_id not in {row["NewsArticleId"] for row in ok(client.get("/news"))["Items"]}
-    assert client.get(internal_path, headers=staff).status_code == 403
-    assert client.post("/admin/news", headers=staff,
+    assert client.get(internal_path, headers=outsider).status_code == 403
+    assert client.post("/admin/news", headers=outsider,
                        json={**payload, "Slug": f"{slug}-forbidden"}).status_code == 403
-    assert client.patch(internal_path, headers=staff, json={"Title": "Forbidden edit"}).status_code == 403
-    assert client.post(internal_path + "/publish", headers=staff).status_code == 403
+    assert client.patch(internal_path, headers=outsider, json={"Title": "Forbidden edit"}).status_code == 403
+    assert client.post(internal_path + "/publish", headers=outsider).status_code == 403
     assert pg.scalar('select "Title" from "NewsArticles" where "NewsArticleId" = :id',
                      id=article_id) == payload["Title"]
     assert pg.scalar('select count(*) from "NewsArticles" where "Slug" = :slug',
@@ -171,7 +172,7 @@ def test_news_publish_hide_republish_and_admin_permissions_persist_in_postgres(p
     assert duplicate.status_code == 409, duplicate.text
     assert client.patch(internal_path, headers=admin, json={"Status": "Draft"}).status_code == 422
 
-    assert client.post(internal_path + "/hide", headers=staff).status_code == 403
+    assert client.post(internal_path + "/hide", headers=outsider).status_code == 403
     hidden = ok(client.post(internal_path + "/hide", headers=admin))
     assert hidden["Status"] == "Hidden"
     assert client.get(public_path).status_code == 404
@@ -180,14 +181,15 @@ def test_news_publish_hide_republish_and_admin_permissions_persist_in_postgres(p
                      id=article_id) == "Hidden"
     assert pg.scalar('select "PublishedAt" from "NewsArticles" where "NewsArticleId" = :id',
                      id=article_id) == published_at
-    republished = ok(client.post(internal_path + "/publish", headers=admin))
+    republished = ok(client.post(internal_path + "/publish", headers=staff))
     assert datetime.fromisoformat(republished["PublishedAt"]) == published_at
     assert ok(client.get(public_path))["Content"] == "Updated article body"
     assert pg.scalar('select count(*) from "NewsArticles" where "Slug" = :slug', slug=slug) == 1
 
 
-def test_banner_visibility_dates_activation_and_admin_permissions_persist_in_postgres(pg, team):
+def test_banner_visibility_dates_activation_and_internal_permissions_persist_in_postgres(pg, team):
     client, admin, staff = pg.client, team["admin"], team["staff"]
+    _, outsider = new_customer(pg)
     tag = uuid.uuid4().hex
     now = datetime.now(timezone.utc)
     payload = {"Title": f"Banner {tag}", "ImageUrl": "https://cdn.example.com/banner.jpg",
@@ -204,11 +206,11 @@ def test_banner_visibility_dates_activation_and_admin_permissions_persist_in_pos
     public = next(row for row in ok(client.get("/banners")) if row["BannerId"] == banner_id)
     assert "CreatedByUserId" not in public and "CreatedAt" not in public
     assert ok(client.get(path, headers=admin))["Title"] == payload["Title"]
-    assert client.get(path, headers=staff).status_code == 403
-    assert client.post("/admin/banners", headers=staff,
+    assert client.get(path, headers=outsider).status_code == 403
+    assert client.post("/admin/banners", headers=outsider,
                        json={**payload, "Title": f"Forbidden {tag}"}).status_code == 403
-    assert client.patch(path, headers=staff, json={"Title": "Forbidden edit"}).status_code == 403
-    assert client.post(path + "/deactivate", headers=staff).status_code == 403
+    assert client.patch(path, headers=outsider, json={"Title": "Forbidden edit"}).status_code == 403
+    assert client.post(path + "/deactivate", headers=outsider).status_code == 403
     assert pg.scalar('select count(*) from "Banners" where "Title" = :title', title=f"Forbidden {tag}") == 0
 
     # An active banner scheduled in the future must be absent from the public
@@ -233,9 +235,9 @@ def test_banner_visibility_dates_activation_and_admin_permissions_persist_in_pos
     assert ok(client.post(path + "/deactivate", headers=admin))["IsActive"] is False
     assert pg.scalar('select "IsActive" from "Banners" where "BannerId" = :id', id=banner_id) is False
     assert banner_id not in {row["BannerId"] for row in ok(client.get("/banners"))}
-    assert client.post(path + "/activate", headers=staff).status_code == 403
-    assert client.patch(path, headers=admin, json={"IsActive": True}).status_code == 422
+    assert client.post(path + "/activate", headers=outsider).status_code == 403
+    assert client.patch(path, headers=admin, json={"IsActive": False}).status_code == 200
     assert pg.scalar('select "IsActive" from "Banners" where "BannerId" = :id', id=banner_id) is False
-    assert ok(client.post(path + "/activate", headers=admin))["IsActive"] is True
+    assert ok(client.post(path + "/activate", headers=staff))["IsActive"] is True
     assert banner_id in {row["BannerId"] for row in ok(client.get("/banners"))}
     assert pg.scalar('select count(*) from "Banners" where "BannerId" = :id', id=banner_id) == 1

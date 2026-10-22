@@ -55,6 +55,8 @@ from .inventory import (
     StockAdjustmentCreate,
     StockAdjustmentResponse,
     StockOpeningCreate,
+    StockQuantityUpdate,
+    StockQuantityResponse,
 )
 from .wishlist_cart import (
     CartItemCreate,
@@ -223,6 +225,8 @@ __all__ = [
     "PaymentReconciliationResponse",
     "PaymentReconciliationResolve",
     "StockOpeningCreate",
+    "StockQuantityUpdate",
+    "StockQuantityResponse",
     "StockAdjustmentCreate",
     "StockAdjustmentResponse",
     "LowStockVariantResponse",

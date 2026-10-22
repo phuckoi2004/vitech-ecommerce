@@ -148,6 +148,7 @@ class OrderItemResponse(ResponseSchema):
     ProductId: uuid.UUID | None = Field(default=None, validation_alias=AliasPath("product_variant", "ProductId"))
     # Review của dòng đơn (kể cả review đã bị ẩn): khác None là dòng đã được đánh giá.
     ReviewId: uuid.UUID | None = Field(default=None, validation_alias=AliasPath("review", "ReviewId"))
+    SerialNumbers: list[str] = Field(default_factory=list, validation_alias="serial_numbers")
     ProductName: str
     Sku: str
     VariantInfo: str
@@ -179,6 +180,8 @@ class OrderSummary(ResponseSchema):
 
     OrderId: uuid.UUID
     OrderCode: str
+    SourceReturnRequestId: uuid.UUID | None = None
+    ExchangeCreditAmount: Money = 0
     TotalAmount: Money
     OrderStatus: OrderStatusValue
     PaymentStatus: PaymentStatusValue

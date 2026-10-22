@@ -12,9 +12,9 @@ vi.mock('../services/product-media.js', () => ({ uploadProductImage: api.uploadP
 const permissions = ['admin.portal', 'banners:view', 'banners:create', 'banners:update', 'banners:delete']
 const banner = { BannerId: 'b1', Title: 'Banner từ API', ImageUrl: 'https://storage.example.test/banner.png', LinkUrl: '/products', DisplayOrder: 1, IsActive: true, StartDate: '2026-10-12T01:30:25.123Z', EndDate: null, CreatedAt: '2026-10-10T01:30:00Z', CreatedByUserId: 'Admin-id' }
 let banners
-function renderPage(path = '/admin/banners', granted = permissions) {
+function renderPage(path = '/admin/banners', granted = permissions, role = 'Admin') {
   const router = createMemoryRouter(adminRoutes, { initialEntries: [path] })
-  render(<AuthContext.Provider value={makeAuth({ role: 'Admin', permissions: granted })}><RouterProvider router={router} /></AuthContext.Provider>)
+  render(<AuthContext.Provider value={makeAuth({ role, permissions: granted })}><RouterProvider router={router} /></AuthContext.Provider>)
   return router
 }
 beforeEach(() => {
@@ -31,6 +31,13 @@ beforeEach(() => {
   api.deleteBanner.mockImplementation(async (_, id) => { banners = banners.filter((row) => row.BannerId !== id) })
   api.activateBanner.mockImplementation(async (_, id) => { banners = banners.map((row) => row.BannerId === id ? { ...row, IsActive: true } : row); return banners.find((row) => row.BannerId === id) })
   api.deactivateBanner.mockImplementation(async (_, id) => { banners = banners.map((row) => row.BannerId === id ? { ...row, IsActive: false } : row); return banners.find((row) => row.BannerId === id) })
+})
+
+test('Staff can open the banner management page and its create form', async () => {
+  renderPage('/admin/banners', permissions, 'Staff')
+  await screen.findByText('Chưa có banner quảng cáo nào')
+  fireEvent.click(screen.getByRole('button', { name: /Thêm banner/ }))
+  await screen.findByRole('region', { name: 'Thêm banner quảng cáo' })
 })
 
 test('empty banner page retains all columns and accurate counts inside the content dropdown', async () => {

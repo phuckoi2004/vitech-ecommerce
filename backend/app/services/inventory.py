@@ -47,6 +47,8 @@ from app.schemas import (
     StockAdjustmentCreate,
     StockAdjustmentResponse,
     StockOpeningCreate,
+    StockQuantityUpdate,
+    StockQuantityResponse,
 )
 
 from .actor import ADMIN_ONLY, STAFF_OR_ADMIN, Actor, require_role
@@ -89,6 +91,71 @@ class InventoryService(BaseService):
         self.serials = ProductSerialRepository(session)
         self.serial_links = StockAdjustmentSerialRepository(session)
         self.variant_service = ProductVariantService(session, clock=clock)
+
+    def set_stock_quantity(self, actor: Actor, variant_id: uuid.UUID,
+                           data: StockQuantityUpdate) -> StockQuantityResponse:
+        """Atomic Admin-only count/serial edit, without StockAdjustments or cost changes."""
+        require_role(actor, *ADMIN_ONLY)
+        for quantity in (data.StockQuantity, data.ExpectedStockQuantity):
+            if type(quantity) is not int or not 0 <= quantity <= 2147483647:
+                raise BusinessRuleError("Tồn kho phải là số nguyên không âm", code="invalid_stock_quantity")
+        for tracking_value in (data.IsSerialTracked, data.ExpectedIsSerialTracked):
+            if tracking_value is not None and type(tracking_value) is not bool:
+                raise BusinessRuleError("Thiết lập Serial/IMEI không hợp lệ", code="invalid_serial_tracking")
+        with self.transaction():
+            variant = self._lock_variant(variant_id)
+            before = variant.StockQuantity
+            if before != data.ExpectedStockQuantity:
+                raise ConflictError("Tồn kho đã thay đổi. Vui lòng tải lại chi tiết trước khi sửa",
+                                    code="stock_quantity_changed")
+            if data.ExpectedIsSerialTracked is not None and data.ExpectedIsSerialTracked != variant.IsSerialTracked:
+                raise ConflictError("Thiết lập Serial/IMEI đã thay đổi. Vui lòng tải lại chi tiết",
+                                    code="serial_tracking_changed")
+            tracking = variant.IsSerialTracked if data.IsSerialTracked is None else data.IsSerialTracked
+            if variant.IsSerialTracked and not tracking:
+                if before != 0 or data.StockQuantity != 0:
+                    raise BusinessRuleError("Chỉ tắt quản lý Serial/IMEI khi tồn kho bằng 0",
+                                            code="serial_tracking_change_requires_zero_stock")
+                self.variant_service._ensure_serial_tracking_unused(variant)
+            serials = self._normalize_serials(data.SerialNumbers)
+            delta = data.StockQuantity - before
+            available = self.serials.count_available(variant_id)
+            if tracking or available:
+                # Pending orders deducted quantity at checkout, but devices are allocated at confirmation.
+                unbound_quantity = before + self.serials.count_unassigned_order_units(variant_id)
+                if available > unbound_quantity:
+                    raise ConflictError("Số Serial/IMEI khả dụng vượt số hàng trong kho và đơn chờ xác nhận",
+                                        code="serial_stock_mismatch")
+                if delta > 0:
+                    if tracking and len(serials) != delta:
+                        raise BusinessRuleError(f"Phải nhập đúng {delta} Serial/IMEI cho số lượng tăng thêm",
+                                                code="serial_count_mismatch")
+                    if not tracking and serials:
+                        raise BusinessRuleError("Biến thể không quản lý Serial/IMEI", code="serials_not_allowed")
+                    if tracking:
+                        self._register_serials(variant_id, serials)
+                else:
+                    if serials:
+                        raise BusinessRuleError("Chỉ nhập Serial/IMEI khi tăng tồn kho", code="serials_not_allowed")
+                    if delta < 0:
+                        # Keep old unnumbered stock; consume it before removing any available code.
+                        remove_count = max(0, -delta - (unbound_quantity - available))
+                        removed = self.serials.list_available_for_update(variant_id, limit=remove_count, random=True) if remove_count else []
+                        if len(removed) != remove_count:
+                            raise ConflictError("Không đủ Serial/IMEI khả dụng để giảm tồn kho",
+                                                code="serial_not_available")
+                        for serial in removed:
+                            serial.Status = SERIAL_WRITTEN_OFF
+            elif serials:
+                raise BusinessRuleError("Biến thể không quản lý Serial/IMEI", code="serials_not_allowed")
+            tracking_changed = variant.IsSerialTracked != tracking
+            variant.IsSerialTracked = tracking
+            if before != data.StockQuantity:
+                variant.StockQuantity = data.StockQuantity
+                self.variant_service.alert_if_low_stock(variant, before)
+            if before != data.StockQuantity or tracking_changed:
+                self.variants.flush()
+            return StockQuantityResponse.model_validate(variant)
 
     # ------------------------------------------------------------------ Opening
 

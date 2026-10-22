@@ -84,6 +84,7 @@ function OrderCard({ order }) {
   return <li className="cacc-order">
     <div className="cacc-order-info">
       <p className="cacc-order-code">{order.OrderCode} • {formatDate(order.OrderedAt)}</p>
+      {order.SourceReturnRequestId && <p className="font-semibold text-red-600">Đơn đổi trả</p>}
       <p className="cacc-order-items">{orderItemsText(order.Items)}</p>
       <p className="cacc-order-meta">
         <span>Tổng tiền: <Money value={order.TotalAmount} /></span>

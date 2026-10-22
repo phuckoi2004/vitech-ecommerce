@@ -64,6 +64,8 @@ def business_routes():
                     continue
                 if name == "users" and (route.path.startswith(STAGE5_ACCOUNT_PATHS) or route.path == "/users/me"):
                     continue
+                if route.path == "/service-request-image-uploads":
+                    continue  # Raw streamed files and the customer guard have dedicated media tests.
                 yield route
 
 

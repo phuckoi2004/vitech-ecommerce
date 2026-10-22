@@ -102,7 +102,7 @@ export default function OrderResultPage() {
       : <ErrorState title="Không thể tải đơn hàng" message={loaded.error} onRetry={loaded.refresh} />}
   </div>
 
-  const methodName = method?.Name ?? (cod ? 'Thanh toán khi nhận hàng (COD)' : code ? 'Chuyển khoản' : 'Chưa xác định')
+  const methodName = order.SourceReturnRequestId && Number(order.TotalAmount) === 0 ? 'Đơn đổi 0đ · Không cần thanh toán' : method?.Name ?? (cod ? 'Thanh toán khi nhận hàng (COD)' : code ? 'Chuyển khoản' : 'Chưa xác định')
   const shippingName = shippingMethods.data?.find((item) => item.ShippingMethodId === order.ShippingMethodId)?.Name
     ?? (shippingMethods.loading ? 'Đang tải…' : 'Chưa xác định')
   const cancelled = order.OrderStatus === 'Cancelled'
@@ -116,7 +116,7 @@ export default function OrderResultPage() {
     {paid && <div className="order-success" role="status">
       <span className="order-success-icon" aria-hidden="true">✓</span>
       <div className="order-success-body">
-        <p>VieTech đã nhận được thanh toán cho đơn hàng này. Cảm ơn bạn!</p>
+        <p>{order.SourceReturnRequestId && Number(order.TotalAmount) === 0 ? 'Đơn đổi trả 0đ đã được chốt, không cần chuyển khoản.' : 'VieTech đã nhận được thanh toán cho đơn hàng này. Cảm ơn bạn!'}</p>
         <button type="button" className="order-link-button"
           onClick={() => document.getElementById('order-details')?.scrollIntoView?.({ behavior: 'smooth', block: 'start' })}>
           Xem chi tiết đơn hàng
@@ -124,7 +124,7 @@ export default function OrderResultPage() {
       </div>
     </div>}
 
-    <OrderProgress order={order} methodLabel={cod ? 'COD' : code ? 'Chuyển khoản' : 'Chưa xác định'}>
+    <OrderProgress order={order} methodLabel={order.SourceReturnRequestId && Number(order.TotalAmount) === 0 ? 'Không cần thanh toán' : cod ? 'COD' : code ? 'Chuyển khoản' : 'Chưa xác định'}>
       {cancelled ? <div className="od-hint is-cancelled" role="status">
         <p>Đơn hàng đã bị huỷ.{order.CancelReason ? ` Lý do: ${order.CancelReason}` : ''}</p>
         {/* Cancelled after the money came in (or cancelled once paid): the refund is a manual step at the shop. */}
@@ -180,7 +180,7 @@ export default function OrderResultPage() {
       </div>
       <div className="od-help-actions">
         {canCancel(order) ? <CancelOrder order={order} transfer={transfer} onCancelled={loaded.replace} onStale={loaded.refresh} />
-          : !cancelled && <button type="button" className="od-button is-muted" disabled>Hủy đơn</button>}
+          : !cancelled && <button type="button" className="od-button is-muted" disabled>{order.SourceReturnRequestId ? 'Hủy phiếu' : 'Hủy đơn'}</button>}
         <Link className="od-button is-outline" to={CHAT_PATH}>Chat hỗ trợ</Link>
         <Link className="od-button" to={ORDER_HISTORY_PATH}>Về lịch sử mua hàng</Link>
       </div>

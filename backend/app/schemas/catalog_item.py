@@ -68,7 +68,7 @@ class CatalogVariantWrite(RequestSchema):
     CompareAtPrice: VndAmount | None = None
     MinStockLevel: NonNegativeInt = 0
     IsActive: bool = True
-    IsSerialTracked: bool = False
+    IsSerialTracked: bool = True
     VariantImageUrls: list[varchar(500)] | None = None
     DefaultImageUrl: varchar(500) | None = None
     IsDefaultVariant: bool = False

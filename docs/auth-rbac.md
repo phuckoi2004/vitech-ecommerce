@@ -122,3 +122,8 @@ Luồng đổi trả hiện hành không bắt kiểm tra thiệt hại, duyệt
 - Mỗi lần lưu thuộc một transaction: lỗi kiểm tra, ghi hoặc commit hoàn tác nội dung và trạng thái cùng nhau. Form giữ dữ liệu nhập để thử lại, không dùng cơ chế lưu một phần rồi tiếp tục đổi trạng thái.
 - Các nút đổi trạng thái riêng ở danh sách/chi tiết vẫn dùng publish/hide hoặc activate/deactivate. Form không cần gọi thêm các endpoint này sau lần lưu nội dung.
 - API công khai chỉ trả bài Published; banner phải IsActive=true và đang trong [StartDate, EndDate], mốc null là không giới hạn. Trạng thái trong CSDL quyết định khả năng hiển thị, không phải việc trình duyệt đã từng bấm một nút Đăng.
+
+
+## Bổ sung ngày 21/10/2026 — quyền admin hiện hành
+
+Theo yêu cầu mới, Staff/Admin đều quản lý đánh giá (xem/lọc/xóa mềm, bắt buộc lý do), tin tức và banner (xem/thêm/sửa/xóa). Không cấp quyền ghi catalog hoặc quản lý tài khoản cho Staff. Người xác nhận đơn đầu tiên được lưu tại AssignedStaffId; Staff khác chỉ xem, Admin can thiệp được. Chi tiết và kiểm thử: [bản bổ sung](updates/2026-10-21-admin-orders-content.md). Các mô tả cũ về Admin-only ở đúng ba nhóm này được giữ làm lịch sử và được thay bởi bổ sung hiện hành này.

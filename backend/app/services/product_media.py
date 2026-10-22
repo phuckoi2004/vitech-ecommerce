@@ -5,7 +5,7 @@ import uuid
 from app.core.errors import AuthError
 from app.core.storage import AVATAR_EXTENSIONS, AVATAR_MAX_BYTES, AvatarStorage, detect_image_type
 
-from .actor import ADMIN_ONLY, Actor, require_role
+from .actor import STAFF_OR_ADMIN, Actor, require_role
 
 
 PRODUCT_IMAGE_MAX_BYTES = AVATAR_MAX_BYTES  # Respect the existing bucket's 2 MB policy.
@@ -18,7 +18,8 @@ class ProductMediaService:
         self.storage = storage
 
     def upload_product_image(self, actor: Actor, data: bytes) -> str:
-        require_role(actor, *ADMIN_ONLY)
+        # Shared image staging for products, news and banners; no catalog-write permission is granted.
+        require_role(actor, *STAFF_OR_ADMIN)
         if not data:
             raise AuthError(422, "Vui lòng chọn ảnh sản phẩm.")
         if len(data) > PRODUCT_IMAGE_MAX_BYTES:

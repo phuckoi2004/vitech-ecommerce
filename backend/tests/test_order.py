@@ -2,6 +2,7 @@
 
 import unittest
 import uuid
+from datetime import timedelta
 from decimal import Decimal
 
 from app.models import CartItem, Order, PaymentTransaction, ProductSerial
@@ -59,7 +60,8 @@ class CreateOrderTest(OrderTestBase):
         self.assertEqual(self.session.commits, 1)
         for user in (self.staff, self.admin):
             [alert] = self.f.notifications_for(user)
-            self.assertEqual((alert.Title, alert.ReferenceType, alert.ReferenceId), ("Đơn hàng mới", "Order", order.OrderId))
+            self.assertEqual((alert.Title, alert.NotificationType, alert.ReferenceType, alert.ReferenceId),
+                             ("Đơn hàng mới chờ xác nhận", "NewOrder", "Order", order.OrderId))
             self.assertIn(order.OrderCode, alert.Content)
             self.assertIn("230.000đ", alert.Content)
 
@@ -165,7 +167,7 @@ class OwnershipAndCancelTest(OrderTestBase):
         with self.assertRaises(BusinessRuleError) as ctx:
             self.svc.cancel_customer_order(self.f.actor(self.customer), self.order.OrderId, OrderCancelRequest())
         self.assertEqual(ctx.exception.code, "order_not_cancellable")
-        with self.assertRaises(BusinessRuleError):
+        with self.assertRaises(PermissionDeniedError):
             self.svc.update_order_status(
                 self.f.actor(self.staff), self.order.OrderId, OrderStatusUpdate(OrderStatus="Cancelled")
             )
@@ -208,9 +210,19 @@ class StatusTransitionTest(OrderTestBase):
             self.set_status(order.OrderId, "Shipping")
         self.assertEqual(ctx.exception.code, "invalid_status_transition")
         order.PaymentStatus = "Paid"  # đơn QR chỉ được xác nhận khi đã thanh toán
-        self.assertEqual(self.set_status(order.OrderId, "Confirmed").ConfirmedAt is not None, True)
+        with self.assertRaises(BusinessRuleError) as ctx:
+            self.set_status(order.OrderId, "Processing")
+        self.assertEqual(ctx.exception.code, "invalid_status_transition")
+        confirmed = self.set_status(order.OrderId, "Confirmed")
+        self.assertEqual(confirmed.OrderStatus, "Confirmed")
+        self.assertIsNotNone(confirmed.ConfirmedAt)
         with self.assertRaises(BusinessRuleError):
             self.set_status(order.OrderId, "Confirmed")  # gọi lặp
+        self.svc._clock = lambda: confirmed.ConfirmedAt + timedelta(minutes=1)
+        processing = self.set_status(order.OrderId, "Processing")
+        self.assertEqual(processing.OrderStatus, "Processing")
+        self.assertEqual(processing.ConfirmedAt, confirmed.ConfirmedAt)
+        self.assertEqual(processing.StatusHistories[-1].NewStatus, "Processing")
 
     def test_non_cod_must_be_paid_before_shipping(self):
         order = self.f.order(self.customer, self.qr, status="Processing", lines=((self.variant, 1),))
@@ -319,6 +331,18 @@ class RolePermissionTest(OrderTestBase):
 
 
 class CustomerOrderHistoryTest(OrderTestBase):
+    def test_product_history_paginates_only_the_current_customers_orders(self):
+        variant = self.f.variant(stock=5)
+        mine = [self.f.order(self.customer, self.qr, status=status, lines=((variant, 1),))
+                for status in ('Delivered', 'Completed')]
+        self.f.order(self.other, self.qr, status='Delivered', lines=((variant, 1),))
+        pages = [self.svc.search_customer_orders(
+            self.f.actor(self.customer), product_id=variant.ProductId,
+            order_status=['Delivered', 'Completed'], page=page, page_size=1) for page in (1, 2)]
+        self.assertEqual([page.Total for page in pages], [2, 2])
+        self.assertEqual([len(page.Items) for page in pages], [1, 1])
+        self.assertEqual({page.Items[0].OrderId for page in pages}, {order.OrderId for order in mine})
+
     def test_filters_several_statuses_and_lists_order_lines(self):
         variant = self.f.variant(stock=5)
         confirmed = self.f.order(self.customer, self.qr, status="Confirmed", lines=((variant, 2),))
@@ -354,20 +378,20 @@ class CustomerOrderHistoryTest(OrderTestBase):
 
 
 class SerialReservationTest(OrderTestBase):
-    def test_processing_does_not_pick_serials_automatically(self):
-        # Quyết định đợt 5.1 (C2): serial do Staff quét khi đóng gói; Processing không tự chọn serial.
+    def test_processing_picks_serials_automatically(self):
         variant = self.f.variant(stock=3, serial_tracked=True)
         order = self.f.order(self.customer, self.qr, status="Confirmed", lines=((variant, 2),))
         serial = self.db.add(ProductSerial(ProductVariantId=variant.ProductVariantId, SerialNumber="S1", Status="Available"))
+        self.db.add(ProductSerial(ProductVariantId=variant.ProductVariantId, SerialNumber="S2", Status="Available"))
         self.set_status(order.OrderId, "Processing")
-        self.assertEqual((serial.Status, serial.OrderItemId), ("Available", None))
+        self.assertEqual((serial.Status, serial.OrderItemId), ("Reserved", order.items[0].OrderItemId))
 
-    def test_untracked_variant_ignores_serials(self):
+    def test_existing_serial_is_used_even_if_tracking_new_receipts_is_not_enabled(self):
         variant = self.f.variant(stock=3, serial_tracked=False)
         order = self.f.order(self.customer, self.qr, status="Confirmed", lines=((variant, 1),))
         serial = self.db.add(ProductSerial(ProductVariantId=variant.ProductVariantId, SerialNumber="S1", Status="Available"))
         self.set_status(order.OrderId, "Processing")
-        self.assertEqual(serial.Status, "Available")
+        self.assertEqual((serial.Status, serial.OrderItemId), ("Reserved", order.items[0].OrderItemId))
 
 
 class QrExpiryTest(OrderTestBase):

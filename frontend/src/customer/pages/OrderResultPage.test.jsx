@@ -642,3 +642,43 @@ describe('order page: access', () => {
     expect(server.calls.some((call) => call.endpoint.startsWith('/orders'))).toBe(false)
   })
 })
+
+describe('exchange orders', () => {
+  test('even exchange skips QR and is ready for staff, with no order-cancellation action', async () => {
+    const server = mockApi({ 'GET /orders/o1': { body: { ...PAID,
+      SourceReturnRequestId: 'r1', TotalAmount: '0.00', ShippingFee: '0.00', DiscountAmount: ORDER.Subtotal } } })
+    renderAt('/don-hang/o1')
+    await screen.findByRole('heading', { level: 1, name: 'Đã chốt đơn đổi trả' })
+    expect(await screen.findByText('Đơn đổi trả 0đ đã được chốt, không cần chuyển khoản.')).toBeInTheDocument()
+    expect(server.qrRequests()).toHaveLength(0)
+    expect(screen.queryByRole('button', { name: 'Hủy đơn' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Hủy phiếu' })).toBeDisabled()
+    expect(screen.queryByText(/Vui lòng quét mã QR/)).not.toBeInTheDocument()
+  })
+
+  test('unpaid replacement cancels the return request instead of just its order', async () => {
+    const server = mockApi({
+      'GET /orders/o1': { body: { ...ORDER, SourceReturnRequestId: 'r1' } },
+      'POST /return-requests/r1/cancel': { body: { ReturnRequestId: 'r1', Status: 'Cancelled' } },
+    })
+    const { router } = renderAt('/don-hang/o1')
+    await userEvent.click(await screen.findByRole('button', { name: 'Hủy phiếu' }))
+    expect(screen.queryByRole('button', { name: 'Hủy đơn' })).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Xác nhận huỷ' }))
+    await vi.waitFor(() => expect(router.state.location.pathname).toBe('/tai-khoan'))
+    expect(router.state.location.search).toContain('request=r1')
+    expect(server.cancels()).toHaveLength(0)
+    expect(server.calls.filter((call) => call.endpoint === '/return-requests/r1/cancel' && call.method === 'POST')).toHaveLength(1)
+  })
+
+  test('payment winning the race blocks cancellation of the exchange request', async () => {
+    mockApi({
+      'GET /orders/o1': { body: { ...ORDER, SourceReturnRequestId: 'r1' } },
+      'POST /return-requests/r1/cancel': { status: 400, body: { code: 'return_not_cancellable', detail: 'Đã chốt đơn đổi' } },
+    })
+    renderAt('/don-hang/o1')
+    await userEvent.click(await screen.findByRole('button', { name: 'Hủy phiếu' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Xác nhận huỷ' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Phiếu đã chốt đơn đổi hoặc đã đóng nên không thể hủy.')
+  })
+})

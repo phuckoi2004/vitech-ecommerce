@@ -147,6 +147,9 @@ def test_order_flow_from_cart_to_processing(flow):
     assert listed["Total"] == 1
     confirmed = ok(as_user(staff).post(f"/admin/orders/{order_id}/status", json={"OrderStatus": "Confirmed"}))
     assert confirmed["OrderStatus"] == "Confirmed"
+    processing = ok(as_user(staff).post(f"/admin/orders/{order_id}/status", json={"OrderStatus": "Processing"}))
+    assert processing["OrderStatus"] == "Processing"
+    assert confirmed["AssignedStaffId"] == str(staff.UserId)
     cogs = ok(as_user(admin).get(f"/admin/orders/{order_id}/cogs"))
     assert cogs == {"OrderId": order_id, "Cogs": "140000.00"}
     # COGS is Admin-only inside the Service: Staff passes the /admin guard but the Service refuses.

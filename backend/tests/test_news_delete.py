@@ -59,7 +59,7 @@ def test_delete_removes_selected_article_from_admin_and_public_reads_only(news):
     assert session.get(User, author).FullName == 'Người tạo'
 
 
-@pytest.mark.parametrize('role', ['Staff', 'Customer'])
+@pytest.mark.parametrize('role', ['Customer'])
 def test_other_roles_cannot_delete_even_an_existing_article(news, role):
     client, session, selected, _, _, state = news
     state['role'] = role

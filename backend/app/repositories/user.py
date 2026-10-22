@@ -144,6 +144,13 @@ class AddressRepository(BaseRepository[Address]):
 class NotificationRepository(BaseRepository[Notification]):
     model = Notification
 
+    def resolve_new_order(self, order_id: uuid.UUID, now: datetime) -> None:
+        """Resolve only the shared new-order alert; retain every recipient's history."""
+        self.session.execute(update(Notification).where(
+            Notification.NotificationType == 'NewOrder', Notification.ReferenceType == 'Order',
+            Notification.ReferenceId == order_id, Notification.IsRead.is_(False),
+        ).values(IsRead=True, ReadAt=now))
+
     def get_conversation(self, conversation_id: uuid.UUID) -> Conversation | None:
         return self.session.get(Conversation, conversation_id)
 

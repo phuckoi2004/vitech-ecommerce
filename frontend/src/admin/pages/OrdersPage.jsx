@@ -8,14 +8,14 @@ import OrderBadge from '../components/OrderBadge.jsx'
 import OrderDialog from '../components/OrderDialog.jsx'
 import { PRODUCT_CONTROL } from '../components/ProductUi.jsx'
 import useAdminQuery from '../hooks/useAdminQuery.js'
-import { ORDER_NEXT, ORDER_PAGE_SIZE, ORDER_STATUSES, orderFilters, orderListSearch } from '../lib/orders.js'
+import { canOperateOrder, ORDER_NEXT, ORDER_PAGE_SIZE, ORDER_STATUSES, orderFilters, orderListSearch } from '../lib/orders.js'
 import useAutoFilters from '../hooks/useAutoFilters.js'
 
 function OrderSearch({ keyword, onSearch }) {
-  const { draft, setDraft, formProps } = useAutoFilters({ keyword }, (values) => onSearch(values.keyword))
+  const { draft, setDraft, formProps } = useAutoFilters({ keyword }, (values) => onSearch(values.keyword), { delay: 0 })
   return <form role="search" className="flex items-end gap-2.5" {...formProps}>
     <label className="flex w-[330px] flex-col gap-1.5 text-[11px] leading-normal font-semibold">Tìm kiếm
-      <input type="search" aria-label="Tìm kiếm đơn hàng theo mã" placeholder="Tìm kiếm đơn hàng.." title="Tìm kiếm theo mã đơn hàng" maxLength={255} className={PRODUCT_CONTROL + ' h-10 rounded-lg! px-3 text-[10px]! font-normal placeholder:text-admin-muted'} value={draft.keyword} onChange={(event) => setDraft({ keyword: event.target.value })} />
+      <input type="search" aria-label="Tìm kiếm đơn hàng theo mã, tên tài khoản hoặc số điện thoại" placeholder="Mã đơn, tên tài khoản hoặc số điện thoại" title="Nhập từ một ký tự để tìm kiếm" maxLength={255} className={PRODUCT_CONTROL + ' h-10 rounded-lg! px-3 text-[10px]! font-normal placeholder:text-admin-muted'} value={draft.keyword} onChange={(event) => setDraft({ keyword: event.target.value })} />
     </label>
   </form>
 }
@@ -25,7 +25,7 @@ export default function OrdersPage() {
   const navigate = useNavigate()
   const [params, setParams] = useSearchParams()
   const filter = orderFilters(params)
-  const list = useAdminQuery('/admin/orders', { page: filter.page, page_size: ORDER_PAGE_SIZE, order_code: filter.keyword, order_status: filter.status })
+  const list = useAdminQuery('/admin/orders', { page: filter.page, page_size: ORDER_PAGE_SIZE, keyword: filter.keyword, order_status: filter.status })
   const [notice, setNotice] = useState('')
   const canUpdate = auth.permissions.includes('orders:update')
   const rows = list.data?.Items ?? []
@@ -65,7 +65,7 @@ export default function OrdersPage() {
     { key: 'OrderedAt', label: 'Ngày đặt', className: 'w-[12.4%]', render: formatDate },
     { key: 'OrderStatus', label: 'Trạng thái', className: 'w-[15.6%]', render: (value) => <OrderBadge value={value} /> },
     { key: 'next', label: 'Bước tiếp theo', className: 'w-[14.7%]', render: (_, row) => ORDER_NEXT[row.OrderStatus]
-      ? canUpdate ? <button type="button" className={linkClass} aria-label={ORDER_NEXT[row.OrderStatus][1] + ' ' + row.OrderCode} onClick={() => open(row.OrderId, 'advance')}>{ORDER_NEXT[row.OrderStatus][1]}</button>
+      ? canOperateOrder(row, auth) ? <button type="button" className={linkClass} aria-label={ORDER_NEXT[row.OrderStatus][1] + ' ' + row.OrderCode} onClick={() => open(row.OrderId, 'advance')}>{ORDER_NEXT[row.OrderStatus][1]}</button>
         : <span className="text-admin-muted">{ORDER_NEXT[row.OrderStatus][1]}</span>
       : <span className="text-admin-muted">{row.OrderStatus === 'Cancelled' ? 'Đã đóng' : 'Đã hoàn tất'}</span> },
     { key: 'actions', label: 'Thao tác', className: 'w-[16.1%]', render: (_, row) => <button type="button" className={linkClass} aria-label={'Xem chi tiết ' + row.OrderCode} onClick={() => navigate('/admin/orders/' + encodeURIComponent(row.OrderId) + orderListSearch(params))}>Xem chi tiết</button> },

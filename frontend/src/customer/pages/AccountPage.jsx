@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import useCustomerSession from '../../hooks/useCustomerSession.js'
 import { AVATAR_MAX_BYTES, AVATAR_TYPES, changePassword, getDefaultAddress, saveDefaultAddress, updateProfile, uploadAvatar } from '../../lib/account-api.js'
 import { passwordRules } from '../../lib/password-rules.js'
 import { EyeIcon, PasswordInput } from '../components/AuthFields.jsx'
 import OrderHistory from '../components/order/OrderHistory.jsx'
+import ServiceHistory from '../components/service-request/ServiceHistory.jsx'
+import { RETURN_CREATE_PATH, WARRANTY_CREATE_PATH } from '../routes/paths.js'
 import '../layouts/CustomerAuthLayout.css'
 import './AccountPage.css'
 
@@ -12,7 +14,7 @@ import './AccountPage.css'
 const SECTIONS = [
   { id: 'profile', label: 'Thông tin cá nhân' },
   { id: 'orders', label: 'Lịch sử mua hàng' },
-  { id: 'service', label: 'Tra cứu bảo hành và đổi trả' },
+  { id: 'service', label: 'Bảo hành và đổi trả' },
 ]
 
 const GENDERS = ['Nam', 'Nữ', 'Khác']
@@ -297,8 +299,10 @@ export default function AccountPage() {
   const [signingOut, setSigningOut] = useState(false)
 
   useEffect(() => {
-    document.title = 'Tài khoản | VieTech'
-  }, [])
+    const section = params.get('section')
+    document.title = section === 'service' ? `${params.get('request') ? params.get('type') === 'return' ? 'Chi tiết đổi trả' : 'Chi tiết bảo hành' : 'Bảo hành và đổi trả'} | VieTech`
+      : section === 'orders' ? 'Lịch sử mua hàng | VieTech' : 'Tài khoản | VieTech'
+  }, [params])
 
   if (!user) return <div className="cacc-loading" role="status"><span className="spinner" />Đang tải thông tin tài khoản…</div>
 
@@ -320,9 +324,11 @@ export default function AccountPage() {
       </section>
       <div className="cacc-body">
         <nav className="cacc-card cacc-menu" aria-label="Mục tài khoản">
-          {SECTIONS.map((item) => <button key={item.id} type="button" className={`cacc-menu-item ${item === current ? 'is-active' : ''}`}
+          {SECTIONS.map((item) => <div key={item.id} className={item.id === 'service' ? 'cacc-menu-group' : 'cacc-menu-entry'}><button type="button" className={`cacc-menu-item ${item === current ? 'is-active' : ''}`}
             aria-current={item === current ? 'page' : undefined}
-            onClick={() => setParams(item === SECTIONS[0] ? {} : { section: item.id })}>{item.label}</button>)}
+            onClick={() => setParams(item === SECTIONS[0] ? {} : { section: item.id })}>{item.label}{item.id === 'service' && <span className="cacc-menu-chevron" aria-hidden="true">›</span>}</button>
+            {item.id === 'service' && <div className="cacc-submenu"><Link to={WARRANTY_CREATE_PATH}>Tạo yêu cầu bảo hành</Link><Link to={RETURN_CREATE_PATH}>Tạo yêu cầu đổi trả</Link></div>}
+          </div>)}
           <button type="button" className="cacc-menu-item is-logout" onClick={logout} disabled={signingOut}>
             {signingOut ? 'Đang đăng xuất…' : 'Đăng xuất'}
           </button>
@@ -332,10 +338,7 @@ export default function AccountPage() {
             ? <ProfileSection session={session} />
             : current.id === 'orders'
               ? <OrderHistory />
-              : <>
-                <div className="cacc-panel-heading"><h1>{current.label}</h1></div>
-                <p className="cacc-placeholder">Chức năng đang được xây dựng.</p>
-              </>}
+              : <ServiceHistory />}
         </section>
       </div>
     </div>

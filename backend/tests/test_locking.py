@@ -82,6 +82,25 @@ class LockingQueryTest(unittest.TestCase):
         self.assertIn("FOR UPDATE SKIP LOCKED", sql(stmt))
         self.assertEqual(session.calls[0], "flush")
 
+    def test_automatic_serial_selection_excludes_bound_codes_and_randomizes_only_reduction(self):
+        for random in (False, True):
+            session = RecordingSession()
+            ProductSerialRepository(session).list_available_for_update(uuid.uuid4(), limit=2, random=random)
+            query = sql(session.statements[0])
+            self.assertIn('"ProductSerials"."OrderItemId" IS NULL', query)
+            self.assertIn('FOR UPDATE SKIP LOCKED', query)
+            self.assertEqual('random()' in query, random)
+            self.assertTrue(session.statements[0].get_execution_options().get('populate_existing'))
+
+    def test_unassigned_quantity_query_includes_order_state_and_existing_reservations(self):
+        session = RecordingSession()
+        self.assertEqual(ProductSerialRepository(session).count_unassigned_order_units(uuid.uuid4()), 0)
+        query = sql(session.statements[0])
+        self.assertIn('JOIN "Orders"', query)
+        self.assertIn('"Orders"."OrderStatus" =', query)
+        self.assertEqual(session.statements[0].compile().params['OrderStatus_1'], 'Pending')
+        self.assertIn('"ProductSerials"."OrderItemId" = "OrderItems"."OrderItemId"', query)
+
     def test_coupon_lock_is_case_insensitive_and_populates_existing(self):
         session = RecordingSession()
         self.assertIsNone(CouponRepository(session).get_by_code_for_update("Sale10"))

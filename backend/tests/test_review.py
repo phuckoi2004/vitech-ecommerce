@@ -258,12 +258,12 @@ class ModerationTest(ReviewTestBase):
         self.assertEqual(admin_view.Total, 2)
         self.assertEqual(self.svc.list_my_reviews(self.f.actor(self.customer)).Total, 0)
 
-    def test_customer_and_staff_cannot_moderate(self):
-        for who in (self.customer, self.staff, self.other):
+    def test_customer_cannot_moderate(self):
+        for who in (self.customer, self.other):
             with self.subTest(role=who.Role), self.assertRaises(PermissionDeniedError):
                 self.hide(self.five.ReviewId, by=who)
         with self.assertRaises(PermissionDeniedError):
-            self.svc.moderate_review(None, self.five.ReviewId, ReviewDeleteRequest())
+            self.svc.moderate_review(None, self.five.ReviewId, ReviewDeleteRequest(DeleteReason="Spam"))
         self.assertFalse(self.db.get(Review, self.five.ReviewId).IsDeleted)
         self.assertFalse(hasattr(self.svc, "delete_review"))  # không có nghiệp vụ khách hàng tự xóa
 
@@ -294,8 +294,20 @@ class ModerationTest(ReviewTestBase):
             self.hide(uuid.uuid4())
         with self.assertRaises(NotFoundError):
             self.svc.admin_get_review(self.f.actor(self.admin), uuid.uuid4())
-        with self.assertRaises(PermissionDeniedError):
-            self.svc.admin_get_review(self.f.actor(self.staff), self.five.ReviewId)
+        self.assertEqual(self.svc.admin_get_review(self.f.actor(self.staff), self.five.ReviewId).ReviewId,
+                         self.five.ReviewId)
+
+    def test_staff_moderates_with_audited_reason(self):
+        result = self.hide(self.five.ReviewId, by=self.staff, reason="  Spam  ")
+        self.assertEqual((result.IsDeleted, result.DeletedByUserId, result.DeleteReason),
+                         (True, self.staff.UserId, "Spam"))
+
+    def test_missing_or_blank_reason_is_rejected_for_both_roles(self):
+        for who in (self.staff, self.admin):
+            for body in ({}, {"DeleteReason": None}, {"DeleteReason": ""}, {"DeleteReason": "  \n "}):
+                with self.subTest(role=who.Role, body=body), self.assertRaises(ValidationError):
+                    self.svc.moderate_review(self.f.actor(who), self.five.ReviewId, ReviewDeleteRequest(**body))
+        self.assertFalse(self.db.get(Review, self.five.ReviewId).IsDeleted)
 
 
 class ProductStatsTest(ReviewTestBase):

@@ -6,6 +6,12 @@ export const FORGOT_PASSWORD_PATH = '/quen-mat-khau'
 export const ACCOUNT_PATH = '/tai-khoan'
 // The account page opened at its order history section.
 export const ORDER_HISTORY_PATH = `${ACCOUNT_PATH}?section=orders`
+export const WARRANTY_HISTORY_PATH = `${ACCOUNT_PATH}?section=service`
+export const WARRANTY_CREATE_PATH = '/bao-hanh/tao-yeu-cau'
+export const warrantyRequestPath = (id) => `${WARRANTY_HISTORY_PATH}&request=${encodeURIComponent(id)}`
+export const RETURN_HISTORY_PATH = `${WARRANTY_HISTORY_PATH}&type=return`
+export const RETURN_CREATE_PATH = '/doi-tra/tao-yeu-cau'
+export const returnRequestPath = (id) => `${RETURN_HISTORY_PATH}&request=${encodeURIComponent(id)}`
 
 // Pages linked from the header and the home page.
 export const SEARCH_PATH = '/tim-kiem'

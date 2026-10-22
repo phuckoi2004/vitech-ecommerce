@@ -14,6 +14,7 @@ from app.core.search_text import fold, folded, is_marked, like_pattern, words as
 from app.models import (
     Brand,
     Category,
+    Order,
     OrderItem,
     Product,
     ProductImage,
@@ -572,6 +573,30 @@ class ProductImageRepository(BaseRepository[ProductImage]):
 
 class ProductSerialRepository(BaseRepository[ProductSerial]):
     model = ProductSerial
+
+    def count_available(self, variant_id: uuid.UUID) -> int:
+        return self.count(ProductSerial.ProductVariantId == variant_id,
+                          ProductSerial.Status == "Available", ProductSerial.OrderItemId.is_(None))
+
+    def count_unassigned_order_units(self, variant_id: uuid.UUID) -> int:
+        """Only pending orders still share the unbound pool; confirmed devices have already been allocated."""
+        reserved = select(func.count(ProductSerial.ProductSerialId)).where(
+            ProductSerial.OrderItemId == OrderItem.OrderItemId,
+            ProductSerial.Status == "Reserved",
+        ).correlate(OrderItem).scalar_subquery()
+        stmt = select(func.coalesce(func.sum(func.greatest(OrderItem.Quantity - reserved, 0)), 0)).join(
+            Order, Order.OrderId == OrderItem.OrderId
+        ).where(OrderItem.ProductVariantId == variant_id,
+                Order.OrderStatus == "Pending")
+        return int(self.session.scalar(stmt) or 0)
+
+    def list_available_for_update(self, variant_id: uuid.UUID, *, limit: int,
+                                  random: bool = False) -> list[ProductSerial]:
+        stmt = select(ProductSerial).where(
+            ProductSerial.ProductVariantId == variant_id,
+            ProductSerial.Status == "Available", ProductSerial.OrderItemId.is_(None),
+        ).order_by(func.random() if random else ProductSerial.SerialNumber).limit(limit).with_for_update(skip_locked=True)
+        return self._scalars_for_update(stmt)
 
     def has_return_history(self, product_serial_id: uuid.UUID) -> bool:
         """Serial từng thuộc yêu cầu đổi/trả hoặc hồ sơ hàng hoàn vận chuyển (mọi trạng thái)."""

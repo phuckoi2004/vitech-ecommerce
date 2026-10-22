@@ -24,6 +24,8 @@ from app.schemas import (
     StockAdjustmentCreate,
     StockAdjustmentResponse,
     StockOpeningCreate,
+    StockQuantityUpdate,
+    StockQuantityResponse,
     SupplierCreate,
     SupplierResponse,
     SupplierUpdate,
@@ -181,3 +183,9 @@ def declare_stock_opening(variant_id: uuid.UUID, data: StockOpeningCreate, servi
                    status_code=status.HTTP_201_CREATED)
 def adjust_stock(variant_id: uuid.UUID, data: StockAdjustmentCreate, service: Inventory, actor: CurrentActor):
     return service.adjust_stock(actor, variant_id, data)
+
+
+@admin_router.patch("/variants/{variant_id}/stock", response_model=StockQuantityResponse)
+def set_stock_quantity(variant_id: uuid.UUID, data: StockQuantityUpdate, service: Inventory, actor: CurrentActor):
+    """Direct quantity edit, Admin-only; does not create an adjustment/history record."""
+    return service.set_stock_quantity(actor, variant_id, data)

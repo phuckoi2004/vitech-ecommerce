@@ -127,6 +127,7 @@ class StaffConfirmTest(OrderPaymentRulesBase):
         self.bank_transfer(tx)
         self.assertEqual(self.set_status(order, "Confirmed").OrderStatus, "Confirmed")
         self.assertIsNotNone(order.ConfirmedAt)
+        self.assertEqual(self.history(order), ["Confirmed"])
         self.assertEqual(self.set_status(order, "Processing").OrderStatus, "Processing")
         self.assertEqual(self.history(order), ["Confirmed", "Processing"])
 
