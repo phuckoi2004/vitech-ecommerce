@@ -78,6 +78,11 @@ class MessageResponse(_MessageFields):
     def _hide_staff_sender(self):
         if self.SenderType != "Customer":
             self.SenderUserId = None
+        if self.MessageType == "Text" and self.Metadata:
+            # Processing leases/usage belong to the server, not customer history.
+            public = {key: value for key, value in self.Metadata.items()
+                      if key in {"ClientRequestId", "AiProcessingStatus", "ReplyToMessageId"}}
+            self.Metadata = public or None
         return self
 
 
@@ -94,6 +99,7 @@ class ConversationResponse(ResponseSchema):
     Status: ConversationStatus
     CreatedAt: datetime
     ClosedAt: datetime | None
+    Title: str | None = None
 
 
 class ConversationDetailResponse(ConversationResponse):

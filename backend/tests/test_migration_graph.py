@@ -32,6 +32,7 @@ PRICING_HEAD = "93e7a2b0c518"
 CATALOG_DELETE_HEAD = "a6d2e8f4b190"
 CATALOG_MERGE_HEAD = "b2f8c6d4e901"
 HEAD = "c3a9f5e7d206"
+AI_HEAD = "d7a1e5c9b304"
 COUPON_REVISION = "213feab4a632"
 STATUS_REVISION = "dd773e03e503"
 TRANSACTION_TYPE_REVISION = "9b10f42fc70d"
@@ -91,9 +92,10 @@ def test_unique_revision_ids_and_one_complete_canonical_graph():
     duplicates = {revision: [name for name, identifier in identifiers if identifier == revision]
                   for revision, count in counts.items() if count > 1}
     assert duplicates == {}, f"Duplicate Alembic revision identifiers: {duplicates}"
-    assert len(identifiers) == 30
+    assert len(identifiers) == 31
     graph = scripts()
-    assert graph.get_heads() == [HEAD]
+    assert graph.get_heads() == [AI_HEAD]
+    assert graph.get_revision(AI_HEAD).down_revision == HEAD
     assert graph.get_revision(HEAD).down_revision == (PRICING_HEAD, CATALOG_MERGE_HEAD)
     assert graph.get_revision(PRICING_HEAD).down_revision == PROMOTION_HEAD
     assert graph.get_revision(PROMOTION_HEAD).down_revision == NEWS_VIEWS_HEAD

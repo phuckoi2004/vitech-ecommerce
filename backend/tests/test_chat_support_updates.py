@@ -142,6 +142,11 @@ def test_closed_history_scope_and_admin_all_remain_read_only_for_other_staff(inb
     assert client.post(path + '/messages', json={'MessageType': 'Text', 'Content': 'No takeover'}).status_code == 400
 
 
+def ask(client, conversation_id, content='Cần hỗ trợ'):
+    response = client.post(f'/conversations/{conversation_id}/messages', json={'MessageType': 'Text', 'Content': content})
+    assert response.status_code == 201
+
+
 def test_new_queue_and_assigned_messages_create_notifications_without_reuse_duplicates(inbox):
     client, session, _, current, ids, actors = inbox
     current['actor'] = actors[0]
@@ -149,10 +154,14 @@ def test_new_queue_and_assigned_messages_create_notifications_without_reuse_dupl
     opened = client.post('/conversations', json={'Mode': 'Staff'})
     assert opened.status_code == 201
     id_ = opened.json()['ConversationId']
+    # Merely opening the chat window does not page staff; the first customer message does.
+    assert client.post('/conversations', json={'Mode': 'Staff'}).json()['ConversationId'] == id_
+    assert list(session.scalars(select(Notification))) == []
+    ask(client, id_)
     notes = list(session.scalars(select(Notification)))
     assert {note.UserId for note in notes} == {actor.user_id for actor in actors[2:]}
     assert all(note.ReferenceType == 'Conversation' and id_ in note.ActionUrl for note in notes)
-    assert client.post('/conversations', json={'Mode': 'Staff'}).json()['ConversationId'] == id_
+    ask(client, id_, 'Còn ai không?')
     assert len(list(session.scalars(select(Notification)))) == 3
     current['actor'] = actors[2]
     assert client.post(f'/admin/conversations/{id_}/claim').status_code == 200
@@ -170,6 +179,7 @@ def test_claim_resolves_queue_alerts_for_every_recipient_without_exposing_the_cl
     current['actor'] = actors[0]
     assert client.post(f'/conversations/{ids[0]}/close').status_code == 200
     id_ = client.post('/conversations', json={'Mode': 'Staff'}).json()['ConversationId']
+    ask(client, id_)
     current['actor'] = actors[2]
     assert client.post(f'/admin/conversations/{id_}/claim').status_code == 200
     current['actor'] = actors[3]
@@ -190,6 +200,7 @@ def test_customer_closing_a_waiting_chat_resolves_queue_alerts(inbox):
     current['actor'] = actors[0]
     client.post(f'/conversations/{ids[0]}/close')
     id_ = client.post('/conversations', json={'Mode': 'Staff'}).json()['ConversationId']
+    ask(client, id_)
     assert client.post(f'/conversations/{id_}/close').status_code == 200
     notes = list(session.scalars(select(Notification)))
     assert len(notes) == 3 and all(note.IsRead and note.ActionUrl == '/admin/support' for note in notes)

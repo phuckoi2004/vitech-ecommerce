@@ -6,7 +6,7 @@ import LoadingState from '../../components/shared/LoadingState.jsx'
 import useApiData from '../../hooks/useApiData.js'
 import useCustomerRequest from '../../hooks/useCustomerRequest.js'
 import { formatDateTime } from '../../lib/format.js'
-import useChatDraft from '../chat-drafts.js'
+import useChatDraft, { useDraftHandoff } from '../chat-drafts.js'
 import { productPath } from '../routes/paths.js'
 import './ShoppingPages.css'
 import './ChatPage.css'
@@ -161,9 +161,10 @@ function ChatThread({ conversationId, send, onClosed, paused = false }) {
 }
 
 // Mounted only after a customer opens chat (or returns here after signing in).
-// The server reuses an open Staff conversation; initialization never closes a different conversation.
+// The server reuses an open Staff conversation; initialization only closes an AI conversation that has no messages.
 export function StaffChat({ onDismiss, titleId, initialConversationId = '' }) {
   const send = useCustomerRequest()
+  const handOffDraft = useDraftHandoff()
   const [historyPage, setHistoryPage] = useState(1)
   const conversations = useApiData(`my-conversations:${historyPage}`, (signal) => send('/conversations', { query: { page: historyPage, page_size: 20 }, signal }))
   const { reload: reloadHistory } = conversations
@@ -199,21 +200,18 @@ export function StaffChat({ onDismiss, titleId, initialConversationId = '' }) {
         const response = await send('/conversations', { query: { status: 'Open', page_size: 1 }, signal: controller.signal })
         if (controller.signal.aborted) return
         const open = response.Items?.[0]
-        if (open && open.Mode !== 'Staff') {
-          setSession({ blocked: open })
-          return
-        }
-        const conversation = open ?? await send('/conversations', {
+        const conversation = open?.Mode === 'Staff' ? open : await send('/conversations', {
           method: 'POST', body: { Mode: 'Staff' }, signal: controller.signal,
         })
+        if (conversation !== open) handOffDraft(open, conversation)
         if (!controller.signal.aborted) { setSession({ conversation }); reloadHistory() }
       } catch (failure) {
-        if (!controller.signal.aborted) setSession({ error: failure.message })
+        if (!controller.signal.aborted) setSession(failure.code === 'open_conversation_exists' ? { blocked: true } : { error: failure.message })
       }
     }
     openChat()
     return () => controller.abort()
-  }, [send, attempt, reloadHistory, initialConversationId])
+  }, [send, attempt, reloadHistory, initialConversationId, handOffDraft])
 
   useEffect(() => () => creation.current?.abort(), [])
   useEffect(() => {

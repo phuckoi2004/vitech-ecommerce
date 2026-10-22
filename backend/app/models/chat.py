@@ -103,3 +103,18 @@ Index(
     unique=True,
     postgresql_where=text("\"Status\" = 'Open'"),
 )
+
+
+# Stage 10.2: metadata is assigned by AiChatService, never accepted from customer Text requests.
+for index_name, key, sender, extra in (
+    ("UX_Messages_AiRequest", "ClientRequestId", "Customer", None),
+    ("UX_Messages_AiReply", "ReplyToMessageId", "AI", None),
+    ("UX_Messages_AiPending", None, "Customer", "\"Metadata\" ->> 'AiProcessingStatus' = 'Pending'"),
+):
+    predicate = f"\"SenderType\" = '{sender}' AND " + (
+        extra if extra else f"\"Metadata\" ->> '{key}' IS NOT NULL"
+    )
+    columns = [Message.ConversationId]
+    if key:
+        columns.append(text(f"(\"Metadata\" ->> '{key}')"))
+    Index(index_name, *columns, unique=True, postgresql_where=text(predicate), sqlite_where=text(predicate))

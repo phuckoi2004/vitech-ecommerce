@@ -3,16 +3,37 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import and_, func, or_, select, update
+from sqlalchemy import and_, exists, func, or_, select, update
 from sqlalchemy.orm import aliased, selectinload
+from sqlalchemy.sql import ColumnElement
 
 from app.models import Conversation, Message, User
 
 from .base import BaseRepository
 
 
+def has_messages() -> ColumnElement[bool]:
+    """Hội thoại đã có ít nhất một tin nhắn (khách không chỉ mở khung chat rồi rời đi)."""
+    return exists().where(Message.ConversationId == Conversation.ConversationId)
+
+
 class ConversationRepository(BaseRepository[Conversation]):
     model = Conversation
+
+    def get_titles(self, conversation_ids: list[uuid.UUID]) -> dict[uuid.UUID, str]:
+        """First customer text for an already authorized page, in one bounded query."""
+        if not conversation_ids:
+            return {}
+        ranked = select(
+            Message.ConversationId,
+            func.substr(Message.Content, 1, 120).label("title"),
+            func.row_number().over(partition_by=Message.ConversationId,
+                                   order_by=(Message.SentAt, Message.MessageId)).label("message_rank"),
+        ).where(Message.ConversationId.in_(conversation_ids), Message.SenderType == "Customer",
+                Message.MessageType == "Text", func.length(func.trim(Message.Content)) > 0).subquery()
+        rows = self.session.execute(select(ranked.c.ConversationId, ranked.c.title)
+                                    .where(ranked.c.message_rank == 1)).all()
+        return {id_: " ".join(content.split())[:90] for id_, content in rows}
 
     def get_support_context(self, conversation_ids: list[uuid.UUID]) -> dict:
         """Only enrich IDs already authorized by the service; two queries per page, no N+1/history load."""
@@ -66,8 +87,14 @@ class ConversationRepository(BaseRepository[Conversation]):
         mode: str | None,
         unassigned: bool = False,
         assigned: bool = False,
+        started: bool = False,
+        hide_unused_closed: bool = False,
     ) -> list:
         conditions = []
+        if started:
+            conditions.append(has_messages())
+        if hide_unused_closed:
+            conditions.append(or_(Conversation.Status == "Open", has_messages()))
         if unassigned:
             conditions.append(Conversation.AssignedStaffId.is_(None))
         if assigned:
@@ -91,11 +118,14 @@ class ConversationRepository(BaseRepository[Conversation]):
         mode: str | None = None,
         unassigned: bool = False,
         assigned: bool = False,
+        started: bool = False,
+        hide_unused_closed: bool = False,
         offset: int | None = None,
         limit: int | None = None,
     ) -> list[Conversation]:
         return self.get_all(
-            *self._filters(customer_id, assigned_staff_id, status, mode, unassigned, assigned),
+            *self._filters(customer_id, assigned_staff_id, status, mode, unassigned, assigned, started,
+                           hide_unused_closed),
             order_by=(Conversation.CreatedAt.desc(), Conversation.ConversationId),
             offset=offset,
             limit=limit,
@@ -110,12 +140,32 @@ class ConversationRepository(BaseRepository[Conversation]):
         mode: str | None = None,
         unassigned: bool = False,
         assigned: bool = False,
+        started: bool = False,
+        hide_unused_closed: bool = False,
     ) -> int:
-        return self.count(*self._filters(customer_id, assigned_staff_id, status, mode, unassigned, assigned))
+        return self.count(*self._filters(customer_id, assigned_staff_id, status, mode, unassigned, assigned, started,
+                                         hide_unused_closed))
 
 
 class MessageRepository(BaseRepository[Message]):
     model = Message
+
+    def get_ai_request(self, conversation_id: uuid.UUID, request_id: uuid.UUID) -> Message | None:
+        return self.get_one(Message.ConversationId == conversation_id, Message.SenderType == "Customer",
+                            Message.Metadata.op("->>")("ClientRequestId") == str(request_id))
+
+    def pending_ai_requests(self, conversation_id: uuid.UUID) -> list[Message]:
+        return self.get_all(Message.ConversationId == conversation_id, Message.SenderType == "Customer",
+                            Message.Metadata.op("->>")("AiProcessingStatus") == "Pending")
+
+    def completed_ai_requests(self, conversation_id: uuid.UUID, limit: int) -> list[Message]:
+        rows = self.get_all(Message.ConversationId == conversation_id, Message.SenderType == "Customer",
+                            Message.Metadata.op("->>")("AiProcessingStatus") == "Completed",
+                            order_by=(Message.SentAt.desc(), Message.MessageId.desc()), limit=limit)
+        return list(reversed(rows))
+
+    def get_messages_by_ids(self, ids: list[uuid.UUID]) -> list[Message]:
+        return self.get_all(Message.MessageId.in_(ids)) if ids else []
 
     def list_window(self, conversation_id: uuid.UUID, *, limit: int, latest: bool = False,
                     after: tuple[datetime, uuid.UUID] | None = None,

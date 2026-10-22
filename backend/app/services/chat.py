@@ -4,7 +4,8 @@ Nguồn nghiệp vụ: docs/business-requirements.md mục 14 và quyết địn
 - Mode AI/Staff; SenderType Customer/Staff/AI; MessageType Text/Image/Product (CHECK ở migration c8d2f4a6b1e3).
 - Mỗi Customer tối đa một hội thoại Open: khóa dòng Users của Customer (FOR UPDATE) rồi kiểm tra; UNIQUE INDEX
   "UX_Conversations_CustomerId_Open" là lớp chặn cuối khi hai yêu cầu đồng thời. Đã có hội thoại Open cùng chế độ →
-  trả lại hội thoại đó; khác chế độ → lỗi ``open_conversation_exists`` (không tự đóng hội thoại cũ).
+  trả lại hội thoại đó; khác chế độ mà chưa có tin nhắn nào (khách mới mở khung chat) → tự đóng hội thoại rỗng đó rồi
+  mở chế độ mới; khác chế độ và đã có tin nhắn → lỗi ``open_conversation_exists`` (không tự đóng hội thoại đang dùng).
 - Staff (Admin kế thừa chức năng Staff — business-requirements mục 2) tự nhận hội thoại Staff đang Open chưa gán:
   khóa dòng Conversation rồi kiểm tra; đã có người nhận → lỗi, không ghi đè. Không có chức năng chuyển giao.
 - Quyền xem: Customer — hội thoại của mình; Staff — hội thoại được gán cho mình + hàng đợi (Open, Mode Staff, chưa
@@ -76,7 +77,10 @@ class ChatService(BaseService):
     # ------------------------------------------------------------------ Customer
 
     def start_conversation(self, actor: Actor, data: ConversationCreate) -> ConversationResponse:
-        """Customer mở hội thoại (AI hoặc Staff); đã có hội thoại Open cùng chế độ thì trả lại hội thoại đó."""
+        """Customer mở hội thoại (AI hoặc Staff); đã có hội thoại Open cùng chế độ thì trả lại hội thoại đó.
+
+        Hội thoại Open ở chế độ khác nhưng chưa có tin nhắn nào thì được đóng để mở chế độ mới.
+        """
         require_role(actor, *CUSTOMER_ONLY)
         values = dict(data.model_dump(exclude_unset=True))
         not_allowed = sorted(set(values) - {"Mode"})
@@ -93,21 +97,14 @@ class ChatService(BaseService):
                 if customer is None or customer.IsDeleted:
                     raise NotFoundError("Không tìm thấy tài khoản", code="user_not_found")
                 existing = self.conversations.get_open_by_customer(actor.user_id)
+                if existing is not None and existing.Mode != mode and self._close_if_unused(existing):
+                    existing = None
                 if existing is not None:
                     return self._reuse_open(existing, mode)
                 conversation = self.conversations.create(
                     {"CustomerId": actor.user_id, "Mode": mode, "Status": STATUS_OPEN, "CreatedAt": self.now()}
                 )
-                self.conversations.flush()
-                if mode == MODE_STAFF:
-                    for role in STAFF_OR_ADMIN:
-                        for operator in self.users.list_users(role=role, account_status='Active'):
-                            self.notifications.notify(
-                                operator.UserId, title='Khách hàng đang chờ hỗ trợ',
-                                content='Có cuộc trò chuyện mới cần tiếp nhận.', notification_type='Chat',
-                                action_url=f'/admin/support?conversation={conversation.ConversationId}',
-                                reference_type='Conversation', reference_id=conversation.ConversationId,
-                            )
+                self.conversations.flush()  # nhân viên chỉ được báo khi khách gửi tin đầu tiên (send_message)
                 return ConversationResponse.model_validate(conversation)
         except ConflictError as exc:
             if exc.code != "open_conversation_exists":
@@ -119,20 +116,28 @@ class ChatService(BaseService):
             return self._reuse_open(existing, mode)
 
     def list_my_conversations(
-        self, actor: Actor, *, status: str | None = None, page: int = 1, page_size: int = 20
+        self, actor: Actor, *, status: str | None = None, mode: str | None = None, page: int = 1, page_size: int = 20
     ) -> PageResponse[ConversationResponse]:
         require_role(actor, *CUSTOMER_ONLY)
-        return self._page(customer_id=actor.user_id, status=status, page=page, page_size=page_size)
+        if mode is not None and mode not in CONVERSATION_MODES:
+            raise BusinessRuleError("Chế độ hội thoại không hợp lệ", code="invalid_conversation_mode")
+        # Hội thoại đã đóng mà chưa có tin nhắn (khách chỉ mở khung chat) không đáng giữ trong lịch sử.
+        result = self._page(customer_id=actor.user_id, status=status, mode=mode, hide_unused_closed=True,
+                            page=page, page_size=page_size)
+        titles = self.conversations.get_titles([item.ConversationId for item in result.Items])
+        for item in result.Items:
+            item.Title = titles.get(item.ConversationId)
+        return result
 
     # ------------------------------------------------------------------ Staff / Admin
 
     def list_unassigned_conversations(
         self, actor: Actor, *, page: int = 1, page_size: int = 20
     ) -> PageResponse[AdminConversationResponse]:
-        """Hàng đợi để nhân viên nhận: hội thoại Staff đang Open, chưa có người nhận."""
+        """Hàng đợi để nhân viên nhận: hội thoại Staff đang Open, chưa có người nhận, khách đã gửi tin."""
         require_role(actor, *STAFF_OR_ADMIN)
-        return self._page(status=STATUS_OPEN, mode=MODE_STAFF, unassigned=True, page=page, page_size=page_size,
-                          schema=AdminConversationResponse)
+        return self._page(status=STATUS_OPEN, mode=MODE_STAFF, unassigned=True, started=True, page=page,
+                          page_size=page_size, schema=AdminConversationResponse)
 
     def list_assigned_conversations(
         self, actor: Actor, *, status: str | None = None, page: int = 1, page_size: int = 20
@@ -306,7 +311,10 @@ class ChatService(BaseService):
                 }
             )
             self.messages.flush()
-            if sender_type == SENDER_CUSTOMER and conversation.AssignedStaffId is not None:
+            if (sender_type == SENDER_CUSTOMER and conversation.Mode == MODE_STAFF and conversation.AssignedStaffId is None
+                    and self.messages.count_by_conversation(conversation_id) == 1):
+                self._notify_waiting(conversation_id)  # tin đầu tiên: hội thoại mới vào hàng đợi
+            elif sender_type == SENDER_CUSTOMER and conversation.AssignedStaffId is not None:
                 self.notifications.notify(
                     conversation.AssignedStaffId, title='Tin nhắn mới từ khách hàng',
                     content='Khách hàng vừa gửi tin nhắn trong cuộc trò chuyện bạn phụ trách.',
@@ -359,6 +367,33 @@ class ChatService(BaseService):
                 "Đang có hội thoại mở ở chế độ khác; không mở thêm hội thoại", code="open_conversation_exists"
             )
         return ConversationResponse.model_validate(existing)
+
+    def _notify_waiting(self, conversation_id: uuid.UUID) -> None:
+        for role in STAFF_OR_ADMIN:
+            for operator in self.users.list_users(role=role, account_status='Active'):
+                self.notifications.notify(
+                    operator.UserId, title='Khách hàng đang chờ hỗ trợ',
+                    content='Có cuộc trò chuyện mới cần tiếp nhận.', notification_type='Chat',
+                    action_url=f'/admin/support?conversation={conversation_id}',
+                    reference_type='Conversation', reference_id=conversation_id,
+                )
+
+    def _close_if_unused(self, conversation: Conversation) -> bool:
+        """Đóng hội thoại Open chưa có tin nhắn nào; True nếu hội thoại không còn Open.
+
+        Khóa dòng Conversation (sau khóa Users của Customer): tin nhắn gửi đồng thời hoặc được lưu trước (hội thoại được
+        giữ nguyên), hoặc chờ khóa rồi thấy hội thoại đã đóng và bị từ chối.
+        """
+        locked = self._lock(conversation.ConversationId)
+        if locked.Status != STATUS_OPEN:
+            return True
+        if self.messages.count_by_conversation(locked.ConversationId):
+            return False
+        locked.Status = STATUS_CLOSED
+        locked.ClosedAt = self.now()
+        self.conversations.flush()
+        self.notifications.resolve_chat_queue(locked.ConversationId)
+        return True
 
     def _lock(self, conversation_id: uuid.UUID) -> Conversation:
         conversation = self.conversations.get_by_id_for_update(conversation_id)

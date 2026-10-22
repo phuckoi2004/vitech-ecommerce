@@ -191,6 +191,60 @@ def test_logout_revokes_bearer_and_removes_refresh_cookies(http_context):
     assert client.get("/auth/me", headers=authorization(tokens["access_token"])).status_code == 401
 
 
+def test_refresh_finishes_database_reads_before_rotating_the_cookie(http_context, monkeypatch):
+    """A database outage after rotation must not lose a user's only refresh credential."""
+    from sqlalchemy.exc import OperationalError
+
+    client, engine, _ = http_context
+    user = seed_user(engine, "Customer")
+    original = login(client, user["email"]).json()
+    rotated = {"done": False}
+    refresh = SessionManager.refresh
+
+    def track_rotation(self, *args, **kwargs):
+        result = refresh(self, *args, **kwargs)
+        rotated["done"] = True
+        return result
+
+    def reject_reads_after_rotation(_connection, _cursor, statement, _parameters, _context, _executemany):
+        if rotated["done"] and statement.lstrip().upper().startswith("SELECT"):
+            raise OperationalError("SELECT", {}, Exception("private-connection-error"))
+
+    monkeypatch.setattr(SessionManager, "refresh", track_rotation)
+    event.listen(engine, "before_cursor_execute", reject_reads_after_rotation)
+    try:
+        response = client.post("/auth/refresh", headers={"X-CSRF-Token": original["csrf_token"]})
+        assert response.status_code == 200, response.text
+        renewed = response.json()
+        assert renewed["user"]["UserId"] == user["id"]
+    finally:
+        event.remove(engine, "before_cursor_execute", reject_reads_after_rotation)
+    assert client.get("/auth/me", headers=authorization(renewed["access_token"])).status_code == 200
+
+
+def test_refresh_database_failure_does_not_rotate_cookie_and_can_be_retried(http_context):
+    from sqlalchemy.exc import OperationalError
+
+    client, engine, _ = http_context
+    user = seed_user(engine, "Customer")
+    original = login(client, user["email"]).json()
+    cookie = client.cookies.get("vietech_refresh")
+
+    def unavailable(*_args):
+        raise OperationalError("SELECT", {}, Exception("private-connection-error"))
+
+    event.listen(engine, "before_cursor_execute", unavailable)
+    try:
+        response = client.post("/auth/refresh", headers={"X-CSRF-Token": original["csrf_token"]})
+        assert response.status_code == 503
+        assert response.json()["code"] == "database_unavailable"
+        assert "private-connection-error" not in response.text
+        assert client.cookies.get("vietech_refresh") == cookie
+    finally:
+        event.remove(engine, "before_cursor_execute", unavailable)
+    assert client.post("/auth/refresh", headers={"X-CSRF-Token": original["csrf_token"]}).status_code == 200
+
+
 def test_portals_and_account_admin_permissions_reject_cross_role_and_peer_actions(http_context):
     client, engine, _ = http_context
     customer, staff, admin, peer = [seed_user(engine, role) for role in ("Customer", "Staff", "Admin", "Admin")]

@@ -113,7 +113,8 @@ async def database_error_handler(request: Request, error: SQLAlchemyError):
     # Type and SQLSTATE only: the error text may hold SQL parameters or connection details. Path without query string.
     logger.error("Database error on %s %s: %s sqlstate=%s", request.method, request.url.path, type(error).__name__,
                  database_error_code(error))
-    return JSONResponse(status_code=503, content={"detail": "Không thể xử lý dữ liệu lúc này. Vui lòng thử lại"})
+    return JSONResponse(status_code=503, content={"detail": "Không thể xử lý dữ liệu lúc này. Vui lòng thử lại",
+                                                  "code": "database_unavailable"})
 
 
 @app.middleware("http")
@@ -141,5 +142,7 @@ def database_health_check():
     try:
         result = test_database_connection()
         return {"status": "ok", "database": "connected", "test": result}
-    except SQLAlchemyError:
-        return JSONResponse(status_code=503, content={"status": "error", "database": "disconnected"})
+    except SQLAlchemyError as error:
+        logger.error("Database health check failed: %s sqlstate=%s", type(error).__name__, database_error_code(error))
+        return JSONResponse(status_code=503, content={"status": "error", "database": "disconnected",
+                                                      "code": "database_unavailable"})

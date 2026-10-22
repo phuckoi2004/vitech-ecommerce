@@ -75,6 +75,7 @@ class CustomerCloseTest(ChatTestBase):
 
     def test_one_open_conversation_rule_still_holds(self):
         first = self.start(mode="AI")
+        self.svc.record_ai_reply(first.ConversationId, "Xin chào")
         self.assert_error(BusinessRuleError, "open_conversation_exists", lambda: self.start(mode="Staff"))
         self.close(first.ConversationId)
         second = self.start(mode="Staff")
@@ -89,6 +90,7 @@ class AdminInheritsStaffTest(ChatTestBase):
         self.cid = self.conversation.ConversationId
 
     def test_admin_sees_queue_claims_replies_and_closes(self):
+        self.send(self.cid, content="Cần hỗ trợ")
         queue = self.svc.list_unassigned_conversations(self.a(self.admin))
         self.assertEqual([c.ConversationId for c in queue.Items], [self.cid])
         self.assertEqual(self.claim(self.cid, by=self.admin).AssignedStaffId, self.admin.UserId)
@@ -178,8 +180,9 @@ class NoGenericConversationUpdateTest(ChatTestBase):
                 self.assert_error(BusinessRuleError, "conversation_field_not_allowed", lambda e=extra: self.svc.start_conversation(
                     self.a(self.customer), bypass({"Mode": "Staff", **e})))
         conversation = self.start(mode="AI")
-        self.assert_error(BusinessRuleError, "open_conversation_exists", lambda: self.start(mode="Staff"))
-        self.assertEqual(self.db.get(Conversation, conversation.ConversationId).Mode, "AI")  # Mode không đổi
+        self.assertNotEqual(self.start(mode="Staff").ConversationId, conversation.ConversationId)
+        record = self.db.get(Conversation, conversation.ConversationId)
+        self.assertEqual((record.Mode, record.Status), ("AI", "Closed"))  # hội thoại rỗng được đóng, Mode không đổi
         staff_chat = self.start(by=self.other)
         self.assertEqual(self.claim(staff_chat.ConversationId).AssignedStaffId, self.staff.UserId)
         self.assertEqual(self.svc.close_conversation(self.a(self.staff), staff_chat.ConversationId).Status, "Closed")

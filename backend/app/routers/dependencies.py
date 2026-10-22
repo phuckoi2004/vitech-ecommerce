@@ -12,6 +12,8 @@ from fastapi import Depends, Query
 from sqlalchemy.orm import Session
 
 from app.core.dependencies import get_current_actor, get_optional_actor
+from app.core.ai_config import get_ai_settings
+from app.core.dependencies import AuthRuntime, get_runtime
 from app.core.storage import AvatarStorage, get_avatar_storage
 from app.database import get_db
 from app.integrations.sepay import SePayConfigError, SePayQrGateway, SePaySettings
@@ -25,6 +27,8 @@ from app.services.catalog import (
     ProductVariantService,
 )
 from app.services.chat import ChatService
+from app.integrations.gemini import GeminiChatModel
+from app.services.ai_chat import AiChatService
 from app.services.catalog_item import CatalogItemService
 from app.services.content import ContentService
 from app.services.inventory import InventoryService
@@ -108,6 +112,13 @@ get_purchase_order_service = _session_service(PurchaseOrderService)
 get_inventory_service = _session_service(InventoryService)
 get_review_service = _session_service(ReviewService)
 get_chat_service = _session_service(ChatService)
+
+
+def get_ai_chat_service(db: Database, runtime: Annotated[AuthRuntime, Depends(get_runtime)]) -> AiChatService:
+    settings = get_ai_settings()
+    return AiChatService(db, settings=settings, model=GeminiChatModel(settings), state=runtime.state)
+
+
 get_warranty_service = _session_service(WarrantyService)
 get_content_service = _session_service(ContentService)
 get_statistics_service = _session_service(StatisticsService)

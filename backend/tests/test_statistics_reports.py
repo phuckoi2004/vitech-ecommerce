@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
 
 from app.core.dependencies import get_current_actor
-from app.models import (Base, Brand, Category, Conversation, Order, OrderItem, PaymentTransaction,
+from app.models import (Base, Brand, Category, Conversation, Message, Order, OrderItem, PaymentTransaction,
     Product, ProductVariant, PurchaseOrder, PurchaseOrderItem, PurchaseReceipt, PurchaseReceiptItem,
     Supplier, StockAdjustment, ReturnRequest, User, WarrantyRequest)
 from app.routers.errors import service_error_handler
@@ -26,12 +26,13 @@ def reports(request):
     engine = create_engine('sqlite+pysqlite:///:memory:', poolclass=StaticPool, connect_args={'check_same_thread': False})
     metadata = MetaData()
     models = (User, Category, Brand, Product, ProductVariant, Order, OrderItem, PaymentTransaction,
-              Conversation, ReturnRequest, WarrantyRequest, Supplier, PurchaseOrder, PurchaseOrderItem,
+              Conversation, Message, ReturnRequest, WarrantyRequest, Supplier, PurchaseOrder, PurchaseOrderItem,
               PurchaseReceipt, PurchaseReceiptItem, StockAdjustment)
     for table in Base.metadata.tables.values():
         table.to_metadata(metadata)
     metadata.tables['Products'].c.Specifications.type = JSON()
     metadata.tables['PaymentTransactions'].c.ResponseData.type = JSON()
+    metadata.tables['Messages'].c.Metadata.type = JSON()
 
     @event.listens_for(engine, 'connect')
     def functions(connection, _):
@@ -72,6 +73,11 @@ def reports(request):
         ordered_at=datetime(2026, 9, 30, 16, 59, 59, tzinfo=timezone.utc))
     outside.DeliveredAt = outside.OrderedAt
     f.payment(outside, gateway_code='PAY-OUTSIDE')
+    # Waiting chats count only staff chats the customer has written in, not ones merely opened.
+    db.add(Conversation(CustomerId=customer.UserId, Mode='Staff', Status='Open', CreatedAt=time))
+    asked = db.add(Conversation(CustomerId=f.user().UserId, Mode='Staff', Status='Open', CreatedAt=time))
+    db.add(Message(ConversationId=asked.ConversationId, SenderUserId=asked.CustomerId, SenderType='Customer',
+                   MessageType='Text', Content='Cần tư vấn', IsRead=False, SentAt=time))
     if getattr(request, 'param', None) == 'monthly':
         for variant, timestamp in ((first, datetime(2026, 10, 15, 0, 0, tzinfo=timezone.utc)),
                                    (other, datetime(2026, 10, 31, 17, 0, tzinfo=timezone.utc))):
@@ -296,7 +302,7 @@ def test_workload_and_cancellation_reasons_are_read_only(reports):
     client, _, _, _, _, statements = reports
     response = client.get('/admin/statistics/workload')
     assert response.status_code == 200
-    assert response.json() == {'PendingOrders': 1, 'WaitingChats': 0, 'PendingReturns': 0, 'NewWarranties': 0}
+    assert response.json() == {'PendingOrders': 1, 'WaitingChats': 1, 'PendingReturns': 0, 'NewWarranties': 0}
     report = fetch(client, 'orders')
     assert report['Summary']['InProgressOrders'] == 1
     assert sum(item['TotalOrders'] for item in report['CancellationReasons']) == 1

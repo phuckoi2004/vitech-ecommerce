@@ -68,10 +68,10 @@ def test_staff_queue_exposes_only_customer_context_and_latest_message(inbox):
     response = client.get('/admin/conversations/unassigned')
     assert response.status_code == 200, response.text
     rows = {row['ConversationId']: row for row in response.json()['Items']}
-    first, second = rows[str(ids[0])], rows[str(ids[1])]
+    first = rows[str(ids[0])]
     assert (first['CustomerName'], first['CustomerEmail']) == ('Customer 0', 'Customer0@example.test')
     assert first['LastMessage']['Content'] == 'Tin gần nhất'
-    assert second['LastMessage'] is None
+    assert str(ids[1]) not in rows  # customer opened the chat but has not written yet
     assert 'Messages' not in first
     assert 'PasswordHash' not in response.text and 'test-only-secret' not in response.text
     detail = client.get('/admin/conversations/' + str(ids[0])).json()
@@ -165,7 +165,10 @@ def test_conversation_lock_always_refreshes_existing_session_state():
 
 
 def test_admin_sees_every_customer_being_helped_and_who_is_helping(inbox):
-    client, _, _, current, ids, actors = inbox
+    client, session, _, current, ids, actors = inbox
+    session.add(Message(ConversationId=ids[1], SenderUserId=actors[1].user_id, SenderType='Customer', MessageType='Text',
+                        Content='Đang chờ', Metadata=None, IsRead=False))
+    session.commit()
     assert client.post(f'/admin/conversations/{ids[0]}/claim').status_code == 200  # Staff 2 takes the first chat
     mine = client.get('/admin/conversations/assigned', params={'status': 'Open'}).json()['Items']
     assert [(row['ConversationId'], row['AssignedStaffName']) for row in mine] == [(str(ids[0]), 'Staff 2')]

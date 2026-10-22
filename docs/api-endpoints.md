@@ -270,11 +270,14 @@ Thông báo Admin/Staff mở chi tiết phiếu nhập, bảo hành và đổi t
 | Method | Đường dẫn | Quyền | Body | Query | Trả về | Service |
 |---|---|---|---|---|---|---|
 | POST | `/conversations` | Đăng nhập | `ConversationCreate` |  | `ConversationResponse` | `start_conversation` |
-| GET | `/conversations` | Đăng nhập |  | status, page, page_size | `PageResponse[ConversationResponse]` | `list_my_conversations` |
+| GET | `/conversations` | Đăng nhập |  | status, mode, page, page_size | `PageResponse[ConversationResponse]` | `list_my_conversations` |
 | GET | `/conversations/{conversation_id}` | Đăng nhập |  |  | `ConversationDetailResponse` | `get_conversation` |
 | GET | `/conversations/{conversation_id}/messages` | Đăng nhập |  | page, page_size | `PageResponse[MessageResponse]` | `list_messages` |
 | POST | `/conversations/{conversation_id}/messages` | Đăng nhập | `MessageCreate` |  | `MessageResponse` | `send_message` |
 | POST | `/conversations/{conversation_id}/close` | Đăng nhập |  |  | `ConversationResponse` | `close_conversation` |
+| POST | `/conversations/{conversation_id}/ai-messages` | Customer, sở hữu hội thoại AI | `AiMessageCreate` (ClientRequestId, Content, MessageType=Text) | | `AiTurnResponse`: 200 Completed/Cancelled, 202 Pending; lỗi AI 503, giới hạn nội bộ 429 | `ask` |
+| GET | `/conversations/{conversation_id}/ai-messages/{request_id}` | Customer, sở hữu hội thoại AI | | | `AiTurnResponse`: Pending/Completed/Failed/Cancelled | `get_status` |
+| POST | `/conversations/{conversation_id}/ai-messages/{request_id}/cancel` | Customer, sở hữu hội thoại AI | `AiMessageCancel` (Content gốc) | | `AiTurnResponse`: 200 Cancelled; Completed nếu kết quả đã được lưu trước khi dừng | `cancel` |
 | GET | `/admin/conversations` | Admin |  | status, mode, page, page_size | `PageResponse[AdminConversationResponse]` | `admin_list_conversations` |
 | GET | `/admin/conversations/unassigned` | Staff/Admin |  | page, page_size | `PageResponse[AdminConversationResponse]` | `list_unassigned_conversations` |
 | GET | `/admin/conversations/active` | Admin |  | page, page_size | `PageResponse[AdminConversationResponse]` (có `AssignedStaffName`) | `list_active_conversations` |
@@ -288,9 +291,19 @@ Thông báo Admin/Staff mở chi tiết phiếu nhập, bảo hành và đổi t
 | POST | `/admin/conversations/{conversation_id}/messages` | Staff/Admin | `MessageCreate` |  | `AdminMessageResponse` | `send_message` |
 | POST | `/admin/conversations/{conversation_id}/close` | Staff/Admin |  |  | `AdminConversationResponse` | `close_conversation` |
 
+Bước 10.3: AiMessages của AI gồm tin Text và tối đa ba tin Product có metadata do backend dựng từ catalog/giá hiện hành. Xem [AI tools](stage10-ai-tools.md) để biết schema thẻ, tham chiếu và giới hạn; API và body gửi câu hỏi giữ nguyên bước 10.2.
+
+Bước 10.5: không thêm endpoint. Cá nhân hóa diễn ra tự động bên trong `POST .../ai-messages` từ danh sách yêu thích và đơn đã giao của chính khách; xem [cá nhân hóa AI](stage10-ai-personalization.md).
+
+Cập nhật 22/10/2026: request/response của `POST .../ai-messages` không đổi. Lượt AI không còn đọc danh sách yêu thích/đơn hàng; ngữ cảnh, chống lặp và kiểm chứng câu trả lời chạy bên trong endpoint. Xem [nâng cấp tư vấn theo catalog](stage10-ai-advisor-upgrade.md).
+
+Bước 10.6: không thêm endpoint hay trường trong response cho Customer. Thẻ của câu trả lời gợi ý được sắp theo điểm xếp hạng và nội dung Text có dòng “Phù hợp/Lưu ý”; xem [xếp hạng gợi ý](stage10-ai-recommendation.md).
+
 Trang hỗ trợ có Đang chờ, Đang hỗ trợ, Đã kết thúc; Admin có thêm Tất cả hội thoại. Staff chỉ xem lịch sử được gán cho mình; Admin xem mọi lịch sử nhưng không trả lời/đóng/đánh dấu đã đọc thay nhân viên khác. Khi mở hội thoại, tải 50 tin mới nhất; polling chỉ lấy tin sau cursor, lịch sử cũ tải theo yêu cầu. Cursor cần cả timestamp có múi giờ và UUID, không kết hợp hai hướng. Các API cũ giữ nguyên hành vi.
 
-Hội thoại Staff mới tạo thông báo chờ hỗ trợ cho Staff/Admin đang hoạt động; mở lại hội thoại đang tồn tại không tạo thông báo trùng. Tin Customer gửi vào hội thoại đã gán tạo thông báo cho người phụ trách. Thông báo dùng bảng Notifications hiện có và cùng transaction với hội thoại/tin nhắn; không gửi email hoặc gọi dịch vụ ngoài. `UnreadCount` là số tin Customer chưa được người phụ trách đánh dấu đã đọc, không phải số hội thoại.
+`POST /conversations`: mỗi Customer tối đa một hội thoại Open. Cùng chế độ → trả lại hội thoại đang mở. Khác chế độ mà hội thoại đang mở chưa có tin nhắn nào → server đóng hội thoại rỗng đó (giải quyết thông báo chờ hỗ trợ nếu là Staff) rồi tạo hội thoại mới. Khác chế độ và đã có tin nhắn → 400 `open_conversation_exists`; Customer phải tự đóng hội thoại trước khi chuyển kênh.
+
+Mở hội thoại Staff không tạo thông báo; tin nhắn đầu tiên của Customer trong hội thoại Staff chưa có người nhận mới tạo thông báo chờ hỗ trợ cho Staff/Admin đang hoạt động (tin sau đó không tạo thông báo trùng). Hàng đợi `/admin/conversations/unassigned` và số `WaitingChats` chỉ tính hội thoại đã có tin nhắn. `GET /conversations` của Customer ẩn hội thoại đã đóng mà chưa có tin nhắn nào (vẫn giữ trong database); hội thoại đang mở luôn được trả về. Tin Customer gửi vào hội thoại đã gán tạo thông báo cho người phụ trách. Thông báo dùng bảng Notifications hiện có và cùng transaction với hội thoại/tin nhắn; không gửi email hoặc gọi dịch vụ ngoài. `UnreadCount` là số tin Customer chưa được người phụ trách đánh dấu đã đọc, không phải số hội thoại.
 
 Khi nhân viên/Admin phụ trách gửi tin trả lời, Customer nhận thông báo `Chat`, tham chiếu `Conversation` và liên kết `/tu-van?conversation=<id>` trong cùng transaction. Liên kết mở chính hội thoại được tham chiếu, kể cả hội thoại đã đóng; không tự tạo hội thoại khác. Customer chỉ đọc được hội thoại và thông báo của chính mình.
 

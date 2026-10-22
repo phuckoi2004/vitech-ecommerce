@@ -123,7 +123,7 @@ describe('API calls with the access token', () => {
     expect(refreshCalls(calls)).toHaveLength(1)
   })
 
-  test.each([403, 409, 500])('a %i response is not retried and does not refresh the session', async (status) => {
+  test.each([403, 409, 500, 503])('a %i response is not retried and does not refresh the session', async (status) => {
     const calls = backend({ resource: () => jsonResponse({ detail: 'Lỗi cho test', code: 'test_error' }, status) })
     const { result } = renderAuth()
     await waitFor(() => expect(result.current.sessionReady).toBe(true))
@@ -137,6 +137,35 @@ describe('API calls with the access token', () => {
     expect(refreshCalls(calls)).toHaveLength(0)
     expect(calls.filter((call) => call.url === '/api/orders')).toHaveLength(1)
     expect(result.current.user.FullName).toBe('initial')
+  })
+
+  test('a transient 503 during refresh preserves the current session and allows a later refresh', async () => {
+    let attempts = 0
+    const calls = backend({
+      renewed: () => ++attempts === 1
+        ? jsonResponse({ detail: 'Không thể xử lý dữ liệu lúc này. Vui lòng thử lại', code: 'database_unavailable' }, 503)
+        : jsonResponse(sessionData('Admin', 'renewed')),
+      resource: (_url, options) => options.headers.Authorization === 'Bearer renewed-access'
+        ? jsonResponse({ ok: true }) : jsonResponse({ detail: 'Cần đăng nhập' }, 401),
+    })
+    const { result } = renderAuth()
+    await waitFor(() => expect(result.current.sessionReady).toBe(true))
+    await act(() => result.current.signInInternal('admin@example.com', 'Password1!'))
+    setCsrfCookie('csrf-1')
+    let failure, response
+    await act(async () => {
+      failure = await result.current.withAccessToken((token) => request('/orders', { accessToken: token })).catch((error) => error)
+    })
+    expect(failure).toMatchObject({ status: 503, code: 'database_unavailable' })
+    expect(result.current.user.FullName).toBe('initial')
+    expect(document.cookie).toContain('vietech_csrf=csrf-1')
+    expect(refreshCalls(calls)).toHaveLength(1)
+    await act(async () => {
+      response = await result.current.withAccessToken((token) => request('/orders', { accessToken: token }))
+    })
+    expect(response).toEqual({ ok: true })
+    expect(result.current.user.FullName).toBe('renewed')
+    expect(refreshCalls(calls)).toHaveLength(2)
   })
 
   test('a renewed session of the other portal ends the current session as expired', async () => {

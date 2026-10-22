@@ -40,11 +40,18 @@ def _visible_variant_of_product():
             ProductVariant.IsDeleted.is_(False))
 
 
-def lowest_price_expression(pricing_at=None):
+def lowest_price_expression(pricing_at=None, *, in_stock=False, min_price=None, max_price=None):
     """The "from" price customers see: the lowest automatic-promotion price among visible variants."""
     from app.core.product_pricing import automatic_price_expression
-    return select(func.min(automatic_price_expression(pricing_at or datetime.now(timezone.utc)))).where(
-        *_visible_variant_of_product()).correlate(Product).scalar_subquery()
+    price = automatic_price_expression(pricing_at or datetime.now(timezone.utc))
+    conditions = list(_visible_variant_of_product())
+    if in_stock:
+        conditions.append(ProductVariant.StockQuantity > 0)
+    if min_price is not None:
+        conditions.append(price >= min_price)
+    if max_price is not None:
+        conditions.append(price <= max_price)
+    return select(func.min(price)).where(*conditions).correlate(Product).scalar_subquery()
 
 
 def best_discount_expression(pricing_at=None):
@@ -224,6 +231,13 @@ class ProductRepository(BaseRepository[Product]):
         stmt = select(Product).where(Product.ProductId == product_id).options(*self._detail_options())
         return self.session.scalars(stmt).one_or_none()
 
+    def list_details(self, product_ids: Collection[uuid.UUID]) -> list[Product]:
+        """Like get_detail for several products at once, in no particular order."""
+        if not product_ids:
+            return []
+        stmt = select(Product).where(Product.ProductId.in_(product_ids)).options(*self._detail_options())
+        return list(self.session.scalars(stmt))
+
     def list_with_media(self, product_ids: Collection[uuid.UUID]) -> list[Product]:
         """Products with their variants and images, in no particular order."""
         if not product_ids:
@@ -249,11 +263,13 @@ class ProductRepository(BaseRepository[Product]):
         product_ids: Collection[uuid.UUID] | None = None,
         in_stock: bool = False,
         created_since=None,
+        match_variant_price: bool = False,
+        excluded_brand_ids: Collection[uuid.UUID] | None = None,
     ) -> list:
         conditions = []
         if product_ids is not None:
             conditions.append(Product.ProductId.in_(product_ids))
-        if in_stock:
+        if in_stock and not match_variant_price:
             conditions.append(exists().where(*_visible_variant_of_product(), ProductVariant.StockQuantity > 0))
         if created_since is not None:
             conditions.append(Product.CreatedAt >= created_since)
@@ -270,11 +286,17 @@ class ProductRepository(BaseRepository[Product]):
             conditions.append(Product.CategoryId.in_(category_ids))
         if brand_id is not None:
             conditions.append(Product.BrandId == brand_id)
+        if excluded_brand_ids:
+            conditions.append(Product.BrandId.not_in(excluded_brand_ids))
         if status is not None:
             conditions.append(Product.Status == status)
         if not include_deleted:
             conditions.append(Product.IsDeleted.is_(False))
-        if min_price is not None or max_price is not None:
+        if match_variant_price:
+            # AI selects a purchasable variant, rather than the listing's advertised "from" price.
+            price = lowest_price_expression(pricing_at, in_stock=in_stock, min_price=min_price, max_price=max_price)
+            conditions.append(price.is_not(None))
+        elif min_price is not None or max_price is not None:
             # Match the "from" price shown to customers, using only visible variants.
             price = lowest_price_expression(pricing_at)
             if min_price is not None:
@@ -300,18 +322,21 @@ class ProductRepository(BaseRepository[Product]):
         sort: str = "newest",
         offset: int | None = None,
         limit: int | None = None,
+        match_variant_price: bool = False,
+        excluded_brand_ids: Collection[uuid.UUID] | None = None,
     ) -> list[Product]:
         """Danh sách sản phẩm (không load relationship). Thứ tự luôn kết thúc bằng ngày tạo và ID để phân trang ổn định."""
         return self.get_all(
             *self._filters(category_ids, brand_id, status, include_deleted, name_contains, min_price, max_price,
-                           pricing_at, product_ids, in_stock, created_since),
-            order_by=self._order(sort, pricing_at, name_contains),
+                           pricing_at, product_ids, in_stock, created_since, match_variant_price, excluded_brand_ids),
+            order_by=self._order(sort, pricing_at, name_contains,
+                {"in_stock": in_stock, "min_price": min_price, "max_price": max_price} if match_variant_price else None),
             offset=offset,
             limit=limit,
         )
 
     @staticmethod
-    def _order(sort: str, pricing_at, keyword: str | None = None) -> tuple:
+    def _order(sort: str, pricing_at, keyword: str | None = None, variant_price_filters=None) -> tuple:
         newest = (Product.CreatedAt.desc(), Product.ProductId)
         if sort == "relevance" and keyword and search_words(keyword):
             # The whole phrase in the name first, then every word in the name, then matches via brand/category.
@@ -324,7 +349,7 @@ class ProductRepository(BaseRepository[Product]):
         if sort == "best_selling":
             return (Product.SoldQuantity.desc(), *newest)
         if sort in ("price_asc", "price_desc"):
-            price = lowest_price_expression(pricing_at)
+            price = lowest_price_expression(pricing_at, **(variant_price_filters or {}))
             return (price.asc().nulls_last() if sort == "price_asc" else price.desc().nulls_last(), *newest)
         if sort == "discount":
             return (best_discount_expression(pricing_at).desc().nulls_last(), *newest)
@@ -344,9 +369,12 @@ class ProductRepository(BaseRepository[Product]):
         product_ids: Collection[uuid.UUID] | None = None,
         in_stock: bool = False,
         created_since=None,
+        match_variant_price: bool = False,
+        excluded_brand_ids: Collection[uuid.UUID] | None = None,
     ) -> int:
         return self.count(*self._filters(category_ids, brand_id, status, include_deleted, name_contains, min_price,
-                                         max_price, pricing_at, product_ids, in_stock, created_since))
+                                         max_price, pricing_at, product_ids, in_stock, created_since,
+                                         match_variant_price, excluded_brand_ids))
 
     def count_products_per(
         self,

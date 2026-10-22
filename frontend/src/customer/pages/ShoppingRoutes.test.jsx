@@ -49,9 +49,16 @@ function mockApi({ existingConversation = null, messages = [], history = [], new
     else if (endpoint === '/news') result = { Items: [{ NewsArticleId: 'n1', Title: 'Tin công nghệ', Slug: 'tin-cong-nghe' }], Total: 1 }
     else if (endpoint === '/news/tin-cong-nghe') result = { Title: 'Tin công nghệ', Content: newsContent }
     else if (endpoint === '/conversations' && method === 'POST') {
-      while (records.some(item => item.ConversationId === `c${nextId}`)) nextId++
-      result = { ...conversation, ConversationId: `c${nextId}`, CreatedAt: new Date(Date.parse(conversation.CreatedAt) + nextId * 60000).toISOString() }
-      records.unshift(result); if (!threads.has(result.ConversationId)) threads.set(result.ConversationId, []); nextId++
+      // Like the server: an open conversation of the other mode blocks only once it has messages.
+      const open = records.find(item => item.Status === 'Open' && item.Mode !== body.Mode)
+      if (open && threads.get(open.ConversationId)?.length) {
+        status = 400; result = { code: 'open_conversation_exists', detail: 'Đang có hội thoại mở ở chế độ khác' }
+      } else {
+        if (open) open.Status = 'Closed'
+        while (records.some(item => item.ConversationId === `c${nextId}`)) nextId++
+        result = { ...conversation, Mode: body.Mode, ConversationId: `c${nextId}`, CreatedAt: new Date(Date.parse(conversation.CreatedAt) + nextId * 60000).toISOString() }
+        records.unshift(result); if (!threads.has(result.ConversationId)) threads.set(result.ConversationId, []); nextId++
+      }
     }
     else if (endpoint === '/conversations') {
       const items = records.filter(item => !url.searchParams.has('status') || item.Status === url.searchParams.get('status'))
@@ -399,7 +406,7 @@ test('signing out clears chat drafts even when the same customer signs in again'
   expect(await screen.findByRole('textbox', { name: 'Nội dung tin nhắn' })).toHaveValue('')
 })
 
-test('AI opens a coming-soon window without creating or closing any conversation', async () => {
+test('AI opens a login prompt for guests without creating or closing any conversation', async () => {
   const calls = mockApi()
   const user = userEvent.setup()
   renderAt('/')
@@ -408,7 +415,7 @@ test('AI opens a coming-soon window without creating or closing any conversation
   expect(employee.compareDocumentPosition(ai) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   await user.click(ai)
   const dialog = screen.getByRole('dialog', { name: 'Chat với AI' })
-  expect(within(dialog).getByRole('heading', { name: 'Sắp ra mắt' })).toBeInTheDocument()
+  expect(within(dialog).getByRole('heading', { name: 'Đăng nhập để chat với AI' })).toBeInTheDocument()
   expect(within(dialog).queryByRole('textbox')).not.toBeInTheDocument()
   expect(calls.some(c => c.endpoint.startsWith('/conversations'))).toBe(false)
   await user.keyboard('{Escape}')
@@ -441,14 +448,14 @@ test('news consultation opens employee chat on the article only after that optio
   expect(calls.filter(c => c.endpoint === '/conversations' && c.method === 'POST')).toHaveLength(1)
 })
 
-test('news AI consultation opens the existing coming-soon panel without creating a conversation', async () => {
+test('news AI consultation opens the login prompt for guests without creating a conversation', async () => {
   const calls = mockApi()
   const user = userEvent.setup()
   const router = renderAt('/tin-tuc/tin-cong-nghe')
   await user.click(await screen.findByRole('button', { name: 'Tư vấn ngay' }))
   await user.click(within(screen.getByRole('dialog', { name: 'Chọn hình thức tư vấn' })).getByRole('button', { name: 'Chat với AI' }))
   const dialog = await screen.findByRole('dialog', { name: 'Chat với AI' })
-  expect(within(dialog).getByRole('heading', { name: 'Sắp ra mắt' })).toBeInTheDocument()
+  expect(within(dialog).getByRole('heading', { name: 'Đăng nhập để chat với AI' })).toBeInTheDocument()
   expect(screen.queryByRole('dialog', { name: 'Chọn hình thức tư vấn' })).not.toBeInTheDocument()
   expect(router.state.location.pathname).toBe('/tin-tuc/tin-cong-nghe')
   expect(calls.some(c => c.endpoint.startsWith('/conversations'))).toBe(false)
@@ -495,17 +502,26 @@ test('closing the conversation does not immediately create another one', async (
   expect(calls.filter(c => c.endpoint === '/conversations' && c.method === 'POST')).toHaveLength(2)
 })
 
-test('an older AI conversation is only closed when the customer explicitly chooses to switch', async () => {
-  const calls = mockApi({ existingConversation: { ...conversation, Mode: 'AI' } })
+test('an AI conversation with messages is only closed when the customer explicitly chooses to switch', async () => {
+  const asked = [{ MessageId: 'ai-question', SenderType: 'Customer', MessageType: 'Text', Content: 'Laptop nào nhẹ?', SentAt: '2026-10-13T00:01:00Z' }]
+  const calls = mockApi({ existingConversation: { ...conversation, Mode: 'AI' }, messages: asked })
   const user = userEvent.setup()
   renderAt('/tu-van', makeAuth({ role: 'Customer' }))
   await screen.findByText(/Bạn có hội thoại với trợ lý đang mở/)
-  expect(calls.some(c => c.method === 'POST')).toBe(false)
+  expect(calls.some(c => c.endpoint.endsWith('/close'))).toBe(false)
   await user.click(screen.getByRole('button', { name: 'Danh sách hội thoại', exact: true }))
   await user.click(screen.getByRole('button', { name: 'Tạo hội thoại mới' }))
   expect(await screen.findByRole('textbox', { name: 'Nội dung tin nhắn' })).toBeInTheDocument()
   expect(calls.filter(c => c.endpoint.endsWith('/close'))).toHaveLength(1)
-  expect(calls.filter(c => c.endpoint === '/conversations' && c.method === 'POST')).toHaveLength(1)
+  expect(calls.filter(c => c.endpoint === '/conversations' && c.method === 'POST')).toHaveLength(2)  // bị từ chối, rồi tạo mới
+})
+
+test('an AI conversation opened without any message does not block chatting with staff', async () => {
+  const calls = mockApi({ existingConversation: { ...conversation, Mode: 'AI' } })
+  renderAt('/tu-van', makeAuth({ role: 'Customer' }))
+  expect(await screen.findByRole('textbox', { name: 'Nội dung tin nhắn' })).toBeInTheDocument()
+  expect(screen.queryByText(/Bạn có hội thoại với trợ lý đang mở/)).not.toBeInTheDocument()
+  expect(calls.filter(c => c.method === 'POST').map(c => [c.endpoint, c.body])).toEqual([['/conversations', { Mode: 'Staff' }]])
 })
 
 test('the hamburger keeps history and new-chat actions hidden until opened, without losing a draft', async () => {

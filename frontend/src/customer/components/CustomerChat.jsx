@@ -2,6 +2,7 @@ import { useEffect, useId, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import useCustomerSession from '../../hooks/useCustomerSession.js'
 import { StaffChat } from '../pages/ChatPage.jsx'
+import AiChat from './AiChat.jsx'
 import { CHAT_PATH } from '../routes/paths.js'
 import './CustomerChat.css'
 
@@ -22,8 +23,7 @@ function AiIcon() {
   </svg>
 }
 
-// One employee-chat entry. Opening the window starts/reuses the real customer conversation.
-// AI is intentionally a coming-soon view and never creates a conversation or sends a message.
+// Each panel reuses the customer's conversation. Merely closing a panel never closes the server conversation.
 export default function CustomerChat() {
   const { user } = useCustomerSession()
   // Reset only the chat window when the customer changes, preserving the page and route guard.
@@ -76,24 +76,8 @@ function CustomerChatWindow() {
     {activeKind && <section ref={panel} id={panelId} className={`shop-chat-panel shop-chat-panel-${activeKind.toLowerCase()}`} role="dialog"
       aria-modal="false" aria-labelledby={titleId} tabIndex={-1}
       onKeyDown={(event) => { if (event.key === 'Escape') { event.stopPropagation(); close() } }}>
-      {activeKind === 'Staff' ? <StaffChat onDismiss={close} titleId={titleId} /> : <>
-      <header className="shop-chat-panel-header">
-        <div className="shop-chat-panel-title">
-          <span className="shop-chat-panel-symbol"><AiIcon /></span>
-          <div><h2 id={titleId}>Chat với AI</h2>
-            <p>Trợ lý VieTech</p>
-          </div>
-        </div>
-        <button type="button" className="shop-chat-close" aria-label="Đóng cửa sổ chat" onClick={close}>×</button>
-      </header>
-      <div className="shop-chat-panel-content">
-        <div className="shop-chat-coming-soon">
-          <span className="shop-chat-ai-symbol"><AiIcon /></span>
-          <h3>Sắp ra mắt</h3>
-          <p>Trợ lý AI của VieTech đang được hoàn thiện. Bạn có thể chat với nhân viên để được hỗ trợ ngay.</p>
-        </div>
-      </div>
-      </>}
+      {activeKind === 'Staff' ? <StaffChat onDismiss={close} titleId={titleId} />
+        : <AiChat titleId={titleId} onDismiss={close} />}
     </section>}
     <div className="shop-chat-actions" aria-label="Hỗ trợ trực tuyến">
       <button ref={employeeButton} type="button" className="shop-chat-button" disabled={!ready}

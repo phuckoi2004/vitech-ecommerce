@@ -39,15 +39,9 @@ def test_chat_claim_transcript_ownership_and_close_persist_in_postgres(pg, team)
     assert conversation["CustomerId"] == customer["id"]
     assert conversation["Status"] == "Open" and "AssignedStaffId" not in conversation
 
-    # Reopening the same mode reuses the row; switching mode cannot create a
-    # second open conversation (the real DB also has the partial unique index).
+    # Reopening the same mode reuses the row.
     reused = ok(client.post("/conversations", headers=headers, json={"Mode": "Staff"}), 201)
     assert reused["ConversationId"] == conversation_id
-    rejected_mode = client.post("/conversations", headers=headers, json={"Mode": "AI"})
-    assert rejected_mode.status_code == 400, rejected_mode.text
-    assert rejected_mode.json()["code"] == "open_conversation_exists"
-    assert pg.scalar('select count(*) from "Conversations" where "CustomerId" = :id '
-                     'and "Status" = \'Open\'', id=customer["id"]) == 1
     for suffix in ("", "/messages"):
         assert client.get(public_path + suffix, headers=stranger).status_code == 404
     assert client.post(public_path + "/messages", headers=stranger,
@@ -55,6 +49,22 @@ def test_chat_claim_transcript_ownership_and_close_persist_in_postgres(pg, team)
     assert client.post(public_path + "/close", headers=stranger).status_code == 404
     assert client.get(internal_path, headers=headers).status_code == 403
     assert client.post(internal_path + "/claim", headers=headers).status_code == 403
+
+    # The waiting queue only lists chats where the customer has written something.
+    assert conversation_id not in {row["ConversationId"] for row in
+                                   ok(client.get("/admin/conversations/unassigned", headers=staff))["Items"]}
+    customer_message = ok(client.post(public_path + "/messages", headers=headers, json={
+        "MessageType": "Text", "Content": "  Please help with my order  "}), 201)
+    assert customer_message["SenderUserId"] == customer["id"]
+    assert customer_message["SenderType"] == "Customer"
+    assert customer_message["Content"] == "Please help with my order"
+    # Once it has messages, switching mode cannot create a second open
+    # conversation (the real DB also has the partial unique index).
+    rejected_mode = client.post("/conversations", headers=headers, json={"Mode": "AI"})
+    assert rejected_mode.status_code == 400, rejected_mode.text
+    assert rejected_mode.json()["code"] == "open_conversation_exists"
+    assert pg.scalar('select count(*) from "Conversations" where "CustomerId" = :id '
+                     'and "Status" = \'Open\'', id=customer["id"]) == 1
 
     queue = ok(client.get("/admin/conversations/unassigned", headers=staff))
     assert conversation_id in {row["ConversationId"] for row in queue["Items"]}
@@ -68,11 +78,6 @@ def test_chat_claim_transcript_ownership_and_close_persist_in_postgres(pg, team)
     assert pg.scalar('select cast("AssignedStaffId" as text) from "Conversations" '
                      'where "ConversationId" = :id', id=conversation_id) == team["staff_id"]
 
-    customer_message = ok(client.post(public_path + "/messages", headers=headers, json={
-        "MessageType": "Text", "Content": "  Please help with my order  "}), 201)
-    assert customer_message["SenderUserId"] == customer["id"]
-    assert customer_message["SenderType"] == "Customer"
-    assert customer_message["Content"] == "Please help with my order"
     staff_message = ok(client.post(internal_path + "/messages", headers=staff, json={
         "MessageType": "Text", "Content": "I can help with that"}), 201)
     assert staff_message["SenderUserId"] == team["staff_id"]

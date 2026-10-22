@@ -10,6 +10,7 @@ from fastapi.responses import JSONResponse
 
 from app.services.exceptions import (
     AccountLockedError,
+    AiUnavailableError,
     AuthenticationError,
     BusinessRuleError,
     ConflictError,
@@ -33,6 +34,7 @@ _STATUS_BY_ERROR: tuple[tuple[type[ServiceError], int], ...] = (
     (AccountLockedError, 403),
     (EmailNotVerifiedError, 403),
     (TooManyRequestsError, 429),
+    (AiUnavailableError, 503),
     (PaymentGatewayError, 502),
     (JobSelectionError, 500),  # an internal job could not select its records: nothing was processed
     (InvalidOtpError, 400),
@@ -56,7 +58,7 @@ async def service_error_handler(request: Request, error: ServiceError) -> JSONRe
     if status_code == 401:
         headers["WWW-Authenticate"] = "Bearer"
     retry_after = getattr(error, "retry_after_seconds", None)
-    if status_code == 429 and retry_after is not None:
+    if status_code in (429, 503) and retry_after is not None:
         headers["Retry-After"] = str(max(int(retry_after), 0))
     return JSONResponse(status_code=status_code, content={"detail": error.message, "code": error.code},
                         headers=headers or None)

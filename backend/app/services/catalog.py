@@ -340,6 +340,8 @@ class ProductService(BaseService):
         specs: list[str] | None = None,
         page: int = 1,
         page_size: int = 20,
+        match_variant_price: bool = False,
+        excluded_brand_ids: list[uuid.UUID] | None = None,
     ) -> PageResponse[ProductSummary]:
         """Tìm kiếm/xem danh sách sản phẩm đang bán (Status Active, chưa xóa).
 
@@ -382,6 +384,10 @@ class ProductService(BaseService):
             "in_stock": in_stock,
             "created_since": now - timedelta(days=NEW_ARRIVAL_DAYS) if new_arrivals else None,
         }
+        if match_variant_price:
+            filters["match_variant_price"] = True
+        if excluded_brand_ids:
+            filters["excluded_brand_ids"] = excluded_brand_ids
         items = self.products.list_products(**filters, sort=sort, offset=offset, limit=limit)
         return PageResponse[ProductSummary](
             Items=[ProductSummary.model_validate(p) for p in items],
@@ -588,7 +594,19 @@ class ProductService(BaseService):
     def get_product_detail_by_slug(self, slug: str) -> ProductDetailResponse:
         return self._customer_detail(self.products.get_detail_by_slug(slug))
 
-    def _customer_detail(self, product: Product | None) -> ProductDetailResponse:
+    def get_product_details(self, product_ids: list[uuid.UUID]) -> dict[uuid.UUID, ProductDetailResponse]:
+        """get_product_detail for many products in a fixed number of queries; products not on sale are omitted."""
+        from app.core.product_pricing import matches_product
+
+        from .pricing import PricingService
+        products = [p for p in self.products.list_details(product_ids) if is_product_sellable(p)]
+        if not products:
+            return {}
+        promotions = PricingService(self.session, clock=self._clock).automatic_promotions()
+        return {p.ProductId: self._customer_detail(p, promotions=[x for x in promotions if matches_product(x, p)])
+                for p in products}
+
+    def _customer_detail(self, product: Product | None, *, promotions=None) -> ProductDetailResponse:
         if not is_product_sellable(product):
             raise NotFoundError("Không tìm thấy sản phẩm", code="product_not_found")
         response = ProductDetailResponse.model_validate(product)
@@ -596,8 +614,9 @@ class ProductService(BaseService):
         visible = {v.ProductVariantId for v in product.variants if is_variant_sellable(v)}
         response.Variants = [v for v in response.Variants if v.ProductVariantId in visible]
         from .pricing import PricingService, variant_price
-        pricing = PricingService(self.session, clock=self._clock)
-        promotions, now = pricing.automatic_promotions(product=product), self.now()
+        if promotions is None:
+            promotions = PricingService(self.session, clock=self._clock).automatic_promotions(product=product)
+        now = self.now()
         variants = {v.ProductVariantId: v for v in product.variants}
         for variant in response.Variants:
             for key, value in variant_price(variants[variant.ProductVariantId], promotions, now).items():

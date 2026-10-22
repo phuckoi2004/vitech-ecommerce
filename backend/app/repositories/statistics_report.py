@@ -10,6 +10,8 @@ from app.models import (Brand, Category, Conversation, Order, OrderItem, Payment
     Product, ProductVariant, PurchaseOrderItem, PurchaseReceipt, PurchaseReceiptItem,
     ReturnRequest, StockAdjustment, Supplier, User, WarrantyRequest)
 
+from .chat import has_messages
+
 
 class StatisticsReportRepository:
     def __init__(self, session):
@@ -173,7 +175,7 @@ class StatisticsReportRepository:
         return self.session.execute(select(
             count(Order, Order.OrderStatus == 'Pending').label('PendingOrders'),
             count(Conversation, Conversation.Status == 'Open', Conversation.Mode == 'Staff',
-                Conversation.AssignedStaffId.is_(None)).label('WaitingChats'),
+                Conversation.AssignedStaffId.is_(None), has_messages()).label('WaitingChats'),
             count(ReturnRequest, ReturnRequest.Status == 'Pending').label('PendingReturns'),
             count(WarrantyRequest, WarrantyRequest.Status == 'New', WarrantyRequest.ReceivedAt.is_(None)).label('NewWarranties')
         )).mappings().one()

@@ -530,6 +530,14 @@ class FakeConversationRepo(FakeRepo):
 
     model = Conversation
 
+    def get_titles(self, conversation_ids):
+        titles = {}
+        for message in sorted(self.db.rows(Message), key=lambda item: (item.SentAt, str(item.MessageId))):
+            if (message.ConversationId in conversation_ids and message.ConversationId not in titles
+                    and message.SenderType == "Customer" and message.MessageType == "Text" and message.Content.strip()):
+                titles[message.ConversationId] = " ".join(message.Content[:120].split())[:90]
+        return titles
+
     def get_support_context(self, conversation_ids):
         context = {}
         for id_ in conversation_ids:
@@ -556,10 +564,13 @@ class FakeConversationRepo(FakeRepo):
         return rows[0] if rows else None
 
     def _filtered(self, customer_id=None, assigned_staff_id=None, status=None, mode=None, unassigned=False,
-                  assigned=False):
+                  assigned=False, started=False, hide_unused_closed=False):
+        used = {m.ConversationId for m in self.db.rows(Message)}
         return sorted(
             self._rows(
-                lambda c: (customer_id is None or c.CustomerId == customer_id)
+                lambda c: (not started or c.ConversationId in used)
+                and (not hide_unused_closed or c.Status == "Open" or c.ConversationId in used)
+                and (customer_id is None or c.CustomerId == customer_id)
                 and (assigned_staff_id is None or c.AssignedStaffId == assigned_staff_id)
                 and (status is None or c.Status == status)
                 and (mode is None or c.Mode == mode)

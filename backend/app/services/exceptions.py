@@ -79,3 +79,13 @@ class PaymentGatewayError(ServiceError):
     """Gọi cổng thanh toán lỗi/không rõ kết quả; giao dịch liên quan được giữ để đối soát."""
 
     code = "payment_gateway_error"
+
+
+class AiUnavailableError(ServiceError):
+    """Sanitized integration/configuration error; retry information is safe to expose."""
+
+    code = "ai_unavailable"
+
+    def __init__(self, message: str, *, code: str | None = None, retry_after_seconds: int | None = None):
+        super().__init__(message, code=code)
+        self.retry_after_seconds = retry_after_seconds

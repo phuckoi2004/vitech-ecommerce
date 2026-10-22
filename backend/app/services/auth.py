@@ -252,11 +252,16 @@ class AuthService:
         return tokens, user
 
     def refresh(self, token):
+        user = None
+
         def load_user(user_id):
-            return ensure_active_user(self.repo.get_by_id(uuid.UUID(str(user_id))), self.db)
+            nonlocal user
+            user = ensure_active_user(self.repo.get_by_id(uuid.UUID(str(user_id))), self.db)
+            return user
+
         tokens = self.runtime.sessions.refresh(token, load_user)
-        from app.core.security import decode_access_token
-        user = self.repo.get_by_id(uuid.UUID(decode_access_token(tokens.access_token, self.settings)["sub"]))
+        # All DB reads must finish before the refresh secret rotates. A read failure afterwards would
+        # return 503 without delivering the new cookie, leaving the browser with a revoked credential.
         return tokens, user
 
     def forgot_password(self, identifier):

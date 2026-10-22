@@ -11,7 +11,7 @@ from types import SimpleNamespace
 
 from pydantic import ValidationError
 
-from app.models import Conversation, Message, Product
+from app.models import Conversation, Message, Notification, Product
 from app.schemas import ConversationCreate, MessageCreate
 from app.services import BusinessRuleError, ConflictError, NotFoundError, PermissionDeniedError
 
@@ -85,9 +85,39 @@ class StartConversationTest(ChatTestBase):
         rollbacks = self.session.rollbacks
         self.assertEqual(self.start().ConversationId, first.ConversationId)
         self.assertEqual(self.session.rollbacks, rollbacks)  # Service tự thấy hội thoại Open, không cần tới UNIQUE
+        self.send(first.ConversationId)
         self.assert_error(BusinessRuleError, "open_conversation_exists", lambda: self.start(mode="AI"))
         self.assertEqual(len(self.conversations()), 1)
-        self.assertEqual(self.db.get(Conversation, first.ConversationId).Status, "Open")  # không tự đóng hội thoại cũ
+        self.assertEqual(self.db.get(Conversation, first.ConversationId).Status, "Open")  # không tự đóng hội thoại đang dùng
+
+    def test_unused_conversation_of_other_mode_is_closed_when_switching(self):
+        """Khách chỉ mở khung chat (chưa có tin nhắn) rồi chuyển chế độ: hội thoại rỗng được đóng, không chặn."""
+        staff_chat = self.start()
+        self.assertEqual(self.db.rows(Notification), [])  # chỉ mở khung chat: chưa báo nhân viên
+        self.db.locks.clear()
+        self.clock.now = NOW + timedelta(minutes=1)
+        ai = self.start(mode="AI")
+        self.assertNotEqual(ai.ConversationId, staff_chat.ConversationId)
+        record = self.db.get(Conversation, staff_chat.ConversationId)
+        self.assertEqual((record.Mode, record.Status, record.ClosedAt), ("Staff", "Closed", NOW + timedelta(minutes=1)))
+        self.assertEqual(self.db.locks, [("User", self.customer.UserId), ("Conversation", staff_chat.ConversationId)])
+        back = self.start()  # và ngược lại: AI rỗng → Staff
+        self.assertEqual(self.db.get(Conversation, ai.ConversationId).Status, "Closed")
+        self.assertEqual([c.ConversationId for c in self.conversations() if c.Status == "Open"], [back.ConversationId])
+
+    def test_history_hides_closed_conversations_nobody_wrote_in(self):
+        def listed(**filters):
+            page = self.svc.list_my_conversations(self.a(self.customer), **filters)
+            return [c.ConversationId for c in page.Items], page.Total
+
+        unused = self.start(mode="AI")
+        self.assertEqual(listed(), ([unused.ConversationId], 1))  # đang mở: vẫn hiện để dùng tiếp
+        used = self.start()  # đóng hội thoại AI rỗng
+        self.send(used.ConversationId)
+        self.svc.close_conversation(self.a(self.customer), used.ConversationId)
+        self.assertEqual(listed(), ([used.ConversationId], 1))
+        self.assertEqual(listed(mode="AI"), ([], 0))
+        self.assertEqual(self.db.get(Conversation, unused.ConversationId).Status, "Closed")  # chỉ ẩn, không xóa
 
     def test_new_conversation_allowed_after_previous_closed(self):
         first = self.start()
@@ -242,6 +272,9 @@ class ViewConversationTest(ChatTestBase):
         self.assertEqual(self.view(self.staff, self.mine).AssignedStaffId, self.staff.UserId)
         self.assert_hidden(self.staff2, self.mine)  # đã gán cho người khác
         self.assert_hidden(self.staff, self.ai)  # hội thoại AI không thuộc hàng đợi nhân viên
+        queue = self.svc.list_unassigned_conversations(self.a(self.staff2))
+        self.assertEqual((queue.Items, queue.Total), ([], 0))  # khách mới mở khung chat, chưa hỏi gì
+        self.send(self.theirs.ConversationId, by=self.other)
         queue = self.svc.list_unassigned_conversations(self.a(self.staff2))
         self.assertEqual([c.ConversationId for c in queue.Items], [self.theirs.ConversationId])
 

@@ -32,6 +32,16 @@ Mở PowerShell trong `E:\vitech-ecommerce\backend`. Dùng Python của `.venv` 
 
 Mở Swagger: <http://localhost:8000/docs>. Endpoint `/health/db` kiểm tra kết nối database; kết quả này không kiểm tra SMTP hoặc toàn bộ luồng Auth.
 
+Có thể chạy từ bất kỳ thư mục nào bằng script phát triển (ví dụ dưới đây chạy ở gốc dự án):
+
+```powershell
+.\.venv\Scripts\python.exe backend/scripts/run_dev.py
+```
+
+Script cố định `127.0.0.1:8000`, một worker và tự nạp lại khi mã Python trong `backend/app` đổi. Sau khi sửa `.env`, khởi động lại backend. Với `AUTH_STATE_BACKEND=memory`, mỗi lần khởi động/reload làm mất phiên; trình duyệt cần đăng nhập lại. Chạy đồng thời hai backend cùng cổng sẽ bị từ chối, không nên bỏ qua lỗi khởi động rồi tiếp tục dùng tiến trình cũ.
+
+Khi thấy 503, đối chiếu `http://127.0.0.1:8000/health/db` và `http://127.0.0.1:5173/api/health/db`. JSON có `code=database_unavailable` là lỗi database do FastAPI trả; `ai_unavailable`/`ai_quota_exceeded` thuộc lượt AI. Kiểm tra CSRF/refresh bằng phiên đăng nhập hợp lệ; gọi `/auth/refresh` không có cookie/header CSRF trả 403 là đúng. Báo cáo điều tra thực tế: [kết nối API ngày 22/10/2026](updates/2026-10-22-api-connectivity.md).
+
 Sao chép [.env.example](../backend/.env.example) thành `backend/.env` (hoặc thêm các biến còn thiếu vào `.env` đang có) rồi điền giá trị thật, gồm cả `DATABASE_URL`. Các giá trị phát triển:
 
 ```dotenv

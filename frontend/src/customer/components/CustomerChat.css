@@ -68,11 +68,6 @@
 .shop-chat-panel .chat-thread { margin-top: 0; border: 0; border-radius: 0; }
 .shop-chat-panel .chat-messages { height: min(38dvh, 310px); min-height: 150px; padding: 20px 14px; }
 .shop-chat-panel .shopping-notice { margin: 12px; }
-.shop-chat-coming-soon { padding: 20px 12px; text-align: center; }
-.shop-chat-coming-soon h3 { margin: 16px 0 8px; font-size: 22px; }
-.shop-chat-coming-soon p { margin: 0; color: var(--color-muted-600); font-size: 14px; line-height: 1.7; }
-.shop-chat-ai-symbol { display: inline-grid; place-items: center; width: 60px; height: 60px; border-radius: 50%; color: var(--color-accent-500); background: var(--color-accent-50); }
-.shop-chat-ai-symbol svg { width: 32px; height: 32px; }
 @media (max-width: 600px) {
   .shop-chat-button { width: 44px; height: 44px; }
   .shop-chat-button > span { font-size: 12px; }

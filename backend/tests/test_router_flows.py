@@ -95,7 +95,11 @@ def test_chat_flow_keeps_customer_and_staff_views_apart(flow):
     conversation = ok(as_user(customer).post("/conversations", json={"Mode": "Staff"}), 201)
     conversation_id = conversation["ConversationId"]
     assert "AssignedStaffId" not in conversation
+    # The waiting queue only lists chats where the customer has written something.
+    assert ok(as_user(staff).get("/admin/conversations/unassigned"))["Items"] == []
 
+    ok(as_user(customer).post(f"/conversations/{conversation_id}/messages",
+                              json={"MessageType": "Text", "Content": "Cho tôi hỏi giá"}), 201)
     queue = ok(as_user(staff).get("/admin/conversations/unassigned"))
     assert [c["ConversationId"] for c in queue["Items"]] == [conversation_id]
     claimed = ok(as_user(staff).post(f"/admin/conversations/{conversation_id}/claim"))
@@ -104,8 +108,6 @@ def test_chat_flow_keeps_customer_and_staff_views_apart(flow):
                                    json={"MessageType": "Text", "Content": "Chào anh"}), 201)
     assert reply["SenderUserId"] == str(staff.UserId)
 
-    ok(as_user(customer).post(f"/conversations/{conversation_id}/messages",
-                              json={"MessageType": "Text", "Content": "Cho tôi hỏi giá"}), 201)
     page = ok(as_user(customer).get(f"/conversations/{conversation_id}/messages"))
     staff_messages = [m for m in page["Items"] if m["SenderType"] == "Staff"]
     assert staff_messages and all(m["SenderUserId"] is None for m in staff_messages)

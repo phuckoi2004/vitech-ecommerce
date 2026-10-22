@@ -1,15 +1,15 @@
 """Chat APIs: the customer's conversations with staff or the AI bot, and the staff inbox.
 
 Customer routes return customer schemas (no assigned staff, no staff sender id); ``/admin`` routes return the
-internal schemas. The Service checks who may read or write each conversation. AI replies are recorded by the
-future AI integration (``ChatService.record_ai_reply``), not through these routes.
+internal schemas. The Service checks who may read or write each conversation. Managed AI turns use
+AiChatService; ordinary message routes never accept a client-supplied AI sender.
 """
 
 import uuid
 from datetime import datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query, Response, status
 
 from app.schemas import (
     AdminConversationDetailResponse,
@@ -23,15 +23,18 @@ from app.schemas import (
     PageResponse,
 )
 from app.services.chat import ChatService
+from app.services.ai_chat import AiChatService
+from app.schemas.ai_chat import AiMessageCancel, AiMessageCreate, AiTurnResponse
 from app.schemas.chat import MessageReadRequest
 from app.services.exceptions import BusinessRuleError
 
-from .dependencies import CurrentActor, InternalOnly, Page, PageSize, get_chat_service
+from .dependencies import CurrentActor, InternalOnly, Page, PageSize, get_ai_chat_service, get_chat_service
 
 router = APIRouter(tags=["Chat"])
 admin_router = APIRouter(prefix="/admin", tags=["Quản lý chat"], dependencies=[InternalOnly])
 
 Chat = Annotated[ChatService, Depends(get_chat_service)]
+AiChat = Annotated[AiChatService, Depends(get_ai_chat_service)]
 StatusFilter = Annotated[str | None, Query(alias="status")]
 
 
@@ -46,8 +49,8 @@ def start_conversation(data: ConversationCreate, service: Chat, actor: CurrentAc
 
 @router.get("/conversations", response_model=PageResponse[ConversationResponse])
 def list_my_conversations(service: Chat, actor: CurrentActor, status_filter: StatusFilter = None,
-                          page: Page = 1, page_size: PageSize = 20):
-    return service.list_my_conversations(actor, status=status_filter, page=page, page_size=page_size)
+                          page: Page = 1, page_size: PageSize = 20, mode: str | None = None):
+    return service.list_my_conversations(actor, status=status_filter, mode=mode, page=page, page_size=page_size)
 
 
 @router.get("/conversations/{conversation_id}", response_model=ConversationDetailResponse)
@@ -70,6 +73,30 @@ def send_my_message(conversation_id: uuid.UUID, data: MessageCreate, service: Ch
 @router.post("/conversations/{conversation_id}/close", response_model=ConversationResponse)
 def close_my_conversation(conversation_id: uuid.UUID, service: Chat, actor: CurrentActor):
     return service.close_conversation(actor, conversation_id)
+
+
+# ------------------------------------------------------------------ AI turns
+
+
+@router.post("/conversations/{conversation_id}/ai-messages", response_model=AiTurnResponse,
+             responses={202: {"description": "Yêu cầu đang được xử lý"}})
+def send_ai_message(conversation_id: uuid.UUID, data: AiMessageCreate, actor: CurrentActor,
+                    service: AiChat, response: Response):
+    result = service.ask(actor, conversation_id, data)
+    if result.Status == "Pending":
+        response.status_code = status.HTTP_202_ACCEPTED
+    return result
+
+
+@router.get("/conversations/{conversation_id}/ai-messages/{request_id}", response_model=AiTurnResponse)
+def get_ai_message_status(conversation_id: uuid.UUID, request_id: uuid.UUID, actor: CurrentActor, service: AiChat):
+    return service.get_status(actor, conversation_id, request_id)
+
+
+@router.post("/conversations/{conversation_id}/ai-messages/{request_id}/cancel", response_model=AiTurnResponse)
+def cancel_ai_message(conversation_id: uuid.UUID, request_id: uuid.UUID, data: AiMessageCancel,
+                      actor: CurrentActor, service: AiChat):
+    return service.cancel(actor, conversation_id, request_id, data)
 
 
 # ------------------------------------------------------------------ staff inbox

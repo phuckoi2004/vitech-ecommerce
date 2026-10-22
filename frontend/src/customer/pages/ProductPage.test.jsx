@@ -50,7 +50,7 @@ function mockApi({ detail = product, productStatus = 200, cartStatus = 200, rela
     } else if (endpoint === '/cart') result = { Items: quantities, SelectedQuantity: quantities.length, SelectedSubtotal: '41990000' }
     else if (endpoint === '/wishlist/items') result = {}
     else if (endpoint.endsWith('/notifications/unread-count')) result = { Count: 0 }
-    else if (endpoint === '/conversations' && method === 'POST') result = { ConversationId: 'chat1', Status: 'Open', Mode: 'Staff' }
+    else if (endpoint === '/conversations' && method === 'POST') result = { ConversationId: 'chat1', Status: 'Open', Mode: body.Mode }
     else if (endpoint === '/conversations') result = { Items: [], Total: 0 }
     else if (endpoint === '/conversations/chat1') result = { ConversationId: 'chat1', Status: 'Open', Messages: [] }
     else { status = 404; result = { detail: 'Không tìm thấy' } }
@@ -289,16 +289,18 @@ test('guest consultation requires sign-in or registration like purchase actions'
   expect(router.state.location.search).toBe('?next=%2Fsan-pham%2Fsan-pham-kiem-thu')
 })
 
-test.each([false, true])('product AI consultation stays on the product without creating a conversation (guest=%s)', async (guest) => {
+test.each([false, true])('product AI consultation opens a usable panel or login prompt on the same product (guest=%s)', async (guest) => {
   const { calls } = mockApi(); const router = renderProduct({ guest }); const user = userEvent.setup()
   await user.click(await screen.findByRole('button', { name: 'Tư vấn ngay' }))
   await user.click(within(screen.getByRole('dialog', { name: 'Chọn hình thức tư vấn' })).getByRole('button', { name: 'Chat với AI' }))
   const panel = await screen.findByRole('dialog', { name: 'Chat với AI' })
-  expect(within(panel).getByRole('heading', { name: 'Sắp ra mắt' })).toBeInTheDocument()
+  if (guest) expect(within(panel).getByRole('heading', { name: 'Đăng nhập để chat với AI' })).toBeInTheDocument()
+  else expect(await within(panel).findByRole('textbox', { name: 'Câu hỏi cho AI' })).toBeInTheDocument()
   expect(screen.queryByRole('dialog', { name: 'Chọn hình thức tư vấn' })).not.toBeInTheDocument()
   expect(screen.queryByRole('dialog', { name: 'Bạn đã có tài khoản chưa?' })).not.toBeInTheDocument()
   expect(router.state.location.pathname).toBe('/san-pham/san-pham-kiem-thu')
-  expect(calls.some((call) => call.endpoint === '/conversations' || call.endpoint === '/cart/items')).toBe(false)
+  expect(calls.some((call) => call.endpoint === '/cart/items')).toBe(false)
+  expect(calls.filter((call) => call.endpoint === '/conversations' && call.method === 'POST')).toHaveLength(guest ? 0 : 1)
 })
 
 test('related products exclude the current product and link to their own slug', async () => {

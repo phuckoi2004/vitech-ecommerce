@@ -58,18 +58,21 @@ def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
+    supplied = config.attributes.get("connection")
+    if supplied is not None:
+        configure_connection(supplied)
+        return
     connectable = create_engine(get_database_url(), poolclass=pool.NullPool)
 
     with connectable.connect() as connection:
-        context.configure(
-            connection=connection,
-            target_metadata=target_metadata,
-            compare_type=True,
-            compare_server_default=True,
-        )
+        configure_connection(connection)
 
-        with context.begin_transaction():
-            context.run_migrations()
+
+def configure_connection(connection) -> None:
+    context.configure(connection=connection, target_metadata=target_metadata,
+                      compare_type=True, compare_server_default=True)
+    with context.begin_transaction():
+        context.run_migrations()
 
 
 if context.is_offline_mode():

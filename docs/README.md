@@ -56,3 +56,14 @@ Giữ nguyên các biên bản này. Số test đạt, head migration và mô t�
 - [Xóa mềm danh mục/thương hiệu, quyền và xóa chứng từ phiếu nhập](updates/2026-10-20-catalog-purchases.md): quyết định mới, cách frontend gọi backend, thay đổi CSDL đã áp dụng và lưu ý revision CSDL khác source. Đọc phần này để cập nhật các mô tả hủy/xóa phiếu cũ; giữ nguyên nội dung lịch sử phía trên.
 
 - Đề xuất bổ sung nhận hàng nhiều đợt vào báo cáo: [bản Word](updates/2026-10-20-purchase-receiving-spec.docx) và [bản Markdown](updates/2026-10-20-purchase-receiving-spec.md). Đây là tài liệu đề xuất riêng, chưa thay nội dung báo cáo gốc.
+
+## Bổ sung ngày 22/10/2026
+
+- [Tích hợp Google Gemini từng bước](stage10-gemini-integration-guide.md): cấu hình model, SDK và lộ trình AI.
+- [API chat AI bước 10.2](stage10-ai-chat.md): cách thử bằng Swagger, retry/lịch sử, kiểm thử và migration chống trùng (đã áp dụng 22/10/2026).
+- [AI đọc catalog bước 10.3](stage10-ai-tools.md): công cụ sản phẩm/giá/ưu đãi, dữ liệu thẻ và cách thử câu hỏi nối tiếp.
+- [Giao diện chat AI bước 10.4](stage10-ai-frontend.md): giao diện mới, gửi tin, thẻ/giá, tạo hội thoại, lịch sử và phục hồi request; không chuyển AI sang nhân viên.
+- [Cá nhân hóa AI bước 10.5](stage10-ai-personalization.md): cá nhân hóa tự động từ danh sách yêu thích và đơn đã giao, khách không cần thao tác; dữ liệu gửi AI và cách thử. Không có bảng/API/migration mới.
+- [Xếp hạng gợi ý bước 10.6](stage10-ai-recommendation.md): lọc cứng rồi chấm điểm N/B/T/H, tiêu chí thông số theo nhu cầu, dòng lý do, chế độ baseline để so sánh và kết quả kiểm tra trên catalog thật.
+- [Nâng cấp tư vấn AI theo catalog](stage10-ai-advisor-upgrade.md): nguyên nhân tư vấn chưa đúng, nhận diện ý định, ngữ cảnh nhiều lượt, công thức N/B/T không dùng lịch sử mua hàng, chống gợi ý trùng, kiểm chứng câu trả lời của Gemini, kết quả kiểm thử và chạy thật. Không có migration.
+- [Kiểm thử và đánh giá AI bước 10.7](stage10-ai-evaluation.md): đối chiếu các ca kiểm thử tự động, bộ 40 câu benchmark A/B/C trên catalog thật, lỗi phát hiện và đã sửa, kết quả đo và cách chạy tiếp khi hết hạn mức Google Gemini.
