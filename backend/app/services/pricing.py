@@ -83,7 +83,7 @@ class PricingService(BaseService):
     def automatic_promotions(self, *, product=None):
         return PromotionRepository(self.session).list_automatic(self.now(), product=product)
 
-    def public_coupons(self, *, product_id=None):
+    def public_coupons(self, *, product_id=None, category_ids=None):
         now = self.now()
         rows = self.session.scalars(select(Coupon).join(Coupon.promotion).where(
             Promotion.ApplyMode == "Coupon", Promotion.Status.in_(("Scheduled", "Active")),
@@ -93,16 +93,21 @@ class PricingService(BaseService):
           .order_by(Coupon.CreatedAt.desc(), Coupon.CouponId))
         product = None
         if product_id is not None:
-            from app.models import Product
             product = self.session.get(Product, product_id)
             if product is None or product.IsDeleted or product.Status != "Active":
                 raise NotFoundError("Không tìm thấy sản phẩm", code="product_not_found")
         result = []
+        scoped_products = None
+        if category_ids is not None:
+            scoped_products = list(self.session.execute(select(Product.ProductId, Product.CategoryId).where(
+                Product.CategoryId.in_(category_ids), Product.Status == "Active", Product.IsDeleted.is_(False))))
         for coupon in rows:
             remaining = None if coupon.UsageLimit is None else max(0, coupon.UsageLimit - coupon.UsedCount)
             if remaining == 0 or (product is not None and not matches_product(coupon.promotion, product)):
                 continue
             promotion = coupon.promotion
+            if scoped_products is not None and not any(matches_product(promotion, item) for item in scoped_products):
+                continue
             result.append(PublicCouponResponse(
                 CouponId=coupon.CouponId, Code=coupon.Code, Name=coupon.Name,
                 Description=promotion.Description, DiscountType=promotion.DiscountType,

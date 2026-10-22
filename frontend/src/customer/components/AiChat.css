@@ -51,6 +51,19 @@
 .ai-chat-message-body { min-width: 0; flex: 1; }
 .ai-chat-sender { display: block; margin: 4px 0 7px; color: var(--color-ink-900); font-size: 12px; font-weight: 650; }
 .ai-chat-message-body > p { margin: 0; white-space: pre-wrap; font-size: 14px; line-height: 1.8; }
+.ai-chat-text { font-size: 14px; line-height: 1.75; color: var(--color-ink-900); overflow-wrap: anywhere; }
+.ai-chat-text > * { margin: 0 0 12px; }
+.ai-chat-text > :last-child { margin-bottom: 0; }
+.ai-chat-text p, .ai-chat-text li { white-space: pre-wrap; }
+.ai-chat-text h4 { margin-top: 18px; font-size: 14px; line-height: 1.6; font-weight: 650; }
+.ai-chat-text > h4:first-child { margin-top: 0; }
+.ai-chat-text strong { font-weight: 650; }
+.ai-chat-text ul, .ai-chat-text ol { padding-left: 22px; }
+.ai-chat-text ul { list-style: disc; }
+.ai-chat-text ol { list-style: decimal; }
+.ai-chat-text li + li { margin-top: 7px; }
+.ai-chat-text li::marker { color: var(--color-muted-600); }
+.ai-chat-text code { padding: 2px 5px; border-radius: 5px; background: var(--color-surface-muted); font-size: .9em; }
 .ai-chat-message-body > small:not(.ai-chat-sender, .sr-only) { display: block; margin-top: 5px; color: var(--color-muted-600); font-size: 11px; }
 .ai-chat-message time { display: block; margin-top: 9px; color: var(--color-muted-500); font-size: 10px; }
 .ai-chat-message.is-customer { justify-content: flex-end; margin-left: auto; max-width: 86%; }
@@ -85,7 +98,6 @@
 .ai-chat .ai-chat-send.is-stop { background: var(--color-ink-900); }
 .ai-chat .ai-chat-send.is-stop:hover:not(:disabled) { background: var(--color-ink-900); opacity: .85; }
 .ai-chat .ai-chat-send:disabled { background: var(--color-surface-muted); color: var(--color-muted-400); opacity: 1; }
-.ai-chat-disclosure { margin: 9px 0 0; color: var(--color-muted-500); text-align: center; font-size: 10px; line-height: 1.6; }
 .ai-chat-error { margin: 8px 18px; padding: 12px; border: 1px solid var(--color-line-soft); border-radius: 12px; background: var(--color-surface-subtle); font-size: 12px; line-height: 1.6; flex-shrink: 0; }
 .ai-chat-error p { margin: 0 0 8px; }
 .ai-chat-error button { margin-right: 7px; padding: 5px 8px; border: 1px solid var(--color-line); border-radius: 7px; background: var(--color-surface); color: var(--color-ink-900); font-size: 11px; }

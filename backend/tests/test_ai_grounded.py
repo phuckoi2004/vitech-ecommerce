@@ -127,7 +127,7 @@ def finish(intent, *ids):
 
 def test_cancelled_turn_never_starts_a_repair_model_round(grounded_shop):
     s = grounded_shop
-    data = AiMessageCreate(ClientRequestId=uuid.uuid4(), Content="Tôi cần laptop")
+    data = AiMessageCreate(ClientRequestId=uuid.uuid4(), Content="Tôi cần laptop học lập trình")
     other, _ = s.service([])
 
     def cancel_during_call(_messages):
@@ -146,6 +146,8 @@ def test_cancelled_turn_never_starts_a_repair_model_round(grounded_shop):
     ("Laptop dưới 20 triệu", 20000000), ("không quá 20,5 triệu", 20500000),
     ("tối đa 20tr500", 20500000), ("ngân sách 20.000.000 đồng", 20000000),
     ("khoảng 15tr", 15000000), ("RAM 16 GB SSD 512 GB", None),
+    ("Tôi chỉ có 20 triệu thôi", 20000000), ("Mình còn 15 triệu", 15000000), ("20 triệu trở xuống", 20000000),
+    ("Laptop 18 triệu đổ lại", 18000000), ("Máy có 16 GB RAM", None), ("Tôi có 2 máy", None),
 ])
 def test_budget_units(question, expected):
     assert budget_ceiling(question) == expected
@@ -260,7 +262,7 @@ def test_detail_lookup_preserves_the_search_price_range(grounded_shop):
 
     svc, _ = s.service([[call("search_products", category="Laptop", min_price=18000000, max_price=20000000)],
                         read_details, finish("recommend", s.products["asus-zen"])])
-    result = ask(s, svc, "Tư vấn laptop phù hợp cho tôi")
+    result = ask(s, svc, "Tư vấn laptop dưới 20 triệu phù hợp cho tôi")
     assert Decimal(result.AiMessages[1].Metadata["Price"]) == 18000000
 
 

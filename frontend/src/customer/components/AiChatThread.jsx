@@ -7,6 +7,7 @@ import useChatDraft from '../chat-drafts.js'
 import { productPath } from '../routes/paths.js'
 import StoreImage from './StoreImage.jsx'
 import AiChatIcon from './AiChatIcon.jsx'
+import AiChatText from './AiChatText.jsx'
 import { mergeMessages, readTurn, storeTurn, turnStorageKey, unfinishedTurn } from './ai-chat-state.js'
 
 function ProductSuggestion({ message, onLoad }) {
@@ -93,7 +94,7 @@ export default function AiChatThread({ conversation, userId, onLockedChange, dis
   async function timedRequest(url, options = {}) {
     const controller = new AbortController()
     control.current = controller
-    const timer = setTimeout(() => controller.abort(), 75000)
+    const timer = setTimeout(() => controller.abort(), 135000)  // Server AI timeout (120 s) plus margin.
     try { return await send(url, { ...options, signal: controller.signal }) }
     finally { clearTimeout(timer); if (control.current === controller) control.current = null }
   }
@@ -221,11 +222,11 @@ export default function AiChatThread({ conversation, userId, onLockedChange, dis
         className={`ai-chat-message ${message.SenderType === 'Customer' ? 'is-customer' : ''}`}>
         {message.SenderType !== 'Customer' && <span className="ai-chat-avatar ai-chat-message-avatar"><AiChatIcon name="sparkles" /></span>}
         <div className="ai-chat-message-body"><small className={message.SenderType === 'Customer' ? 'sr-only' : 'ai-chat-sender'}>{message.SenderType === 'Customer' ? 'Bạn' : 'VieTech AI'}</small>
-        <p>{message.Content}</p>
+        {message.SenderType === 'AI' ? <AiChatText content={message.Content} /> : <p>{message.Content}</p>}
         {message.Metadata?.AiProcessingStatus === 'Failed' && message.Metadata.ClientRequestId !== requestId && <small>Chưa nhận được câu trả lời.</small>}
         {message.Metadata?.AiProcessingStatus === 'Cancelled' && <small>Đã dừng trả lời.</small>}
         {messages.filter((card) => card.MessageType === 'Product' && card.Metadata?.AiAnswerMessageId === message.MessageId)
-          .sort((a, b) => a.Metadata.Rank - b.Metadata.Rank).slice(0, 3)
+          .sort((a, b) => a.Metadata.Rank - b.Metadata.Rank).slice(0, 5)
           .map((card) => <ProductSuggestion key={card.MessageId} message={card} onLoad={scrollToBottom} />)}
         <time dateTime={message.SentAt}>{formatDateTime(message.SentAt)}</time></div>
       </article>)}
@@ -253,7 +254,7 @@ export default function AiChatThread({ conversation, userId, onLockedChange, dis
           <AiChatIcon name={showStop ? 'stop' : 'send'} />
         </button>
       </div>
-    </form><p className="ai-chat-disclosure">Nội dung chat được Google Gemini xử lý; gợi ý dựa trên sản phẩm đang bán tại VieTech và nhu cầu bạn nêu.<br />Giá và tồn kho có thể thay đổi. Kiểm tra tại trang sản phẩm.</p></div>
+    </form></div>
       : <div className="ai-chat-closed"><p>Cuộc trò chuyện này đã kết thúc.</p><button type="button" className="ai-chat-primary" disabled={disabled} onClick={onNew}><AiChatIcon name="new" />Bắt đầu cuộc trò chuyện mới</button></div>}
   </div>
 }

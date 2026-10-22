@@ -21,7 +21,7 @@ def test_cli_uses_explicit_model_and_timeout_without_changing_environment(monkey
     monkeypatch.setattr(check_gemini, "GeminiChatModel", Model)
     assert check_gemini.main(["--model", "gemini-3.8-flash", "--timeout", "5"]) == 0
     assert (captured[0].model, captured[0].timeout_seconds) == ("gemini-3.8-flash", 5)
-    assert (base.model, base.timeout_seconds) == ("gemini-3.5-flash-lite", 60)
+    assert (base.model, base.timeout_seconds) == ("gemini-3.5-flash-lite", 120)
     output = capsys.readouterr().out
     assert "Xin chào" in output and "private-test-key" not in output
 

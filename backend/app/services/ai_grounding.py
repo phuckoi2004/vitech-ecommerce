@@ -68,9 +68,9 @@ class Facts:
 
 
 def sanitize(message):
-    """Plain text for the chat bubble (rendered with pre-wrap, not Markdown)."""
-    text = re.sub(r"\*\*|__|`+", "", message or "")
-    text = re.sub(r"(?m)^\s{0,3}#{1,6}\s*", "", text)
+    """Normalize whitespace while preserving the text-only formatting supported by the chat renderer."""
+    # The model sometimes escapes line breaks twice in its JSON arguments, leaving a literal "\n" in the text.
+    text = re.sub(r"\\r\\n|\\n|\\r", "\n", message or "")
     text = re.sub(r"(?m)^\s*[*•]\s+", "- ", text)
     text = re.sub(r"[ \t]+\n", "\n", text)
     return re.sub(r"\n{3,}", "\n\n", text).strip()
@@ -170,7 +170,10 @@ def check_message(message, facts: Facts):
         return clean, ["trống"]
     if len(clean) > MAX_MESSAGE:
         issues.append("quá dài")
-    folded = fold(clean)
+    # Formatting cannot hide a product name from per-product fact checks.
+    plain = re.sub(r"\*\*|__|`+", "", clean)
+    plain = re.sub(r"(?m)^\s{0,3}#{1,6}\s+", "", plain)
+    folded = fold(plain)
     if _INTERNAL.search(folded):
         issues.append("lộ chi tiết nội bộ")
     if _CONTACT.search(clean):
@@ -198,7 +201,7 @@ def check_message(message, facts: Facts):
     aliases = {p.product_id: _aliases(p) for p in facts.products}
     by_id = {p.product_id: p for p in facts.products}
     corpora, first_seen = {}, {}
-    for index, segment in enumerate(_segments(clean)):
+    for index, segment in enumerate(_segments(plain)):
         text = fold(segment)
         named = _mentions(text, aliases)
         for product_id in named:

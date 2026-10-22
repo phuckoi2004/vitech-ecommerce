@@ -158,7 +158,7 @@ Quy tắc dữ liệu:
 
 1. Sắp xếp giảm dần theo Score_final, so ở 2 chữ số thập phân (đúng giá trị model nhìn thấy). Chênh lệch nhỏ hơn mức đó thường chỉ do B, nên không được để máy rẻ hơn vượt máy phù hợp nhu cầu hơn.
 2. Đồng điểm: N cao hơn, rồi dữ liệu đầy đủ hơn, rồi giá thấp hơn, rồi ProductId (ổn định).
-3. Đưa tối đa 5 ứng viên đã xếp hạng (kèm `Matched`/`Gaps`) cho Gemini; câu trả lời hiển thị tối đa 3 thẻ. Khi `intent=recommend`, backend đọc lại giá/tồn kho và sắp thẻ theo điểm, không theo thứ tự model liệt kê.
+3. Đưa tối đa 5 ứng viên đã xếp hạng (kèm `Matched`/`Gaps`) cho Gemini; câu trả lời hiển thị tối đa 5 thẻ. Khi `intent=recommend`, backend đọc lại giá/tồn kho và sắp thẻ theo điểm, không theo thứ tự model liệt kê.
 4. Khách yêu cầu thứ tự (“rẻ nhất”, “mới nhất”, “giá giảm dần”) thì giữ thứ tự đó và không xếp hạng lại.
 5. Tìm kiếm rỗng vì ngân sách thì backend tìm mẫu rẻ nhất vượt ngân sách mà vẫn đạt mọi điều kiện khác (`NearestAboveBudget`) và nói rõ mẫu đó cùng giá.
 6. `AI_RANKING_ENABLED=false` vẫn cho chế độ baseline (thứ tự catalog) để so sánh.
@@ -182,7 +182,7 @@ Không gửi toàn bộ database. Mỗi lượt Gemini nhận:
 - **Persona** (`prompts/vietech_ai.py`) và **quy ước backend** (`prompts/vietech_ai_protocol.py`).
 - **Phân tích lượt này** (JSON): ý định, tên danh mục, ngân sách, nhu cầu, tiêu chí ưu tiên, hãng bắt buộc/ưu tiên/loại trừ, điều kiện kế thừa, số mẫu đã loại, sản phẩm được tham chiếu (Rank, ProductId, tên). Không chứa văn bản của khách.
 - **Kết quả `search_products` đã chạy sẵn** khi là câu gợi ý trong danh mục đã biết: tối đa 5 ứng viên (tên, hãng, danh mục, một biến thể với giá thực bán, Ranking gồm Rank/Score/Parts/Matched/Gaps), số ứng viên đạt, điều kiện đã áp.
-- **Sản phẩm được tham chiếu** (“máy thứ hai”): tối đa 3 sản phẩm, 12 thông số công khai, 4 biến thể, số tháng bảo hành.
+- **Sản phẩm được tham chiếu** (“máy thứ hai”, “máy thứ năm”): tối đa 5 sản phẩm, 12 thông số công khai, 4 biến thể, số tháng bảo hành.
 - **Lịch sử:** cặp hỏi–đáp đã hoàn tất (≤10.000 ký tự, đã ẩn email/số điện thoại), kèm tên sản phẩm đã hiển thị.
 - **Kết quả công cụ** do model tự gọi thêm (schema Pydantic, chỉ đọc).
 
@@ -227,7 +227,7 @@ Các test SDK hiện có (`test_ai_gemini.py`) vẫn đạt.
 | `backend/app/schemas/ai_chat.py` | `present_answer`: `message`, `intent=chat` |
 | `backend/app/prompts/vietech_ai_protocol.py` (mới) | Quy ước backend nối sau persona `vietech_ai.py` |
 | `backend/app/cli/ai_benchmark.py`, `ai_benchmark_cases.py` | Chấm được câu trả lời dạng văn xuôi; intent lấy từ metadata; ca an toàn chấp nhận `chat` |
-| `frontend/src/customer/components/AiChatThread.jsx` | Dòng thông báo: gợi ý dựa trên sản phẩm đang bán và nhu cầu khách nêu |
+| `frontend/src/customer/components/AiChatThread.jsx` | Hiển thị câu trả lời có định dạng; đã xóa đoạn thông báo Gemini và lưu ý giá/tồn kho dưới ô nhập |
 | Tests | `test_ai_advisor.py` (mới), cập nhật `test_ai_recommendation.py`, `test_ai_grounded.py`, `test_ai_personalization.py`, `AiChat.test.jsx` |
 
 `repositories/ai_personalization.py` được giữ nguyên (vẫn có test) nhưng không còn được lượt AI gọi.
@@ -301,3 +301,95 @@ Script tạm chạy 8 lượt trên qua `AiChatService` + `GeminiChatModel` th�
 - Kiểm tra message xác minh số, mã, tên hãng và các khẳng định đã liệt kê. Nó không hiểu ngữ nghĩa câu, ví dụ một nhận xét định tính sai nhưng không có số liệu. Dòng nhắc nhiều sản phẩm chỉ được so với dữ liệu của các sản phẩm đó gộp lại.
 - Gemini Free có lúc trả 503/quá hạn mức; adapter cố ý không tự retry, khách dùng nút thử lại.
 - Văn bản dự phòng của backend vẫn có cấu trúc liệt kê. Nó chỉ xuất hiện khi văn bản của Gemini không đạt kiểm tra.
+
+## 13. Bổ sung: hỏi chính sách, hỏi vì sao đề xuất và mô tả chi tiết sản phẩm (22/10/2026, tối)
+
+Kiểm tra trên giao diện khách phát hiện hai câu hỏi không có câu trả lời. Mã lỗi đọc từ `Messages.Metadata`:
+
+| Câu hỏi | Lỗi | Nguyên nhân |
+|---|---|---|
+| “Thông tin khuyến mãi bảo hành như nào” | `ai_invalid_output` | Backend không có dữ liệu chính sách để đưa cho Gemini. Quy ước cũ còn bảo model chuyển câu hỏi bảo hành/đổi trả sang `handoff`. |
+| “Tại sao bạn lại đề xuất cho tôi 3 máy này” | `ai_ungrounded_output` | Câu hỏi bị hiểu là gợi ý mới (`product_recommendation`). Tìm kiếm chạy sẵn ghi đè dữ liệu chi tiết của các máy đã giới thiệu, nên phiên bản/thông số Gemini chọn bị coi là chưa tra cứu. |
+| “Tại sao bạn lại đề xuất cho tôi những máy này” | `ai_unavailable` | Gemini lỗi (503/quá thời gian); câu hỏi này không có câu trả lời dự phòng. |
+
+Thay đổi (không có migration, API và giao diện giữ nguyên):
+
+- **Hai ý định mới trong `ai_intent.py`:**
+  - `policy_inquiry`: có từ bảo hành, đổi trả, đổi hàng, trả hàng, hoàn tiền hoặc chính sách, bao gồm câu hỏi về chính sách/thủ tục của sản phẩm đã tham chiếu. “Bảo hành của 2 sản phẩm trên như thế nào” và “Tôi muốn biết bảo hành của 2 sản phẩm trên” giữ đúng danh sách vừa so sánh; hỏi riêng “máy thứ hai” chỉ kèm thời hạn của máy đó. `Topics` gồm `promotion`, `warranty`, `returns`; hỏi kèm khuyến mãi thì có cả `promotion`. Câu chỉ hỏi thời hạn (“Máy thứ hai bảo hành bao lâu?”) hoặc hỏi thêm thông số khác vẫn là `product_information`. “đời mới” không bị nhầm với “đổi mới”.
+  - `explain_recommendation`: có từ hỏi lý do (“tại sao”, “vì sao”, “sao lại”, “lý do”, “dựa vào đâu”) đi cùng động từ chọn (“đề xuất”, “gợi ý”, “chọn”…), khi hội thoại đã có danh sách. Câu hỏi giải thích cả danh sách vừa hiển thị, hoặc đúng máy được nêu (“máy thứ hai”). Điều kiện đang áp dụng (danh mục, ngân sách, nhu cầu) được giữ nguyên.
+- **Dữ liệu chính sách (`services/ai_policy.py`):**
+  - Bảo hành: quy tắc của `warranty_period.py` và trang “Chính sách bảo hành”. Kèm số tháng bảo hành đọc từ catalog của đúng sản phẩm được tham chiếu; nếu không chỉ rõ thì dùng danh sách vừa gợi ý hoặc sản phẩm vừa xem. Sản phẩm có thời hạn 0 tháng được ghi rõ không có bảo hành.
+  - Đổi trả: thời hạn `RETURN_WINDOW_DAYS` (mặc định 7 ngày) và điều kiện đổi giống trang tạo yêu cầu đổi trả.
+  - Khuyến mãi: giảm giá tự động theo danh mục (`PricingService.category_offers`) và mã giảm giá công khai (`list_offers`).
+  - Dữ liệu được đưa cho Gemini trong khối “CHÍNH SÁCH VÀ ƯU ĐÃI VIETECH”, đồng thời là căn cứ để kiểm chứng câu trả lời. Mã giảm giá được đọc lại khi dựng câu trả lời.
+- **Giải thích đề xuất:**
+  - Backend áp lại công thức xếp hạng cho đúng các máy đã hiển thị, giữ nguyên thứ tự hiển thị. Mỗi máy nhận `Matched`/`Gaps`, cờ trong ngân sách và cờ đúng hãng ưu tiên.
+  - Câu trả lời chỉ có văn bản, không lặp thẻ sản phẩm. `ProductReferences` giữ nguyên Rank, nên “máy thứ hai” vẫn trỏ đúng danh sách cũ.
+- **Backend quyết định nội dung:**
+  - Với hai ý định này, Gemini chỉ viết lời. Sản phẩm hay ý định model chọn sai không làm hỏng lượt.
+  - Gemini lỗi (503, quá thời gian, JSON sai, vượt giới hạn tra cứu) thì hiển thị câu trả lời của backend; áp dụng cho cả `promotion_inquiry`. Lỗi hết hạn mức (`ai_quota_exceeded`) vẫn báo lỗi để giữ thời gian chờ.
+  - Lời Gemini có số liệu hoặc khẳng định không có trong dữ liệu (ví dụ “30 ngày”, “1 đổi 1”) thì bị thay bằng văn bản backend, như mục 8.
+  - Với câu hỏi chính sách, chỉ dùng lời Gemini khi model chọn `intent=policy` và nội dung được kiểm chứng; nếu model chuyển nhầm sang `handoff` hoặc ý định khác thì dùng câu trả lời chính sách của backend.
+- **Giới thiệu/mô tả chi tiết sản phẩm đang đề xuất** (ý định `product_description`):
+  - Ví dụ: “Mô tả cụ thể từng máy”, “Cho tôi biết thông tin cụ thể hơn 3 chiếc laptop”, “Giới thiệu chi tiết các máy này”, “Giới thiệu thêm về máy thứ hai”, “Đánh giá máy thứ nhất”. Trước đây các câu này bị xếp `general_chat`, nên Gemini không nhận dữ liệu sản phẩm.
+  - Điều kiện: có từ mô tả (“mô tả”, “chi tiết”, “cụ thể”, “ưu nhược điểm”…), hoặc từ “giới thiệu/thông tin/cấu hình/đánh giá” kèm tham chiếu (“từng máy”, “3 chiếc”, “máy thứ hai”, “các máy này”). Câu không được nêu tiêu chí mới (ngân sách, nhu cầu, tên mẫu khác) và phải cùng nhóm danh mục.
+  - Sản phẩm được mô tả:
+    - “Từng máy”, “3 chiếc”: cả danh sách vừa gợi ý.
+    - “Mô tả chi tiết hơn”: sản phẩm của câu trả lời gần nhất, ví dụ đúng máy vừa hỏi pin.
+  - Backend đọc 20 thông số và 8 phiên bản mỗi máy. Câu trả lời chỉ có văn bản, theo đúng thứ tự đã hiển thị. Mỗi máy gồm phiên bản, giá, còn hàng, tối đa 8 thông số nổi bật (chip/CPU, RAM, bộ nhớ, card, màn hình, pin…) và bảo hành.
+  - Gemini lỗi thì backend tự trả lời; lời có số liệu bịa thì bị thay.
+- Câu trả lời giải thích và mô tả không tạo danh sách mới: “máy thứ hai” vẫn là máy thứ hai của lần gợi ý gần nhất.
+- Ngân sách nói kiểu “Tôi chỉ có 20 triệu thôi”, “còn 15 triệu”, “20 triệu trở xuống/đổ lại” được hiểu là trần giá. Câu chỉ nêu ngân sách giữ danh mục và nhu cầu đang tư vấn, rồi tìm lại. Trước đây câu này bị xếp `general_chat`.
+- **Hỏi lại khi khách chưa nêu tiêu chí:**
+  - Ví dụ: “Tôi muốn mua 1 chiếc điện thoại”, “Tư vấn laptop cho tôi”, “Tôi cần mua máy”.
+  - Điều kiện hỏi lại: là yêu cầu gợi ý nhưng chưa có ngân sách, nhu cầu, hãng, thứ tự (“rẻ nhất”, “mới nhất”) hay dòng sản phẩm (“iPhone”), kể cả điều kiện kế thừa trong cùng nhóm danh mục.
+  - Backend tự hỏi ngân sách, nhu cầu sử dụng và hãng yêu thích, kèm ví dụ theo loại sản phẩm, không gọi Gemini. Chưa có danh mục thì hỏi thêm loại sản phẩm.
+  - Câu trả lời của khách (“Tầm 8 triệu, chơi game”) được ghép với danh mục đã hỏi rồi gợi ý ngay.
+  - Chỉ hỏi một lần cho mỗi yêu cầu. Khách trả lời “tùy bạn”, “gì cũng được” hoặc nhắc lại yêu cầu thì gợi ý theo hồ sơ cấu hình cân bằng.
+  - Câu đã có tiêu chí rõ (“Tư vấn điện thoại dưới 8 triệu”, “Điện thoại pin trâu”, “Có laptop ASUS nào không?”) vẫn được gợi ý ngay.
+- `present_answer` có thêm `intent=explain` và `intent=policy`. `handoff` chỉ dùng cho tình trạng một đơn hàng, thanh toán hay yêu cầu cụ thể.
+- Câu trả lời ưu đãi (`intent=offers`) có thêm dòng giảm giá tự động theo danh mục. Hạn mã ghi dạng ngày/tháng/năm.
+
+Kiểm thử: `tests/test_ai_policy_explain.py`:
+
+- Nhận diện ý định và chủ đề.
+- Câu “tại sao” khi Gemini lỗi, chọn sản phẩm lạ hoặc trả tham số sai.
+- Câu khuyến mãi + bảo hành khi Gemini lỗi, trả văn bản không phải JSON hoặc chọn `handoff`.
+- Hai cách hỏi bảo hành của “2 sản phẩm trên” sau khi so sánh: nêu đúng thời hạn của hai máy, không lấy thêm máy thứ ba; hoạt động khi Gemini lỗi/JSON sai/chuyển nhầm `handoff`, giữ lời model hợp lệ và không làm mất ngữ cảnh “máy thứ hai”.
+- Thời hạn đổi trả theo cấu hình; lời bịa bị thay.
+- Lỗi hết hạn mức vẫn báo lỗi.
+- Mô tả từng máy khi Gemini lỗi, chọn sản phẩm lạ hoặc bịa thông số; “mô tả chi tiết hơn” chỉ mô tả máy vừa nói tới.
+- Câu chung chung được hỏi lại trước, câu trả lời của khách dẫn tới gợi ý; không hỏi hai lần.
+- Các test vòng đời lượt AI (`test_ai_chat.py`, `test_ai_chat_http.py`, hai test trong `test_ai_grounded.py`) dùng câu hỏi có tiêu chí, để vẫn kiểm tra luồng gọi model.
+
+Toàn bộ `tests/test_ai*.py`, `tests/test_chat*.py`, `tests/api/test_chat_api.py`: **302 passed, 7 skipped**, cùng **45 subtests passed**. Ba test benchmark dùng thư mục tạm cần chạy lại với quyền tạo thư mục tương thích sandbox Windows; không thay đổi mã ứng dụng hoặc mã kiểm thử để xử lý quyền thư mục.
+
+## 14. Khuyến mãi đúng sản phẩm, câu hỏi đổi trả và trình bày tin nhắn (23/10/2026)
+
+- “Khuyến mãi sản phẩm như nào” sau một danh sách dùng đúng các mẫu vừa nhắc tới. “Khuyến mãi các sản phẩm trên như nào” giữ danh sách đang so sánh. “Khuyến mãi sản phẩm trên như nào” dùng mẫu vừa xem; nếu còn nhiều mẫu thì hỏi lại.
+- Mỗi mẫu có một nhóm riêng: giá gốc/giá sau giảm tự động và mã công khai thực sự áp dụng cho mẫu đó. Không lấy mã của mẫu khác. Hỏi theo danh mục thì lọc coupon theo các sản phẩm trong danh mục; hỏi một mã cụ thể thì không đưa mã khác vào trả lời. Hỏi cách áp dụng mã thì hướng dẫn giỏ hàng.
+- Ưu đãi được đọc lại khi dựng câu trả lời; dữ liệu dùng kiểm chứng cũng được thay mới để lời model không giữ mã vừa hết hạn.
+- Nhận diện thêm “được đổi mới”, “muốn đổi máy”, “được trả không”, kể cả khi nhắc tới mẫu cụ thể. Câu trả lời tập trung vào thời hạn, cách gửi, chênh lệch, hoàn tiền hoặc cách xem tiến độ theo điều khách hỏi.
+- Nội dung đổi trả tuân theo luồng hiện hành: chỉ tạo yêu cầu đổi sản phẩm, mỗi phiếu 1 sản phẩm; không cam kết trả hàng hoàn tiền mới. Thời hạn lấy từ RETURN_WINDOW_DAYS; nhân viên kiểm tra điều kiện thực tế. Lời model hứa hoàn tiền được thay bằng câu trả lời có căn cứ.
+- Prompt yêu cầu trả lời trực tiếp, đoạn ngắn, chữ đậm ở tên/mã/số liệu chính, tiêu đề nhỏ khi cần, danh sách và các bước rõ ràng. Câu dự phòng từ backend cũng chia riêng từng sản phẩm. ai_grounding.py giữ định dạng khi hiển thị và bỏ ký hiệu định dạng khi kiểm tra số liệu, nên chữ đậm không che được việc gán sai thông số.
+- AiChatText.jsx dựng đoạn, tiêu đề, chữ đậm/nghiêng, mã ngắn và danh sách bằng React; không render HTML thô hoặc liên kết. Ký hiệu Markdown chưa đóng không làm mất chữ. Không thêm thư viện frontend.
+- Xóa toàn bộ thông báo “Nội dung chat được Google Gemini xử lý…” và “Giá và tồn kho có thể thay đổi…” dưới ô nhập.
+
+Tham khảo cách tổ chức nội dung và hướng dẫn định dạng từ [ChatGPT](https://help.openai.com/en/articles/20001246-working-with-writing-blocks-and-code-blocks-in-chatgpt), [Claude](https://support.claude.com/en/articles/14546867-set-organization-instructions) và [Gemini](https://ai.google.dev/gemini-api/docs/prompting-strategies). Chọn tập định dạng gọn phù hợp khung chat của VieTech.
+
+Xác minh: **364 kiểm thử backend đạt, 7 bỏ qua, 45 subtests đạt** (AI, chat và pricing); **32 kiểm thử frontend đạt**; production build và lint các thành phần liên quan đạt. Đã kiểm tra hai mẫu trả lời khuyến mãi/đổi trả trên viewport 1440, 390 và 320 px: không tràn ngang và ô nhập nằm trong khung. Ảnh mẫu nằm trong output/ai-offers-*.png và output/ai-returns-*.png.
+
+Đã gọi Gemini thật với catalog giả và SQLite trong bộ nhớ cho câu hỏi khuyến mãi hai sản phẩm, cách gửi yêu cầu đổi trả và trả hàng hoàn tiền. Các câu đều hoàn tất; sau khi làm rõ prompt yêu cầu trả lời chính sách bằng văn bản với products rỗng, câu khuyến mãi dùng trực tiếp lời Gemini đã được kiểm chứng trong một lần gọi. Không kết nối database cửa hàng hoặc dùng dữ liệu tài khoản khách trong kiểm tra này.
+
+## 15. Tư vấn tối đa 5 sản phẩm và hỏi nhu cầu tự nhiên hơn (23/10/2026)
+
+- AI_MAX_PRODUCTS mặc định 5, nhận cấu hình từ 1 đến 5. Schema kết quả, công cụ đọc theo thứ tự/danh sách, prompt, lịch sử, chính sách và giao diện đều hỗ trợ 5 sản phẩm.
+- Khách hỏi 2 mẫu thì chỉ tư vấn 2. Khách hỏi 5 mẫu nhưng model chọn ít hơn, backend bổ sung từ các ứng viên đã lọc và xếp hạng, không nới ngân sách hoặc hãng. Nếu chỉ có ít mẫu phù hợp thì nêu số lượng thực tế.
+- Câu “hãy đề xuất tối đa 5 sản phẩm cho tôi” chưa nêu loại hàng/ngân sách vẫn được hỏi thêm. Số lượng 5 được giữ qua bước hỏi nhu cầu, thay vì mất khi khách trả lời “laptop dưới 20 triệu”.
+- Hiểu “máy thứ tư”, “máy thứ năm”, “bốn máy đầu”, “năm sản phẩm trên”. Lượt “tư vấn thêm 5 mẫu” loại các mẫu đã tư vấn trong ngữ cảnh hiện tại. Bảo hành và khuyến mãi vẫn áp dụng đúng cả mẫu thứ 4 và thứ 5.
+- Giữ cấu trúc câu hỏi và ba mục ngân sách, mục đích sử dụng, hãng yêu thích cùng các ví dụ. Chỉ chỉnh câu mở đầu thành “Để tư vấn laptop phù hợp với bạn, bạn cho mình biết thêm nhé:”; không rút gọn hoặc thêm cụm “vài mẫu”.
+- Prompt yêu cầu dùng “tư vấn”, giữ đủ các thông tin cần hỏi và cho phép danh sách kèm ví dụ. Hãng là tùy chọn. Câu hỏi chung không cần gọi model và chỉ hỏi một lần cho yêu cầu hiện tại.
+
+Kiểm thử bổ sung ở tests/test_ai_five_products.py: giới hạn schema/cấu hình, đủ 5 thẻ, giới hạn thấp hơn, bổ sung từ 3 lên 5, giữ số lượng qua lượt hỏi thêm, không lặp 5 mẫu trước, tham chiếu thứ 4/5, bảo hành đủ 5 máy và kích thước kết quả đọc nhóm. Test frontend xác nhận hiển thị 5 thẻ theo thứ tự, bỏ thẻ thứ 6.
+
+Xác minh cho cập nhật này: **344 kiểm thử AI/chat backend đạt, 7 bỏ qua, 45 subtests đạt**; **32 kiểm thử frontend đạt**; production build và lint thành công. Gemini thật đã hoàn tất luồng hỏi nhu cầu laptop → tư vấn 5 mẫu dưới 20 triệu cho lập trình → hỏi pin máy thứ năm, trên catalog giả trong SQLite bộ nhớ. Bước hỏi thêm không gọi model; không truy cập database cửa hàng.

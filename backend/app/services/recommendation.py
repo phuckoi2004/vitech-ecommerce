@@ -24,7 +24,7 @@ from app.core.search_text import fold
 WEIGHTS = {"N": 0.40, "B": 0.25, "T": 0.20}
 CANDIDATE_PAGE = 30  # Listing page read per search; a second page is read only when the first one is full.
 CANDIDATE_MAX = 60  # Eligible candidates scored per search (2 pages). The largest VieTech category has 35 products.
-RESULT_LIMIT = 5  # Ranked candidates shown to the model; the answer still shows at most three cards.
+RESULT_LIMIT = 5  # Ranked candidates shown to the model and the maximum number of cards in an answer.
 CATEGORY_WEIGHT = 0.2  # VieTech's curated child category ("Laptop lập trình") as one need criterion.
 GENERAL = "general"  # Profile used when the customer states no specific need for a phone, laptop or tablet.
 

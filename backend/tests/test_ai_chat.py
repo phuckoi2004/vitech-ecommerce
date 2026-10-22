@@ -90,7 +90,7 @@ def ai():
     engine.dispose()
 
 
-def payload(content="Xin tư vấn", request_id=None):
+def payload(content="Xin tư vấn laptop dưới 20 triệu", request_id=None):
     return AiMessageCreate(ClientRequestId=request_id or uuid.uuid4(), Content=content)
 
 

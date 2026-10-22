@@ -37,12 +37,12 @@ Search lấy tối đa 20 ứng viên qua service. Từ bước 10.6, ứng viê
 - Dùng SalePrice của ProductService/PricingService, gồm ưu đãi tự động hợp lệ. Không cộng coupon vào giá thẻ khi chưa có quote giỏ hàng.
 - ProductId/variant ID lạ hoặc thông số không thuộc dữ liệu tool bị từ chối. Thông số công khai dạng lồng nhau được làm phẳng có giới hạn, giữ nguyên giá trị, không tự suy ra FPS/chất lượng camera/thời lượng pin.
 - Đọc lại giá/tồn/trạng thái trước khi lưu đáp án. Nếu thay đổi khiến lựa chọn không còn hợp lệ thì bỏ thẻ và thông báo theo dữ liệu hiện tại.
-- Có thể so sánh từ hai đến ba sản phẩm; giới hạn số thẻ không làm mất thông tin đối chiếu. Mỗi sản phẩm hiển thị tối đa bốn thông số được chọn từ dữ liệu chuẩn và số tháng bảo hành.
+- Có thể so sánh từ hai đến năm sản phẩm; giới hạn số thẻ không làm mất thông tin đối chiếu. Mỗi sản phẩm hiển thị tối đa bốn thông số được chọn từ dữ liệu chuẩn và số tháng bảo hành.
 - Coupon được tra cứu lại khi dựng kết quả: hiển thị mức giảm, đơn tối thiểu, mức giảm tối đa nếu có, hạn và giới hạn lượt. Việc thực sự áp dụng theo khách/giỏ hàng được kiểm tra ở checkout.
 
 ## Response và lưu lịch sử
 
-`AiMessages` bắt đầu bằng một tin Text, sau đó tối đa `AI_MAX_PRODUCTS` (1–3) tin Product. Metadata thẻ gồm ProductId, ProductVariantId, ProductName, Slug, VariantName, Price (giá hiệu lực), OriginalPrice, ImageUrl, InStock, Rank, SnapshotAt và AiAnswerMessageId.
+`AiMessages` bắt đầu bằng một tin Text, sau đó tối đa `AI_MAX_PRODUCTS` (1–5, mặc định 5) tin Product. Metadata thẻ gồm ProductId, ProductVariantId, ProductName, Slug, VariantName, Price (giá hiệu lực), OriginalPrice, ImageUrl, InStock, Rank, SnapshotAt và AiAnswerMessageId.
 
 Tin khách lưu AiCardMessageIds/AiConstraints nội bộ; tin Text AI lưu ProductReferences có thứ tự. Tham chiếu “máy thứ hai” lấy theo danh sách đã lưu trong hội thoại, sau đó đọc lại ProductService. Không dò tên trong văn bản và không đọc hội thoại của người khác.
 

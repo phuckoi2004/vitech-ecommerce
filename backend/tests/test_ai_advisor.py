@@ -317,7 +317,7 @@ def test_ungrounded_wording_is_replaced_and_recorded(store):
     svc = s.service(ScriptedModel([invent], s.counters))
     response = s.ask(svc, "Tư vấn điện thoại dưới 8 triệu")
     text = response.AiMessages[0].Content
-    assert "9000" not in text and "trả góp" not in text and text.startswith("Đây là 2 lựa chọn phù hợp nhất")
+    assert "9000" not in text and "trả góp" not in text and text.startswith("Mình tư vấn 2 mẫu này")
     meta = s.question("Tư vấn điện thoại dưới 8 triệu")
     assert meta["AiAnswerSource"] == "backend" and any("9000" in issue for issue in meta["AiGroundingIssues"])
 
@@ -437,6 +437,9 @@ def test_context_rules_inherit_replace_and_reset():
     assert set(more.excluded_product_ids) == {"p1", "p2", "p3"} and more.filters()["max_price"] == 8_000_000
     cheaper = analyze("Có mẫu nào rẻ hơn?", VOCAB, STATE)
     assert cheaper.max_budget == 5_000_000 and cheaper.cheaper_than == 5_000_001
+    only = analyze("Tôi chỉ có 20 triệu thôi", VOCAB, STATE)  # A budget alone refines the current need group.
+    assert (only.intent, only.category_id, only.max_budget, only.needs) == (
+        "product_recommendation", "phone", 20_000_000, ("battery",))
     new_budget = analyze("Giờ tối đa 6 triệu thôi", VOCAB, STATE)
     assert (new_budget.min_budget, new_budget.max_budget) == (None, 6_000_000)  # A new budget replaces the old one.
     switched = analyze("Không, tôi muốn laptop.", VOCAB, STATE)

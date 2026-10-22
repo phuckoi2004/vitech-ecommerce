@@ -49,9 +49,9 @@ class SearchProductsArguments(ToolArguments):
 class GetProductArguments(ToolArguments):
     product_id: uuid.UUID | None = None
     # Stage 10.7: a comparison reads its products in one round instead of one round each.
-    product_ids: list[uuid.UUID] | None = Field(default=None, min_length=1, max_length=3)
+    product_ids: list[uuid.UUID] | None = Field(default=None, min_length=1, max_length=5)
     slug: str | None = Field(default=None, min_length=1, max_length=300)
-    rank: int | None = Field(default=None, ge=1, le=3, strict=True)
+    rank: int | None = Field(default=None, ge=1, le=5, strict=True)
 
     @model_validator(mode="after")
     def one_selector(self):
@@ -74,8 +74,10 @@ class ProductSelection(ToolArguments):
 
 
 class PresentAnswerArguments(ToolArguments):
-    intent: Literal["recommend", "product", "compare", "offers", "no_results", "clarify", "handoff", "chat"]
-    products: list[ProductSelection] = Field(default_factory=list, max_length=3)
+    # explain/policy answers are built by the backend from its own data; any products the model lists are ignored.
+    intent: Literal["recommend", "product", "compare", "offers", "no_results", "clarify", "handoff", "chat", "explain",
+                    "policy"]
+    products: list[ProductSelection] = Field(default_factory=list, max_length=5)
     clarification: Literal["category", "budget", "usage", "brand", "products"] = "category"
     # Natural-language answer written by the model. The backend shows it only when every fact in it is grounded
     # in this turn's data (services/ai_grounding.py); otherwise its own text is used.

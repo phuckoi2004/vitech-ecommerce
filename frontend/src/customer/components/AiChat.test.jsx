@@ -83,7 +83,7 @@ test('guests see a login link preserving the current product and make no chat re
 test('reuses an AI conversation, sends one authenticated UUID turn and renders safe text and backend cards', async () => {
   const calls = mockApi({ post: async (body) => {
     const response = result(body)
-    response.AiMessages.push(...[3, 1, 2, 4].map((rank) => ({ ...message(`product${rank}`, 'AI', ''), MessageType: 'Product', Metadata: {
+    response.AiMessages.push(...[3, 5, 1, 6, 2, 4].map((rank) => ({ ...message(`product${rank}`, 'AI', ''), MessageType: 'Product', Metadata: {
       AiAnswerMessageId: 'answer', ProductName: `Laptop ${rank}`, Slug: `laptop-${rank}`, VariantName: '16GB / 512GB',
       Price: '18000000', OriginalPrice: '20000000', InStock: true, Rank: rank, ImageUrl: 'javascript:alert(1)',
     } })))
@@ -98,7 +98,9 @@ test('reuses an AI conversation, sends one authenticated UUID turn and renders s
   expect(posts[0].body.ClientRequestId).toMatch(/^[\da-f-]{36}$/)
   expect(calls.filter((call) => call.path === '/conversations' && call.method === 'POST')).toHaveLength(0)
   const links = within(screen.getByRole('log')).getAllByRole('link')
-  expect(links.map((link) => link.getAttribute('href'))).toEqual(['/san-pham/laptop-1', '/san-pham/laptop-2', '/san-pham/laptop-3'])
+  expect(links.map((link) => link.getAttribute('href'))).toEqual([
+    '/san-pham/laptop-1', '/san-pham/laptop-2', '/san-pham/laptop-3', '/san-pham/laptop-4', '/san-pham/laptop-5',
+  ])
   expect(links[0]).toHaveTextContent('18.000.000')
   expect(document.querySelector('script')).toBeNull()
   expect(screen.getByRole('textbox')).toHaveValue('')
@@ -385,7 +387,8 @@ test('customers only ask questions: no personalization or save-preference contro
   expect(screen.queryByRole('button', { name: /Cá nhân hóa|sở thích|nhu cầu/i })).not.toBeInTheDocument()
   expect(calls.some((call) => call.path.startsWith('/users/'))).toBe(false)
   // Advice comes from the catalog and the customer's request; wishlist and orders are not used.
-  expect(screen.getByText(/gợi ý dựa trên sản phẩm đang bán tại VieTech và nhu cầu bạn nêu/)).toBeInTheDocument()
+  expect(screen.queryByText(/Nội dung chat được Google Gemini xử lý/)).not.toBeInTheDocument()
+  expect(screen.queryByText(/Giá và tồn kho có thể thay đổi/)).not.toBeInTheDocument()
   expect(screen.queryByText(/đã yêu thích hoặc đã mua/)).not.toBeInTheDocument()
 })
 
@@ -430,7 +433,7 @@ test('a POST timeout recovers the completed response without generating a second
   vi.useFakeTimers()
   fireEvent.change(screen.getByRole('textbox'), { target: { value: 'Laptop dưới 20 triệu' } })
   fireEvent.click(screen.getByRole('button', { name: 'Gửi câu hỏi AI' }))
-  await act(async () => { await vi.advanceTimersByTimeAsync(77010) })
+  await act(async () => { await vi.advanceTimersByTimeAsync(137010) })
   await act(async () => { await vi.advanceTimersByTimeAsync(10) })
   expect(screen.getByText(/Kết quả từ catalog/)).toBeInTheDocument()
   expect(calls.filter((call) => call.path.endsWith('/ai-messages'))).toHaveLength(1)
@@ -476,4 +479,11 @@ test('Retry-After prevents early retries and terminal retry caps allow abandonin
   expect(screen.queryByRole('button', { name: 'Kiểm tra và thử lại' })).not.toBeInTheDocument()
   fireEvent.click(screen.getByRole('button', { name: 'Bỏ qua câu hỏi' }))
   expect(screen.getByRole('textbox')).toBeEnabled()
+})
+
+test('a literal backslash-n saved in an older AI answer is shown as a line break', async () => {
+  mockApi({ open: { ...conversation, Messages: [message('saved', 'AI', String.raw`Mình gợi ý 2 mẫu:\n\n- Mẫu một\r\n- Mẫu hai`)] } })
+  renderChat()
+  expect(await screen.findByRole('heading', { name: 'Mình gợi ý 2 mẫu' })).toBeInTheDocument()
+  expect(screen.getAllByRole('listitem').map((node) => node.textContent)).toEqual(['Mẫu một', 'Mẫu hai'])
 })

@@ -42,7 +42,7 @@ def ai_http(http_context, monkeypatch):
     yield client, engine, cid, headers, other_headers, fake
 
 
-def request_body(content="Tôi cần tư vấn laptop"):
+def request_body(content="Tôi cần tư vấn laptop dưới 20 triệu"):
     return {"ClientRequestId": str(uuid.uuid4()), "MessageType": "Text", "Content": content}
 
 

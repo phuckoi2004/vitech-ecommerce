@@ -44,6 +44,10 @@ REPAIR_NOTE = (
 FINAL_NOTE = "Đã hết lượt tra cứu. Gọi present_answer ngay với các sản phẩm đã tra cứu trong lượt này."
 # Marks a turn the backend answered itself (an unresolvable "máy thứ ba"), without a model call.
 RULES_MODEL = "vietech-rules"
+# Questions the backend can answer from data it already read; when the model fails (provider error, malformed or
+# over-long tool use) the backend's own answer is shown instead of an error. Quota errors still fail (cool-down).
+BACKEND_ANSWERS = {"explain_recommendation": "explain", "policy_inquiry": "policy", "promotion_inquiry": "offers",
+                   "product_description": "chat"}
 # The persona (how to advise) followed by the backend contract (how to read the turn data and end the turn).
 SYSTEM_PROMPT = VIETECH_SYSTEM_PROMPT.strip() + "\n\n" + VIETECH_TOOL_PROTOCOL
 
@@ -59,6 +63,9 @@ def turn_note(context):
     if context.prefetched:
         parts.append("KẾT QUẢ search_products BACKEND ĐÃ CHẠY THEO PHÂN TÍCH TRÊN (đã lọc cứng, xếp hạng, loại mẫu đã "
                      "giới thiệu):\n" + json.dumps(context.prefetched, ensure_ascii=False))
+    if context.policy:
+        parts.append("CHÍNH SÁCH VÀ ƯU ĐÃI VIETECH (backend đọc từ cấu hình, catalog và list_offers; chỉ dùng đúng nội "
+                     "dung này):\n" + json.dumps(context.policy, ensure_ascii=False))
     return "\n\n".join(parts)
 
 
@@ -101,8 +108,17 @@ class AiChatService(BaseService):
                 completion = ChatCompletion("", RULES_MODEL)
                 decision = PresentAnswerArguments(intent="clarify", clarification="products")
             else:
-                completion, decision = self._reply_with_tools(actor, conversation_id, data.ClientRequestId,
-                                                              ticket, history, context)
+                try:
+                    completion, decision = self._reply_with_tools(actor, conversation_id, data.ClientRequestId,
+                                                                  ticket, history, context)
+                except AiUnavailableError as error:
+                    fallback = BACKEND_ANSWERS.get(context.intent.intent)
+                    if fallback is None or error.code == "ai_quota_exceeded" or (
+                            fallback == "offers" and not context.offer_scopes and not context.policy):
+                        raise
+                    logger.warning("AI model failed, backend answer used request_id=%s intent=%s code=%s",
+                                   data.ClientRequestId, context.intent.intent, error.code)
+                    completion, decision = ChatCompletion("", RULES_MODEL), PresentAnswerArguments(intent=fallback)
             return self._finish(actor, conversation_id, data.ClientRequestId, ticket, completion, decision, context)
         except Exception as error:
             self._fail(conversation_id, data.ClientRequestId, ticket, error)
@@ -467,7 +483,7 @@ class AiChatService(BaseService):
             references = (reply.Metadata or {}).get("ProductReferences")
             if references:
                 shown = [{key: ref.get(key) for key in ("Rank", "ProductId", "ProductName") if ref.get(key)}
-                         for ref in references[:3]]
+                         for ref in references[:5]]
                 content += "\nTham chiếu thẻ (dữ liệu): " + json.dumps(shown, ensure_ascii=False)
             cost = len(question.Content) + len(content)
             if cost > budget:

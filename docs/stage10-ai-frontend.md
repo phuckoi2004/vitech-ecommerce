@@ -35,11 +35,13 @@ npm run dev
 ```
 
 4. Mở `http://127.0.0.1:5173`, đăng nhập tài khoản Customer và chọn nút “Chat với AI” ở góc dưới bên phải. Khách chưa đăng nhập có liên kết đăng nhập, giữ đường dẫn quay lại trang đang xem; sau khi quay lại, chọn nút AI để tiếp tục.
-5. Hỏi “Laptop ASUS dưới 20 triệu để học lập trình”, điều chỉnh theo sản phẩm thật trong catalog. Kết quả có văn bản và tối đa ba thẻ sản phẩm, giá của biến thể, ảnh và liên kết trang chi tiết.
+5. Hỏi “Laptop ASUS dưới 20 triệu để học lập trình”, điều chỉnh theo sản phẩm thật trong catalog. Kết quả có văn bản và tối đa năm thẻ sản phẩm, giá của biến thể, ảnh và liên kết trang chi tiết.
 6. Hỏi tiếp “Máy thứ hai có thông số gì?”. Đóng khung chat, mở lại, kiểm tra tin nhắn vẫn còn. Biểu tượng lịch sử ở đầu khung có nhãn truy cập “Lịch sử AI”; chọn để xem phiên trước. Phiên đã đóng chỉ cho đọc.
 7. Biểu tượng tạo hội thoại ở đầu khung có nhãn “Hội thoại mới”; thao tác đóng phiên AI đang mở rồi tạo phiên AI mới. Mở rộng khung bằng biểu tượng bốn góc. Nếu đã có Staff Open, chỉ khi khách chọn rõ “Kết thúc phiên hiện tại và mở AI” mới đóng phiên đó để mở AI; không có thao tác từ AI chuyển sang Staff.
 
-Giá/tồn kho trên thẻ là snapshot khi tư vấn; trang sản phẩm là nơi kiểm tra thông tin hiện tại. Trước ô nhập có thông báo nội dung chat được gửi tới Google Gemini. [Bước 10.5](stage10-ai-personalization.md) cá nhân hóa tự động ở backend từ danh sách yêu thích và đơn đã giao; giao diện không có nút cá nhân hóa, chỉ thêm câu ghi chú dưới ô nhập.
+Giá/tồn kho trên thẻ là snapshot khi tư vấn; trang sản phẩm là nơi kiểm tra thông tin hiện tại. Theo cập nhật ngày 23/10/2026, đã xóa toàn bộ đoạn thông báo Google Gemini và lưu ý giá/tồn kho dưới ô nhập. Gợi ý hiện dựa trên catalog và nhu cầu khách nêu, không đọc wishlist hoặc đơn đã mua để cá nhân hóa.
+
+Tin nhắn AI hiển thị đoạn ngắn, tiêu đề nhỏ, chữ đậm, danh sách và các bước đánh số bằng AiChatText.jsx. Tin nhắn khách giữ nguyên văn bản. Renderer chỉ tạo các phần tử React được hỗ trợ, không thực thi HTML hoặc tạo liên kết từ nội dung model. Hỗ trợ cả các câu trả lời cũ có ký tự xuống dòng bị escape.
 
 ## Gửi, chờ và phục hồi
 

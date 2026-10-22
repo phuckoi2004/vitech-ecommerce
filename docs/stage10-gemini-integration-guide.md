@@ -24,12 +24,12 @@ AI_MAX_OUTPUT_TOKENS=2048
 AI_REQUESTS_PER_MINUTE=10
 AI_MAX_ATTEMPTS=3
 AI_MAX_TOOL_ROUNDS=4
-AI_MAX_PRODUCTS=3
+AI_MAX_PRODUCTS=5
 AI_RANKING_ENABLED=true
 AI_BENCHMARK_TOKENS_PER_MINUTE=0
 ```
 
-`AI_MAX_OUTPUT_TOKENS` dành cho đầu ra của model, bao gồm ngân sách suy luận theo API. Backend tiếp tục giới hạn câu trả lời công khai ở 5.000 ký tự và tối đa ba thẻ. `AI_BENCHMARK_TOKENS_PER_MINUTE=0` tắt ước lượng pacing; nếu cần, điền hạn mức TPM thực tế của dự án trong AI Studio. Không có một hạn mức Free cố định dùng chung cho mọi tài khoản.
+`AI_MAX_OUTPUT_TOKENS` dành cho đầu ra của model, bao gồm ngân sách suy luận theo API. Backend tiếp tục giới hạn câu trả lời công khai ở 5.000 ký tự và tối đa năm thẻ. `AI_BENCHMARK_TOKENS_PER_MINUTE=0` tắt ước lượng pacing; nếu cần, điền hạn mức TPM thực tế của dự án trong AI Studio. Không có một hạn mức Free cố định dùng chung cho mọi tài khoản.
 
 Deadline website đã cập nhật lên 60 giây sau khi chẩn đoán được một lượt gọi công cụ trả kết quả sau 24,3 giây, vượt cấu hình cũ 20 giây. Lượt thử với ngân sách 45 giây có vòng đầu mất 25,7 giây và vòng trả lời cuối timeout với phần thời gian còn lại; luồng tư vấn cần ít nhất hai vòng model. Frontend chờ tối đa 75 giây cho mỗi HTTP request rồi kiểm tra trạng thái, không tự POST lại câu hỏi. Việc tăng ngân sách chờ không bảo đảm Google luôn phản hồi trong hạn hoặc tránh quota. Model, mức suy luận, cơ chế không retry và `store=false` giữ nguyên. Xem [báo cáo kết nối API](updates/2026-10-22-api-connectivity.md).
 

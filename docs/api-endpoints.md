@@ -291,7 +291,7 @@ Thông báo Admin/Staff mở chi tiết phiếu nhập, bảo hành và đổi t
 | POST | `/admin/conversations/{conversation_id}/messages` | Staff/Admin | `MessageCreate` |  | `AdminMessageResponse` | `send_message` |
 | POST | `/admin/conversations/{conversation_id}/close` | Staff/Admin |  |  | `AdminConversationResponse` | `close_conversation` |
 
-Bước 10.3: AiMessages của AI gồm tin Text và tối đa ba tin Product có metadata do backend dựng từ catalog/giá hiện hành. Xem [AI tools](stage10-ai-tools.md) để biết schema thẻ, tham chiếu và giới hạn; API và body gửi câu hỏi giữ nguyên bước 10.2.
+Bước 10.3: AiMessages của AI gồm tin Text và tối đa năm tin Product (cập nhật 23/10/2026) có metadata do backend dựng từ catalog/giá hiện hành. Xem [AI tools](stage10-ai-tools.md) để biết schema thẻ, tham chiếu và giới hạn; API và body gửi câu hỏi giữ nguyên bước 10.2.
 
 Bước 10.5: không thêm endpoint. Cá nhân hóa diễn ra tự động bên trong `POST .../ai-messages` từ danh sách yêu thích và đơn đã giao của chính khách; xem [cá nhân hóa AI](stage10-ai-personalization.md).
 
