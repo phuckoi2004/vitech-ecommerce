@@ -30,7 +30,7 @@ RECOMMENDING = frozenset({"product_recommendation", "recommend_more"})
 ABOUT_PRODUCTS = frozenset({"product_comparison", "product_information", "product_description", "price_inquiry",
                             "follow_up_question"})
 # Answers about products already shown; they never start a new list for "máy thứ hai".
-ABOUT_SHOWN = frozenset({"explain", "describe"})
+ABOUT_SHOWN = frozenset({"explain", "describe", "offers", "policy"})
 
 # --- Budget -----------------------------------------------------------------------------------------------------
 
@@ -312,6 +312,7 @@ class ShoppingIntent:
     inherited: tuple[str, ...] = ()
     category_changed: bool = False
     references: tuple[dict, ...] = ()  # Resolved [{Rank, ProductId, ProductVariantId, ProductName, ...}]
+    product_query: str | None = None  # A named product to resolve in the public catalog before answering offers.
     clarification: str | None = None  # Set when a reference cannot be resolved: ask instead of guessing.
     excluded_product_ids: tuple[str, ...] = ()
     excluded_model_keys: tuple[str, ...] = ()
@@ -495,6 +496,22 @@ def _names_product(text, mentioned_brands):
     return bool(PRODUCT_FAMILY.search(text) or (mentioned_brands and tokens))
 
 
+def _promotion_product_query(text, mentioned_brands):
+    starts = [match.start() for brand in mentioned_brands
+              if (match := re.search(r"\b" + re.escape(fold(brand.name)) + r"\b", text))]
+    starts += [match.start() for match in PRODUCT_FAMILY.finditer(text)]
+    if not starts:
+        return None
+    phrase = text[min(starts):]
+    phrase = re.split(r"\b(?:co|khuyen mai|uu dai|giam gia|nhu|the nao|bao nhieu|ap dung|duoc|dang|hien tai"
+                      r"|cho|voi|va|hay|thi|ma|khong|nhe|gia|duoi|tren|tam|khoang|ngan sach|mau)\b",
+                      phrase, maxsplit=1)[0]
+    model = re.sub(r"\b\d+\s*(?:gb|tb|mah|wh|w|hz|mp|inch|g|kg|trieu|tr|k)\b", " ", phrase)
+    if not (re.search(r"\d", model) or PRODUCT_FAMILY.search(phrase)):
+        return None
+    return phrase.strip(" .,;:?!\"'")[:100] or None
+
+
 def _classify(text, *, promo, refs, listed, needs, category, budget, brands, named, previous, describe=False):
     policy = bool(POLICY_TERMS.search(text))
     if _GREETING.search(text) and not (category or needs or budget or brands or refs or promo or policy):
@@ -572,17 +589,25 @@ def analyze(question, vocab: Vocabulary, state: ConversationState = Conversation
     if intent == "product_description" and not refs and not clarification:
         # "Từng máy"/"3 chiếc" is the list; "Mô tả chi tiết hơn" is what the latest answer was about.
         refs = tuple(listed if listed and _LIST_REF.search(text) else state.last_focus() or listed)
-    if (intent == "promotion_inquiry" and not refs and not (category or named or mentioned)
-            and ((not clarification and re.search(r"\b(?:san pham|sp|may|mau)\b", text))
-                 or (not _ranks(text) and re.search(r"\b(?:san pham|sp)\s+tren\b", text)))):
-        # "Khuyến mãi đối với sản phẩm trên" refers to the latest focus, including a recommended list.
-        refs = tuple(state.last_focus() or listed)
+    if (promo and intent in ("promotion_inquiry", "policy_inquiry") and not refs and not (named or mentioned)
+            and ((not clarification) or (not _ranks(text) and re.search(r"\b(?:san pham|sp)\s+tren\b", text)))):
+        # Short questions such as "Ưu đãi như nào?" stay about the products being discussed, unless the customer
+        # explicitly asks about the whole store or changes category.
+        focus_turn = next((turn for turn in reversed(state.turns) if turn.references), None)
+        focus_category = focus_turn.slots.get("CategoryId") if focus_turn else None
+        current_category = category.id if category else prev.get("CategoryId")
+        same_focus = not (focus_category and current_category) or (
+            vocab.root_id(focus_category) == vocab.root_id(current_category))
+        store_wide = re.search(r"\b(?:cua hang|shop|toan bo|toan he thong|tat ca danh muc|vietech)\b", text)
+        if same_focus and not store_wide and (category is None or same_root):
+            refs = tuple(state.last_focus() or listed)
         if refs:
             clarification = None
     if intent in RECOMMENDING and clarification and not _REJECT.search(text):
         clarification = None  # "Còn mẫu khác không?" needs no target; only a rejection does.
 
     result = ShoppingIntent(intent=intent, references=refs, clarification=clarification,
+                            product_query=_promotion_product_query(text, mentioned) if promo else None,
                             explicit_order=any(term in text for term in EXPLICIT_ORDER),
                             topics=policy_topics(text, promo=promo) if intent == "policy_inquiry" else ())
     explicit, inherited = set(), []

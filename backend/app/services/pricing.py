@@ -1,12 +1,14 @@
 """Pricing without cart/order ownership. Checkout can call reserve_order_quote
 inside its existing transaction; public preview never consumes a redemption.
 """
+import re
 from decimal import Decimal, ROUND_DOWN, ROUND_HALF_UP
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import joinedload, selectinload
 
 from app.core.product_pricing import CENT, automatic_price_expression, discount_for, matches_product
+from app.core.search_text import fold
 from app.models import Category, Coupon, Order, Product, ProductVariant, Promotion
 from app.repositories import PromotionRepository
 from app.schemas.pricing import CategoryOfferResponse, PricedItem, PricingQuoteResponse, PublicCouponResponse
@@ -46,6 +48,35 @@ def variant_price(variant, promotions, now):
                 PromotionEndsAt=chosen.EndDate if chosen else None)
 
 
+def _described_coupon_categories(promotion, categories):
+    """Conservative chat advice when a category restriction exists only in the public conditions.
+
+    Structured targets take precedence. This does not change checkout eligibility or promotion records.
+    """
+    if promotion.promotion_products or promotion.promotion_categories:
+        return None
+    description = fold(promotion.Description or "")
+    if re.search(r"\b(?:moi|tat ca|toan bo) san pham\b", description):
+        return None
+    clause = re.search(r"\b(?:ap dung(?: cho| doi voi)?|cho)\s+(.+?)(?:[.;]|$)", description)
+    if not clause:
+        return None
+    spans, allowed = [], set()
+    for category in sorted(categories, key=lambda item: -len(item.Name)):
+        for match in re.finditer(r"\b" + re.escape(fold(category.Name)) + r"\b", clause[1]):
+            if not any(start < match.end() and match.start() < end for start, end in spans):
+                spans.append(match.span())
+                allowed.add(category.CategoryId)
+    if not allowed:
+        return None
+    for _ in categories:
+        expanded = allowed | {category.CategoryId for category in categories if category.ParentCategoryId in allowed}
+        if expanded == allowed:
+            break
+        allowed = expanded
+    return allowed
+
+
 class PricingService(BaseService):
     def category_offers(self):
         """Homepage highlights from actual in-stock prices, including active descendants.
@@ -83,7 +114,12 @@ class PricingService(BaseService):
     def automatic_promotions(self, *, product=None):
         return PromotionRepository(self.session).list_automatic(self.now(), product=product)
 
-    def public_coupons(self, *, product_id=None, category_ids=None):
+    def public_coupons(self, *, product_id=None, category_ids=None, single_item=False, product_variant_id=None):
+        """Public conditions; single_item additionally checks the current price of one in-stock item.
+
+        A product uses the shown variant, or its cheapest available variant. A category may match any available
+        product in that category. Cart listings keep their existing behavior unless single_item is requested.
+        """
         now = self.now()
         rows = self.session.scalars(select(Coupon).join(Coupon.promotion).where(
             Promotion.ApplyMode == "Coupon", Promotion.Status.in_(("Scheduled", "Active")),
@@ -101,6 +137,26 @@ class PricingService(BaseService):
         if category_ids is not None:
             scoped_products = list(self.session.execute(select(Product.ProductId, Product.CategoryId).where(
                 Product.CategoryId.in_(category_ids), Product.Status == "Active", Product.IsDeleted.is_(False))))
+        candidates = []
+        categories = []
+        if single_item:
+            categories = list(self.session.scalars(select(Category).where(
+                Category.IsActive.is_(True), Category.IsDeleted.is_(False))))
+            stmt = select(Product.ProductId, Product.CategoryId, ProductVariant.ProductVariantId,
+                          ProductVariant.CostPrice, automatic_price_expression(now).label("SalePrice")).join(
+                ProductVariant, ProductVariant.ProductId == Product.ProductId).where(
+                    Product.Status == "Active", Product.IsDeleted.is_(False),
+                    ProductVariant.IsActive.is_(True), ProductVariant.IsDeleted.is_(False),
+                    ProductVariant.StockQuantity > 0, ProductVariant.CostPrice > 0)
+            if product_id is not None:
+                stmt = stmt.where(Product.ProductId == product_id)
+            if category_ids is not None:
+                stmt = stmt.where(Product.CategoryId.in_(category_ids))
+            candidates = list(self.session.execute(stmt))
+            if product_id is not None and candidates:
+                shown = next((item for item in candidates if item.ProductVariantId == product_variant_id), None)
+                candidates = [shown or min(candidates, key=lambda item: (item.SalePrice, str(item.ProductVariantId)))]
+        savings = {}
         for coupon in rows:
             remaining = None if coupon.UsageLimit is None else max(0, coupon.UsageLimit - coupon.UsedCount)
             if remaining == 0 or (product is not None and not matches_product(coupon.promotion, product)):
@@ -108,12 +164,23 @@ class PricingService(BaseService):
             promotion = coupon.promotion
             if scoped_products is not None and not any(matches_product(promotion, item) for item in scoped_products):
                 continue
+            if single_item:
+                described_categories = _described_coupon_categories(promotion, categories)
+                amounts = [discount_for(promotion, item.SalePrice) for item in candidates
+                           if matches_product(promotion, item) and item.SalePrice >= promotion.MinOrderValue
+                           and (described_categories is None or item.CategoryId in described_categories)
+                           and item.SalePrice - discount_for(promotion, item.SalePrice) >= item.CostPrice]
+                if not amounts or max(amounts) <= 0:
+                    continue
+                savings[coupon.CouponId] = max(amounts)
             result.append(PublicCouponResponse(
                 CouponId=coupon.CouponId, Code=coupon.Code, Name=coupon.Name,
                 Description=promotion.Description, DiscountType=promotion.DiscountType,
                 DiscountValue=promotion.DiscountValue, MinOrderValue=promotion.MinOrderValue,
                 MaxDiscountAmount=promotion.MaxDiscountAmount, StartDate=promotion.StartDate,
                 EndDate=promotion.EndDate, RemainingUses=remaining, EvaluatedAt=now))
+        if single_item:
+            result.sort(key=lambda coupon: (-savings[coupon.CouponId], coupon.MinOrderValue, coupon.Code))
         return result
 
     def quote(self, items, *, coupon_code=None, actor: Actor | None = None, lock_coupon=False):
