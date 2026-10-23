@@ -52,6 +52,8 @@
   overflow: hidden;
 }
 .shop-chat-panel:focus { outline: none; }
+.shop-chat-backdrop { position: fixed; inset: 0; z-index: 21; padding: 0; border: 0; background: rgb(23 36 61 / 28%); backdrop-filter: blur(3px); cursor: default; animation: shop-chat-fade .2s ease-out; }
+@keyframes shop-chat-fade { from { opacity: 0; } }
 .shop-chat-panel { --chat-accent: var(--color-accent-500); }
 .shop-chat-panel-staff { --chat-accent: var(--color-brand-500); }
 .shop-chat-panel-header { display: flex; flex-shrink: 0; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; color: #fff; background: var(--chat-accent); }
@@ -68,8 +70,41 @@
 .shop-chat-panel .chat-thread { margin-top: 0; border: 0; border-radius: 0; }
 .shop-chat-panel .chat-messages { height: min(38dvh, 310px); min-height: 150px; padding: 20px 14px; }
 .shop-chat-panel .shopping-notice { margin: 12px; }
+/* Enlarged window: centered over a dimmed page. The kind classes outrank each window's own size rules. */
+:is(.shop-chat-panel-ai, .shop-chat-panel-staff).shop-chat-panel.is-expanded {
+  z-index: 22;
+  top: 50%;
+  left: 50%;
+  right: auto;
+  bottom: auto;
+  width: min(1080px, calc(100vw - 48px));
+  max-width: none;
+  height: min(900px, calc(100dvh - 48px));
+  max-height: none;
+  border-radius: 28px;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 40px 120px rgb(23 36 61 / 28%), 0 8px 24px rgb(23 36 61 / 10%);
+  animation: shop-chat-expand .22s cubic-bezier(.2, .8, .2, 1);
+}
+@keyframes shop-chat-expand { from { transform: translate(-50%, -50%) scale(.96); opacity: .6; } }
+/* The staff thread fills the enlarged window instead of keeping its fixed message height. */
+.shop-chat-panel.is-expanded > .staff-chat { flex: 1; }
+.shop-chat-panel.is-expanded .staff-chat-header { padding-inline: 20px; }
+.shop-chat-panel.is-expanded .staff-chat-body { display: flex; flex-direction: column; overflow: hidden; }
+.shop-chat-panel.is-expanded .staff-chat-view { display: flex; flex: 1; flex-direction: column; min-height: 0; }
+.shop-chat-panel.is-expanded .chat-thread { display: flex; flex: 1; flex-direction: column; min-height: 0; }
+.shop-chat-panel.is-expanded .chat-messages { flex: 1; height: auto; min-height: 0; padding: 32px max(20px, calc((100% - 820px) / 2)); }
+.shop-chat-panel.is-expanded .chat-message { max-width: 72%; }
+.shop-chat-panel.is-expanded .chat-compose { padding: 8px max(16px, calc((100% - 820px) / 2)) 20px; }
+.shop-chat-panel.is-expanded .staff-chat-history { padding-inline: max(16px, calc((100% - 640px) / 2)); }
 @media (max-width: 600px) {
   .shop-chat-button { width: 44px; height: 44px; }
   .shop-chat-button > span { font-size: 12px; }
   .shop-chat-panel { bottom: calc(110px + env(safe-area-inset-bottom, 0px)); max-height: calc(100dvh - 122px - env(safe-area-inset-bottom, 0px)); }
+  :is(.shop-chat-panel-ai, .shop-chat-panel-staff).shop-chat-panel.is-expanded { top: 0; left: 0; width: 100vw; height: 100dvh; border: 0; border-radius: 0; transform: none; animation: shop-chat-fade .2s ease-out; }
+  .shop-chat-panel.is-expanded .staff-chat-header { padding: max(14px, env(safe-area-inset-top, 0px)) 12px 14px; }
+  .shop-chat-panel.is-expanded .chat-messages { padding: 20px 14px; }
+  .shop-chat-panel.is-expanded .chat-message { max-width: 92%; }
+  .shop-chat-panel.is-expanded .chat-compose { padding: 10px 12px calc(14px + env(safe-area-inset-bottom, 0px)); }
 }
+@media (prefers-reduced-motion: reduce) { .shop-chat-panel.is-expanded, .shop-chat-backdrop { animation: none; } }

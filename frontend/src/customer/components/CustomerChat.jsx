@@ -34,26 +34,30 @@ function CustomerChatWindow() {
   const { ready, user } = useCustomerSession()
   const navigate = useNavigate()
   const [kind, setKind] = useState(null)
+  const [expanded, setExpanded] = useState(false)
   const panel = useRef(null)
   const employeeButton = useRef(null)
   const aiButton = useRef(null)
   const panelId = useId()
   const titleId = useId()
   const activeKind = kind === 'Staff' && !user ? null : kind
+  // Either window can be enlarged; it opens at the normal size each time.
+  const isExpanded = expanded && Boolean(activeKind)
+  const toggleExpand = () => setExpanded((value) => !value)
 
   useEffect(() => {
     if (activeKind) panel.current?.focus()
   }, [activeKind])
 
   function close() {
-    setKind(null)
+    setKind(null); setExpanded(false)
     const launcher = activeKind === 'Staff' ? employeeButton : aiButton
     launcher.current?.focus()
   }
 
   function openEmployee() {
     if (!user) { navigate(CHAT_PATH); return }
-    setKind((current) => current === 'Staff' ? null : 'Staff')
+    setKind((current) => current === 'Staff' ? null : 'Staff'); setExpanded(false)
   }
 
   // Product and news consultation reuse these chat windows.
@@ -73,11 +77,17 @@ function CustomerChatWindow() {
   }, [ready, user, navigate])
 
   return <>
-    {activeKind && <section ref={panel} id={panelId} className={`shop-chat-panel shop-chat-panel-${activeKind.toLowerCase()}`} role="dialog"
+    {isExpanded && <button type="button" className="shop-chat-backdrop" aria-hidden="true" tabIndex={-1} onClick={() => setExpanded(false)} />}
+    {activeKind && <section ref={panel} id={panelId} className={`shop-chat-panel shop-chat-panel-${activeKind.toLowerCase()}${isExpanded ? ' is-expanded' : ''}`} role="dialog"
       aria-modal="false" aria-labelledby={titleId} tabIndex={-1}
-      onKeyDown={(event) => { if (event.key === 'Escape') { event.stopPropagation(); close() } }}>
-      {activeKind === 'Staff' ? <StaffChat onDismiss={close} titleId={titleId} />
-        : <AiChat titleId={titleId} onDismiss={close} />}
+      onKeyDown={(event) => {
+        if (event.key !== 'Escape') return
+        // Escape first returns an enlarged window to its normal size, then closes it.
+        event.stopPropagation()
+        if (isExpanded) setExpanded(false); else close()
+      }}>
+      {activeKind === 'Staff' ? <StaffChat onDismiss={close} titleId={titleId} expanded={isExpanded} onToggleExpand={toggleExpand} />
+        : <AiChat titleId={titleId} onDismiss={close} expanded={isExpanded} onToggleExpand={toggleExpand} />}
     </section>}
     <div className="shop-chat-actions" aria-label="Hỗ trợ trực tuyến">
       <button ref={employeeButton} type="button" className="shop-chat-button" disabled={!ready}
@@ -87,7 +97,7 @@ function CustomerChatWindow() {
       </button>
       <button ref={aiButton} type="button" className="shop-chat-button shop-chat-button-ai"
         aria-haspopup="dialog" aria-controls={activeKind === 'AI' ? panelId : undefined}
-        aria-expanded={activeKind === 'AI'} onClick={() => setKind((current) => current === 'AI' ? null : 'AI')}>
+        aria-expanded={activeKind === 'AI'} onClick={() => { setKind((current) => current === 'AI' ? null : 'AI'); setExpanded(false) }}>
         <AiIcon /><span>Chat với AI</span>
       </button>
     </div>

@@ -2,6 +2,8 @@ const paths = {
   history: <><rect x="3" y="4" width="18" height="16" rx="3" /><path d="M9 4v16M13 9h4M13 13h3" /></>,
   new: <><path d="M12 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-6" /><path d="m15 4 5 5M10 14l1-5 7-7 4 4-7 7-5 1Z" /></>,
   close: <path d="m6 6 12 12M18 6 6 18" />,
+  expand: <><path d="M10 20H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v4" /><rect x="13" y="13" width="7" height="7" rx="1.5" /><path d="M12 12 8 8m0 4V8h4" /></>,
+  collapse: <><path d="M10 20H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v4" /><rect x="13" y="13" width="7" height="7" rx="1.5" /><path d="m8 8 4 4m0-4v4H8" /></>,
   sparkles: <><path d="m12 3 2.6 6.4L21 12l-6.4 2.6L12 21l-2.6-6.4L3 12l6.4-2.6L12 3Z" /><path d="m20 2 .6 1.4L22 4l-1.4.6L20 6l-.6-1.4L18 4l1.4-.6L20 2Z" /></>,
   send: <path d="M12 19V5m-6 6 6-6 6 6" />,
   stop: <rect x="7" y="7" width="10" height="10" rx="1.5" fill="currentColor" stroke="none" />,

@@ -162,7 +162,7 @@ function ChatThread({ conversationId, send, onClosed, paused = false }) {
 
 // Mounted only after a customer opens chat (or returns here after signing in).
 // The server reuses an open Staff conversation; initialization only closes an AI conversation that has no messages.
-export function StaffChat({ onDismiss, titleId, initialConversationId = '' }) {
+export function StaffChat({ onDismiss, titleId, expanded, onToggleExpand, initialConversationId = '' }) {
   const send = useCustomerRequest()
   const handOffDraft = useDraftHandoff()
   const [historyPage, setHistoryPage] = useState(1)
@@ -258,6 +258,13 @@ export function StaffChat({ onDismiss, titleId, initialConversationId = '' }) {
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
       </button>
       <div className="staff-chat-heading"><h2 id={titleId}>Chat với nhân viên</h2><p>Hỗ trợ từ VieTech</p></div>
+      {onToggleExpand && <button type="button" className="staff-chat-expand" aria-label={expanded ? 'Thu nhỏ cửa sổ chat' : 'Phóng to cửa sổ chat'}
+        title={expanded ? 'Thu nhỏ' : 'Phóng to'} aria-pressed={Boolean(expanded)} onClick={onToggleExpand}>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M10 20H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v4" /><rect x="13" y="13" width="7" height="7" rx="1.5" />
+          <path d={expanded ? 'm8 8 4 4m0-4v4H8' : 'M12 12 8 8m0 4V8h4'} />
+        </svg>
+      </button>}
       {onDismiss && <button type="button" className="staff-chat-dismiss" aria-label="Đóng cửa sổ chat" onClick={onDismiss}>×</button>}
     </header>
     <div className="staff-chat-body">

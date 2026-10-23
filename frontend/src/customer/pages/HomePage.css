@@ -313,7 +313,8 @@ span.home-tab { display: block; cursor: default; }
 .home-rail-nav {
   position: absolute;
   top: 42%;
-  z-index: 1;
+  /* Above a hovered product card (z-index 1), which would otherwise cover the earlier-painted previous arrow. */
+  z-index: 2;
   display: grid;
   place-items: center;
   width: 40px;

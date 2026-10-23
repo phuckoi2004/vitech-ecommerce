@@ -10,22 +10,24 @@ import AiChatThread from './AiChatThread.jsx'
 import AiChatIcon from './AiChatIcon.jsx'
 import './AiChat.css'
 
-function ChatHeader({ titleId, onDismiss, onHistory, menu, historyId, loading, historyButton }) {
+function ChatHeader({ titleId, onDismiss, expanded, onToggleExpand, onHistory, menu, historyId, loading, historyButton }) {
   return <header className="ai-chat-header">
     <button ref={historyButton} type="button" className="ai-chat-icon-button" aria-label="Lịch sử AI" title="Lịch sử trò chuyện"
       aria-expanded={Boolean(menu)} aria-controls={historyId} disabled={!onHistory || loading} onClick={onHistory}><AiChatIcon name="history" /></button>
     <span className="ai-chat-avatar ai-chat-header-avatar"><AiChatIcon name="sparkles" /></span>
     <div className="ai-chat-heading"><h2 id={titleId}>Chat với AI</h2><p>Trợ lý mua sắm VieTech</p></div>
     <div className="ai-chat-header-actions">
+      {onToggleExpand && <button type="button" className="ai-chat-icon-button" aria-label={expanded ? 'Thu nhỏ cửa sổ chat' : 'Phóng to cửa sổ chat'}
+        title={expanded ? 'Thu nhỏ' : 'Phóng to'} aria-pressed={Boolean(expanded)} onClick={onToggleExpand}><AiChatIcon name={expanded ? 'collapse' : 'expand'} /></button>}
       <button type="button" className="ai-chat-icon-button" aria-label="Đóng cửa sổ chat" title="Đóng cửa sổ" onClick={onDismiss}><AiChatIcon name="close" /></button>
     </div>
   </header>
 }
 
-export default function AiChat({ titleId, onDismiss }) {
+export default function AiChat({ titleId, onDismiss, expanded, onToggleExpand }) {
   const { ready, user } = useCustomerSession()
   const location = useLocation()
-  const headerProps = { titleId, onDismiss }
+  const headerProps = { titleId, onDismiss, expanded, onToggleExpand }
   return <div className="ai-chat">
     {ready && user ? <AiChatSession key={user.UserId} userId={user.UserId} headerProps={headerProps} /> : <>
       <ChatHeader {...headerProps} />
