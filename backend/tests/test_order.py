@@ -95,27 +95,35 @@ class CreateOrderTest(OrderTestBase):
         self.assertEqual(order.TotalAmount, Decimal("210000.00"))
         self.assertEqual(coupon.UsedCount, 1)
 
-    def test_each_account_uses_a_coupon_once_and_a_cancelled_order_gives_it_back(self):
+    def test_each_account_uses_a_coupon_twice_and_a_cancelled_order_restores_one_use(self):
         coupon = self.f.coupon(self.admin)
         variant = self.f.variant(stock=5)
         carts = {user.UserId: self.f.cart_with(user) for user in (self.customer, self.other)}
 
         def order(user):
-            item = self.db.add(CartItem(CartId=carts[user.UserId].CartId, ProductVariantId=variant.ProductVariantId,
-                                        Quantity=1, UnitPrice=variant.Price))
+            cart_id = carts[user.UserId].CartId
+            item = next((row for row in self.db.rows(CartItem) if row.CartId == cart_id), None)
+            if item is None:
+                item = self.db.add(CartItem(CartId=cart_id, ProductVariantId=variant.ProductVariantId,
+                                            Quantity=1, UnitPrice=variant.Price))
             item.product_variant = variant
             return self.svc.create_order(self.f.actor(user), self.order_input(CouponCode="SALE10"))
 
         first = order(self.customer)
+        order(self.customer)
         with self.assertRaises(BusinessRuleError) as ctx:
             order(self.customer)
         self.assertEqual(ctx.exception.code, "coupon_customer_limit")
-        self.assertEqual((coupon.UsedCount, variant.StockQuantity, len(self.db.rows(Order))), (1, 4, 1))
-        # Another customer still can; cancelling gives the first customer the code back.
+        self.assertEqual((coupon.UsedCount, variant.StockQuantity, len(self.db.rows(Order))), (2, 3, 2))
+        # Another customer's limit is independent; cancellation restores exactly one use.
         order(self.other)
         self.svc.cancel_customer_order(self.f.actor(self.customer), first.OrderId, OrderCancelRequest())
         order(self.customer)
-        self.assertEqual(coupon.UsedCount, 2)
+        self.assertEqual((coupon.UsedCount, variant.StockQuantity, len(self.db.rows(Order))), (3, 2, 4))
+        with self.assertRaises(BusinessRuleError) as ctx:
+            order(self.customer)
+        self.assertEqual(ctx.exception.code, "coupon_customer_limit")
+        self.assertEqual((coupon.UsedCount, variant.StockQuantity, len(self.db.rows(Order))), (3, 2, 4))
 
     def test_exhausted_coupon_rolls_back_order_and_stock(self):
         coupon = self.f.coupon(self.admin, usage_limit=1, used=1)

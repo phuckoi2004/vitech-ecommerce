@@ -4,6 +4,7 @@ from datetime import datetime
 from decimal import Decimal
 from pydantic import Field
 
+from app.core.coupon_policy import PER_CUSTOMER_COUPON_USAGE_LIMIT
 from .common import Money, RequestSchema, ResponseSchema, varchar
 
 
@@ -55,7 +56,7 @@ class PublicCouponResponse(ResponseSchema):
     StartDate: datetime
     EndDate: datetime
     RemainingUses: int | None
-    PerCustomerUsageLimit: int = 1
+    PerCustomerUsageLimit: int = PER_CUSTOMER_COUPON_USAGE_LIMIT
     EvaluatedAt: datetime
 
 

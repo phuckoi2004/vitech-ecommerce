@@ -422,7 +422,7 @@ describe('cart coupon', () => {
     expect(sessionStorage.getItem('vietech-cart-coupon:Customer-id')).toBeNull()
   })
 
-  test('public coupons are listed to choose from; one the selection does not reach yet cannot be chosen', async () => {
+  test('coupon choices use the customer token; one the selection does not reach yet cannot be chosen', async () => {
     const offer = (code, overrides) => ({ CouponId: code, Code: code, Name: `Ưu đãi ${code}`, DiscountType: 'Percentage',
       DiscountValue: '10.00', MinOrderValue: '0.00', MaxDiscountAmount: null, EndDate: '2026-12-31T16:59:59Z',
       RemainingUses: 5, ...overrides })
@@ -444,8 +444,8 @@ describe('cart coupon', () => {
     expect(second).toHaveTextContent(`Giảm ${vnd(2000000)}`)
     expect(second).toHaveTextContent(`Mua thêm ${vnd(8010000)} để dùng mã này`) // 50 000 000 − 41 990 000 đã chọn
     expect(within(second).getByRole('button', { name: 'Chọn mã VIP' })).toBeDisabled()
-    // The list is public: it is read without the customer's token.
-    expect(server.calls.find((call) => call.endpoint === '/coupons').token).toBeUndefined()
+    // The token lets the server omit codes used twice by this customer.
+    expect(server.calls.find((call) => call.endpoint === '/coupons').token).toBe('Bearer access-for-test')
 
     await user.click(within(first).getByRole('button', { name: 'Chọn mã GIAM10' }))
     expect(await within(dialog).findByText(/cho các sản phẩm đã chọn/)).toBeInTheDocument()
@@ -458,6 +458,32 @@ describe('cart coupon', () => {
     expect(within(summary).getByText('GIAM10')).toBeInTheDocument()
     expect(within(summary).getByText('Giảm giá').nextElementSibling).toHaveTextContent(`−${vnd(4199000)}`)
     expect(previews(server)).toHaveLength(1)
+  })
+
+  test('a code reaching the customer limit in another tab disappears and stays hidden when the dialog reopens', async () => {
+    let used = false
+    const offers = ['USED', 'NEW'].map((code) => ({ CouponId: code, Code: code, Name: code, DiscountType: 'Percentage',
+      DiscountValue: '10', MinOrderValue: '0', EndDate: '2026-12-31T16:59:59Z', RemainingUses: 5 }))
+    const server = fakeServer({ lines: [line()], products: { p1: IPHONE }, intercept: (call) => {
+      if (call.endpoint === '/coupons') return new Response(JSON.stringify(offers.filter((offer) => !used || offer.Code !== 'USED')))
+      if (call.endpoint === '/cart/coupon-preview') {
+        used = true
+        return new Response(JSON.stringify({ detail: 'Bạn đã sử dụng mã này đủ 2 lần', code: 'coupon_customer_limit' }), { status: 400 })
+      }
+    } })
+    const user = userEvent.setup()
+    renderCart()
+    await user.click(await screen.findByRole('button', { name: 'Chọn mã giảm giá' }))
+    const dialog = screen.getByRole('dialog', { name: 'Nhập hoặc chọn mã khuyến mãi' })
+    await user.click(await within(dialog).findByRole('button', { name: 'Chọn mã USED' }))
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent('Bạn đã sử dụng mã này đủ 2 lần')
+    await within(dialog).findByRole('button', { name: 'Chọn mã NEW' })
+    expect(within(dialog).queryByRole('button', { name: 'Chọn mã USED' })).not.toBeInTheDocument()
+    await user.click(within(dialog).getByRole('button', { name: 'Đóng' }))
+    await user.click(screen.getByRole('button', { name: 'Chọn mã giảm giá' }))
+    await screen.findByRole('button', { name: 'Chọn mã NEW' })
+    expect(screen.queryByRole('button', { name: 'Chọn mã USED' })).not.toBeInTheDocument()
+    expect(server.calls.filter((call) => call.endpoint === '/coupons').every((call) => call.token === 'Bearer access-for-test')).toBe(true)
   })
 
   test('a wrong code shows the server message, keeps the dialog open and closing changes nothing', async () => {

@@ -520,9 +520,9 @@ class FakeOrderRepo(FakeRepo):
     def exists_by_code(self, order_code):
         return bool(self._rows(lambda o: o.OrderCode == order_code))
 
-    def customer_used_coupon(self, customer_id, coupon_id):
-        return bool(self._rows(lambda o: o.CustomerId == customer_id and o.CouponId == coupon_id
-                               and o.OrderStatus != "Cancelled"))
+    def customer_coupon_usage_count(self, customer_id, coupon_id):
+        return len(self._rows(lambda o: o.CustomerId == customer_id and o.CouponId == coupon_id
+                              and o.OrderStatus != "Cancelled"))
 
     def exists_by_shipping_method(self, shipping_method_id):
         return bool(self._rows(lambda o: o.ShippingMethodId == shipping_method_id))

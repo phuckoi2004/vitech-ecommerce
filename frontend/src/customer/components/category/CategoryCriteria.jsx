@@ -8,12 +8,13 @@ import { ChevronDownIcon } from '../icons.jsx'
 // closes on "Đóng", Escape or a click outside; options stay reachable with Tab right after their chip.
 function Panel({ id, title, onClose, children }) {
   const panel = useRef(null)
-  // Opens under its chip, moved left when a chip near the right edge would push it off screen.
+  // Keep the panel on screen when the chip moves or grows to show its selected values.
   useLayoutEffect(() => {
     const element = panel.current
+    element.style.left = '0px'
     const overflow = element.getBoundingClientRect().right - (document.documentElement.clientWidth - 16)
     if (overflow > 0) element.style.left = `${-overflow}px`
-  }, [])
+  })
   return <div className="catalog-overlay" id={id} role="dialog" aria-label={title} ref={panel}>
     <div className="catalog-overlay-header">
       <h3>{title}</h3>
@@ -50,12 +51,14 @@ export default function CategoryCriteria({ listing, priceRanges, facets, needs, 
     const spec = `${key}:${value}`
     onChange({ specs: listing.specs.includes(spec) ? listing.specs.filter((item) => item !== spec) : [...listing.specs, spec] })
   }
-  const selectedIn = (key) => listing.specs.filter((spec) => spec.startsWith(`${key}:`)).length
-
   const criteria = [
-    ...(priceRanges.length ? [{ key: 'price', label: 'Xem theo giá', count: listing.price ? 1 : 0 }] : []),
-    ...(needs.length ? [{ key: 'needs', label: 'Nhu cầu sử dụng', count: 0 }] : []),
-    ...facets.map((facet) => ({ key: `spec-${facet.Key}`, label: facet.Label, count: selectedIn(facet.Key), facet })),
+    ...(priceRanges.length ? [{ key: 'price', label: 'Xem theo giá',
+      selectedLabels: priceRanges.filter((range) => range.Value === listing.price).map((range) => range.Label) }] : []),
+    ...(needs.length ? [{ key: 'needs', label: 'Nhu cầu sử dụng',
+      selectedLabels: needs.filter((item) => item.CategoryId === currentCategoryId).map((item) => item.Name) }] : []),
+    ...facets.map((facet) => ({ key: `spec-${facet.Key}`, label: facet.Label,
+      selectedLabels: facet.Options.filter((option) => listing.specs.includes(`${facet.Key}:${option.Value}`))
+        .map((option) => option.Label), facet })),
   ]
 
   function panel(criterion) {
@@ -87,7 +90,7 @@ export default function CategoryCriteria({ listing, priceRanges, facets, needs, 
           onClick={() => setOpen(open === 'all' ? null : 'all')}>Bộ lọc</button>
         {open === 'all' && <Panel id={panelId('all')} title="Bộ lọc đầy đủ" onClose={() => setOpen(null)}>
           {criteria.map((criterion) => <button key={criterion.key} type="button" className="catalog-option"
-            onClick={() => setOpen(criterion.key)}>{criterion.label}{criterion.count > 0 && ` (${criterion.count})`}</button>)}
+            onClick={() => setOpen(criterion.key)}>{criterion.label}{criterion.selectedLabels.length > 0 && `: ${criterion.selectedLabels.join(', ')}`}</button>)}
         </Panel>}
       </li>}
       <li><button type="button" className="catalog-chip" aria-pressed={listing.inStock}
@@ -95,9 +98,10 @@ export default function CategoryCriteria({ listing, priceRanges, facets, needs, 
       <li><button type="button" className="catalog-chip" aria-pressed={listing.newArrivals}
         onClick={() => onChange({ newArrivals: !listing.newArrivals })}>Hàng mới về</button></li>
       {criteria.map((criterion) => <li key={criterion.key} className={`catalog-criterion${open === criterion.key ? ' is-open' : ''}`}>
-        <button type="button" className={`catalog-chip${criterion.count ? ' is-selected' : ''}`} aria-expanded={open === criterion.key}
-          aria-controls={panelId(criterion.key)} onClick={() => setOpen(open === criterion.key ? null : criterion.key)}>
-          {criterion.label}{criterion.count > 1 && ` (${criterion.count})`}<ChevronDownIcon className="size-4" />
+        <button type="button" className={`catalog-chip${criterion.selectedLabels.length ? ' is-selected' : ''}`} aria-expanded={open === criterion.key}
+          aria-controls={panelId(criterion.key)} title={criterion.label} onClick={() => setOpen(open === criterion.key ? null : criterion.key)}>
+          <span className="catalog-chip-label">{criterion.selectedLabels.length ? criterion.selectedLabels.join(', ') : criterion.label}</span>
+          <ChevronDownIcon className="size-4 shrink-0" />
         </button>
         {open === criterion.key && panel(criterion)}
       </li>)}

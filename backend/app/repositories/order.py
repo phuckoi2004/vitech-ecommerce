@@ -52,9 +52,9 @@ class OrderRepository(BaseRepository[Order]):
     def exists_by_code(self, order_code: str) -> bool:
         return self.exists(Order.OrderCode == order_code)
 
-    def customer_used_coupon(self, customer_id: uuid.UUID, coupon_id: uuid.UUID) -> bool:
-        """Khách đã có đơn chưa hủy dùng coupon này."""
-        return self.exists(Order.CustomerId == customer_id, Order.CouponId == coupon_id, Order.OrderStatus != "Cancelled")
+    def customer_coupon_usage_count(self, customer_id: uuid.UUID, coupon_id: uuid.UUID) -> int:
+        """Số đơn chưa hủy của khách đã dùng coupon này."""
+        return self.count(Order.CustomerId == customer_id, Order.CouponId == coupon_id, Order.OrderStatus != "Cancelled")
 
     def get_by_id_and_customer(self, order_id: uuid.UUID, customer_id: uuid.UUID) -> Order | None:
         return self.get_one(Order.OrderId == order_id, Order.CustomerId == customer_id)

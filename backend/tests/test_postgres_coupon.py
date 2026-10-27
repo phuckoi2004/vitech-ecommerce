@@ -2,7 +2,7 @@
 
 The shared pg fixture truncates the dedicated test database before/after this module.
 No payment gateway, webhook or cron endpoint is used. UsageLimit is global; each account
-uses a code once, derived from its Orders that are not Cancelled.
+uses a code at most twice, derived from its Orders that are not Cancelled.
 """
 
 import uuid
@@ -184,10 +184,9 @@ def test_coupon_global_limit_across_customers_rolls_back_and_released_use_can_be
     assert_usage(pg, coupon, 1, by_customer={first_customer["id"]: 1, second_customer["id"]: 0})
     assert stock(pg, item) == 5
 
-    # Each account uses a code once: the first customer still has an order with it.
-    assert_error(pg.client.get("/cart/coupon-preview", headers=first_headers, params={"code": coupon["Code"]}),
-                 400, "coupon_customer_limit")
-    assert_error(pg.client.post("/orders", headers=first_headers, json=payload), 400, "coupon_customer_limit")
+    # One existing order leaves the first customer one personal use; preview reserves nothing.
+    preview = ok(pg.client.get("/cart/coupon-preview", headers=first_headers, params={"code": coupon["Code"]}))
+    assert Decimal(preview["DiscountAmount"]) == Decimal("15000.00")
     assert_usage(pg, coupon, 1)
     assert stock(pg, item) == 5
     # The second customer's order was cancelled, which gives their use back.

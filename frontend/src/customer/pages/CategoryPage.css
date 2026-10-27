@@ -67,7 +67,9 @@
 
 /* "Chọn theo tiêu chí": grey chips; the "Bộ lọc" chip and chosen criteria are outlined in red. */
 .catalog-criteria { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 12px 8px; margin: 0; padding: 0; list-style: none; }
-.catalog-criterion { position: relative; }
+.catalog-criterion { position: relative; min-width: 0; max-width: 100%; }
+.catalog-criterion > .catalog-chip { max-width: 100%; }
+.catalog-chip-label { min-width: 0; white-space: normal; overflow-wrap: anywhere; text-align: left; }
 .catalog-chip {
   display: inline-flex;
   align-items: center;

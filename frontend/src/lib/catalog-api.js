@@ -77,9 +77,10 @@ export function listNews({ page = 1, pageSize = 3, signal } = {}) {
 }
 
 // Public coupons still running with uses left: [{ CouponId, Code, Name, DiscountType, DiscountValue, MinOrderValue,
-// MaxDiscountAmount, EndDate, RemainingUses }]. Only a suggestion: the cart's coupon preview decides if one applies.
-export function listCoupons({ signal } = {}) {
-  return request('/coupons', { signal })
+// MaxDiscountAmount, EndDate, RemainingUses }]. With a customer token, codes at that customer's usage limit are omitted.
+// Only a suggestion: the cart's coupon preview decides if one applies.
+export function listCoupons({ accessToken, signal } = {}) {
+  return request('/coupons', { accessToken, signal })
 }
 
 export function listPaymentMethods({ signal } = {}) {

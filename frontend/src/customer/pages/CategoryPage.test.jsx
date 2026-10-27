@@ -163,13 +163,14 @@ test('criteria panels combine options in the URL and the product query, and clos
   await user.click(await screen.findByRole('button', { name: 'Chip xử lý' }))
   const panel = screen.getByRole('dialog', { name: 'Chip xử lý' })
   await user.click(within(panel).getByRole('button', { name: 'Snapdragon' }))
+  expect(screen.getByRole('button', { name: 'Snapdragon', expanded: true })).toHaveClass('is-selected')
   await user.click(within(panel).getByRole('button', { name: 'Apple A' }))
   expect(search(router).getAll('spec')).toEqual(['chip:snapdragon', 'chip:apple-a'])
   await waitFor(() => expect(productCalls(calls).at(-1).query).toMatchObject({ spec: ['chip:snapdragon', 'chip:apple-a'], page: '1' }))
   expect(within(panel).getByRole('button', { name: 'Apple A' })).toHaveAttribute('aria-pressed', 'true')
   await user.keyboard('{Escape}')
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
-  expect(screen.getByRole('button', { name: /Chip xử lý \(2\)/ })).toHaveFocus()
+  expect(screen.getByRole('button', { name: 'Snapdragon, Apple A' })).toHaveFocus()
 
   // "Bộ lọc" lists every criterion and opens the chosen one.
   await user.click(screen.getByRole('button', { name: 'Bộ lọc' }))
@@ -178,6 +179,7 @@ test('criteria panels combine options in the URL and the product query, and clos
   await waitFor(() => expect(productCalls(calls).at(-1).query).toMatchObject({ min_price: '2000000.00', max_price: '3999999.99' }))
   await user.click(document.body)
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  expect(screen.getByRole('button', { name: '2 – 4 triệu' })).toHaveClass('is-selected')
 })
 
 test('brand, sort and quick filters update the query; "Xóa bộ lọc" keeps the sort', async () => {
@@ -200,7 +202,7 @@ test('brand, sort and quick filters update the query; "Xóa bộ lọc" keeps th
 test('an old link drops options the category no longer offers and keeps the homepage price ranges', async () => {
   const calls = mockApi()
   renderAt('/danh-muc/dien-thoai?spec=chip:old&spec=ram:8gb&price=5-10')
-  expect(await screen.findByRole('button', { name: 'Dung lượng RAM' })).toHaveClass('is-selected')
+  expect(await screen.findByRole('button', { name: '8 GB' })).toHaveClass('is-selected')
   await waitFor(() => expect(productCalls(calls)).toHaveLength(1))
   expect(productCalls(calls)[0].query).toMatchObject({ spec: ['ram:8gb'], min_price: '5000000', max_price: '9999999.99' })
 })

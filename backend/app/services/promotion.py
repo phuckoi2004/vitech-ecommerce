@@ -23,6 +23,7 @@ from typing import Protocol
 
 from sqlalchemy.orm import Session
 
+from app.core.coupon_policy import PER_CUSTOMER_COUPON_USAGE_LIMIT
 from app.models import Coupon, Order, Promotion
 from app.repositories import (
     CartItemRepository,
@@ -497,7 +498,7 @@ class CouponService(BaseService):
     ) -> tuple[Coupon, Decimal]:
         """Khóa coupon (FOR UPDATE), kiểm tra, tính và phân bổ tiền giảm vào ``lines``, tăng UsedCount.
 
-        ``customer_id``: mỗi khách dùng mỗi mã một lần (đơn đã hủy không tính). Chỉ gọi bên trong use case tạo đơn
+        ``customer_id``: mỗi khách dùng mỗi mã tối đa hai lần (đơn đã hủy không tính). Chỉ gọi bên trong use case tạo đơn
         (không dùng trực tiếp từ Router).
         """
         self.require_enclosing_use_case()
@@ -561,9 +562,12 @@ class CouponService(BaseService):
         return eligible, calculate_discount(promotion, base)
 
     def _check_customer(self, coupon: Coupon, customer_id: uuid.UUID | None) -> None:
-        """Mỗi tài khoản dùng mỗi mã một lần; đơn đã hủy trả lại lượt của khách."""
-        if customer_id is not None and self.orders.customer_used_coupon(customer_id, coupon.CouponId):
-            raise BusinessRuleError("Bạn đã sử dụng mã này", code="coupon_customer_limit")
+        """Giới hạn lượt theo tài khoản; đơn đã hủy trả lại lượt của khách."""
+        if (customer_id is not None
+                and self.orders.customer_coupon_usage_count(customer_id, coupon.CouponId)
+                >= PER_CUSTOMER_COUPON_USAGE_LIMIT):
+            raise BusinessRuleError(f"Bạn đã sử dụng mã này đủ {PER_CUSTOMER_COUPON_USAGE_LIMIT} lần",
+                                    code="coupon_customer_limit")
 
     @staticmethod
     def _check_price_floor(lines: Sequence[DiscountLine]) -> None:

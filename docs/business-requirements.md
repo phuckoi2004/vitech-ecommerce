@@ -134,6 +134,7 @@ Khi tích hợp giai đoạn 4 và 5, người dùng chọn giữ chính sách A
 - Việc tra cứu mã không phân biệt hoa thường nếu functional unique index và Repository hiện tại đã được triển khai theo cách này.
 - Khi áp dụng vào đơn, khóa dòng Coupon và kiểm tra lại `UsedCount < UsageLimit` trong cùng transaction.
 - Tăng lượt dùng khi đơn được tạo và coupon được gắn thành công; trả lại lượt khi đơn bị hủy hợp lệ theo chính sách hiện hành.
+- Mỗi khách dùng mỗi mã tối đa 2 lần, tính theo đơn chưa hủy. Sau lần đầu mã vẫn hiện; đủ 2 lần thì ẩn trong danh sách chọn và gợi ý AI, đồng thời chặn áp mã thủ công. Đơn `Cancelled` trả lại lượt của khách.
 - Không xóa Coupon đã được sử dụng nếu quy tắc FK/lịch sử ngăn việc xóa; đặt `IsActive = false`.
 - Phân bổ giảm giá vào từng OrderItem phải bảo đảm tổng phân bổ đúng bằng tổng giảm giá, không tạo sai lệch do làm tròn.
 

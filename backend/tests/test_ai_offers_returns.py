@@ -6,7 +6,7 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import Brand, Category, Coupon, Product, ProductVariant, Promotion, PromotionCategory, PromotionProduct, User
+from app.models import Brand, Category, Coupon, Order, Product, ProductVariant, Promotion, PromotionCategory, PromotionProduct, User
 from app.schemas.ai_chat import ListOffersArguments, PresentAnswerArguments
 from app.services.ai_grounding import Facts, ProductFacts, check_message
 from app.services.ai_intent import ConversationState, PastTurn, analyze
@@ -35,6 +35,36 @@ def offer(s, code, *, product_id=None, category_id=None, automatic=False, amount
                           Name=code, UsageLimit=100, UsedCount=0))
         db.commit()
         return promotion.PromotionId
+
+
+@pytest.mark.parametrize("respond", [provider_down, lambda m: answer({"intent": "offers"})])
+def test_ai_offers_hide_only_codes_used_twice_by_the_signed_in_customer(store, respond):
+    s = store
+    for code in ("FRESH100", "ONCE100", "TWICE100", "CANCEL100", "OTHER100"):
+        offer(s, code)
+    with Session(s.engine) as db:
+        customer = db.scalar(select(User).where(User.Email == "advisor@example.test"))
+        other = User(Email="other-coupon@example.test", PhoneNumber="0912000001", PasswordHash="test-only",
+                     FullName="Other customer", Role="Customer", AccountStatus="Active")
+        db.add(other); db.flush()
+        coupons = {row.Code: row for row in db.scalars(select(Coupon))}
+        for code, owner, statuses in (("ONCE100", customer, ("Pending",)),
+                                      ("TWICE100", customer, ("Delivered", "Pending")),
+                                      ("CANCEL100", customer, ("Cancelled", "Pending")),
+                                      ("OTHER100", other, ("Pending", "Pending"))):
+            for number, status in enumerate(statuses):
+                db.add(Order(OrderCode=f"{code}-{number}", CustomerId=owner.UserId, CouponId=coupons[code].CouponId,
+                             ShippingMethodId=uuid.uuid4(), PaymentMethodId=uuid.uuid4(), Subtotal=5000000,
+                             ShippingFee=0, DiscountAmount=100000, TotalAmount=4900000,
+                             OrderStatus=status, PaymentStatus="Pending", ReceiverName="Coupon customer",
+                             ReceiverPhone="0900000000", ShippingAddress="Test address"))
+        db.commit()
+    reply = s.ask(s.service(TurnModel(s.counters, respond)), "Điện thoại có ưu đãi gì?")
+    assert reply.Status == "Completed"
+    text = reply.AiMessages[0].Content
+    assert "TWICE100" not in text
+    assert all(code in text for code in ("FRESH100", "ONCE100", "CANCEL100", "OTHER100"))
+    assert "tối đa 2 lượt/khách" in text
 
 
 @pytest.mark.parametrize("question", [

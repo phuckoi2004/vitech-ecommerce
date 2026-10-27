@@ -7,12 +7,13 @@ from decimal import Decimal, ROUND_DOWN, ROUND_HALF_UP
 from sqlalchemy import func, select
 from sqlalchemy.orm import joinedload, selectinload
 
+from app.core.coupon_policy import PER_CUSTOMER_COUPON_USAGE_LIMIT
 from app.core.product_pricing import CENT, automatic_price_expression, discount_for, matches_product
 from app.core.search_text import fold
 from app.models import Category, Coupon, Order, Product, ProductVariant, Promotion
-from app.repositories import PromotionRepository
+from app.repositories import OrderRepository, PromotionRepository
 from app.schemas.pricing import CategoryOfferResponse, PricedItem, PricingQuoteResponse, PublicCouponResponse
-from .actor import Actor, CUSTOMER_ONLY, require_role
+from .actor import Actor, CUSTOMER_ONLY, has_role, require_role
 from .base import BaseService
 from .exceptions import BusinessRuleError, NotFoundError
 from .promotion_state import aware
@@ -114,17 +115,25 @@ class PricingService(BaseService):
     def automatic_promotions(self, *, product=None):
         return PromotionRepository(self.session).list_automatic(self.now(), product=product)
 
-    def public_coupons(self, *, product_id=None, category_ids=None, single_item=False, product_variant_id=None):
+    def public_coupons(self, *, product_id=None, category_ids=None, single_item=False, product_variant_id=None,
+                       actor: Actor | None = None):
         """Public conditions; single_item additionally checks the current price of one in-stock item.
 
         A product uses the shown variant, or its cheapest available variant. A category may match any available
-        product in that category. Cart listings keep their existing behavior unless single_item is requested.
+        product in that category. A signed-in customer only sees codes below their personal usage limit.
         """
         now = self.now()
-        rows = self.session.scalars(select(Coupon).join(Coupon.promotion).where(
+        stmt = select(Coupon).join(Coupon.promotion).where(
             Promotion.ApplyMode == "Coupon", Promotion.Status.in_(("Scheduled", "Active")),
             Promotion.StartDate <= now, Promotion.EndDate >= now,
-        ).options(joinedload(Coupon.promotion).selectinload(Promotion.promotion_products),
+        )
+        if has_role(actor, *CUSTOMER_ONLY):
+            usage_count = select(func.count(Order.OrderId)).where(
+                Order.CustomerId == actor.user_id, Order.CouponId == Coupon.CouponId,
+                Order.OrderStatus != "Cancelled",
+            ).scalar_subquery()
+            stmt = stmt.where(usage_count < PER_CUSTOMER_COUPON_USAGE_LIMIT)
+        rows = self.session.scalars(stmt.options(joinedload(Coupon.promotion).selectinload(Promotion.promotion_products),
                   joinedload(Coupon.promotion).selectinload(Promotion.promotion_categories))
           .order_by(Coupon.CreatedAt.desc(), Coupon.CouponId))
         product = None
@@ -224,10 +233,11 @@ class PricingService(BaseService):
                 raise BusinessRuleError("Mã giảm giá đã hết hạn hoặc chưa bắt đầu", code="coupon_expired")
             if coupon.UsageLimit is not None and coupon.UsedCount >= coupon.UsageLimit:
                 raise BusinessRuleError("Mã giảm giá đã hết lượt sử dụng", code="coupon_usage_exceeded")
-            if actor is not None and self.session.scalar(select(Order.OrderId).where(
-                    Order.CustomerId == actor.user_id, Order.CouponId == coupon.CouponId,
-                    Order.OrderStatus != "Cancelled").limit(1)) is not None:
-                raise BusinessRuleError("Bạn đã sử dụng mã này", code="coupon_customer_limit")
+            if (actor is not None
+                    and OrderRepository(self.session).customer_coupon_usage_count(actor.user_id, coupon.CouponId)
+                    >= PER_CUSTOMER_COUPON_USAGE_LIMIT):
+                raise BusinessRuleError(f"Bạn đã sử dụng mã này đủ {PER_CUSTOMER_COUPON_USAGE_LIMIT} lần",
+                                        code="coupon_customer_limit")
             if subtotal < coupon.promotion.MinOrderValue:
                 raise BusinessRuleError("Tiền hàng sau giảm trực tiếp chưa đạt đơn tối thiểu của mã", code="coupon_min_order_value")
             eligible = [line for line in lines if matches_product(coupon.promotion, by_id[line.ProductVariantId].product)]

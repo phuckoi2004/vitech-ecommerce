@@ -129,12 +129,13 @@ def _price(variant):
 class AiTools:
     """Called inside the orchestrator's short authorized transaction; never commits or calls the model."""
 
-    def __init__(self, session, *, clock, ranking=True):
+    def __init__(self, session, *, clock, ranking=True, actor=None):
         self.catalog = ProductService(session, clock=clock)
         self.categories = CategoryService(session, clock=clock)
         self.brands = BrandService(session, clock=clock)
         self.pricing = PricingService(session, clock=clock)
         self.clock = clock
+        self.actor = actor
         self.ranking = ranking  # False = baseline catalog order, for the stage 10.7 comparison.
 
     # --- Turn preparation ----------------------------------------------------------------------------------------
@@ -486,6 +487,7 @@ class AiTools:
         shown = next((ref.get("ProductVariantId") for ref in context.intent.references
                       if ref["ProductId"] == str(args.product_id)), None)
         coupons = self.pricing.public_coupons(product_id=args.product_id,
+                                             actor=self.actor,
                                              single_item=args.product_id is not None or category_ids is not None,
                                              product_variant_id=uuid.UUID(shown) if shown else None,
                                              **({"category_ids": category_ids} if category_ids is not None else {}))

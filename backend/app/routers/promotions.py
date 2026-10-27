@@ -38,9 +38,9 @@ def category_offers(service: Pricing):
 
 
 @router.get("/coupons", response_model=list[PublicCouponResponse])
-def public_coupons(service: Pricing, product_id: uuid.UUID | None = None):
-    """Public codes with remaining redemptions. Reading/copying never reserves a use."""
-    return service.public_coupons(product_id=product_id)
+def public_coupons(service: Pricing, actor: OptionalActor, product_id: uuid.UUID | None = None):
+    """Available codes below the signed-in customer's usage limit. Reading never reserves a use."""
+    return service.public_coupons(product_id=product_id, actor=actor)
 
 
 @router.post("/pricing/quote", response_model=PricingQuoteResponse)

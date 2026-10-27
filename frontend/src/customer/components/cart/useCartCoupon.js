@@ -53,8 +53,15 @@ export default function useCartCoupon({ userId, cart, withAccessToken }) {
   const [code, setCode] = useState(() => readCartCoupon(userId))
   const [seed, setSeed] = useState(null)
   const key = couponKey(code, cart)
+  const [query, setQuery] = useState({ key, revision: 0 })
+  // Forget the confirmed preview as soon as its cart changes. A new revision also keeps an earlier request's
+  // result hidden when the customer returns to the same quantities before the intervening request finishes.
+  if (query.key !== key) {
+    setQuery({ key, revision: query.revision + 1 })
+    if (seed !== null && seed.key !== key) setSeed(null)
+  }
   const seeded = seed !== null && seed.key === key
-  const check = useApiData(seeded ? null : key, async (signal) => {
+  const check = useApiData(seeded || key === null ? null : `${query.revision}:${key}`, async (signal) => {
     try {
       return { preview: await withAccessToken((token) => previewCartCoupon(token, code, { signal })) }
     } catch (failure) {
@@ -75,6 +82,11 @@ export default function useCartCoupon({ userId, cart, withAccessToken }) {
     saveCartCoupon(userId, '')
   }
 
+  function retry() {
+    setSeed(null)
+    check.reload()
+  }
+
   const result = seeded ? { preview: seed.preview } : check.data
   let status = 'checking'
   if (!code) status = 'none'
@@ -83,5 +95,5 @@ export default function useCartCoupon({ userId, cart, withAccessToken }) {
   else if (result?.preview) status = Number(result.preview.Subtotal) === Number(cart.SelectedSubtotal) ? 'ok' : 'mismatch'
   else if (check.error) status = 'unavailable'
   const error = status === 'invalid' ? result.rejected : status === 'unavailable' ? check.error : ''
-  return { code, status, preview: status === 'ok' ? result.preview : null, error, retry: check.reload, apply, remove }
+  return { code, status, preview: status === 'ok' ? result.preview : null, error, retry, apply, remove }
 }

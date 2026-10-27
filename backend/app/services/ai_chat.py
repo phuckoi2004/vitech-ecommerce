@@ -226,7 +226,7 @@ class AiChatService(BaseService):
                 question = self.messages.get_ai_request(conversation_id, request_id)
                 if conversation.Status != "Open" or not self._owns_ticket(question, ticket) or self._expired(question):
                     raise ConflictError("Lượt xử lý AI đã kết thúc", code="ai_request_superseded")
-                AiTools(self.session, clock=self._clock, ranking=self.settings.ranking_enabled).prepare(context)
+                AiTools(self.session, clock=self._clock, ranking=self.settings.ranking_enabled, actor=actor).prepare(context)
         finally:
             self.session.close()
         history[0] = {"role": "system", "content": SYSTEM_PROMPT + "\n\n" + turn_note(context)}
@@ -353,7 +353,7 @@ class AiChatService(BaseService):
                 question = self.messages.get_ai_request(conversation_id, request_id)
                 if conversation.Status != "Open" or not self._owns_ticket(question, ticket) or self._expired(question):
                     raise ConflictError("Lượt xử lý AI đã kết thúc", code="ai_request_superseded")
-                tools = AiTools(self.session, clock=self._clock, ranking=self.settings.ranking_enabled)
+                tools = AiTools(self.session, clock=self._clock, ranking=self.settings.ranking_enabled, actor=actor)
                 # Dispatch is explicit; model-provided strings never select arbitrary methods.
                 if name == "search_products":
                     return tools.search_products(args, context)
@@ -376,7 +376,7 @@ class AiChatService(BaseService):
             if self._expired(question) or conversation.Status != "Open":
                 raise ConflictError("Hội thoại hoặc lượt xử lý đã kết thúc", code="ai_request_expired")
             answer, cards, references, notes = AiTools(self.session, clock=self._clock,
-                                                       ranking=self.settings.ranking_enabled).finish(
+                                                       ranking=self.settings.ranking_enabled, actor=actor).finish(
                 decision, context, self.settings.max_products)
             if not answer.strip() or len(answer) > 5000:
                 raise AiUnavailableError("AI chưa trả được câu trả lời hợp lệ.")

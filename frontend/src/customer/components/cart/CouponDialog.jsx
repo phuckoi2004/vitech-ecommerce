@@ -6,7 +6,7 @@ import { previewCartCoupon } from '../../../lib/cart-api.js'
 import { listCoupons } from '../../../lib/catalog-api.js'
 import { formatDate, formatMoney } from '../../../lib/format.js'
 
-// Figma "Mã giảm giá" (259:341). Under the code field, the public coupons (GET /coupons) to choose from. Choosing one,
+// Figma "Mã giảm giá" (259:341). Under the code field, coupons below the customer's usage limit (GET /coupons). Choosing one,
 // or "Áp dụng" on a typed code, checks it against the selected lines; "Xác nhận" applies it (checking it first if
 // needed), or removes the current code when the field is empty. A coupon whose minimum order the selected lines do
 // not reach says how much is missing and cannot be chosen. Closing does not change the cart.
@@ -19,7 +19,7 @@ export default function CouponDialog({ code = '', applied = null, subtotal = 0, 
   const [checked, setChecked] = useState(applied)
   const [error, setError] = useState('')
   const [pending, setPending] = useState(false)
-  const coupons = useApiData('public-coupons', (signal) => listCoupons({ signal }))
+  const coupons = useApiData('customer-coupons', (signal) => withAccessToken((accessToken) => listCoupons({ accessToken, signal })))
   const typed = draft.trim()
   const ready = checked !== null && checked.Code.toLowerCase() === typed.toLowerCase()
 
@@ -38,6 +38,7 @@ export default function CouponDialog({ code = '', applied = null, subtotal = 0, 
     } catch (failure) {
       setChecked(null)
       setError(failure.message)
+      if (failure.code === 'coupon_customer_limit') coupons.reload()
       return null
     } finally {
       setPending(false)
@@ -119,8 +120,8 @@ function conditionText(coupon) {
   ].filter(Boolean).join(' · ')
 }
 
-// The public coupons in the order the API lists them (newest first). Whether a code applies to the selected lines
-// (scope, uses left) is only known once it is checked; the minimum order is known here and shown before.
+// Coupons below the customer's usage limit, in the order the API lists them (newest first). Whether a code applies to the
+// selected lines (scope, uses left) is only known once it is checked; the minimum order is shown before.
 function CouponList({ coupons, subtotal, chosen, disabled, onPick }) {
   if (coupons.loading) return <p className="cart-coupon-note" role="status">Đang tải mã khuyến mãi…</p>
   if (coupons.error) return <p className="cart-coupon-note">

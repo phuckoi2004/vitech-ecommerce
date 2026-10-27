@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import useAuth from '../../auth/useAuth.js'
 import ErrorState from '../../components/shared/ErrorState.jsx'
@@ -97,6 +97,13 @@ export default function ProductPage() {
     try { return await getProductBySlug(slug, { signal }) }
     catch (error) { if (error.status === 404) return null; throw error }
   })
+  const title = product.loading ? 'Đang tải sản phẩm'
+    : product.error ? 'Không thể tải sản phẩm'
+      : product.data?.ProductId ? product.data.Name : 'Không tìm thấy sản phẩm'
+  useEffect(() => {
+    document.title = `${title} | VieTech`
+  }, [title])
+
   if (product.loading || (exchange.active && exchange.loading)) return <div className="pd-page"><LoadingState label="Đang tải sản phẩm…" /></div>
   if (exchange.active && exchange.error) return <ErrorState message={exchange.error} onRetry={exchange.reload} />
   if (product.error) return <div className="pd-page"><ErrorState message={product.error} onRetry={product.reload} /></div>

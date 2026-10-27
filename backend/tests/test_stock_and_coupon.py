@@ -218,10 +218,13 @@ class CouponUsageTest(unittest.TestCase):
                 self.svc.release_coupon_usage(coupon.CouponId)
         self.assertEqual(coupon.UsedCount, 0)
 
-    def test_preview_refuses_a_code_the_account_used_or_one_below_cost(self):
+    def test_preview_allows_second_use_and_refuses_third_use_or_a_code_below_cost(self):
         variant = self.f.variant(stock=3, price="100000", cost="70000")
         self.f.cart_with(self.customer, (variant, 1))
         used = self.f.coupon(self.admin)
+        self.f.order(self.customer, self.f.payment_method("COD"), coupon=used)
+        self.assertEqual(self.svc.preview_cart_coupon(self.f.actor(self.customer), "SALE10").DiscountAmount,
+                         Decimal("10000.00"))
         self.f.order(self.customer, self.f.payment_method("COD"), coupon=used)
         deep = self.f.coupon(self.admin, code="GIAM40", value="40")
         for code, expected in (("SALE10", "coupon_customer_limit"), ("GIAM40", "coupon_price_floor")):

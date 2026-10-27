@@ -213,23 +213,64 @@ def test_reservation_requires_transaction_and_rolls_back(pricing_shop):
         assert session.get(Coupon, uuid.UUID(c["CouponId"])).UsedCount == 0
 
 
-def test_one_use_per_account_uses_order_history_and_allows_cancelled_order(pricing_shop):
+def test_two_uses_per_account_use_order_history_and_cancellation_restores_one_use(pricing_shop):
     s = pricing_shop
     c = coupon(s)
     actor = Actor(s["customer"].UserId, "Customer")
     items = [QuoteItemRequest(ProductVariantId=s["variant"].ProductVariantId, Quantity=1)]
     with Session(s["engine"]) as session:
-        order = Order(OrderCode="TEST-ONCE", CustomerId=actor.user_id, CouponId=uuid.UUID(c["CouponId"]),
-                      ShippingMethodId=s["shipping"].ShippingMethodId, PaymentMethodId=s["payment"].PaymentMethodId,
-                      Subtotal=35000000, ShippingFee=0, DiscountAmount=300000, TotalAmount=34700000,
-                      OrderStatus="Pending", PaymentStatus="Pending", ReceiverName="Khách thử", ReceiverPhone="0900000000",
-                      ShippingAddress="Địa chỉ thử")
-        session.add(order); session.commit()
+        orders = []
+        for number in range(2):
+            assert PricingService(session).quote(items, coupon_code="TEST300", actor=actor).CouponDiscount == 300000
+            order = Order(OrderCode=f"TEST-TWICE-{number}", CustomerId=actor.user_id, CouponId=uuid.UUID(c["CouponId"]),
+                          ShippingMethodId=s["shipping"].ShippingMethodId, PaymentMethodId=s["payment"].PaymentMethodId,
+                          Subtotal=35000000, ShippingFee=0, DiscountAmount=300000, TotalAmount=34700000,
+                          OrderStatus="Pending", PaymentStatus="Pending", ReceiverName="Khách thử",
+                          ReceiverPhone="0900000000", ShippingAddress="Địa chỉ thử")
+            session.add(order); session.commit()
+            orders.append(order)
         with pytest.raises(BusinessRuleError) as error:
             PricingService(session).quote(items, coupon_code="TEST300", actor=actor)
         assert error.value.code == "coupon_customer_limit"
-        order.OrderStatus = "Cancelled"; session.commit()
+        with pytest.raises(BusinessRuleError) as error:
+            service = PricingService(session)
+            with service.transaction():
+                service.reserve_order_quote(actor, items, coupon_code="TEST300")
+        assert error.value.code == "coupon_customer_limit"
+        orders[0].OrderStatus = "Cancelled"; session.commit()
         assert PricingService(session).quote(items, coupon_code="TEST300", actor=actor).CouponDiscount == 300000
+
+
+@pytest.mark.parametrize("order_status", ["Pending", "Delivered", "Completed", "Cancelled"])
+@pytest.mark.parametrize("usage_count", [0, 1, 2, 3])
+def test_coupon_choices_hide_only_after_two_non_cancelled_uses_by_current_customer(pricing_shop, order_status, usage_count):
+    s = pricing_shop
+    used = coupon(s, code="USED300")
+    coupon(s, code="NEW300")
+    actor = Actor(s["customer"].UserId, "Customer")
+    with Session(s["engine"]) as session:
+        for number in range(usage_count):
+            session.add(Order(OrderCode=f"USED-COUPON-{number}", CustomerId=actor.user_id, CouponId=uuid.UUID(used["CouponId"]),
+                              ShippingMethodId=s["shipping"].ShippingMethodId, PaymentMethodId=s["payment"].PaymentMethodId,
+                              Subtotal=35000000, ShippingFee=0, DiscountAmount=300000, TotalAmount=34700000,
+                              OrderStatus=order_status, PaymentStatus="Pending", ReceiverName="Khách thử",
+                              ReceiverPhone="0900000000", ShippingAddress="Địa chỉ thử"))
+        session.commit()
+
+    app = s["client"].app
+    app.dependency_overrides[get_optional_actor] = lambda: actor
+    expected = {"NEW300"} if order_status != "Cancelled" and usage_count >= 2 else {"USED300", "NEW300"}
+    for params in ({}, {"product_id": str(s["variant"].ProductId)}):
+        choices = ok(s["client"].get("/coupons", params=params))
+        assert {row["Code"] for row in choices} == expected
+        assert all(row["PerCustomerUsageLimit"] == 2 for row in choices)
+        assert all("CustomerId" not in row for row in choices)
+
+    # The same code stays visible to another customer and to anonymous visitors.
+    app.dependency_overrides[get_optional_actor] = lambda: Actor(uuid.uuid4(), "Customer")
+    assert {row["Code"] for row in ok(s["client"].get("/coupons"))} == {"USED300", "NEW300"}
+    app.dependency_overrides[get_optional_actor] = lambda: None
+    assert {row["Code"] for row in ok(s["client"].get("/coupons"))} == {"USED300", "NEW300"}
 
 
 def test_unknown_cost_fails_closed(pricing_shop):

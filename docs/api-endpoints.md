@@ -220,6 +220,7 @@ Thông báo Admin/Staff mở chi tiết phiếu nhập, bảo hành và đổi t
   - `PATCH /admin/promotions/{promotion_id}` được kiểm tra lại với giá trị đang lưu. Giảm cố định có phần lẻ (ví dụ chỉ gửi `DiscountValue` có phần lẻ cho khuyến mãi đang là `FixedAmount`), hoặc giảm theo phần trăm lớn hơn 100, trả 400 `invalid_discount_value`.
   - Kiểm tra giảm cố định nguyên đồng chỉ chạy khi `PATCH` có `DiscountType` hoặc `DiscountValue`, nên khuyến mãi cũ có phần lẻ vẫn đổi được tên, mô tả hoặc trạng thái.
 - Giỏ hàng (`CartLineResponse.CurrentPrice`, `SelectedSubtotal`), xem trước mã và đặt đơn dùng giá bán sau chương trình giảm trực tiếp đang chạy, như `SalePrice` của trang sản phẩm; `OriginalPrice` là giá trước giảm. Đơn lưu `Subtotal` theo giá trước giảm, `DiscountAmount` gồm giảm trực tiếp và mã giảm giá (từng dòng cũng vậy).
+- Mỗi khách dùng mỗi mã tối đa 2 lần theo lịch sử đơn chưa hủy. `GET /coupons` có token khách sẽ ẩn mã đã dùng đủ 2 lần; xem trước và đặt đơn cũng từ chối với `coupon_customer_limit`. Đơn `Cancelled` không tính lượt dùng theo khách. Giới hạn tổng `UsageLimit` của mã vẫn được kiểm tra độc lập.
 - Tiền giảm của mã giảm giá (`GET /cart/coupon-preview` và khi đặt đơn):
   - Cơ sở là tiền hàng sau giảm trực tiếp; đơn tối thiểu cũng xét trên số này.
   - `Percentage`: cơ sở × `DiscountValue` / 100; `FixedAmount`: `DiscountValue`.
