@@ -210,7 +210,7 @@ describe('checkout page', () => {
     // What comes after placing the order follows the chosen method: a transfer is paid by QR within 15 minutes.
     expect(screen.getByText(/Bạn thanh toán khi nhận hàng\./)).toBeInTheDocument()
     await user.click(payments[1])
-    expect(screen.getByText(/hiển thị mã QR và thông tin chuyển khoản; vui lòng thanh toán trong 15 phút/)).toBeInTheDocument()
+    expect(screen.getByText(/hiển thị mã QR và thông tin chuyển khoản, vui lòng thanh toán trong 15 phút/)).toBeInTheDocument()
     expect(screen.queryByText(/Bạn thanh toán khi nhận hàng\./)).not.toBeInTheDocument()
   })
 

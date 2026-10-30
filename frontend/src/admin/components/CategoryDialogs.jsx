@@ -54,7 +54,7 @@ function CategoryEditor({ category, categories, onBusy, onClose, onDone }) {
     {categories.error && <ProductButton secondary onClick={categories.refresh}>Thử lại danh sách danh mục</ProductButton>}
     <fieldset disabled={busy || uploading} className="grid min-w-0 grid-cols-2 gap-4 border-0 p-0">
       <Field id="category-name" label="Tên danh mục" className="col-span-full" required maxLength={255} value={form.Name} onChange={(event) => change('Name', event.target.value)} />
-      <Field id="category-slug" label="Đường dẫn (slug)" className="col-span-full" required maxLength={300} pattern="[a-z0-9]+(-[a-z0-9]+)*" hint="Được gợi ý từ tên danh mục; bạn có thể chỉnh lại." value={form.Slug} onChange={(event) => change('Slug', event.target.value)} />
+      <Field id="category-slug" label="Đường dẫn (slug)" className="col-span-full" required maxLength={300} pattern="[a-z0-9]+(-[a-z0-9]+)*" hint="Được gợi ý từ tên danh mục, bạn có thể chỉnh lại." value={form.Slug} onChange={(event) => change('Slug', event.target.value)} />
       <Field id="category-parent" label="Danh mục cha"><select id="category-parent" className={PRODUCT_CONTROL} value={form.ParentCategoryId} disabled={categories.loading || Boolean(categories.error)} onChange={(event) => change('ParentCategoryId', event.target.value)}>
         <option value="">Không có danh mục cha</option>{parents.map((parent) => <option key={parent.CategoryId} value={parent.CategoryId}>{parent.Name}{parent.IsActive ? '' : ' (đã ẩn)'}</option>)}
       </select></Field>

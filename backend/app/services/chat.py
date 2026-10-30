@@ -364,7 +364,7 @@ class ChatService(BaseService):
     def _reuse_open(existing: Conversation, mode: str) -> ConversationResponse:
         if existing.Mode != mode:
             raise BusinessRuleError(
-                "Đang có hội thoại mở ở chế độ khác; không mở thêm hội thoại", code="open_conversation_exists"
+                "Đang có hội thoại mở ở chế độ khác, không mở thêm hội thoại", code="open_conversation_exists"
             )
         return ConversationResponse.model_validate(existing)
 

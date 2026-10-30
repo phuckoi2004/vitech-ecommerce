@@ -93,7 +93,7 @@ class ExchangeService(BaseService):
             if request.Status not in OPEN:
                 raise BusinessRuleError("Chỉ chọn máy đổi sau khi tiếp nhận và trước khi đóng phiếu", code="exchange_not_open")
             if request.Quantity != 1:
-                raise BusinessRuleError("Phiếu cũ có nhiều máy cần được xử lý riêng; luồng đổi mới chỉ đổi 1 máy", code="exchange_quantity_invalid")
+                raise BusinessRuleError("Phiếu cũ có nhiều máy cần được xử lý riêng, luồng đổi mới chỉ đổi 1 máy", code="exchange_quantity_invalid")
             existing = self.expire_pending(request)
             if existing:
                 return OrderDetailResponse.model_validate(sales.orders.get_detail(existing.OrderId))
@@ -141,7 +141,7 @@ class ExchangeService(BaseService):
             # Reserve a real code immediately for the replacement; normal delivery starts its new warranty.
             sales._auto_assign_order_serials(order)
             sales._record_history(order, None, "Pending", changed_by=changed_by,
-                                  note=f"Đơn đổi trả từ {request.RequestCode}; bù thêm {due:,.0f}đ.")
+                                  note=f"Đơn đổi trả từ {request.RequestCode}, bù thêm {due:,.0f}đ.")
             sales.notifications.notify(customer_id, title="Đã tạo đơn đổi trả",
                 content=f"Đơn {order.OrderCode}: {'không cần thanh toán' if due == 0 else f'cần thanh toán phần bù {due:,.0f}đ'}.",
                 notification_type="Order", reference_type="Order", reference_id=order.OrderId)
@@ -152,7 +152,7 @@ class ExchangeService(BaseService):
                         action_url=f"/admin/orders/{order.OrderId}", reference_type="Order", reference_id=order.OrderId)
             prefix = "Hệ thống tự động tạo" if changed_by is None else "Đã tạo"
             flow._history(request, changed_by, request.Status, request.Status,
-                          f"{prefix} đơn đổi trả {order.OrderCode}; giá trị dùng đổi {credit:,.0f}đ; bù thêm {due:,.0f}đ.")
+                          f"{prefix} đơn đổi trả {order.OrderCode}, giá trị dùng đổi {credit:,.0f}đ, bù thêm {due:,.0f}đ.")
             sales.orders.flush()
             return OrderDetailResponse.model_validate(sales.orders.get_detail(order.OrderId))
 

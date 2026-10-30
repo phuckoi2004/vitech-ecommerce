@@ -58,6 +58,6 @@ export function PurchaseReportRules() {
     <p><strong>Số phiếu nhập:</strong> Mỗi phiếu tạo trong kỳ được đếm một lần, theo ngày Việt Nam và trạng thái hiện tại.</p>
     <p><strong>Số lượng và giá trị đặt:</strong> Cộng các dòng hàng phù hợp bộ lọc, không gồm phiếu đã hủy hoặc bị từ chối. Giá trị đặt là số tiền trên phiếu, chưa thể hiện khoản tiền đã thanh toán cho nhà cung cấp.</p>
     <p><strong>Số lượng đã nhận:</strong> Lũy kế thực nhận đến thời điểm xem của các phiếu tạo trong kỳ, kể cả nhận sau kỳ. Đây không phải số lượng nhận riêng trong khoảng ngày đang chọn.</p>
-    <p><strong>Bộ lọc:</strong> Nhà cung cấp, danh mục, thương hiệu và sản phẩm được kết hợp đồng thời. Khi lọc sản phẩm, chỉ tính các dòng hàng phù hợp; số phiếu và trạng thái vẫn đếm một lần mỗi phiếu.</p>
+    <p><strong>Bộ lọc:</strong> Nhà cung cấp, danh mục, thương hiệu và sản phẩm được kết hợp đồng thời. Khi lọc sản phẩm, chỉ tính các dòng hàng phù hợp, số phiếu và trạng thái vẫn đếm một lần mỗi phiếu.</p>
   </>
 }

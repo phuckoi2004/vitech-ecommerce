@@ -1,6 +1,7 @@
 """Read-only catalog tools and server-rendered facts; no ORM/admin objects leave this boundary."""
 
 import re
+import unicodedata
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -11,8 +12,12 @@ from app.schemas.ai_chat import (GetProductArguments, ListOffersArguments, Prese
                                   SearchProductsArguments)
 
 from .ai_grounding import Facts, ProductFacts, check_message
-from .ai_policy import (PROMOTION_LINE, PROMOTION_USAGE_LINES, WARRANTY_LINES, policy_text, promotion_usage,
-                        requested_coupon, return_lines, return_message_issue)
+from .ai_customer_wording import customer_notes, customer_text
+from .ai_comparison import build_comparison, closest_products, colour_only_default, normalized_specs, spec_signature
+from .ai_compatibility import AiCompatibility
+from .ai_product_requirements import feature_evidence, meets_features
+from .ai_policy import (PROMOTION_LINE, PROMOTION_USAGE_LINES, policy_text, promotion_usage,
+                        requested_coupon, return_lines, return_message_issue, warranty_lines, warranty_message_issue)
 from .ai_intent import (CATEGORY_ALIASES, BrandInfo, CategoryInfo, ConversationState, ShoppingIntent, Vocabulary,
                         analyze, budget_ceiling, budget_floor, soften_category)  # noqa: F401 (budget_* stay importable here)
 from .catalog import BrandService, CategoryService, ProductService
@@ -47,8 +52,13 @@ CLARIFY = {"category": "Bạn đang muốn tìm loại sản phẩm nào (điệ
            "products": "Bạn muốn so sánh hoặc hỏi về những mẫu nào?"}
 HANDOFF = ("Trợ lý AI hỗ trợ tư vấn sản phẩm, ưu đãi và chính sách chung. Với tình trạng một đơn hàng, thanh toán hay "
            "yêu cầu bảo hành/đổi trả cụ thể, bạn vui lòng xem trong tài khoản hoặc chat với nhân viên VieTech.")
+ORDER_ACTION = ("Mình là trợ lý tư vấn nên không thể đặt hàng hay thanh toán thay bạn. Bạn mở trang sản phẩm, chọn "
+                "phiên bản, bấm \"Thêm vào giỏ hàng\" rồi đặt hàng và thanh toán từ giỏ hàng nhé. Để an toàn, bạn đừng "
+                "gửi số thẻ hay mã OTP trong khung chat. Nếu cần chọn mẫu, mình có thể tư vấn giúp bạn.")
 CHAT = ("Mình là trợ lý tư vấn sản phẩm của VieTech. Bạn đang cần tìm điện thoại, laptop hay phụ kiện nào, "
         "và ngân sách khoảng bao nhiêu? Bạn nói thêm nhu cầu sử dụng để mình tư vấn nhé.")
+COMPARISON_GUIDANCE = ("Mình vẫn so sánh được các mục có thông số rõ ràng. Riêng mục bị thiếu sẽ ghi “Chưa rõ”, "
+                      "không tự đoán hoặc kết luận mẫu nào hơn ở mục đó.")
 
 
 def tool_definitions(*, final_only=False):
@@ -82,12 +92,35 @@ class GroundingContext:
     nearest: dict | None = None  # Cheapest product just above the ceiling when a search found nothing within it.
     policy: dict | None = None  # Store policy lines by topic (Warranty/Returns/Promotion) read for this turn.
     explained: dict = field(default_factory=dict)  # explain_recommendation: Evaluation per shown ProductId.
+    comparison: dict | None = None  # Verified Smart Compare snapshot; set once the 2–3 exact SKUs are resolved.
+    compatibility: dict | None = None
+    compatibility_options: list[dict] = field(default_factory=list)
+    compatibility_fallback: bool = False
 
 
 def money(value):
     amount = Decimal(str(value))
     result = f"{amount:,.0f}" if amount == amount.to_integral_value() else f"{amount:,.2f}"
     return result.replace(",", "_").replace(".", ",").replace("_", ".") + " đ"
+
+
+# "So sánh camera, pin và hiệu năng của …": these are criteria, not product names.
+_ASPECT = (r"(?:camera|pin|man hinh|hieu nang|cau hinh|thong so|gia ban|gia|thiet ke|am thanh|chip|cpu|gpu"
+           r"|ram|ssd|rom|o cung|bo nho|sac|toc do sac|trong luong|kich thuoc)")
+_ASPECT_OF = re.compile(rf"{_ASPECT}(?:\s*(?:[,;]|\bva\b)\s*{_ASPECT})*\s+(?:cua|giua)\s+")
+
+
+def _strip_aspect(query):
+    typed = unicodedata.normalize("NFC", query)
+    folded = fold(typed)
+    match = _ASPECT_OF.match(folded)
+    return typed[match.end():] if match and len(folded) == len(typed) else query
+
+
+def _mentions_variant(value, question):
+    tokens = re.findall(r"[a-z]+|\d+", fold(value or ""))
+    return bool(tokens and re.search(r"(?<![a-z0-9])" + r"[^a-z0-9]*".join(map(re.escape, tokens))
+                                     + r"(?![a-z0-9])", fold(question)))
 
 
 def public_specifications(specifications, limit=12):
@@ -126,6 +159,22 @@ def _price(variant):
     return variant.SalePrice if variant.SalePrice is not None else variant.Price
 
 
+def _gigabytes(value):
+    match = re.search(r"(\d+(?:[.,]\d+)?)\s*(tb|gb)\b", fold(value or ""))
+    return float(match[1].replace(",", ".")) * (1024 if match[2] == "tb" else 1) if match else None
+
+
+def _has_memory(detail, variant, filters):
+    """The SKU's own RAM/storage (as Smart Compare reads it) meets the stated minimums. A capacity the catalog does
+    not state cannot be confirmed, so it does not pass a hard filter."""
+    wanted = {"ram": filters.get("min_ram_gb"), "storage": filters.get("min_storage_gb")}
+    if not any(wanted.values()):
+        return True
+    specs = normalized_specs(detail.Specifications, variant, None)
+    return all((size := _gigabytes(specs.get(key))) is not None and size >= minimum
+               for key, minimum in wanted.items() if minimum)
+
+
 class AiTools:
     """Called inside the orchestrator's short authorized transaction; never commits or calls the model."""
 
@@ -154,10 +203,20 @@ class AiTools:
         context.references = context.state.last_list()
         context.constraints = context.intent.filters()
         context.ranking = RankingCriteria(context.intent.needs, context.intent.soft_brands())
+        if context.intent.intent == "comparison_guidance":
+            return
+        if context.intent.intent == "product_compatibility":
+            AiCompatibility(self.catalog, context, clock=self.clock, variant_match=_mentions_variant).prepare()
+            return
         if context.intent.clarification:
             return
         try:
-            self._resolve_promotion_products(context)
+            if context.intent.comparison_search:
+                self._select_comparison_products(context)
+                if context.intent.clarification or not context.intent.references:
+                    return
+            self._resolve_comparison_products(context)
+            self._resolve_named_products(context)
             if context.intent.clarification:
                 return
             if context.intent.references:
@@ -171,6 +230,8 @@ class AiTools:
                                                              spec_limit=DESCRIBED_SPECS if describe else 12))
                 if context.intent.intent == "explain_recommendation":
                     self._explain(context, details)
+                elif context.intent.intent == "product_comparison":
+                    self._comparison_items(context, details)
             if context.intent.intent == "policy_inquiry":
                 context.policy = self._policy(context)
             elif context.intent.intent == "promotion_inquiry":
@@ -182,7 +243,131 @@ class AiTools:
         except (BusinessRuleError, NotFoundError):
             pass  # The model can still read the catalog with its own tool calls.
 
-    def _resolve_promotion_products(self, context):
+    def _select_comparison_products(self, context):
+        """A shopping comparison uses the existing filtered/ranked search and locks one eligible SKU per model."""
+        text = fold(context.question)
+        sort = next((sort for terms, sort in PREFETCH_SORTS if any(term in text for term in terms)), "price_asc")
+        context.prefetched = self.search_products(SearchProductsArguments(sort=sort), context)
+        products = context.prefetched["Products"][:context.intent.requested_count]
+        if not products:
+            return
+        if len(products) == 1:
+            context.intent.clarification = ("Hiện mình chỉ tìm được 1 mẫu đáp ứng điều kiện của bạn, "
+                                            "chưa đủ 2 mẫu để lập bảng so sánh. Bạn muốn nới ngân sách hoặc bớt tiêu chí nào?")
+            return
+        context.intent.references = tuple({"ProductId": product["ProductId"], "ProductName": product["Name"],
+            "Slug": product["Slug"], "ProductVariantId": product["Variants"][0]["ProductVariantId"], "Rank": index}
+            for index, product in enumerate(products, 1))
+
+    def _resolve_comparison_products(self, context):
+        """Resolve explicitly named subjects via the public catalog, before Gemini can pick a match."""
+        intent = context.intent
+        if intent.intent != "product_comparison" or intent.references or intent.clarification:
+            return
+        question = re.sub(r"^.*?\bso s[áa]nh\s+(?:(?:giúp|giùm|hộ|cho)\s+(?:mình|tôi|em|tui|anh|chị)\s+)?", "",
+                          context.question, flags=re.I).strip(" .?!")
+        if (not context.state.last_list() and re.search(r"\b(?:may|mau|san pham|cai|con|laptop|dien thoai) nao\b", fold(question))
+                and not re.search(r"\d", question)):
+            intent.clarification = "Mình chưa xác định được các mẫu cần so sánh. Bạn muốn so sánh 2 hoặc 3 sản phẩm nào?"
+            return
+        # A trailing question ('… khác nhau thế nào?', '…, máy nào tốt hơn?') is not part of the last model name.
+        question = re.split(r"(?:\s+|\s*,\s*)(?:khác nhau|khác gì|có gì|có khác|thì|nên|cái nào|máy nào|mẫu nào|con nào"
+                            r"|loại nào|tốt hơn|ra sao|thế nào|như thế nào)\b", question, maxsplit=1, flags=re.I)[0]
+        # Remove criteria before splitting/counting subjects: their commas and 'và' do not name more products.
+        question = _strip_aspect(question)
+        question = re.split(r"\s+(?:về|theo)(?:\s*:\s*|\s+)", question, maxsplit=1, flags=re.I)[0].rstrip(" .,;?!")
+        if re.fullmatch(rf"{_ASPECT}(?:\s*(?:[,;]|\bva\b)\s*{_ASPECT})*", fold(question)):
+            return  # "… rồi so sánh CPU, RAM, SSD…" contains criteria only; it names no products.
+        # The user text alone supplies queries; the limit applies to actual subjects only.
+        chunks = re.split(r"\s+(?:v[àa]|v[ớo]i|vs\.?|versus)\s+|\s*[,;]\s*", question, flags=re.I)
+        if len(chunks) < 2:
+            return
+        if len(chunks) > 3:
+            intent.clarification = "Mỗi bảng so sánh hỗ trợ tối đa 3 sản phẩm. Bạn chọn 2 hoặc 3 mẫu nhé."
+            return
+        references = []
+        for index, chunk in enumerate(chunks, 1):
+            query = re.split(r"\s+(?:về|theo|cho|để)\s+", chunk, maxsplit=1, flags=re.I)[0].strip(" .?!")
+            query = _strip_aspect(re.sub(r"^(?:giữa\s+)?(?:(?:máy|mẫu|sản phẩm)\s+)?", "", query, flags=re.I))
+            if not query:
+                return  # Nothing to look up; the model can still read the catalog.
+            found = self.catalog.search_products(keyword=query[:100], page_size=10, sort="relevance")
+            if not found.Items:
+                intent.clarification = f"Mình chưa tìm thấy {query} đang hiển thị tại VieTech. Bạn kiểm tra lại tên hoặc phiên bản nhé."
+                return
+            exact = [p for p in found.Items if fold(p.Name) == fold(query)]
+            if len(exact) == 1:
+                matches = exact
+            elif found.Total == 1:
+                matches = found.Items
+            elif found.Total <= len(found.Items):
+                matches = closest_products(query, found.Items)
+            else:
+                matches = []
+            if len(matches) != 1:
+                names = ", ".join(p.Name for p in (matches or found.Items)[:5])
+                intent.clarification = f"Có nhiều sản phẩm khớp với {query}: {names}. Bạn chọn mẫu và phiên bản cụ thể nhé."
+                return
+            product = matches[0]
+            references.append({"ProductId": str(product.ProductId), "ProductName": product.Name,
+                               "Slug": product.Slug, "Rank": index})
+        intent.references = tuple(references)
+
+    def _comparison_items(self, context, details):
+        """Lock referenced SKUs, including out-of-stock ones. Never substitute another version."""
+        items = []
+
+        def colour_default(detail, variants):
+            kind = context.vocab.kind(str(detail.CategoryId))
+            return colour_only_default(variants, spec_signature(detail.Specifications, kind))
+
+        # The version question names the first product still lacking a version, so a reply ("Bản 16GB / 512GB")
+        # chooses for that one. Others are matched only when the question names them. Versions that differ only in
+        # colour compare the same, so they are never asked about.
+        pending = next((ref for ref in context.intent.references if not ref.get("ProductVariantId")
+                        and (detail := details.get(uuid.UUID(ref["ProductId"]))) is not None
+                        and len(active := [v for v in detail.Variants if v.IsActive]) > 1
+                        and colour_default(detail, active) is None), None)
+        for ref in context.intent.references:
+            detail = details.get(uuid.UUID(ref["ProductId"]))
+            if detail is None:
+                context.intent.clarification = "Một sản phẩm không còn được hiển thị hoặc đã ngừng bán. Bạn chọn lại mẫu để so sánh nhé."
+                return []
+            active = variants = [v for v in detail.Variants if v.IsActive]
+            if ref.get("ProductVariantId"):
+                variants = [v for v in variants if str(v.ProductVariantId) == ref["ProductVariantId"]]
+            elif len(variants) > 1 and (ref is pending or fold(detail.Name) in fold(context.question)):
+                matched = [v for v in variants if _mentions_variant(v.VariantName, context.question)]
+                if not matched:
+                    matched = [v for v in variants if v.Storage and _mentions_variant(v.Storage, context.question)]
+                if len(matched) == 1:
+                    variants = matched
+            colour_only = colour_default(detail, active) if len(active) > 1 else None
+            if len(variants) > 1 and colour_only is not None:
+                variants = [colour_only]
+            if len(variants) != 1:
+                context.intent.clarification = (f"Bạn muốn so sánh phiên bản nào của {detail.Name}? "
+                    + ", ".join(v.VariantName for v in variants[:6]) if variants else
+                    f"Phiên bản của {detail.Name} không còn được hiển thị. Bạn chọn lại phiên bản nhé.")
+                return []
+            if context.intent.comparison_search and variants[0].ProductVariantId not in {
+                    v.ProductVariantId for v in self._variants(detail, self._constraints(context))}:
+                context.intent.clarification = (f"{detail.Name} hiện không còn phiên bản đã chọn đáp ứng ngân sách "
+                    "hoặc tình trạng còn hàng. Bạn thử lại để mình chọn các mẫu phù hợp nhé.")
+                return []
+            ref["ProductVariantId"] = str(variants[0].ProductVariantId)
+            items.append((detail, variants[0]))
+        if not 2 <= len(items) <= 3 or len({v.ProductVariantId for _, v in items}) != len(items):
+            context.intent.clarification = "Bạn chọn từ 2 đến 3 sản phẩm hoặc phiên bản khác nhau để so sánh nhé."
+            return []
+        context.comparison = build_comparison(items, context, self.clock().isoformat())
+        if context.intent.comparison_search and len(items) < context.intent.requested_count:
+            context.comparison["Caveats"].append(
+                f"Hiện chỉ tìm được {len(items)} mẫu đáp ứng điều kiện của bạn, so với {context.intent.requested_count} mẫu yêu cầu.")
+        return items
+
+    def _resolve_named_products(self, context):
+        """Resolve a model for offers, price or availability without substituting another product."""
         intent = context.intent
         if not intent.product_query or intent.references or intent.clarification:
             return
@@ -192,7 +377,7 @@ class AiTools:
                                     "Bạn kiểm tra lại tên hoặc gửi link sản phẩm giúp mình nhé.")
             return
         if found.Total > 5:
-            intent.clarification = f"Bạn muốn hỏi ưu đãi của mẫu hoặc phiên bản {intent.product_query} nào?"
+            intent.clarification = f"Bạn muốn hỏi mẫu hoặc phiên bản {intent.product_query} nào?"
             return
         intent.references = tuple({"ProductId": str(product.ProductId), "ProductName": product.Name,
                                    "Rank": index, "Slug": product.Slug} for index, product in enumerate(found.Items, 1))
@@ -231,13 +416,17 @@ class AiTools:
             if topic == "promotion":
                 policy["Promotion"] = self._promotion_lines(context)
             elif topic == "warranty":
-                lines = list(WARRANTY_LINES)
                 shown = (context.intent.references or context.state.last_list() or context.state.last_focus())[:5]
                 details = self.catalog.get_product_details([uuid.UUID(ref["ProductId"]) for ref in shown]) if shown else {}
+                if "category" in context.intent.explicit and context.intent.category_id:
+                    root = context.vocab.root_id(context.intent.category_id)
+                    details = {key: detail for key, detail in details.items()
+                               if context.vocab.root_id(str(detail.CategoryId)) == root}
                 months = [f"{ref.get('Rank', index)}. {detail.Name}: "
                           + (f"{detail.WarrantyMonths} tháng" if detail.WarrantyMonths else "không có bảo hành")
                           for index, ref in enumerate(shown, 1)
                           if (detail := details.get(uuid.UUID(ref["ProductId"]))) is not None]
+                lines = list(warranty_lines(context.question, has_products=bool(months)))
                 if months:
                     lines = ["Thời hạn bảo hành của các mẫu vừa giới thiệu:", *months, *lines]
                 policy["Warranty"] = lines
@@ -296,6 +485,10 @@ class AiTools:
             return []
         if str(detail.BrandId) in filters.get("excluded_brand_ids", []):
             return []
+        if filters.get("brand_ids") and str(detail.BrandId) not in filters["brand_ids"]:
+            return []
+        if not meets_features(detail, filters.get("required_features", ())):
+            return []
         if filters.get("category_ids") and str(detail.CategoryId) not in filters["category_ids"]:
             return []
         rows = []
@@ -304,6 +497,8 @@ class AiTools:
             if (not variant.IsActive or variant.StockQuantity <= 0
                     or (filters.get("min_price") is not None and price < Decimal(str(filters["min_price"])))
                     or (filters.get("max_price") is not None and price > Decimal(str(filters["max_price"])))):
+                continue
+            if not _has_memory(detail, variant, filters):
                 continue
             rows.append(variant)
         return sorted(rows, key=lambda v: (_price(v), str(v.ProductVariantId)))
@@ -323,11 +518,14 @@ class AiTools:
         if not summary:
             facts["Specifications"] = public_specifications(detail.Specifications, spec_limit)
             facts["WarrantyMonths"] = detail.WarrantyMonths
+        if filters.get("required_features"):
+            facts["RequiredFeatureEvidence"] = [feature_evidence(detail, feature)
+                for feature in filters["required_features"] if feature_evidence(detail, feature)]
         return facts
 
     def _excluded(self, product_id, name, context):
         intent = context.intent
-        return bool(intent and intent.recommending and (
+        return bool(intent and (intent.recommending or intent.comparison_search) and (
             product_id in intent.excluded_product_ids or model_key(name) in intent.excluded_model_keys))
 
     def _candidate(self, detail, variant, context):
@@ -344,7 +542,7 @@ class AiTools:
         category_id = guard["category_id"] or (
             soften_category(self._category(args.category, vocab), vocab).id if args.category else None)
         brand_id = guard["brand_id"]
-        if not brand_id and args.brand:
+        if not brand_id and not guard.get("brand_ids") and args.brand:
             brand = self._match(args.brand, vocab.brands)
             named = re.search(r"\b" + re.escape(fold(brand.name)) + r"\b", question)
             # A brand the customer did not name must not narrow a recommendation; a soft brand is scored by T.
@@ -474,7 +672,7 @@ class AiTools:
 
     def list_offers(self, args, context):
         self._ensure(context)
-        self._resolve_promotion_products(context)
+        self._resolve_named_products(context)
         if context.intent.clarification:
             raise BusinessRuleError(context.intent.clarification, code="ai_reference_not_found")
         if args.product_id is None and context.intent.references:
@@ -512,16 +710,28 @@ class AiTools:
     # --- Final answer --------------------------------------------------------------------------------------------
 
     def finish(self, decision, context, max_products):
+        text, cards, references, notes = self._finish_answer(decision, context, max_products)
+        return customer_text(text), cards, references, customer_notes(notes)
+
+    def _finish_answer(self, decision, context, max_products):
         """Reload critical facts and return (text, cards, references, notes) from current public services.
 
         Gemini's `message` is shown only if every fact in it is grounded (ai_grounding); otherwise the backend's own
         wording is used. Cards, prices and stock always come from the backend.
         """
         self._ensure(context)
-        self._resolve_promotion_products(context)
+        self._resolve_named_products(context)
         notes = {"AnswerIntent": decision.intent, "AnswerSource": "backend"}
+        if context.intent.transaction:  # An order or payment request, whatever else the question asks.
+            return ORDER_ACTION, [], [], {**notes, "AnswerIntent": "handoff"}
+        if context.intent.intent == "comparison_guidance":
+            return COMPARISON_GUIDANCE, [], [], {**notes, "AnswerIntent": "chat"}
         if context.intent.clarification:
             return context.intent.clarification, [], [], {**notes, "AnswerIntent": "clarify"}
+        if context.intent.intent == "product_compatibility":
+            return AiCompatibility(self.catalog, context, clock=self.clock, variant_match=_mentions_variant).finish(decision, notes)
+        if decision.intent == "compatibility":
+            return CLARIFY["products"], [], [], {**notes, "AnswerIntent": "clarify"}
         if context.intent.intent == "promotion_inquiry" and not context.policy:
             # Direct/older callers may skip prepare(); they still must answer within the customer's scope.
             context.policy = {"Promotion": []}
@@ -540,13 +750,22 @@ class AiTools:
             notes["AnswerIntent"] = "offers" if context.intent.intent == "promotion_inquiry" else "policy"
             text = policy_text(policy)
             issue = return_message_issue(decision.message) if "Returns" in policy else None
+            if "Warranty" in policy:
+                warranty_message = decision.message or ""
+                if "Returns" in policy:
+                    warranty_message = ". ".join(part for part in re.split(r"[.!?\n]", warranty_message)
+                                                 if "bao hanh" in fold(part))
+                issue = issue or warranty_message_issue(warranty_message)
+            unscoped_warranty = "Warranty" in policy and not context.referenced
             unavailable_code = ("Promotion" in policy and requested_coupon(fold(context.question))
                                 and not context.offers)
             if issue:
                 notes["GroundingIssues"] = [issue]
-            if decision.intent in ("policy", "offers") and not (issue or unavailable_code):
+            if decision.intent in ("policy", "offers") and not (issue or unavailable_code or unscoped_warranty):
                 text = self._worded(decision, context, text, notes)
             return text, [], list(context.intent.references), notes
+        if (context.intent.intent == "product_comparison" and context.intent.references) or decision.intent == "compare":
+            return self._comparison(decision, context, notes, max_products)
         intent = decision.intent
         if intent == "clarify":
             fallback = context.intent.clarification or CLARIFY[decision.clarification]
@@ -617,7 +836,7 @@ class AiTools:
                                "SnapshotAt": self.clock().isoformat()})
             lines.append(f"\n**{rank_}. {detail.Name}**")
             if variant:
-                lines.append(f"- Phiên bản: {variant.VariantName}; giá: {money(price)}; còn hàng.")
+                lines.append(f"- Phiên bản: {variant.VariantName}, giá: {money(price)}, còn hàng.")
                 images = detail.VariantImages.get(variant.ProductVariantId) or detail.Images
                 image = next((image for image in images if image.IsDefault), images[0] if images else None)
                 card = {"ProductId": key, "Slug": detail.Slug, "ProductName": detail.Name,
@@ -628,20 +847,18 @@ class AiTools:
                 if len(cards) < limit:
                     cards.append(card)
                 lines.extend(self._reasons(evaluations.get(key), filters))
+                lines.extend("- " + evidence + "." for feature in filters.get("required_features", ())
+                             if (evidence := feature_evidence(detail, feature)))
             else:
                 lines.append("Hiện không có phiên bản còn hàng thỏa điều kiện đã tra cứu.")
             if intent in ("product", "compare"):
                 facts = self._public_product(detail, filters).get("Specifications", {})
-                keys = selection.specification_keys or self._relevant_keys(context.question, facts)
                 known = context.products[key].get("Specifications", {})
-                if selection.specification_keys and any(name not in known for name in keys):
-                    raise AiUnavailableError("AI chọn thông số chưa được tra cứu.", code="ai_ungrounded_output")
-                lines.extend(f"- {name}: {facts.get(name, 'catalog chưa có thông tin')}" for name in keys)
+                # A key this turn did not read is dropped, never shown: "Bảo hành" is WarrantyMonths, listed below.
+                keys = ([name for name in selection.specification_keys if name in known]
+                        or self._relevant_keys(context.question, facts))
+                lines.extend(f"- {name}: {facts.get(name, 'Chưa có thông tin')}" for name in keys)
                 lines.append(f"- Bảo hành: {detail.WarrantyMonths} tháng.")
-        if evaluations and "battery" in context.ranking.needs:
-            lines.append("Dung lượng pin chỉ là tín hiệu từ thông số; thời lượng thực tế tùy cách sử dụng.")
-        if evaluations and "camera" in context.ranking.needs:
-            lines.append("Camera được đánh giá theo chống rung/ống kính ghi trong thông số, không theo số MP.")
         fallback = "\n".join([self._intro(intent, context, len(products)), *lines]).strip()
         if intent == "recommend" and products:
             fallback += "\nBạn muốn mình so sánh chi tiết các mẫu này hoặc xem thêm lựa chọn khác không?"
@@ -654,6 +871,55 @@ class AiTools:
             text += f"\nHiện mình chỉ tìm được {len(cards)} {scope} phù hợp với nhu cầu này."
         return text, cards, references, notes
 
+    def _comparison(self, decision, context, notes, max_products):
+        if context.intent.intent != "product_comparison" or not context.intent.references:
+            # The model chose to compare (the backend resolved no subjects, or read the question as another intent
+            # such as "máy thứ hai có gì hơn …"): use its selection, limited to products read in this turn.
+            refs = []
+            for index, selection in enumerate(decision.products, 1):
+                key = str(selection.product_id)
+                public = context.products.get(key)
+                if public is None:
+                    raise AiUnavailableError("AI chọn sản phẩm chưa được tra cứu.", code="ai_ungrounded_output")
+                if selection.product_variant_id and str(selection.product_variant_id) not in {
+                        v["ProductVariantId"] for v in public["Variants"]}:
+                    raise AiUnavailableError("AI chọn phiên bản chưa được tra cứu.", code="ai_ungrounded_output")
+                refs.append({"ProductId": key, "Rank": index,
+                             "ProductVariantId": str(selection.product_variant_id) if selection.product_variant_id else None})
+            context.intent.references = tuple(refs)
+        ids = [uuid.UUID(ref["ProductId"]) for ref in context.intent.references]
+        items = self._comparison_items(context, self.catalog.get_product_details(ids))
+        if context.intent.clarification:
+            return context.intent.clarification, [], [], {**notes, "AnswerIntent": "clarify"}
+        snapshot = context.comparison
+        # Derive analysis from explicit specs, documented architecture facts and Recommendation Engine evidence.
+        # Numeric grounding alone cannot prove 'chạy Android Studio mượt' or 'camera đẹp hơn'.
+        notes.update(AnswerIntent="compare", Comparison=snapshot)
+        if decision.message:
+            _, issues = check_message(decision.message, self._facts(context, items, [str(d.ProductId) for d, _ in items]))
+            if issues:
+                notes["GroundingIssues"] = issues[:5]
+        lines = ["So sánh các mẫu sau:"]
+        cards, references = [], []
+        for index, (product, (detail, variant)) in enumerate(zip(snapshot["Products"], items), 1):
+            references.append({"Rank": index, "ProductId": product["ProductId"], "Slug": product["Slug"],
+                "ProductName": product["ProductName"], "ProductVariantId": product["ProductVariantId"],
+                "Price": product["Price"], "ModelKey": model_key(detail.Name), "SnapshotAt": snapshot["SnapshotAt"]})
+            lines.append(f"\n### {product['ProductName']}\nPhiên bản: {product['VariantName']}.")
+            for row in snapshot['Rows']:
+                value = row['Values'][index - 1]
+                lines.append(f"- {row['Label']}: " + value.replace('\n', '\n  '))
+            if product['Strengths']:
+                lines.append('\nCách sử dụng phù hợp:')
+                lines.extend('- ' + line.replace('\n', '\n  ') for line in product['Strengths'])
+            if len(cards) < max_products:
+                cards.append({**{k: product[k] for k in ("ProductId", "ProductVariantId", "ProductName", "VariantName",
+                    "Slug", "ImageUrl", "Price", "InStock")}, "Rank": index, "SnapshotAt": snapshot["SnapshotAt"],
+                    "OriginalPrice": str(variant.OriginalPrice if variant.OriginalPrice is not None else variant.Price)})
+        if snapshot["Recommendation"]:
+            lines.append('\n### Chọn theo nhu cầu\n' + snapshot["Recommendation"])
+        return "\n".join(lines), cards, references, notes
+
     def _explanation(self, decision, context, notes):
         """Text only (the cards were shown before); the references keep their ranks so "máy thứ hai" still works."""
         lines, references = [self._method(context)], []
@@ -664,7 +930,7 @@ class AiTools:
             references.append(dict(ref))
             lines.append(f"\n**{ref.get('Rank', len(references))}. {context.products[key]['Name']}**")
             lines.extend(self._reasons(context.explained.get(key), context.filters[key])
-                         or ["Catalog chưa đủ thông số để nêu lý do chi tiết cho mẫu này."])
+                         or ["Chưa có đủ thông số để giải thích chi tiết mức phù hợp của mẫu này."])
         text = self._worded(decision, context, "\n".join(lines), notes, order=[ref["ProductId"] for ref in references])
         return text, [], references, notes
 
@@ -688,7 +954,7 @@ class AiTools:
                 (i for i, word in enumerate(KEY_SPECS) if word in fold(item[0])), len(KEY_SPECS)))
             lines += [f"- {name}: {value}" for name, value in specs[:8]]
             if not specs:
-                lines.append("- Catalog chưa có thông số chi tiết cho mẫu này.")
+                lines.append("- Chưa có thông số chi tiết cho mẫu này.")
             lines.append(f"- Bảo hành: {public['WarrantyMonths']} tháng." if public.get("WarrantyMonths")
                          else "- Không có bảo hành.")
         lines.append("Bạn muốn mình so sánh các mẫu này hay giải thích vì sao chúng phù hợp với nhu cầu của bạn?")
@@ -710,7 +976,7 @@ class AiTools:
         if intent == "compare":
             return "So sánh nhanh theo thông số hiện có:"
         if intent == "product":
-            return "Thông tin bạn hỏi:" if count else ""
+            return "Mẫu bạn hỏi:" if count else ""
         conditions = self._conditions(context)
         if context.intent.intent == "recommend_more":
             return f"Mình tìm thêm được {count} mẫu khác{conditions}:"
@@ -731,7 +997,12 @@ class AiTools:
         brand = vocab.brand(filters["brand_id"])
         if brand:
             parts.append(f"hãng {brand.name}")
-        return f" với {'; '.join(parts)}" if parts else ""
+        if filters.get("min_ram_gb"):
+            parts.append(f"RAM từ {filters['min_ram_gb']} GB")
+        if filters.get("min_storage_gb"):
+            size = filters["min_storage_gb"]
+            parts.append(f"bộ nhớ từ {size // 1024} TB" if size % 1024 == 0 else f"bộ nhớ từ {size} GB")
+        return f" với {', '.join(parts)}" if parts else ""
 
     def _no_results_text(self, context):
         category = context.vocab.category(context.intent.filters()["category_id"]) if context.intent else None
@@ -761,7 +1032,7 @@ class AiTools:
             lines += [f"• {self._coupon_line(coupon)}" for coupon in list(coupons.values())[:5]]
         else:
             lines.append("VieTech hiện chưa tìm thấy mã ưu đãi công khai còn hiệu lực trong phạm vi vừa tra cứu.")
-        lines.append("Điều kiện và khả năng áp dụng được kiểm tra lại tại giỏ hàng; giá sản phẩm đã tính ưu đãi tự động phù hợp.")
+        lines.append("Điều kiện và khả năng áp dụng được kiểm tra lại tại giỏ hàng, giá sản phẩm đã tính ưu đãi tự động phù hợp.")
         return "\n".join(lines)
 
     def _offer_category_ids(self, context):
@@ -802,7 +1073,7 @@ class AiTools:
                         chosen = next(v for v in public["Variants"] if v["ProductVariantId"] == str(variant.ProductVariantId))
                         chosen.update(OriginalPrice=str(original), DiscountAmount=str(discount))
                         info = (f"giảm {money(discount)}, còn {money(sale)} (giá gốc {money(original)})"
-                                if discount else f"chưa có giảm giá tự động; giá hiện tại {money(sale)}")
+                                if discount else f"chưa có giảm giá tự động, giá hiện tại {money(sale)}")
                     else:
                         info = "hiện chưa có phiên bản còn hàng để xác nhận ưu đãi"
                     product_lines.append(f"- {info}.")
@@ -842,8 +1113,8 @@ class AiTools:
         discount = f"{format(value.normalize(), 'f')}%" if coupon["DiscountType"] == "Percentage" else money(value)
         maximum = f", giảm tối đa {money(coupon['MaxDiscountAmount'])}" if coupon["MaxDiscountAmount"] is not None else ""
         end = datetime.fromisoformat(coupon["EndDate"]).astimezone(VIETNAM_TZ).strftime("%d/%m/%Y")
-        return (f"{coupon['Code']}: giảm {discount}{maximum}; đơn tối thiểu {money(coupon['MinOrderValue'])}; "
-                f"hạn {end}; tối đa {coupon['PerCustomerUsageLimit']} lượt/khách.")
+        return (f"{coupon['Code']}: giảm {discount}{maximum}, đơn tối thiểu {money(coupon['MinOrderValue'])}, "
+                f"hạn {end}.")
 
     @staticmethod
     def _relevant_keys(question, specifications):
@@ -864,6 +1135,8 @@ class AiTools:
         if not decision.message:
             return fallback
         message, issues = check_message(decision.message, self._facts(context, selected, order))
+        if not customer_text(message):
+            issues.append("câu trả lời chỉ có lời kết mặc định")
         if issues:
             notes["GroundingIssues"] = issues[:5]
             return fallback
@@ -987,7 +1260,7 @@ class AiTools:
             why.append(f"trong ngân sách {money(filters['max_price'])}")
         if evaluation.soft_brand:
             why.append("đúng hãng bạn ưu tiên")
-        lines = [f"- Phù hợp: {'; '.join(why)}."] if why else []
+        lines = [f"- Phù hợp: {', '.join(why)}."] if why else []
         if evaluation.gaps:
-            lines.append(f"- Lưu ý: {'; '.join(evaluation.gaps[:3])}.")
+            lines.append(f"- Lưu ý: {', '.join(evaluation.gaps[:3])}.")
         return lines

@@ -76,22 +76,32 @@ class ProductSelection(ToolArguments):
 class PresentAnswerArguments(ToolArguments):
     # explain/policy answers are built by the backend from its own data; any products the model lists are ignored.
     intent: Literal["recommend", "product", "compare", "offers", "no_results", "clarify", "handoff", "chat", "explain",
-                    "policy"]
+                    "policy", "compatibility"]
     products: list[ProductSelection] = Field(default_factory=list, max_length=5)
     clarification: Literal["category", "budget", "usage", "brand", "products"] = "category"
     # Natural-language answer written by the model. The backend shows it only when every fact in it is grounded
     # in this turn's data (services/ai_grounding.py); otherwise its own text is used.
     message: str | None = Field(default=None, max_length=1500)
+    # Gemini may choose/reorder verified Vietnamese explanations; never supplies a status, port or invented claim.
+    compatibility_explanation_ids: list[Annotated[str, StringConstraints(min_length=1, max_length=40)]] = Field(
+        default_factory=list, max_length=6)
 
     @model_validator(mode="after")
     def selection_rules(self):
         ids = [p.product_id for p in self.products]
-        if len(ids) != len(set(ids)):
+        identities = [(p.product_id, p.product_variant_id) for p in self.products]
+        if len(identities) != len(set(identities)) or (self.intent != "compare" and len(ids) != len(set(ids))):
             raise ValueError("Không lặp sản phẩm")
+        if len(ids) != len(set(ids)) and any(p.product_variant_id is None for p in self.products):
+            raise ValueError("So sánh cùng sản phẩm phải chọn rõ từng phiên bản")
         if self.intent in ("recommend", "product") and not ids:
             raise ValueError("Cần chọn sản phẩm đã tra cứu")
-        if self.intent == "compare" and len(ids) < 2:
-            raise ValueError("So sánh cần ít nhất hai sản phẩm")
+        if self.intent == "compare" and not 2 <= len(ids) <= 3:
+            raise ValueError("So sánh cần từ hai đến ba sản phẩm")
+        if self.intent == "compatibility" and len(ids) > 2:
+            raise ValueError("Kiểm tra tương thích hỗ trợ tối đa hai thiết bị")
+        if self.compatibility_explanation_ids and self.intent != "compatibility":
+            raise ValueError("Mã giải thích tương thích chỉ dùng với intent compatibility")
         if self.intent in ("clarify", "handoff", "no_results", "offers", "chat") and ids:
             raise ValueError("Ý định này không kèm lựa chọn sản phẩm")
         return self

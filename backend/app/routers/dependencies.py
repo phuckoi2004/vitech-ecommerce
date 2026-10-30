@@ -18,6 +18,7 @@ from app.core.storage import AvatarStorage, get_avatar_storage
 from app.database import get_db
 from app.integrations.sepay import SePayConfigError, SePayQrGateway, SePaySettings
 from app.services import STAFF_OR_ADMIN, Actor, require_role
+from app.services.after_sales_policy import StorePolicyService
 from app.services.catalog import (
     BrandService,
     CategoryService,
@@ -81,6 +82,10 @@ def get_payment_gateway() -> PaymentGateway | None:
 
 def get_return_policy() -> ReturnPolicy:
     return ReturnPolicy.from_env()
+
+
+def get_store_policy_service(policy: Annotated[ReturnPolicy, Depends(get_return_policy)]) -> StorePolicyService:
+    return StorePolicyService(policy)
 
 
 S = TypeVar("S")

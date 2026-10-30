@@ -1,0 +1,152 @@
+{
+  "VerifiedAt": "2026-10-29",
+  "SnapshotFingerprint": "830150c68f84fe5dacdc414d4eaf917cb8c3c6edcebf93264ce3841b862cdcfb",
+  "Policy": "Round 3: only two existing port values may change. Mount VESA/weight are verified matches; conflicting size ranges remain manual. No new keys, rows, columns or tables.",
+  "Sources": [
+    {
+      "URL": "https://www.lge.co.kr/monitors/27g850a",
+      "Title": "LG 27G850A Korea: input signal specifications",
+      "ReadStatus": "read",
+      "LocalFile": "sources/lg-27g850a-korea.html"
+    },
+    {
+      "URL": "https://www.lg.com/hk_en/monitors/gaming/27g850a-b/",
+      "Title": "LG Hong Kong 27G850A-B: exact model and connectivity",
+      "ReadStatus": "read_via_web"
+    },
+    {
+      "URL": "https://global-download.acer.com/GDFiles/Document/User%20Manual/User%20Manual_Acer_1.0_A_A.pdf?BC=ACER&LC=en&OS=ALL&SC=AAP_7&Step1=&Step2=&Step3=SWIFT+SFA14-I31&acerid=639184060932297246",
+      "Title": "Acer Swift Air 14 User Manual, SFA14-I31, May 2026, pages 14 and 64",
+      "ReadStatus": "read",
+      "LocalFile": "sources/acer-sfa14-i31-manual.pdf",
+      "SHA256": "160dc9bfc82ab6635f2438ef995f62ba1c2fdd0c094f16b2f2f6a52a90d3703d"
+    },
+    {
+      "URL": "https://store.acer.com/vi-vn/laptop-swift-air-14-sfa14-i31-55nr",
+      "Title": "Acer Vietnam exact SKU SFA14-I31-55NR/NX.W4JSV.001: three USB ports",
+      "ReadStatus": "read_via_web"
+    },
+    {
+      "URL": "https://edravn.com/gia-do-man-hinh-edra-ema7304.html",
+      "Title": "Giá treo màn hình E-DRA EMA7304 17-34 inch manufacturer mechanical specifications",
+      "ReadStatus": "read"
+    },
+    {
+      "URL": "https://edravn.com/gia-do-man-hinh-edra-ema7310",
+      "Title": "Giá treo màn hình máy tính E-DRA EMA7310 13-32\" manufacturer mechanical specifications",
+      "ReadStatus": "read"
+    },
+    {
+      "URL": "https://e-dra.vn/arm-man-hinh-edra-ema7304/",
+      "Title": "EMA7304 alternate size range",
+      "ReadStatus": "read_conflicting_size_range_only"
+    }
+  ],
+  "Values": [
+    {
+      "ProductId": "1ed340b9-02e6-49d3-b40d-211e9bdbeae8",
+      "ProductName": "Màn hình Gaming LG UltraGear 27G850A-B",
+      "Path": "/Cổng kết nối",
+      "Before": "2 x HDMI; 1 x DisplayPort; 4 đầu cắm (Âm thanh + Mic); USB Downstream 3.2 Gen1; USB Upstream 3.2 Gen1",
+      "Proposed": "2 x HDMI 2.1 (nhận hình tối đa 4K@240Hz, FHD@480Hz); 1 x DisplayPort 2.1 (nhận hình tối đa 4K@240Hz, FHD@480Hz); 4 đầu cắm (Âm thanh + Mic); USB Downstream 3.2 Gen1; USB Upstream 3.2 Gen1",
+      "Decision": "correction",
+      "ChangeKind": "clarification",
+      "SourceURL": "https://www.lge.co.kr/monitors/27g850a",
+      "VerifiedAt": "2026-10-29",
+      "Confidence": "high",
+      "ModelMatch": "exact",
+      "RegionScope": "LG 27G850A hardware platform; exact 27G850A-B confirmed on LG Hong Kong. Korea per-input limits only; no regional warranty, adapter or bundle claims copied.",
+      "Reason": "LG công bố riêng cả HDMI 2.1 và DP 2.1 nhận 3840×2160 @ 240 Hz hoặc 1920×1080 @ 480 Hz. Trang LG Hong Kong xác nhận đúng 27G850A-B có 2 HDMI 2.1 và 1 DP 2.1. Giữ các cổng âm thanh/USB đã có. Chỉ ghi mức tối đa công bố, không tự xác nhận định dạng màu, độ sâu màu, DSC hay cáp."
+    },
+    {
+      "ProductId": "af1642ca-c06a-416a-8514-db105f4b4d99",
+      "ProductName": "Laptop Acer Swift Air 14 SFA14-I31-55NR",
+      "Path": "/Cổng giao tiếp",
+      "Before": "2x USB-C (USB4 40Gbps, Thunderbolt 4, sạc 5V/3A); 1x USB-C (DC-in 20V/100 W); 1x USB-A 3.2 Gen 1",
+      "Proposed": "2x USB-C (USB4 40Gbps, Thunderbolt 4, DisplayPort xuất hình, sạc 5V/3A, DC-in 20V/100 W); 1x USB-A 3.2 Gen 1",
+      "Decision": "correction",
+      "ChangeKind": "correction",
+      "SourceURL": "https://global-download.acer.com/GDFiles/Document/User%20Manual/User%20Manual_Acer_1.0_A_A.pdf?BC=ACER&LC=en&OS=ALL&SC=AAP_7&Step1=&Step2=&Step3=SWIFT+SFA14-I31&acerid=639184060932297246",
+      "VerifiedAt": "2026-10-29",
+      "Confidence": "high",
+      "ModelMatch": "exact",
+      "RegionScope": "Manufacturer manual explicitly covers SFA14-I31, the exact chassis of SFA14-I31-55NR; USB port count cross-checked against the exact Vietnam NX.W4JSV.001 listing.",
+      "Reason": "Hướng dẫn Acer Swift Air 14, Covers SFA14-I31, bản May 2026: trang 14 xác nhận USB-C hỗ trợ xuất âm thanh/hình ảnh DisplayPort, Thunderbolt 4, sạc 5 V/3 A và DC-in 20 V/100 W. Trang 64 xác nhận 40 Gbps và màn hình qua cáp chuyển nhưng không nêu Hz. Acer Việt Nam đúng SKU SFA14-I31-55NR/NX.W4JSV.001 ghi 2 USB-C + 1 USB-A, tổng 3 USB: DC-in là chức năng của USB-C, không phải cổng USB-C thứ ba. Không sao chép DP 2.1 từ SKU Philippines hoặc suy ra 4K60 từ Thunderbolt 4."
+    },
+    {
+      "ProductId": "1000f3e8-59ff-4555-ae56-277b70d842fc",
+      "ProductName": "Giá treo màn hình E-DRA EMA7304 17-34 inch",
+      "Path": "/Chuẩn VESA",
+      "Before": "75 x 75 mm, 100 x 100 mm",
+      "Proposed": "75 x 75 mm, 100 x 100 mm",
+      "Decision": "verified_match",
+      "ChangeKind": "clarification",
+      "SourceURL": "https://edravn.com/gia-do-man-hinh-edra-ema7304.html",
+      "VerifiedAt": "2026-10-29",
+      "Confidence": "high",
+      "ModelMatch": "exact",
+      "RegionScope": "Exact EDRA Vietnam mechanical mount model; physical fit only.",
+      "Reason": "Nguồn EDRA đúng model xác nhận VESA 75×75/100×100 mm và tải 2–10 kg. Đây là phụ kiện treo cơ khí; các thuộc tính hiện có đã đúng. Không thêm đầu vào video vào sản phẩm không phải màn hình."
+    },
+    {
+      "ProductId": "1000f3e8-59ff-4555-ae56-277b70d842fc",
+      "ProductName": "Giá treo màn hình E-DRA EMA7304 17-34 inch",
+      "Path": "/Tải trọng màn hình tối đa",
+      "Before": "2 - 10 kg",
+      "Proposed": "2 - 10 kg",
+      "Decision": "verified_match",
+      "ChangeKind": "clarification",
+      "SourceURL": "https://edravn.com/gia-do-man-hinh-edra-ema7304.html",
+      "VerifiedAt": "2026-10-29",
+      "Confidence": "high",
+      "ModelMatch": "exact",
+      "RegionScope": "Exact EDRA Vietnam mechanical mount model; physical fit only.",
+      "Reason": "Nguồn EDRA đúng model xác nhận VESA 75×75/100×100 mm và tải 2–10 kg. Đây là phụ kiện treo cơ khí; các thuộc tính hiện có đã đúng. Không thêm đầu vào video vào sản phẩm không phải màn hình."
+    },
+    {
+      "ProductId": "406a2e3f-d0a8-44e4-aa93-e0b8d1a97050",
+      "ProductName": "Giá treo màn hình máy tính E-DRA EMA7310 13-32\"",
+      "Path": "/Chuẩn VESA",
+      "Before": "75 x 75 mm, 100 x 100 mm",
+      "Proposed": "75 x 75 mm, 100 x 100 mm",
+      "Decision": "verified_match",
+      "ChangeKind": "clarification",
+      "SourceURL": "https://edravn.com/gia-do-man-hinh-edra-ema7310",
+      "VerifiedAt": "2026-10-29",
+      "Confidence": "high",
+      "ModelMatch": "exact",
+      "RegionScope": "Exact EDRA Vietnam mechanical mount model; physical fit only.",
+      "Reason": "Nguồn EDRA đúng model xác nhận VESA 75×75/100×100 mm và tải 2–10 kg. Đây là phụ kiện treo cơ khí; các thuộc tính hiện có đã đúng. Không thêm đầu vào video vào sản phẩm không phải màn hình."
+    },
+    {
+      "ProductId": "406a2e3f-d0a8-44e4-aa93-e0b8d1a97050",
+      "ProductName": "Giá treo màn hình máy tính E-DRA EMA7310 13-32\"",
+      "Path": "/Tải trọng màn hình tối đa",
+      "Before": "2 - 10 kg",
+      "Proposed": "2 - 10 kg",
+      "Decision": "verified_match",
+      "ChangeKind": "clarification",
+      "SourceURL": "https://edravn.com/gia-do-man-hinh-edra-ema7310",
+      "VerifiedAt": "2026-10-29",
+      "Confidence": "high",
+      "ModelMatch": "exact",
+      "RegionScope": "Exact EDRA Vietnam mechanical mount model; physical fit only.",
+      "Reason": "Nguồn EDRA đúng model xác nhận VESA 75×75/100×100 mm và tải 2–10 kg. Đây là phụ kiện treo cơ khí; các thuộc tính hiện có đã đúng. Không thêm đầu vào video vào sản phẩm không phải màn hình."
+    },
+    {
+      "ProductId": "1000f3e8-59ff-4555-ae56-277b70d842fc",
+      "ProductName": "Giá treo màn hình E-DRA EMA7304 17-34 inch",
+      "Path": "/Kích cỡ màn hình hỗ trợ",
+      "Before": "17 - 34 inch",
+      "Proposed": "17 - 34 inch",
+      "Decision": "manual_review",
+      "ChangeKind": "clarification",
+      "SourceURL": "https://edravn.com/gia-do-man-hinh-edra-ema7304.html",
+      "VerifiedAt": "2026-10-29",
+      "Confidence": "high",
+      "ModelMatch": "exact",
+      "RegionScope": "Exact EMA7304, unresolved published size-range discrepancy.",
+      "Reason": "Catalog/tên ghi 17–34 inch; edravn.com hiện ghi 13–32 inch, còn e-dra.vn ghi 13–34 inch. Nguồn không thống nhất nên giữ nguyên phạm vi kích cỡ và tên, chỉ xác nhận VESA/tải trọng; không dùng dữ liệu này để kết luận lắp vừa mọi màn hình."
+    }
+  ]
+}

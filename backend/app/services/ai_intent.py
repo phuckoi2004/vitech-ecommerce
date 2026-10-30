@@ -22,15 +22,17 @@ from app.core.search_text import fold
 
 from .ai_policy import POLICY_TERMS, RETURN_TERMS, policy_topics
 from .recommendation import NEEDS, detect_needs, model_key, priorities, product_type
+from .compatibility_intent import compatibility_question
+from .ai_product_requirements import FEATURE_LABELS, required_features
 
 INTENTS = ("product_recommendation", "recommend_more", "product_comparison", "product_information",
            "product_description", "price_inquiry", "promotion_inquiry", "policy_inquiry", "explain_recommendation",
-           "follow_up_question", "general_chat")
+           "follow_up_question", "general_chat", "product_compatibility", "comparison_guidance")
 RECOMMENDING = frozenset({"product_recommendation", "recommend_more"})
 ABOUT_PRODUCTS = frozenset({"product_comparison", "product_information", "product_description", "price_inquiry",
-                            "follow_up_question"})
+                            "follow_up_question", "product_compatibility"})
 # Answers about products already shown; they never start a new list for "máy thứ hai".
-ABOUT_SHOWN = frozenset({"explain", "describe", "offers", "policy"})
+ABOUT_SHOWN = frozenset({"explain", "describe", "offers", "policy", "compatibility"})
 
 # --- Budget -----------------------------------------------------------------------------------------------------
 
@@ -103,6 +105,29 @@ def budget_floor(question):
 def budget_cleared(question):
     text = fold(question)
     return any(term in text for term in _CLEAR_BUDGET)
+
+
+# --- Memory minimums ------------------------------------------------------------------------------------------------
+
+# "RAM 16GB", "16GB RAM", "RAM tối thiểu 16GB"; "SSD 512GB", "ổ cứng 1TB", "bộ nhớ 256GB". An unlabelled "16GB/512GB"
+# is not read, and "RAM dưới 16GB" is not a minimum.
+_AT_LEAST = r"\s*(?:tu|toi thieu|it nhat|tren|>=|:)?\s*"
+_RAM = re.compile(rf"\bram{_AT_LEAST}(\d{{1,3}})\s*gb\b|\b(\d{{1,3}})\s*gb\s*ram\b")
+_STORAGE = re.compile(rf"\b(?:ssd|o cung|rom|bo nho trong|bo nho|dung luong luu tru|luu tru)"
+                      rf"{_AT_LEAST}(\d{{1,4}})\s*(gb|tb)\b")
+_STORAGE_AFTER = re.compile(r"\b(\d{1,4})\s*(gb|tb)\s*(?:ssd|rom|o cung)\b")
+
+
+def memory_minimums(question):
+    """(minimum RAM GB, minimum storage GB) the question states, each None when not stated. A labelled "SSD 512GB"
+    wins over "512GB SSD", and a number already read as RAM ("RAM 16GB SSD 512GB") is never storage."""
+    text = fold(question)
+    ram = _RAM.search(text)
+    storage = _STORAGE.search(text) or next((match for match in _STORAGE_AFTER.finditer(text)
+                                             if not (ram and match.start() < ram.end() and ram.start() < match.end())),
+                                            None)
+    size = int(storage[1]) * (1024 if storage[2] == "tb" else 1) if storage else None
+    return (int(ram[1] or ram[2]) if ram else None), size
 
 
 # --- Vocabulary and saved conversation state ---------------------------------------------------------------------
@@ -214,13 +239,13 @@ FAMILY_HINTS = (
      "dien thoai"),
     (r"\bipad\b|\bgalaxy tab\b|\b(?:xiaomi|redmi) pad\b|\bmatepad\b", "may tinh bang"),
     (r"\bmacbook\b|\bthinkpad\b|\bthinkbook\b|\bideapad\b|\bvivobook\b|\bzenbook\b|\bvictus\b|\bpavilion\b"
-     r"|\binspiron\b|\bvostro\b|\baspire\b|\bnitro\b|\blegion\b|\btuf\b|\brog\b", "laptop"),
+    r"|\binspiron\b|\bvostro\b|\bxps\b|\blatitude\b|\baspire\b|\bnitro\b|\blegion\b|\btuf\b|\brog\b", "laptop"),
     (r"\bairpods\b|\bgalaxy buds\b", "tai nghe"),
 )
 PRODUCT_FAMILY = re.compile("|".join(pattern for pattern, _ in FAMILY_HINTS))
 
-# Words that make a named brand a preference, not a filter ("ưu tiên ASUS", "ASUS hoặc Lenovo").
-SOFT_TERMS = ("uu tien", "cung duoc", "hoac", "khong bat buoc")
+# "ASUS hoặc Lenovo" restricts the allowed brands; only explicit preference words make them soft.
+SOFT_TERMS = ("uu tien", "cung duoc", "khong bat buoc")
 # A comparison names several products, so a single brand in it is not the customer's only brand.
 COMPARE_TERMS = ("so sanh", "khac nhau", "khac gi", "nen chon", " hay ", " vs ")
 # A requested order is kept as asked instead of being re-ranked.
@@ -239,14 +264,21 @@ _FIRST_N = re.compile(rf"\b(hai|2|ba|3|bon|4|nam|5)\s+{_ITEM}\s+(?:dau|dau tien)
 _DEMONSTRATIVE = re.compile(rf"\b{_NOUN}\s+(?:nay|do|kia|tren|vua (?:roi|noi|nhac|tu van|goi y|de xuat|gioi thieu)"
                             r"|ban vua (?:noi|goi y|tu van))\b|\bvua (?:noi|nhac) (?:den|toi)\b")
 _WHOLE_LIST = re.compile(rf"\b(?:(?:cac|nhung|may|ca|tat ca)\s+(?:\d\s+|hai\s+|ba\s+|bon\s+|nam\s+)?|(?:\d|hai|ba|bon|nam)\s+){_NOUN}\s+"
-                         r"(?:tren|nay|do|vua (?:roi|noi|tu van|goi y|de xuat))\b"
+                         r"(?:tren|nay|do|vua (?:roi|noi|tu van|goi y|de xuat|gioi thieu))\b"
                          r"|\btrong (?:so )?(?:do|nay|cac mau tren|[2-5] mau|hai mau|ba mau|bon mau|nam mau)\b")
 
 _GREETING = re.compile(r"^(?:xin\s+)?(?:chao|hello|hi|hey|alo)\b|\bcam on\b|\bthank|\btam biet\b|\bbye\b")
 _PROMO = re.compile(r"\b(?:khuyen mai|ma giam|giam gia|uu dai|coupon|voucher|ma uu dai|ma khuyen mai|flash sale"
                     r"|sale|dang giam)\b")
 _COUPON_CODE = re.compile(r"(?:\b[mM][ãÃ]|\b[cC]ode)\s+[A-Z0-9]{4,}\b")
-_REJECT = re.compile(rf"\b(?:khong\s+(?:thich|ung|muon|lay|chon|hop)|bo)\s+{_NOUN}\s+(?:nay|do|kia|thu|so|vua)\b")
+# "Đặt giúp tôi 2 chiếc iPhone 17 và thanh toán luôn bằng thẻ": an order or payment the assistant would carry out
+# (S05). "Mua giúp mẹ" is a customer buying for someone else, so "mua" alone is not one.
+_FOR_ME = r"(?:giup|ho|dum|gium)"
+_TRANSACTION = re.compile(rf"\b(?:dat|order)\s+(?:hang\s+|don\s+|mua\s+)?{_FOR_ME}\s+(?:toi|minh|em|tui)\b"
+                          rf"|\b{_FOR_ME}\s+(?:toi|minh|em|tui)\s+(?:dat|order|thanh toan|chot don|len don)\b"
+                          rf"|\bthanh toan\s+(?:{_FOR_ME}|luon\s+(?:cho|bang|qua|di))\b"
+                          rf"|\bthem\b.{{0,40}}\bvao gio(?:\s+hang)?\s+{_FOR_ME}\b|\b(?:chot|len)\s+don\b(?!\s+gian)")
+_REJECT =re.compile(rf"\b(?:khong\s+(?:thich|ung|muon|lay|chon|hop)|bo)\s+{_NOUN}\s+(?:nay|do|kia|thu|so|vua)\b")
 _MORE = re.compile(
     r"\b(?:de xuat|goi y|gioi thieu|tu van|cho (?:toi|minh|em|tui)(?: xem)?|liet ke|show|xem)\s+(?:them|nua)\b"
     r"|\bthem\s+(?:\d+\s+|mot vai\s+|vai\s+|mot so\s+)?(?:mau|may|lua chon|san pham|option|phuong an|loai)\b"
@@ -303,6 +335,7 @@ class ShoppingIntent:
     follow_up: bool = False
     category_id: str | None = None
     brand_id: str | None = None
+    brand_ids: tuple[str, ...] = ()  # Any of these brands is required (ASUS or Lenovo).
     soft_brand_ids: tuple[str, ...] = ()
     excluded_brand_ids: tuple[str, ...] = ()
     min_budget: int | None = None
@@ -312,7 +345,7 @@ class ShoppingIntent:
     inherited: tuple[str, ...] = ()
     category_changed: bool = False
     references: tuple[dict, ...] = ()  # Resolved [{Rank, ProductId, ProductVariantId, ProductName, ...}]
-    product_query: str | None = None  # A named product to resolve in the public catalog before answering offers.
+    product_query: str | None = None  # A named model to resolve before answering price, availability or offers.
     clarification: str | None = None  # Set when a reference cannot be resolved: ask instead of guessing.
     excluded_product_ids: tuple[str, ...] = ()
     excluded_model_keys: tuple[str, ...] = ()
@@ -323,6 +356,14 @@ class ShoppingIntent:
     cheaper_than: int | None = None
     kind: str | None = None
     topics: tuple[str, ...] = ()  # policy_inquiry: promotion, warranty, returns.
+    compatibility_request: dict | None = None
+    transaction: bool = False  # Asks the assistant to order or pay: the backend answers that it cannot.
+    # Minimum RAM/storage of a recommendation ("RAM 16GB SSD 512GB"): hard filters, like the budget.
+    min_ram_gb: int | None = None
+    min_storage_gb: int | None = None
+    required_features: tuple[str, ...] = ()
+    comparison_search: bool = False  # Select candidates under shopping constraints, then build a comparison.
+    retained_slots: dict | None = None  # An explanatory turn does not change the customer's shopping constraints.
 
     @property
     def recommending(self):
@@ -330,26 +371,44 @@ class ShoppingIntent:
 
     def _applies(self, slot):
         """Inherited slots filter recommendations; a question about named products keeps only what it states."""
-        return slot in self.explicit or (self.intent in RECOMMENDING or self.intent == "explain_recommendation" or (
-            self.intent == "follow_up_question" and not self.references))
+        return slot in self.explicit or (self.intent in RECOMMENDING or self.comparison_search
+            or self.intent == "explain_recommendation" or (
+                self.intent == "follow_up_question" and not self.references))
 
     def filters(self):
         """Hard constraints for search_products/get_product; same keys as the saved AiConstraints."""
         budget, brand = self._applies("budget"), self._applies("brand")
-        return {"min_price": self.min_budget if budget else None, "max_price": self.max_budget if budget else None,
-                "brand_id": self.brand_id if brand else None,
-                "category_id": self.category_id if self._applies("category") else None,
-                "excluded_brand_ids": sorted(self.excluded_brand_ids) if brand else []}
+        filters = {"min_price": self.min_budget if budget else None, "max_price": self.max_budget if budget else None,
+                   "brand_id": self.brand_id if brand else None,
+                   "category_id": self.category_id if self._applies("category") else None,
+                   "excluded_brand_ids": sorted(self.excluded_brand_ids) if brand else []}
+        if brand and self.brand_ids:
+            filters["brand_ids"] = list(self.brand_ids)
+        if self._applies("features") and self.required_features:
+            filters["required_features"] = list(self.required_features)
+        if self._applies("memory"):
+            filters.update({key: value for key, value in (("min_ram_gb", self.min_ram_gb),
+                                                          ("min_storage_gb", self.min_storage_gb)) if value})
+        return filters
 
     def soft_brands(self):
         return frozenset(self.soft_brand_ids) if not self.brand_id else frozenset()
 
     def hard_constraints(self, vocab):
         filters = self.filters()
-        return {"Category": _name(vocab.category(filters["category_id"])), "MinBudget": filters["min_price"],
+        hard = {"Category": _name(vocab.category(filters["category_id"])), "MinBudget": filters["min_price"],
                 "MaxBudget": filters["max_price"], "Brand": _name(vocab.brand(filters["brand_id"])),
                 "ExcludedBrands": [_name(vocab.brand(id_)) for id_ in filters["excluded_brand_ids"]],
                 "ExcludedProducts": len(self.excluded_product_ids), "InStockOnly": True}
+        if filters.get("brand_ids"):
+            hard["AllowedBrands"] = [_name(vocab.brand(id_)) for id_ in filters["brand_ids"]]
+        if filters.get("required_features"):
+            hard["RequiredFeatures"] = [FEATURE_LABELS[f] for f in filters["required_features"]]
+        if filters.get("min_ram_gb"):
+            hard["MinRamGb"] = filters["min_ram_gb"]
+        if filters.get("min_storage_gb"):
+            hard["MinStorageGb"] = filters["min_storage_gb"]
+        return hard
 
     def soft_preferences(self, vocab):
         return {"UsageNeeds": [NEEDS[need].label for need in self.needs],
@@ -363,10 +422,21 @@ class ShoppingIntent:
             "Inherited": list(self.inherited), "References": [ref["ProductId"] for ref in self.references],
             "ExcludedProductIds": list(self.excluded_product_ids),
             **({"Topics": list(self.topics)} if self.topics else {}),
-            "Slots": {"CategoryId": self.category_id, "MinBudget": self.min_budget, "MaxBudget": self.max_budget,
+            "Slots": dict(self.retained_slots) if self.retained_slots is not None else {
+                      "CategoryId": self.category_id, "MinBudget": self.min_budget, "MaxBudget": self.max_budget,
                       "BrandId": self.brand_id, "SoftBrandIds": list(self.soft_brand_ids),
+                      **({"BrandIds": list(self.brand_ids)} if self.brand_ids else {}),
+                      **({"RequiredFeatures": list(self.required_features)} if self.required_features else {}),
                       "ExcludedBrandIds": list(self.excluded_brand_ids), "Needs": list(self.needs),
                       "Rejected": list(self.rejected), "RejectedKeys": list(self.rejected_keys),
+                      **({"PendingComparison": [dict(ref) for ref in self.references]}
+                         if self.intent == "product_comparison" and self.clarification and self.references else {}),
+                      **({"CompatibilitySubjects": [dict(ref) for ref in self.references],
+                          "CompatibilityRequest": self.compatibility_request or {},
+                          "PendingCompatibility": bool(self.clarification)}
+                         if self.intent == "product_compatibility" else {}),
+                      **({"MinRamGb": self.min_ram_gb} if self.min_ram_gb else {}),
+                      **({"MinStorageGb": self.min_storage_gb} if self.min_storage_gb else {}),
                       **({"RequestedCount": self.requested_count} if self.requested_count else {})},
         }
 
@@ -377,7 +447,12 @@ class ShoppingIntent:
                 "budget_min": hard["MinBudget"], "budget_max": hard["MaxBudget"],
                 "brand_required": hard["Brand"], "brands_excluded": hard["ExcludedBrands"],
                 "brands_preferred": soft["PreferredBrands"], "usage_needs": soft["UsageNeeds"],
-                "priorities": soft["Priorities"], "inherited": list(self.inherited)}
+                "priorities": soft["Priorities"], "inherited": list(self.inherited),
+                "ram_min_gb": hard.get("MinRamGb"), "storage_min_gb": hard.get("MinStorageGb")}
+        if hard.get("AllowedBrands"):
+            note["brands_required"] = hard["AllowedBrands"]
+        if hard.get("RequiredFeatures"):
+            note["required_features"] = hard["RequiredFeatures"]
         if self.category_changed:
             note["category_changed"] = True
         if self.excluded_product_ids:
@@ -411,7 +486,7 @@ def _ranks(text):
 
 
 def _describe(references):
-    return "; ".join(f"{ref.get('Rank', i)}. {ref['ProductName']}" if ref.get("ProductName") else f"mẫu {ref.get('Rank', i)}"
+    return ", ".join(f"{ref.get('Rank', i)}. {ref['ProductName']}" if ref.get("ProductName") else f"mẫu {ref.get('Rank', i)}"
                      for i, ref in enumerate(references, 1))
 
 
@@ -537,7 +612,7 @@ def _classify(text, *, promo, refs, listed, needs, category, budget, brands, nam
         return "product_recommendation"
     if _BETTER_EXIST.search(text) and listed:
         return "recommend_more"
-    if _COMPARE.search(text) and (refs or listed or named or "so sanh" in text):
+    if _COMPARE.search(text) and (refs or listed or named or "so sanh" in text or re.search(rf"\b{_NOUN}\s+nao\b", text)):
         return "product_comparison"
     if describe:
         return "product_description"
@@ -548,6 +623,8 @@ def _classify(text, *, promo, refs, listed, needs, category, budget, brands, nam
         return "product_information"
     if named and asks and not (needs or budget is not None) and not _RECOMMEND.search(text):
         return "product_information"  # "Có iPhone 16 Plus không?": availability of a named model.
+    if previous and any(memory_minimums(text)) and not named:
+        return "product_recommendation"  # "Chỉ lấy máy RAM từ 16GB" refines the saved search.
     if _RECOMMEND.search(text) or category or needs or budget is not None or brands:
         return "product_recommendation"
     if refs:
@@ -557,12 +634,50 @@ def _classify(text, *, promo, refs, listed, needs, category, budget, brands, nam
     return "general_chat"
 
 
+def comparison_guidance_question(question):
+    """Ask how a comparison handles missing specs, rather than asking to compare selected products."""
+    text = fold(question)
+    if not re.search(r"\bso sanh\b", text) or _TRANSACTION.search(text):
+        return False
+    if re.search(r"\b(?:hay|vui long|lam on)\s+so sanh\b|\bso sanh\s+(?:giup|cho)\b", text):
+        return False
+    missing = re.search(r"\b(?:thieu|chua co|khong co|khong ro|chua ro|khong biet|tu doan)\b", text)
+    accuracy_question = re.search(r"\bco (?:the )?so sanh\b|\bso sanh\b.*\b(?:chinh xac|duoc khong|duoc ko|the nao|ra sao)\b", text)
+    return bool(missing and _SPEC.search(text) and accuracy_question)
+
+
+def new_shopping_request(question):
+    """A budget, need, promotion, policy, comparison, 'cheaper/more' or recommendation request: never the continuation
+    of an earlier laptop/monitor check. Text only, so it also runs before a turn is admitted."""
+    text = fold(question)
+    return bool(budget_ceiling(question) is not None or budget_floor(question) is not None or budget_cleared(question)
+                or detect_needs(question) or _PROMO.search(text) or _COUPON_CODE.search(question)
+                or POLICY_TERMS.search(text) or _RECOMMEND.search(text) or _CHEAPER.search(text)
+                or _MORE.search(text) or _REJECT.search(text) or _COMPARE.search(text))
+
+
 def analyze(question, vocab: Vocabulary, state: ConversationState = ConversationState()):
     text = fold(question)
     previous = state.latest()
     prev = dict(previous.slots) if previous else {}
+    if comparison_guidance_question(question):
+        # Hypothetical counts/specs must not select earlier products or overwrite saved search slots.
+        category_id = prev.get("CategoryId")
+        return ShoppingIntent(intent="comparison_guidance", follow_up=bool(previous),
+                              category_id=category_id, kind=vocab.kind(category_id), retained_slots=prev)
     needs_now = detect_needs(question)
-    category, hinted = _categories(text, vocab)
+    count_text = re.sub(r"\b(\d{1,2}|mot|hai|ba|bon|nam)\s+(?:chiec|cai|con)\s+", r"\1 ", text) if _COMPARE.search(text) else text
+    count = _COUNT.search(count_text)
+    category_text = text
+    if _COMPARE.search(text):
+        # In "chọn 3 laptop rồi so sánh ... màn hình", the latter is a criterion, not the monitor category.
+        category_text = re.split(r"\b(?:roi|va|de|sau do)\s+so sanh\b", text, maxsplit=1)[0]
+        category_text = re.split(r"\b(?:ve|theo)\b", category_text, maxsplit=1)[0]
+    category, hinted = _categories(category_text, vocab)
+    if count and _COMPARE.search(text):
+        counted_category, counted_hint = _categories(count[0], vocab)
+        if counted_category and (category is None or vocab.root_id(category.id) != vocab.root_id(counted_category.id)):
+            category, hinted = counted_category, counted_hint
     mentioned, excluded, explicit_brands = _brands(text, vocab)
     ceiling, floor, cleared = budget_ceiling(question), budget_floor(question), budget_cleared(question)
     named = _names_product(text, mentioned)
@@ -579,11 +694,37 @@ def analyze(question, vocab: Vocabulary, state: ConversationState = Conversation
     intent = _classify(text, promo=promo, refs=refs or bool(clarification), listed=listed, needs=needs_now,
                        category=category and not hinted, budget=budget_signal,
                        brands=mentioned, named=named, previous=bool(previous), describe=describe)
+    if compatibility_question(question, state, new_request=new_shopping_request(question)):
+        # Device-specific ordinals/names are resolved by the compatibility adapter, across separate category lists.
+        intent, refs, clarification = "product_compatibility", (), None
+    if (previous and previous.answer_intent == "clarify" and prev.get("PendingComparison")
+            and intent in ("general_chat", "follow_up_question", "product_comparison")
+            and (re.search(r"\b(?:phien ban|ram)\b|\d+\s*[gt]b\b", text) or re.search(r"\bbản\b", question, re.I))):
+        # An explicit version reply continues the comparison that asked for it, including after browser reload. A new
+        # request ("Tư vấn laptop RAM 16GB dưới 25 triệu", a promotion or policy question) is answered as asked.
+        intent, refs, clarification = "product_comparison", tuple(dict(ref) for ref in prev["PendingComparison"]), None
     asked = bool(previous) and previous.answer_intent == "clarify"
     if intent == "general_chat" and asked and prev.get("CategoryId") and _ANY.search(text):
         intent = "product_recommendation"  # "Tùy bạn" after the criteria question: advise on the balanced profile.
-    if intent == "product_comparison" and not refs and not named and listed and not clarification:
+    # "So sánh 2 mẫu laptop ASUS rẻ nhất" asks for a new set: a brand not in the list, an order, a budget or another
+    # category. Only a question without such criteria ("Máy nào pin tốt hơn?") is about the list just shown.
+    new_set = bool(budget_signal is not None or any(term in text for term in EXPLICIT_ORDER)
+                   or (category and not hinted and not same_root)
+                   or any(not any(fold(brand.name) in fold(ref.get("ProductName") or "") for ref in listed)
+                          for brand in mentioned))
+    requested = (int(count[1]) if count[1].isdigit() else _COUNT_WORDS[count[1]]) if count else None
+    comparison_search = bool(intent == "product_comparison" and not (named or refs or clarification)
+                             and (category or prev.get("CategoryId")) and requested in (2, 3)
+                             and (budget_signal is not None or re.search(
+                                 r"\b(?:chon|tim|loc|lay|goi y|de xuat|tu van)\b", text)))
+    if intent == "product_comparison" and not refs and not named and listed and not clarification and not (new_set or comparison_search):
         refs = tuple(listed)  # "Máy nào pin tốt hơn?" compares the list just shown.
+    if intent == "product_comparison":
+        if (requested and requested > 3) or len(refs) > 3:
+            clarification = "Mỗi bảng so sánh hỗ trợ tối đa 3 sản phẩm. Bạn chọn 2 hoặc 3 mẫu và phiên bản cụ thể nhé."
+        elif refs and (len(refs) < 2 or requested and requested != len(refs)):
+            clarification = (f"Mình xác định được {len(refs)} mẫu: {_describe(refs)}. "
+                             "Bạn muốn so sánh 2 hoặc 3 mẫu nào?")
     if intent == "explain_recommendation" and (not refs or clarification) and not _ranks(text):
         refs, clarification = tuple(listed), None  # "Tại sao lại chọn máy này?" after a list: explain the list.
     if intent == "product_description" and not refs and not clarification:
@@ -606,9 +747,13 @@ def analyze(question, vocab: Vocabulary, state: ConversationState = Conversation
     if intent in RECOMMENDING and clarification and not _REJECT.search(text):
         clarification = None  # "Còn mẫu khác không?" needs no target; only a rejection does.
 
-    result = ShoppingIntent(intent=intent, references=refs, clarification=clarification,
-                            product_query=_promotion_product_query(text, mentioned) if promo else None,
+    result = ShoppingIntent(intent=intent, references=refs, clarification=clarification, comparison_search=comparison_search,
+                            product_query=_promotion_product_query(text, mentioned) if (promo or (
+                                named and not refs and (intent == "price_inquiry" or (
+                                    intent == "product_information"
+                                    and re.search(r"\bco\b.*\b(?:khong|ko)\b", text))))) else None,
                             explicit_order=any(term in text for term in EXPLICIT_ORDER),
+                            transaction=bool(_TRANSACTION.search(text)),
                             topics=policy_topics(text, promo=promo) if intent == "policy_inquiry" else ())
     explicit, inherited = set(), []
 
@@ -637,21 +782,24 @@ def analyze(question, vocab: Vocabulary, state: ConversationState = Conversation
 
     # Brands: a named brand replaces the old one; exclusions stay until the brand is named again.
     prev_excluded = set(prev.get("ExcludedBrandIds") or []) if same_group else set()
-    comparing = any(term in f" {text} " for term in COMPARE_TERMS)
+    comparing = not comparison_search and any(term in f" {text} " for term in COMPARE_TERMS)
     soft = any(term in text for term in SOFT_TERMS)
     if _CLEAR_BRAND.search(text):
         explicit.add("brand")
     elif mentioned or excluded:
         explicit.add("brand")
-        strict = explicit_brands[0] if len(explicit_brands) == 1 else (
+        allowed = [b for b in mentioned if b not in excluded]
+        strict = explicit_brands[0] if len(explicit_brands) == 1 and len(allowed) == 1 else (
             mentioned[0] if len(mentioned) == 1 and not soft and not excluded and not comparing else None)
         result.brand_id = strict.id if strict else None
+        result.brand_ids = tuple(b.id for b in mentioned if b not in excluded) if not (strict or soft or comparing) else ()
         # Brands named in a comparison are its subjects, not preferences for later recommendations.
-        result.soft_brand_ids = () if strict or comparing else tuple(b.id for b in mentioned if b not in excluded)
+        result.soft_brand_ids = () if strict or comparing or result.brand_ids else tuple(b.id for b in mentioned if b not in excluded)
         named_again = {b.id for b in mentioned if b not in excluded}
         result.excluded_brand_ids = tuple(sorted((prev_excluded - named_again) | {b.id for b in excluded}))
-    elif same_group and (prev.get("BrandId") or prev.get("SoftBrandIds") or prev_excluded):
+    elif same_group and (prev.get("BrandId") or prev.get("BrandIds") or prev.get("SoftBrandIds") or prev_excluded):
         result.brand_id = prev.get("BrandId")
+        result.brand_ids = tuple(prev.get("BrandIds") or ())
         result.soft_brand_ids = tuple(prev.get("SoftBrandIds") or ())
         result.excluded_brand_ids = tuple(sorted(prev_excluded))
         inherited.append("brand")
@@ -664,6 +812,28 @@ def analyze(question, vocab: Vocabulary, state: ConversationState = Conversation
     elif prev_needs:
         result.needs = prev_needs
         inherited.append("needs")
+
+    # Memory minimums of a recommendation: a stated one replaces the old one; a follow-up in the same group keeps it.
+    # A question about a named product ("Máy thứ hai có RAM 16GB không?") asks about it instead of filtering.
+    if intent in RECOMMENDING or comparison_search:
+        stated = dict(zip(("MinRamGb", "MinStorageGb"), memory_minimums(question)))
+        for slot, value in stated.items():
+            if value is None and same_group and prev.get(slot):
+                value = prev[slot]
+                if "memory" not in inherited:
+                    inherited.append("memory")
+            elif value is not None:
+                explicit.add("memory")
+            setattr(result, "min_ram_gb" if slot == "MinRamGb" else "min_storage_gb", value)
+
+    features_now = required_features(question)
+    if features_now:
+        result.required_features = features_now
+        explicit.add("features")
+    elif same_group and not re.search(r"\b(?:khong can|khong yeu cau|bo (?:loc|yeu cau))\b.*\b(?:chong on|anc)\b", text):
+        result.required_features = tuple(prev.get("RequiredFeatures") or ())
+        if result.required_features:
+            inherited.append("features")
 
     # Rejected and already shown products, by ProductId and canonical model name.
     rejected = list(prev.get("Rejected") or []) if same_group else []
@@ -684,7 +854,7 @@ def analyze(question, vocab: Vocabulary, state: ConversationState = Conversation
                 key = ref.get("ModelKey") or (model_key(ref["ProductName"]) if ref.get("ProductName") else None)
                 if key and key not in excluded_keys:
                     excluded_keys.append(key)
-    if intent in RECOMMENDING:
+    if intent in RECOMMENDING or comparison_search:
         result.excluded_product_ids, result.excluded_model_keys = tuple(excluded_ids), tuple(excluded_keys)
 
     # "Có mẫu nào rẻ hơn?": below the cheapest product referenced or just shown.
@@ -695,8 +865,9 @@ def analyze(question, vocab: Vocabulary, state: ConversationState = Conversation
             result.cheaper_than = int(min(prices))
             explicit.add("budget")
 
-    count = _COUNT.search(text)
-    if count and intent in RECOMMENDING:
+    if count and intent == "product_comparison":
+        result.requested_count = requested
+    elif count and intent in RECOMMENDING:
         value = count[1]
         result.requested_count = min(5, int(value) if value.isdigit() else _COUNT_WORDS[value])
     elif intent in RECOMMENDING and asked and (same_group or not prev_category):
@@ -708,8 +879,9 @@ def analyze(question, vocab: Vocabulary, state: ConversationState = Conversation
     # "Tôi muốn mua 1 chiếc điện thoại": no budget, need, brand or order yet, so ask before recommending. Asked once:
     # whatever the next reply leaves open is advised on the balanced profile instead of asking again.
     criteria = (result.min_budget is not None or result.max_budget is not None or "budget" in result.explicit
-                or result.needs or result.brand_id or result.soft_brand_ids or result.excluded_brand_ids
-                or result.explicit_order or result.cheaper_than or named)
+                or result.needs or result.brand_id or result.brand_ids or result.soft_brand_ids or result.excluded_brand_ids
+                or result.required_features
+                or result.explicit_order or result.cheaper_than or named or result.min_ram_gb or result.min_storage_gb)
     if intent == "product_recommendation" and not (refs or clarification or criteria or asked):
         result.clarification = criteria_question(vocab.category(result.category_id), result.kind)
     return result

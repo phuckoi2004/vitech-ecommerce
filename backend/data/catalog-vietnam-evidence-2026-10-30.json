@@ -1,0 +1,512 @@
+{
+  "Operation": "enrich_scoped_content",
+  "ReviewedAt": "2026-10-30",
+  "Rule": "Giữ nguyên bảng, cột và khóa thông số, chỉ bổ sung RAM trong mô tả hiệu năng và thu gọn chi tiết chưa xác nhận riêng tại Việt Nam",
+  "Products": [
+    {
+      "ProductId": "1b20538b-c72e-46b7-beca-d91aa18a485d",
+      "Name": "HONOR Pad V9 Wifi 8GB 256GB",
+      "SourceKind": "vietnam_crosscheck",
+      "VietnamSources": [
+        "https://www.honor.com/vn/tablets/honor-pad-v9/spec/",
+        "https://cellphones.com.vn/may-tinh-bang-honor-pad-v9-wifi.html",
+        "https://fptshop.com.vn/tin-tuc/danh-gia/danh-gia-honor-pad-v9-213467"
+      ],
+      "Sources": [
+        "https://www.honor.com/vn/tablets/honor-pad-v9/spec/",
+        "https://cellphones.com.vn/may-tinh-bang-honor-pad-v9-wifi.html",
+        "https://fptshop.com.vn/tin-tuc/danh-gia/danh-gia-honor-pad-v9-213467"
+      ],
+      "VariantScope": "HONOR Pad V9 Wi-Fi 8 GB 256 GB chính hãng Việt Nam, camera trước 8 MP từ đánh giá tại Việt Nam, không chép RAM 12 GB hoặc RAM Turbo Malaysia, bỏ f/2.0 và FF chưa đối chiếu riêng tại Việt Nam",
+      "Scope": "HONOR Pad V9 Wi-Fi 8 GB 256 GB chính hãng Việt Nam, camera trước 8 MP từ đánh giá tại Việt Nam, không chép RAM 12 GB hoặc RAM Turbo Malaysia, bỏ f/2.0 và FF chưa đối chiếu riêng tại Việt Nam",
+      "VerificationBasis": "vn_listing_plus_camera_review",
+      "Fields": {},
+      "DescriptionEdits": [
+        {
+          "Section": "Camera",
+          "Before": "<h2>Camera 13MP cho nhiều nhu cầu ghi hình</h2><p>Camera sau gồm <strong>13MP, f/2.0</strong>. Hệ thống camera cho phép lưu lại khung cảnh, chụp tài liệu và ghi nhớ những chi tiết cần thiết trong ngày.</p><p>Camera trước 8 MP với khẩu độ f/2.0 và lấy nét cố định phục vụ ảnh selfie, học trực tuyến và cuộc gọi video.</p><p><img src=\"https://cdn2.cellphones.com.vn/800x/media/catalog/product/m/a/may-tinh-bang-honor-pad-v9-wifi-1.jpg\" alt=\"HONOR Pad V9 Wifi 8GB 256GB – thiết kế sản phẩm 2\"></p>",
+          "After": "<h2>Camera 13MP cho nhiều nhu cầu ghi hình</h2><p>Camera sau gồm <strong>13MP, f/2.0</strong>. Hệ thống camera cho phép lưu lại khung cảnh, chụp tài liệu và ghi nhớ những chi tiết cần thiết trong ngày.</p><p>Camera trước 8 MP phục vụ ảnh selfie, học trực tuyến và cuộc gọi video.</p><p><img src=\"https://cdn2.cellphones.com.vn/800x/media/catalog/product/m/a/may-tinh-bang-honor-pad-v9-wifi-1.jpg\" alt=\"HONOR Pad V9 Wifi 8GB 256GB – thiết kế sản phẩm 2\"></p>"
+        }
+      ]
+    },
+    {
+      "ProductId": "2bb31327-234f-4c5c-9d30-9251863bfb63",
+      "Name": "iPhone 17 256GB",
+      "SourceKind": "vietnam_crosscheck",
+      "VietnamSources": [
+        "https://fptshop.com.vn/dien-thoai/iphone-17"
+      ],
+      "Sources": [
+        "https://fptshop.com.vn/dien-thoai/iphone-17"
+      ],
+      "VariantScope": "iPhone 17, A19, 256 GB, hàng chính hãng VN/A, SKU FPT 00921654",
+      "Scope": "iPhone 17, A19, 256 GB, hàng chính hãng VN/A, SKU FPT 00921654",
+      "VerificationBasis": "direct_vn_listing",
+      "Fields": {},
+      "DescriptionEdits": [
+        {
+          "Section": "Hiệu năng",
+          "Before": "<h2>Hiệu năng Apple A19</h2><p><strong>Apple A19</strong> là bộ xử lý trung tâm của máy. Từ mở ứng dụng, chỉnh sửa ảnh đến xử lý thông báo, các thành phần này cùng đảm nhiệm những thao tác bạn dùng thường xuyên trên điện thoại.</p><p>Máy ra mắt với <strong>iOS 26</strong>. Giao diện hệ điều hành cung cấp các công cụ quản lý ứng dụng, lưu trữ và cá nhân hóa thiết bị.</p>",
+          "After": "<h2>Hiệu năng Apple A19</h2><p><strong>Apple A19</strong> là bộ xử lý trung tâm của máy. Từ mở ứng dụng, chỉnh sửa ảnh đến xử lý thông báo, các thành phần này cùng đảm nhiệm những thao tác bạn dùng thường xuyên trên điện thoại.</p><p>Máy ra mắt với <strong>iOS 26</strong>. Giao diện hệ điều hành cung cấp các công cụ quản lý ứng dụng, lưu trữ và cá nhân hóa thiết bị.</p><p>RAM 8 GB phối hợp với bộ xử lý để duy trì các ứng dụng đang mở và chuyển đổi giữa những tác vụ thường dùng.</p>"
+        }
+      ]
+    },
+    {
+      "ProductId": "307bed5f-a07a-4b84-9c5a-a15ec1ec9e9b",
+      "Name": "iPhone 18 Pro 1TB",
+      "SourceKind": "vietnam_crosscheck",
+      "VietnamSources": [
+        "https://fptshop.com.vn/dien-thoai/iphone-18-pro?sku=00930916"
+      ],
+      "Sources": [
+        "https://fptshop.com.vn/dien-thoai/iphone-18-pro?sku=00930916",
+        "https://www.macrumors.com/2026/09/09/iphone-18-pro-and-pro-max-ram/",
+        "https://www.apple.com/vn/iphone-18-pro/specs/"
+      ],
+      "VariantScope": "iPhone 18 Pro, A20 Pro, 1 TB, hàng chính hãng VN/A, SKU FPT 00930916, không dùng bản Pro Max",
+      "Scope": "iPhone 18 Pro, A20 Pro, 1 TB, hàng chính hãng VN/A, SKU FPT 00930916, không dùng bản Pro Max",
+      "VerificationBasis": "vn_variant_plus_xcode",
+      "Fields": {},
+      "DescriptionEdits": [
+        {
+          "Section": "Hiệu năng",
+          "Before": "<h2>Hiệu năng A20 Pro</h2><p><strong>A20 Pro</strong> là bộ xử lý trung tâm của máy. Từ mở ứng dụng, chỉnh sửa ảnh đến xử lý thông báo, các thành phần này cùng đảm nhiệm những thao tác bạn dùng thường xuyên trên điện thoại.</p><p>Máy ra mắt với <strong>iOS 27</strong>. Giao diện hệ điều hành cung cấp các công cụ quản lý ứng dụng, lưu trữ và cá nhân hóa thiết bị.</p>",
+          "After": "<h2>Hiệu năng A20 Pro</h2><p><strong>A20 Pro</strong> là bộ xử lý trung tâm của máy. Từ mở ứng dụng, chỉnh sửa ảnh đến xử lý thông báo, các thành phần này cùng đảm nhiệm những thao tác bạn dùng thường xuyên trên điện thoại.</p><p>Máy ra mắt với <strong>iOS 27</strong>. Giao diện hệ điều hành cung cấp các công cụ quản lý ứng dụng, lưu trữ và cá nhân hóa thiết bị.</p><p>RAM 12 GB phối hợp với bộ xử lý để duy trì các ứng dụng đang mở và chuyển đổi giữa những tác vụ thường dùng.</p>"
+        }
+      ]
+    },
+    {
+      "ProductId": "6139416e-b238-4dca-85db-24c96459c13a",
+      "Name": "Huawei MatePad 11.5 S 2026 12GB 256GB - Kèm bàn phím",
+      "SourceKind": "vietnam_crosscheck",
+      "VietnamSources": [
+        "https://consumer.huawei.com/vn/tablets/matepad-11-5-s-2026/specs/",
+        "https://didongviet.vn/dchannel/cau-hinh-huawei-matepad-11-5-s-2026/",
+        "https://cellphones.com.vn/may-tinh-bang-huawei-matepad-11-5-s-2026.html"
+      ],
+      "Sources": [
+        "https://consumer.huawei.com/vn/tablets/matepad-11-5-s-2026/specs/",
+        "https://didongviet.vn/dchannel/cau-hinh-huawei-matepad-11-5-s-2026/",
+        "https://cellphones.com.vn/may-tinh-bang-huawei-matepad-11-5-s-2026.html"
+      ],
+      "VariantScope": "HUAWEI MatePad 11.5 S 2026, RAM 12 GB, ROM 256 GB, HarmonyOS 4.3, không dùng bản 11.5 không S, bỏ số lõi chưa công bố riêng trên trang Việt Nam",
+      "Scope": "HUAWEI MatePad 11.5 S 2026, RAM 12 GB, ROM 256 GB, HarmonyOS 4.3, không dùng bản 11.5 không S, bỏ số lõi chưa công bố riêng trên trang Việt Nam",
+      "VerificationBasis": "vn_review_with_manufacturer_memory",
+      "Fields": {},
+      "DescriptionEdits": [
+        {
+          "Section": "Hiệu năng",
+          "Before": "<h2>Hiệu năng</h2><p>Bộ xử lý Kirin T92C 6 nhân phối hợp với RAM 12 GB để xử lý ứng dụng và duy trì các tác vụ đang mở.</p><p>Máy ra mắt với <strong>HarmonyOS 4.3</strong>. Giao diện hệ điều hành cung cấp các công cụ quản lý ứng dụng, lưu trữ và cá nhân hóa thiết bị.</p>",
+          "After": "<h2>Hiệu năng</h2><p>Bộ xử lý Kirin T92C phối hợp với RAM 12 GB để xử lý ứng dụng và duy trì các tác vụ đang mở.</p><p>Máy ra mắt với <strong>HarmonyOS 4.3</strong>. Giao diện hệ điều hành cung cấp các công cụ quản lý ứng dụng, lưu trữ và cá nhân hóa thiết bị.</p>"
+        }
+      ]
+    },
+    {
+      "ProductId": "825d8f90-b1f2-42d0-88d2-34f3e09cd1d0",
+      "Name": "iPhone 17 Pro Max 512GB",
+      "SourceKind": "vietnam_crosscheck",
+      "VietnamSources": [
+        "https://fptshop.com.vn/dien-thoai/iphone-17-pro-max-512gb"
+      ],
+      "Sources": [
+        "https://fptshop.com.vn/dien-thoai/iphone-17-pro-max-512gb"
+      ],
+      "VariantScope": "iPhone 17 Pro Max, A19 Pro, 512 GB, hàng chính hãng VN/A, SKU FPT 00921804",
+      "Scope": "iPhone 17 Pro Max, A19 Pro, 512 GB, hàng chính hãng VN/A, SKU FPT 00921804",
+      "VerificationBasis": "direct_vn_listing",
+      "Fields": {},
+      "DescriptionEdits": [
+        {
+          "Section": "Hiệu năng",
+          "Before": "<h2>Hiệu năng Chip A19 Pro</h2><p><strong>Chip A19 Pro</strong> là bộ xử lý trung tâm của máy. Từ mở ứng dụng, chỉnh sửa ảnh đến xử lý thông báo, các thành phần này cùng đảm nhiệm những thao tác bạn dùng thường xuyên trên điện thoại.</p><p>Máy ra mắt với <strong>iOS 26</strong>. Giao diện hệ điều hành cung cấp các công cụ quản lý ứng dụng, lưu trữ và cá nhân hóa thiết bị.</p>",
+          "After": "<h2>Hiệu năng Chip A19 Pro</h2><p><strong>Chip A19 Pro</strong> là bộ xử lý trung tâm của máy. Từ mở ứng dụng, chỉnh sửa ảnh đến xử lý thông báo, các thành phần này cùng đảm nhiệm những thao tác bạn dùng thường xuyên trên điện thoại.</p><p>Máy ra mắt với <strong>iOS 26</strong>. Giao diện hệ điều hành cung cấp các công cụ quản lý ứng dụng, lưu trữ và cá nhân hóa thiết bị.</p><p>RAM 12 GB phối hợp với bộ xử lý để duy trì các ứng dụng đang mở và chuyển đổi giữa những tác vụ thường dùng.</p>"
+        }
+      ]
+    },
+    {
+      "ProductId": "dc687f3f-c9fb-4cd7-a323-902dec6e63c3",
+      "Name": "iPhone 18 Pro Max 1TB",
+      "SourceKind": "vietnam_crosscheck",
+      "VietnamSources": [
+        "https://fptshop.com.vn/dien-thoai/iphone-18-pro-max?sku=00930838"
+      ],
+      "Sources": [
+        "https://fptshop.com.vn/dien-thoai/iphone-18-pro-max?sku=00930838",
+        "https://www.macrumors.com/2026/09/09/iphone-18-pro-and-pro-max-ram/",
+        "https://www.apple.com/vn/iphone-18-pro/specs/"
+      ],
+      "VariantScope": "iPhone 18 Pro Max, A20 Pro, 1 TB, hàng chính hãng VN/A, SKU FPT 00930838, không dùng bản Pro",
+      "Scope": "iPhone 18 Pro Max, A20 Pro, 1 TB, hàng chính hãng VN/A, SKU FPT 00930838, không dùng bản Pro",
+      "VerificationBasis": "vn_variant_plus_xcode",
+      "Fields": {},
+      "DescriptionEdits": [
+        {
+          "Section": "Hiệu năng",
+          "Before": "<h2>Hiệu năng Chip A20 Pro</h2><p><strong>Chip A20 Pro</strong> là bộ xử lý trung tâm của máy. Từ mở ứng dụng, chỉnh sửa ảnh đến xử lý thông báo, các thành phần này cùng đảm nhiệm những thao tác bạn dùng thường xuyên trên điện thoại.</p><p>Máy ra mắt với <strong>iOS 27</strong>. Giao diện hệ điều hành cung cấp các công cụ quản lý ứng dụng, lưu trữ và cá nhân hóa thiết bị.</p>",
+          "After": "<h2>Hiệu năng Chip A20 Pro</h2><p><strong>Chip A20 Pro</strong> là bộ xử lý trung tâm của máy. Từ mở ứng dụng, chỉnh sửa ảnh đến xử lý thông báo, các thành phần này cùng đảm nhiệm những thao tác bạn dùng thường xuyên trên điện thoại.</p><p>Máy ra mắt với <strong>iOS 27</strong>. Giao diện hệ điều hành cung cấp các công cụ quản lý ứng dụng, lưu trữ và cá nhân hóa thiết bị.</p><p>RAM 12 GB phối hợp với bộ xử lý để duy trì các ứng dụng đang mở và chuyển đổi giữa những tác vụ thường dùng.</p>"
+        }
+      ]
+    },
+    {
+      "ProductId": "ed695107-5bf4-4175-86ad-c1ec72bbb11b",
+      "Name": "iPad A16 Wifi 256GB 2025",
+      "SourceKind": "vietnam_crosscheck",
+      "VietnamSources": [
+        "https://www.thegioididong.com/may-tinh-bang/ipad-11-wifi-256gb"
+      ],
+      "Sources": [
+        "https://www.thegioididong.com/may-tinh-bang/ipad-11-wifi-256gb"
+      ],
+      "VariantScope": "iPad A16 Wi-Fi 256 GB 2025, SKU TGDĐ 210283, giữ bản Wi-Fi, không lấy bản 5G hoặc iPad Air",
+      "Scope": "iPad A16 Wi-Fi 256 GB 2025, SKU TGDĐ 210283, giữ bản Wi-Fi, không lấy bản 5G hoặc iPad Air",
+      "VerificationBasis": "direct_vn_listing",
+      "Fields": {},
+      "DescriptionEdits": [
+        {
+          "Section": "Hiệu năng",
+          "Before": "<h2>Hiệu năng Chip A16</h2><p><strong>Chip A16</strong> là bộ xử lý trung tâm của máy. Khi chuyển giữa ứng dụng học tập, trang web và tài liệu, bộ xử lý thực hiện các phép tính còn RAM giúp duy trì dữ liệu làm việc.</p><p>Máy ra mắt với <strong>iPadOS 18</strong>. Giao diện hệ điều hành cung cấp các công cụ quản lý ứng dụng, lưu trữ và cá nhân hóa thiết bị. Các phụ kiện được công bố tương thích gồm Hỗ trợ Apple Pencil (USB‑C), Hỗ trợ Apple Pencil (thế hệ thứ 1), cần chọn đúng phụ kiện cho phiên bản máy.</p>",
+          "After": "<h2>Hiệu năng Chip A16</h2><p><strong>Chip A16</strong> là bộ xử lý trung tâm của máy. Khi chuyển giữa ứng dụng học tập, trang web và tài liệu, bộ xử lý thực hiện các phép tính còn RAM giúp duy trì dữ liệu làm việc.</p><p>Máy ra mắt với <strong>iPadOS 18</strong>. Giao diện hệ điều hành cung cấp các công cụ quản lý ứng dụng, lưu trữ và cá nhân hóa thiết bị. Các phụ kiện được công bố tương thích gồm Hỗ trợ Apple Pencil (USB‑C), Hỗ trợ Apple Pencil (thế hệ thứ 1), cần chọn đúng phụ kiện cho phiên bản máy.</p><p>RAM 6 GB phối hợp với bộ xử lý để duy trì các ứng dụng đang mở và chuyển đổi giữa những tác vụ thường dùng.</p>"
+        }
+      ]
+    }
+  ],
+  "VietnamCrossChecks": [
+    {
+      "ProductId": "1b20538b-c72e-46b7-beca-d91aa18a485d",
+      "Name": "HONOR Pad V9 Wifi 8GB 256GB",
+      "Attribute": "front_camera_and_ram",
+      "Value": "Camera trước 8 MP, RAM 8 GB, ROM 256 GB",
+      "Action": "retained_8mp_removed_unconfirmed_aperture_and_focus",
+      "VietnamSources": [
+        "https://www.honor.com/vn/tablets/honor-pad-v9/spec/",
+        "https://cellphones.com.vn/may-tinh-bang-honor-pad-v9-wifi.html",
+        "https://fptshop.com.vn/tin-tuc/danh-gia/danh-gia-honor-pad-v9-213467"
+      ],
+      "Sources": [
+        "https://www.honor.com/vn/tablets/honor-pad-v9/spec/",
+        "https://cellphones.com.vn/may-tinh-bang-honor-pad-v9-wifi.html",
+        "https://fptshop.com.vn/tin-tuc/danh-gia/danh-gia-honor-pad-v9-213467"
+      ],
+      "VariantScope": "HONOR Pad V9 Wi-Fi 8 GB 256 GB chính hãng Việt Nam, camera trước 8 MP từ đánh giá tại Việt Nam, không chép RAM 12 GB hoặc RAM Turbo Malaysia, bỏ f/2.0 và FF chưa đối chiếu riêng tại Việt Nam",
+      "VerificationBasis": "vn_listing_plus_camera_review",
+      "RemovedDetails": [
+        "f/2.0",
+        "lấy nét cố định"
+      ]
+    },
+    {
+      "ProductId": "28cafea8-a143-4f26-9af7-22f3a8456d54",
+      "Name": "iPhone Air 256GB",
+      "Attribute": "RAM",
+      "Value": "12 GB",
+      "Action": "verified_existing_description",
+      "VietnamSources": [
+        "https://fptshop.com.vn/dien-thoai/iphone-air"
+      ],
+      "Sources": [
+        "https://fptshop.com.vn/dien-thoai/iphone-air"
+      ],
+      "VariantScope": "iPhone Air A19 Pro 256 GB, SKU FPT 00921698, hàng chính hãng Việt Nam, RAM khớp 12 GB đã nhận diện chip",
+      "VerificationBasis": "direct_vn_listing",
+      "ApplePublishedRAM": false
+    },
+    {
+      "ProductId": "2bb31327-234f-4c5c-9d30-9251863bfb63",
+      "Name": "iPhone 17 256GB",
+      "Attribute": "RAM",
+      "Value": "8 GB",
+      "Action": "added_to_performance_description",
+      "VietnamSources": [
+        "https://fptshop.com.vn/dien-thoai/iphone-17"
+      ],
+      "Sources": [
+        "https://fptshop.com.vn/dien-thoai/iphone-17"
+      ],
+      "VariantScope": "iPhone 17, A19, 256 GB, hàng chính hãng VN/A, SKU FPT 00921654",
+      "VerificationBasis": "direct_vn_listing",
+      "LocalStructuredRAM": "8 GB",
+      "ApplePublishedRAM": false
+    },
+    {
+      "ProductId": "307bed5f-a07a-4b84-9c5a-a15ec1ec9e9b",
+      "Name": "iPhone 18 Pro 1TB",
+      "Attribute": "RAM",
+      "Value": "12 GB",
+      "Action": "added_to_performance_description",
+      "VietnamSources": [
+        "https://fptshop.com.vn/dien-thoai/iphone-18-pro?sku=00930916"
+      ],
+      "Sources": [
+        "https://fptshop.com.vn/dien-thoai/iphone-18-pro?sku=00930916",
+        "https://www.macrumors.com/2026/09/09/iphone-18-pro-and-pro-max-ram/",
+        "https://www.apple.com/vn/iphone-18-pro/specs/"
+      ],
+      "VariantScope": "iPhone 18 Pro, A20 Pro, 1 TB, hàng chính hãng VN/A, SKU FPT 00930916, không dùng bản Pro Max",
+      "VerificationBasis": "vn_variant_plus_xcode",
+      "LocalStructuredRAM": "",
+      "ApplePublishedRAM": false
+    },
+    {
+      "ProductId": "541a9613-7276-4e76-85d6-b45a18a6a974",
+      "Name": "iPhone 17 Pro 256GB",
+      "Attribute": "RAM",
+      "Value": "12 GB",
+      "Action": "verified_existing_description",
+      "VietnamSources": [
+        "https://fptshop.com.vn/dien-thoai/iphone-17-pro"
+      ],
+      "Sources": [
+        "https://fptshop.com.vn/dien-thoai/iphone-17-pro"
+      ],
+      "VariantScope": "iPhone 17 Pro A19 Pro 256 GB, SKU FPT 00921741, hàng chính hãng VN/A, giữ RAM 12 GB đã bổ sung",
+      "VerificationBasis": "direct_vn_listing",
+      "ApplePublishedRAM": false
+    },
+    {
+      "ProductId": "6139416e-b238-4dca-85db-24c96459c13a",
+      "Name": "Huawei MatePad 11.5 S 2026 12GB 256GB - Kèm bàn phím",
+      "Attribute": "processor_and_ram",
+      "Value": "Kirin T92C, RAM 12 GB",
+      "Action": "retained_chip_name_removed_unconfirmed_core_count",
+      "VietnamSources": [
+        "https://consumer.huawei.com/vn/tablets/matepad-11-5-s-2026/specs/",
+        "https://didongviet.vn/dchannel/cau-hinh-huawei-matepad-11-5-s-2026/",
+        "https://cellphones.com.vn/may-tinh-bang-huawei-matepad-11-5-s-2026.html"
+      ],
+      "Sources": [
+        "https://consumer.huawei.com/vn/tablets/matepad-11-5-s-2026/specs/",
+        "https://didongviet.vn/dchannel/cau-hinh-huawei-matepad-11-5-s-2026/",
+        "https://cellphones.com.vn/may-tinh-bang-huawei-matepad-11-5-s-2026.html"
+      ],
+      "VariantScope": "HUAWEI MatePad 11.5 S 2026, RAM 12 GB, ROM 256 GB, HarmonyOS 4.3, không dùng bản 11.5 không S, bỏ số lõi chưa công bố riêng trên trang Việt Nam",
+      "VerificationBasis": "vn_review_with_manufacturer_memory",
+      "ManufacturerVietnamPublishesCPU": false,
+      "RemovedDetails": [
+        "6 nhân"
+      ]
+    },
+    {
+      "ProductId": "825d8f90-b1f2-42d0-88d2-34f3e09cd1d0",
+      "Name": "iPhone 17 Pro Max 512GB",
+      "Attribute": "RAM",
+      "Value": "12 GB",
+      "Action": "added_to_performance_description",
+      "VietnamSources": [
+        "https://fptshop.com.vn/dien-thoai/iphone-17-pro-max-512gb"
+      ],
+      "Sources": [
+        "https://fptshop.com.vn/dien-thoai/iphone-17-pro-max-512gb"
+      ],
+      "VariantScope": "iPhone 17 Pro Max, A19 Pro, 512 GB, hàng chính hãng VN/A, SKU FPT 00921804",
+      "VerificationBasis": "direct_vn_listing",
+      "LocalStructuredRAM": "12 GB",
+      "ApplePublishedRAM": false
+    },
+    {
+      "ProductId": "cdcea719-cf05-4376-a4c6-b6b7d181bf26",
+      "Name": "iPhone 16e 128GB",
+      "Attribute": "RAM",
+      "Value": "8 GB",
+      "Action": "verified_existing_description",
+      "VietnamSources": [
+        "https://didongviet.vn/dien-thoai/iphone-16e.html"
+      ],
+      "Sources": [
+        "https://didongviet.vn/dien-thoai/iphone-16e.html"
+      ],
+      "VariantScope": "iPhone 16e A18 128 GB Chính Hãng VN/A, No.0042793, RAM 8 GB khớp bản nhận diện chip",
+      "VerificationBasis": "direct_vn_listing",
+      "ApplePublishedRAM": false
+    },
+    {
+      "ProductId": "dc687f3f-c9fb-4cd7-a323-902dec6e63c3",
+      "Name": "iPhone 18 Pro Max 1TB",
+      "Attribute": "RAM",
+      "Value": "12 GB",
+      "Action": "added_to_performance_description",
+      "VietnamSources": [
+        "https://fptshop.com.vn/dien-thoai/iphone-18-pro-max?sku=00930838"
+      ],
+      "Sources": [
+        "https://fptshop.com.vn/dien-thoai/iphone-18-pro-max?sku=00930838",
+        "https://www.macrumors.com/2026/09/09/iphone-18-pro-and-pro-max-ram/",
+        "https://www.apple.com/vn/iphone-18-pro/specs/"
+      ],
+      "VariantScope": "iPhone 18 Pro Max, A20 Pro, 1 TB, hàng chính hãng VN/A, SKU FPT 00930838, không dùng bản Pro",
+      "VerificationBasis": "vn_variant_plus_xcode",
+      "LocalStructuredRAM": "",
+      "ApplePublishedRAM": false
+    },
+    {
+      "ProductId": "ed695107-5bf4-4175-86ad-c1ec72bbb11b",
+      "Name": "iPad A16 Wifi 256GB 2025",
+      "Attribute": "RAM",
+      "Value": "6 GB",
+      "Action": "added_to_performance_description",
+      "VietnamSources": [
+        "https://www.thegioididong.com/may-tinh-bang/ipad-11-wifi-256gb"
+      ],
+      "Sources": [
+        "https://www.thegioididong.com/may-tinh-bang/ipad-11-wifi-256gb"
+      ],
+      "VariantScope": "iPad A16 Wi-Fi 256 GB 2025, SKU TGDĐ 210283, giữ bản Wi-Fi, không lấy bản 5G hoặc iPad Air",
+      "VerificationBasis": "direct_vn_listing",
+      "LocalStructuredRAM": "6 GB",
+      "ApplePublishedRAM": false
+    }
+  ],
+  "CaptureManifest": [
+    {
+      "Name": "honor-vn-spec",
+      "URL": "https://www.honor.com/vn/tablets/honor-pad-v9/spec/",
+      "Status": 200,
+      "Bytes": 388507,
+      "SHA256": "095ba28b332e09c8fccf8a50216294b1c4fd5262897f0d45fda1f924e7c7c875",
+      "FinalURL": "https://www.honor.com/vn/tablets/honor-pad-v9/spec/"
+    },
+    {
+      "Name": "huawei-vn-spec",
+      "URL": "https://consumer.huawei.com/vn/tablets/matepad-11-5-s-2026/specs/",
+      "Status": 200,
+      "Bytes": 202035,
+      "SHA256": "b9bfd36821e1d5696c297e39915d8331e57c622eb83c97b3853be3a8137a1c92",
+      "FinalURL": "https://consumer.huawei.com/vn/tablets/matepad-11-5-s-2026/specs/"
+    },
+    {
+      "Name": "fpt-iphone17",
+      "URL": "https://fptshop.com.vn/dien-thoai/iphone-17",
+      "Status": 200,
+      "Bytes": 1460111,
+      "SHA256": "8e1b204cbb28c65c8230e6eaa74b5777c7d99514cf639d821c1a6beb21695175",
+      "FinalURL": "https://fptshop.com.vn/dien-thoai/iphone-17"
+    },
+    {
+      "Name": "fpt-air",
+      "URL": "https://fptshop.com.vn/dien-thoai/iphone-air",
+      "Status": 200,
+      "Bytes": 1370737,
+      "SHA256": "8b59b897270cdf9305e88189579dbc897e8ec287fdfab121aaf32de245ae091e",
+      "FinalURL": "https://fptshop.com.vn/dien-thoai/iphone-air"
+    },
+    {
+      "Name": "fpt-16e",
+      "URL": "https://fptshop.com.vn/dien-thoai/iphone-16e",
+      "Status": 200,
+      "Bytes": 1278922,
+      "SHA256": "52d62d42b662f4b0cf6c84a575b1cca92d42840344833e331923755594cea63c",
+      "FinalURL": "https://fptshop.com.vn/dien-thoai/iphone-16e"
+    },
+    {
+      "Name": "tgdd-ipad256",
+      "URL": "https://www.thegioididong.com/may-tinh-bang/ipad-11-wifi-256gb",
+      "Status": 200,
+      "Bytes": 314242,
+      "SHA256": "e1af6c6bf3126c8298e0273512fe4aa983da8e5c38e49c47f95671a5e371d37c",
+      "FinalURL": "https://www.thegioididong.com/may-tinh-bang/ipad-11-wifi-256gb"
+    },
+    {
+      "Name": "fpt-pro17",
+      "URL": "https://fptshop.com.vn/dien-thoai/iphone-17-pro",
+      "Status": 200,
+      "Bytes": 1491276,
+      "SHA256": "920470e6c90658680c3ecfcad79e54147a523866ab754457f82959d50afc0522",
+      "FinalURL": "https://fptshop.com.vn/dien-thoai/iphone-17-pro"
+    },
+    {
+      "Name": "fpt-max17-512",
+      "URL": "https://fptshop.com.vn/dien-thoai/iphone-17-pro-max-512gb",
+      "Status": 200,
+      "Bytes": 1505152,
+      "SHA256": "ba02e82215b229322db123526e6d67b20e0daebeac45ee25a91836d67b22249d",
+      "FinalURL": "https://fptshop.com.vn/dien-thoai/iphone-17-pro-max-512gb"
+    },
+    {
+      "Name": "fpt-pro18-1tb",
+      "URL": "https://fptshop.com.vn/dien-thoai/iphone-18-pro?sku=00930916",
+      "Status": 200,
+      "Bytes": 1340793,
+      "SHA256": "c79ac80c4a69d19e6ffd9566ac4ccd80e962b45e2800fae35c29efb529e4fb5d",
+      "FinalURL": "https://fptshop.com.vn/dien-thoai/iphone-18-pro?sku=00930916"
+    },
+    {
+      "Name": "fpt-max18",
+      "URL": "https://fptshop.com.vn/dien-thoai/iphone-18-pro-max",
+      "Status": 200,
+      "Bytes": 1467425,
+      "SHA256": "e687dfbe102d3eecc6d4dc6ba285a666d4a82bd8d98dd0af92f6632d6b594590",
+      "FinalURL": "https://fptshop.com.vn/dien-thoai/iphone-18-pro-max"
+    },
+    {
+      "Name": "cps-16e",
+      "URL": "https://cellphones.com.vn/iphone-16e.html",
+      "Status": 200,
+      "Bytes": 870913,
+      "SHA256": "cfe25cfc3cc2277cedee08de9ae5d2202b513a631efb02baff986882dd8028b7",
+      "FinalURL": "https://cellphones.com.vn/iphone-16e.html"
+    },
+    {
+      "Name": "cps-honor",
+      "URL": "https://cellphones.com.vn/may-tinh-bang-honor-pad-v9-wifi.html",
+      "Status": 200,
+      "Bytes": 688524,
+      "SHA256": "ea2385327174496c5a79268040e3bb30049fed50d8337125b687ca94ac5d56d9",
+      "FinalURL": "https://cellphones.com.vn/may-tinh-bang-honor-pad-v9-wifi.html"
+    },
+    {
+      "Name": "cps-huawei-list",
+      "URL": "https://cellphones.com.vn/tablet/huawei.html",
+      "Status": 200,
+      "Bytes": 941676,
+      "SHA256": "a1942ba3737a30064cc5c0527fbbe4ffa0fed7e48d36bbdfdf519ea20c570fb4",
+      "FinalURL": "https://cellphones.com.vn/tablet/huawei.html"
+    },
+    {
+      "Name": "didongviet-huawei",
+      "URL": "https://didongviet.vn/dchannel/cau-hinh-huawei-matepad-11-5-s-2026/",
+      "Status": 200,
+      "Bytes": 328946,
+      "SHA256": "9f7bbe3bbae0967ed9afdc077b73c767762c983735b734098726de3ff2bc28d1",
+      "FinalURL": "https://didongviet.vn/dchannel/cau-hinh-huawei-matepad-11-5-s-2026/"
+    },
+    {
+      "Name": "xcode18",
+      "URL": "https://www.macrumors.com/2026/09/09/iphone-18-pro-and-pro-max-ram/",
+      "Status": 200,
+      "Bytes": 154243,
+      "SHA256": "2bf39510bcc977c03b7d6a8bca46d4dc1ddcc8d265ca85217613522c15a356f6",
+      "FinalURL": "https://www.macrumors.com/2026/09/09/iphone-18-pro-and-pro-max-ram/"
+    },
+    {
+      "Name": "fpt-max18-1tb",
+      "URL": "https://fptshop.com.vn/dien-thoai/iphone-18-pro-max?sku=00930838",
+      "Status": 200,
+      "Bytes": 1413972,
+      "SHA256": "1b60937c85d0b0927a4d2a840ffa22a238e47a7d7d32e05a329cd227f01914e9",
+      "FinalURL": "https://fptshop.com.vn/dien-thoai/iphone-18-pro-max?sku=00930838"
+    },
+    {
+      "Name": "cps-huawei",
+      "URL": "https://cellphones.com.vn/may-tinh-bang-huawei-matepad-11-5-s-2026.html",
+      "Status": 200,
+      "Bytes": 729993,
+      "SHA256": "332b41b42cef81e7fb6c2c647ae70ef0953030a94e8c6a042f42ad4a8f505fd5",
+      "FinalURL": "https://cellphones.com.vn/may-tinh-bang-huawei-matepad-11-5-s-2026.html"
+    },
+    {
+      "Name": "fpt-honor-review",
+      "URL": "https://fptshop.com.vn/tin-tuc/danh-gia/danh-gia-honor-pad-v9-213467",
+      "Status": 200,
+      "Bytes": 918754,
+      "SHA256": "ab496576682b838e88db0cc917e07d737d516716136a3425ad7fd733d4aa7eee",
+      "FinalURL": "https://fptshop.com.vn/tin-tuc/danh-gia/danh-gia-honor-pad-v9-213467"
+    },
+    {
+      "Name": "fpt-16e-review",
+      "URL": "https://fptshop.com.vn/tin-tuc/danh-gia/danh-gia-iphone-16e-169797",
+      "Status": 200,
+      "Bytes": 954086,
+      "SHA256": "c4b662b3bfe38f58705af5b91149f2bca722c30ea40c8385ab2f22e576b16bf6",
+      "FinalURL": "https://fptshop.com.vn/tin-tuc/danh-gia/danh-gia-iphone-16e-169797"
+    }
+  ]
+}

@@ -37,7 +37,7 @@ class JobSelectionError(ServiceError):
     code = "job_selection_failed"
 
     def __init__(self) -> None:
-        super().__init__("Không chọn được bản ghi để xử lý; tác vụ chưa xử lý bản ghi nào. Vui lòng thử lại sau.")
+        super().__init__("Không chọn được bản ghi để xử lý, tác vụ chưa xử lý bản ghi nào. Vui lòng thử lại sau.")
 
 
 @dataclass(frozen=True)

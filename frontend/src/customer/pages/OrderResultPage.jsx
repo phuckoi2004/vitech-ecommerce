@@ -142,7 +142,7 @@ export default function OrderResultPage() {
 
     {awaiting && (expired ? <div className="order-panel is-expired" role="status">
       <p>{problem?.expired ? problem.message
-        : 'Đã hết thời gian thanh toán. Đơn hàng sẽ được huỷ tự động; nếu bạn đã chuyển khoản, vui lòng liên hệ VieTech để được hỗ trợ.'}</p>
+        : 'Đã hết thời gian thanh toán. Đơn hàng sẽ được huỷ tự động, nếu bạn đã chuyển khoản, vui lòng liên hệ VieTech để được hỗ trợ.'}</p>
       <button type="button" className="order-link-button" onClick={loaded.refresh}>Kiểm tra lại trạng thái</button>
     </div>
       : qr.qr ? <QrPayment qr={qr.qr} now={now} onCheck={loaded.refresh} />

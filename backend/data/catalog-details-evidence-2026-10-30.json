@@ -1,0 +1,152 @@
+{
+  "Version": 1,
+  "VerifiedAt": "2026-10-30",
+  "DescriptionLayout": "narrative",
+  "Purpose": "Bổ sung giá trị thuộc tính đã có và mô tả, không thêm khóa thông số hoặc thay đổi schema",
+  "Products": [
+    {
+      "Name": "Samsung Galaxy S25 Plus 256GB",
+      "Sources": ["https://www.samsung.com/vn/smartphones/galaxy-s25/specs/"],
+      "Scope": "Kính bảo vệ của S25+, không áp kính Armor 2 của S25 Ultra",
+      "Fields": {"Tính năng màn hình": "120 Hz, độ sáng tối đa 2600 nits, kính Corning Gorilla Glass Victus 2"},
+      "DescriptionReplacements": {"Corning® Gorilla® Armor 2": "Corning Gorilla Glass Victus 2"},
+      "DescriptionFacts": []
+    },
+    {
+      "Name": "Samsung Galaxy S26 Ultra 5G 12GB 256GB",
+      "Sources": ["https://www.samsung.com/vn/business/smartphones/galaxy-s/galaxy-s26-ultra-sky-blue-1tb-sm-s948blbqxxv/", "https://www.samsung.com/de/business/smartphones/galaxy-s/galaxy-s26-ultra-black-256gb-sm-s948bzkdeub/"],
+      "Scope": "Màn hình và CPU chung SM-S948, không chép RAM hoặc bộ nhớ của bản 1 TB",
+      "Fields": {"Tính năng màn hình": "Tần số quét tối đa 120 Hz, độ sáng tối đa 2600 nits", "Loại CPU": "8 nhân, tốc độ 4.74 GHz và 3.6 GHz"},
+      "DescriptionFacts": []
+    },
+    {
+      "Name": "HONOR X7d 5G 8GB 256GB",
+      "Sources": ["https://www.honor.com/latam/phones/honor-x7d-5g/"],
+      "Scope": "Đúng X7d 5G Snapdragon 6s Gen 3, không dùng X7d 4G Snapdragon 685",
+      "PrefixFields": {"Tính năng màn hình": "Tần số quét tối đa 120 Hz"},
+      "DescriptionFacts": []
+    },
+    {
+      "Name": "iPhone Air 256GB",
+      "Sources": ["https://www.apple.com/iphone-air/specs/"],
+      "Scope": "Màn hình tích hợp của iPhone Air, không áp cho màn hình ngoài",
+      "PrefixFields": {"Tính năng màn hình": "ProMotion với tần số quét thích ứng lên đến 120 Hz"},
+      "DescriptionFacts": []
+    },
+    {
+      "Name": "iPhone 17 256GB",
+      "Sources": ["https://www.apple.com/iphone-17/specs/"],
+      "Scope": "iPhone 17 thường, không lấy thông số iPhone 17 Pro",
+      "PrefixFields": {"Tính năng màn hình": "ProMotion với tần số quét thích ứng lên đến 120 Hz"},
+      "DescriptionFacts": []
+    },
+    {
+      "Name": "Tai nghe Bluetooth Apple AirPods Pro 2 2023 USB-C",
+      "Sources": ["https://support.apple.com/vi-vn/111834"],
+      "Scope": "Đúng bản USB-C 2023, không áp hộp sạc Lightning hoặc AirPods Pro 3",
+      "Fields": {
+        "Micro": "Micrô kép điều hướng chùm sóng và micrô hướng vào trong",
+        "Công nghệ âm thanh": "Chủ động khử tiếng ồn ANC, chip Apple H2, Âm thanh thích ứng, Xuyên âm, Nhận biết cuộc hội thoại, Âm thanh không gian cá nhân hóa với theo dõi chuyển động đầu, EQ thích ứng",
+        "Phương thức điều khiển": "Điều khiển bằng thao tác chạm, nhấn để phát hoặc tạm dừng, trả lời cuộc gọi và chuyển bài, hỗ trợ Hey Siri"
+      },
+      "DescriptionFacts": ["Kết nối Bluetooth 5.3, hộp sạc USB-C hỗ trợ MagSafe, bộ sạc Apple Watch và Qi.", "Thời gian nghe lên đến 6 giờ mỗi lần sạc, lên đến 30 giờ khi dùng cùng hộp sạc trong điều kiện thử của Apple.", "Tai nghe và hộp sạc có mức kháng bụi, mồ hôi và nước IP54, mỗi tai nghe nặng 5.3 g, hộp sạc nặng 50.8 g."]
+    },
+    {
+      "Name": "Tai nghe Bluetooth Apple AirPods 4",
+      "Sources": ["https://support.apple.com/en-ie/121203"],
+      "Scope": "AirPods 4 tiêu chuẩn với hộp sạc USB-C, không gán ANC hoặc sạc không dây của bản ANC",
+      "Fields": {
+        "Micro": "Micrô kép điều hướng chùm sóng và micrô hướng vào trong",
+        "Công nghệ âm thanh": "Trình điều khiển và bộ khuếch đại Apple tùy chỉnh, Tách lời nói, Âm thanh không gian cá nhân hóa với theo dõi chuyển động đầu, EQ thích ứng",
+        "Thời lượng sử dụng Pin": "Nghe lên đến 5 giờ mỗi lần sạc, lên đến 30 giờ với hộp sạc USB-C trong điều kiện thử của Apple"
+      },
+      "DescriptionFacts": ["Hộp sạc dùng đầu nối USB-C, tai nghe có mức kháng bụi, mồ hôi và nước IP54.", "Cảm biến lực hỗ trợ phát hoặc tạm dừng, chuyển bài, trả lời cuộc gọi và gọi Siri."]
+    },
+    {
+      "Name": "Tai nghe Bluetooth chụp tai Marshall Major 5",
+      "Sources": ["https://www.marshall.com/ca/en/product/major-v?pid=undefined"],
+      "Scope": "Marshall Major V, không áp thông số Major IV hoặc Monitor III",
+      "Fields": {
+        "Cổng kết nối": "Bluetooth 5.3 và cổng âm thanh 3.5 mm vào/ra, sạc qua USB-C hoặc sạc không dây",
+        "Công nghệ âm thanh": "Âm thanh Marshall, driver dynamic 40 mm, dải tần 20 Hz đến 20000 Hz, trở kháng 32 ohm, không có ANC",
+        "Phương thức điều khiển": "Núm điều khiển đa hướng và nút M tùy chỉnh qua ứng dụng Marshall Bluetooth",
+        "Thời lượng sử dụng Pin": "Hơn 100 giờ nghe không dây theo điều kiện thử của hãng, sạc nhanh 15 phút cho khoảng 15 giờ nghe"
+      },
+      "DescriptionFacts": ["Thiết kế on-ear có thể gập, trọng lượng 186 g, không có khả năng kháng nước được công bố."]
+    },
+    {
+      "Name": "Tai nghe chụp tai Sony MDR-ZX110AP",
+      "Sources": ["https://www.sony.com.vn/electronics/support/audio-video-headphones/mdr-zx110ap/specifications", "https://www.sony.com/electronics/support/audio-video-headphones/mdr-zx110ap/specifications"],
+      "Scope": "Đúng bản AP có micrô, không áp micrô cho ZX110 thường",
+      "Fields": {"Micro": "Micrô electret đa hướng tích hợp trên dây", "Cổng kết nối": "Đầu cắm stereo mini 3.5 mm mạ vàng dạng chữ L"},
+      "DescriptionFacts": ["Tai nghe có dây với driver dynamic 30 mm, dải tần 12 Hz đến 22000 Hz, trở kháng 24 ohm và độ nhạy 98 dB/mW.", "Dây dài 1.2 m dạng chữ Y, trọng lượng 120 g."]
+    },
+    {
+      "Name": "Tai nghe Sony MDR E9LP",
+      "Sources": ["https://www.sony.com/electronics/support/wired-headphones-in-ear/mdr-e9lp/specifications"],
+      "Scope": "MDR-E9LP có dây, không bổ sung thời lượng pin cho tai nghe thụ động",
+      "Fields": {"Cổng kết nối": "Đầu cắm stereo mini 3.5 mm dạng chữ L"},
+      "DescriptionFacts": ["Thiết kế tai nghe mở có dây, dải tần 18 Hz đến 22000 Hz, trở kháng 16 ohm và độ nhạy 104 dB/mW.", "Dây dạng chữ Y dài khoảng 1.2 m, trọng lượng khoảng 6 g."]
+    },
+    {
+      "Name": "Tai nghe Bluetooth True Wireless JBL Tune Buds 2",
+      "Sources": ["https://support.jbl.com/on/demandware.static/-/Sites-masterCatalog_Harman/default/dw288a97d6/pdfs/JBL_TUNE_BUDS_2_Specsheet_EN.pdf"],
+      "Scope": "Tune Buds 2, giữ trọng lượng hộp Ghost đang ghi vì chưa xác nhận màu hộp thực tế",
+      "Fields": {
+        "Công nghệ âm thanh": "Driver dynamic 10 mm, JBL Pure Bass, JBL Spatial Sound, ANC thích ứng với Smart Ambient, Ambient Aware, TalkThru, Personi-Fi 3.0",
+        "Thời lượng sử dụng Pin": "Tắt ANC: tai nghe tối đa 12 giờ và hộp thêm 36 giờ, bật ANC: tai nghe tối đa 10 giờ và hộp thêm 30 giờ",
+        "Tính năng khác": "Tai nghe kháng bụi và nước IP54, kết nối đa điểm, Google Fast Pair"
+      },
+      "DescriptionFacts": ["Kết nối Bluetooth 5.3, dải tần 20 Hz đến 20000 Hz, trở kháng 16 ohm.", "Có tổng cộng 6 micrô, mỗi tai nghe có 2 micrô ngoài tạo chùm và 1 micrô trong."]
+    },
+    {
+      "Name": "Tai nghe không dây JBL Wave Buds 2",
+      "Sources": ["https://uy.jbl.com/on/demandware.static/-/Sites-masterCatalog_Harman/default/dw063db92f/pdfs/JBL_Wave_Buds_2_Specsheet_EN.pdf"],
+      "Scope": "Wave Buds 2, phân biệt IP54 của tai nghe với IPX2 của hộp sạc",
+      "Fields": {
+        "Micro": "4 micrô, mỗi tai nghe có 2 micrô",
+        "Công nghệ âm thanh": "Driver dynamic 8 mm, JBL Pure Bass Sound, ANC và Smart Ambient",
+        "Thời lượng sử dụng Pin": "Tắt ANC: tai nghe tối đa 10 giờ và hộp thêm 30 giờ, bật ANC: tai nghe tối đa 8 giờ, sạc 10 phút cho khoảng 3 giờ nghe khi tắt ANC",
+        "Tính năng khác": "Tai nghe kháng bụi và nước IP54, hộp sạc IPX2, kết nối đa điểm 2 thiết bị, Google Fast Pair và Microsoft Swift Pair"
+      },
+      "DescriptionFacts": ["Kết nối Bluetooth 5.3, dải tần 20 Hz đến 20000 Hz, trở kháng 16 ohm."]
+    },
+    {
+      "Name": "Pin sạc dự phòng Anker A1695 25.000mAh 165W tích hợp cáp rút gọn",
+      "Sources": ["https://www.anker.com/uk/products/a1695-anker-power-bank-25000mah-165w"],
+      "Scope": "Đúng A1695, phân biệt công suất mỗi cổng với tổng công suất khi sạc nhiều thiết bị",
+      "Fields": {
+        "Cổng sạc ra": "1 cổng USB-C và 2 cáp USB-C tích hợp, mỗi đường USB-C tối đa 100 W, 1 cổng USB-A tối đa 33 W",
+        "Cổng sạc vào": "USB-C qua cổng hoặc cáp tích hợp, nhận sạc tối đa 100 W khi đáp ứng điều kiện nguồn và mức pin",
+        "Tiện ích": "Màn hình theo dõi dung lượng, công suất vào/ra và thời gian sạc, bảo vệ nhiệt ActiveShield 2.0, cáp USB-C rút gọn và cáp tích hợp"
+      },
+      "DescriptionFacts": ["Tổng công suất tối đa 165 W khi sạc 2 thiết bị, tối đa 130 W khi sạc 3 hoặc 4 thiết bị.", "Hỗ trợ vừa sạc vừa cấp điện khi dùng nguồn từ 20 W và công suất đầu vào lớn hơn công suất đầu ra."]
+    },
+    {
+      "Name": "Laptop MSI Katana 15 B13VEK-2440VN",
+      "Sources": ["https://www.msi.com/Laptop/Katana-15-B13VX/Specification"],
+      "Scope": "Chỉ bổ sung màn hình chung của cột B13VEK khớp 15.6 inch FHD, không lấy CPU/RAM/SSD từ SKU vùng khác",
+      "PrefixFields": {"Công nghệ màn hình": "IPS-Level, tần số quét 144 Hz"},
+      "DescriptionFacts": []
+    },
+    {
+      "Name": "Laptop MSI Cyborg 15 A13UC-2082VN",
+      "Sources": ["https://www.msi.com/Laptop/Cyborg-15-A13UX/Specification"],
+      "Scope": "Chỉ dùng cột A13UC, không áp A13UDX có tùy chọn panel khác, không thêm khóa màn hình",
+      "DescriptionFacts": ["Màn hình tích hợp 15.6 inch Full HD 1920 x 1080, tấm nền IPS-Level với tần số quét 144 Hz."]
+    },
+    {
+      "Name": "Laptop MSI Modern 15 F1MG-1225VN",
+      "Sources": ["https://www.msi.com/Business-Productivity/Modern-15-F1MX/Specification"],
+      "Scope": "Thông số kết nối không dây chung cột F1MG, không tự điền Hz khi hãng không ghi",
+      "DescriptionFacts": ["Kết nối không dây Wi-Fi 6E và Bluetooth 5.3, có màn che webcam và bàn phím đèn nền trắng với phím Copilot."]
+    }
+  ],
+  "Unresolved": [
+    "Không bổ sung khóa Specifications chưa tồn tại, phần thiếu khóa được giữ trong báo cáo riêng",
+    "Không đoán dung lượng pin hoặc RAM iPhone từ thời gian sử dụng hoặc chipset",
+    "Không bổ sung độ phân giải hoặc Hz từng cổng chưa có timing xác nhận cho Acer Swift Air 14 và các model đang chờ nguồn",
+    "Không chép thông số của model 4G sang 5G, hoặc CPU/RAM/SSD giữa các SKU laptop khác khu vực",
+    "Không coi mọi mô tả được mở rộng là đã xác minh mới toàn bộ thông số của 203 model"
+  ]
+}

@@ -147,9 +147,10 @@ _TYPE_LABELS = {TYPE_RETURN: "trả hàng", TYPE_EXCHANGE: "đổi hàng"}
 
 @dataclass(frozen=True)
 class ReturnPolicy:
-    """Chính sách đổi trả (chưa được chốt: mặc định không cấu hình → không tiếp nhận yêu cầu mới).
+    """Thời hạn gửi yêu cầu đổi sản phẩm.
 
     ``window_days``: số ngày (>= 1) được gửi yêu cầu, tính ngày giao (lịch Việt Nam) là ngày thứ nhất.
+    Ứng dụng dùng ``from_env()`` với mặc định 7 ngày; ``None`` vô hiệu hóa tiếp nhận yêu cầu mới.
     """
 
     window_days: int | None = None
@@ -377,7 +378,7 @@ class ReturnService(BaseService):
             self._notify_customer(request, "Đã nhận yêu cầu đổi trả",
                                   f"Yêu cầu {request.RequestCode} đã được ghi nhận và chờ xem xét.")
             self._notify_operators(request, f"Yêu cầu {_TYPE_LABELS[request_type]} mới",
-                                   f"Khách hàng gửi yêu cầu {request.RequestCode} ({quantity} sản phẩm); chờ xem xét.")
+                                   f"Khách hàng gửi yêu cầu {request.RequestCode} ({quantity} sản phẩm), chờ xem xét.")
             return self._customer_detail(request)
 
     def cancel_return_request(
@@ -437,7 +438,7 @@ class ReturnService(BaseService):
         with self.transaction():
             request, original, _ = self._lock(request_id)
             if request.Status != expected_status:
-                raise ConflictError("Phiếu đã thay đổi; hãy tải lại trước khi chuyển giai đoạn", code="service_request_stale")
+                raise ConflictError("Phiếu đã thay đổi, hãy tải lại trước khi chuyển giai đoạn", code="service_request_stale")
             next_status = transitions.get(request.Status)
             if next_status is None:
                 raise BusinessRuleError("Phiếu đã đóng, không thể chuyển giai đoạn", code="service_request_closed")
@@ -530,7 +531,7 @@ class ReturnService(BaseService):
             self._history(request, actor.user_id, PENDING, APPROVED, compose_note("Tiếp nhận yêu cầu đổi trả.", note),
                           internal_note=internal_note)
             self._notify_customer(request, "Yêu cầu đổi trả được tiếp nhận",
-                                  f"Yêu cầu {request.RequestCode} đã được tiếp nhận; cửa hàng sẽ liên hệ nhận hàng.")
+                                  f"Yêu cầu {request.RequestCode} đã được tiếp nhận, cửa hàng sẽ liên hệ nhận hàng.")
             return self._admin_detail(request)
 
     def reject_return_request(
@@ -673,11 +674,11 @@ class ReturnService(BaseService):
                 raise BusinessRuleError("Yêu cầu đã được duyệt", code="return_already_approved")
             if request.RequestType == TYPE_EXCHANGE:
                 raise BusinessRuleError(
-                    "Chưa có quy tắc giao hàng đổi (xuất serial mới, bảo hành của máy đổi); chưa thể duyệt đổi hàng",
+                    "Chưa có quy tắc giao hàng đổi (xuất serial mới, bảo hành của máy đổi), chưa thể duyệt đổi hàng",
                     code="exchange_fulfillment_policy_missing",
                 )
             if request.DamagedQuantity:
-                raise BusinessRuleError("Có hàng hỏng nhưng chưa có chính sách khấu trừ; chưa thể duyệt số tiền",
+                raise BusinessRuleError("Có hàng hỏng nhưng chưa có chính sách khấu trừ, chưa thể duyệt số tiền",
                                         code="return_damage_policy_missing")
             amount, basis = self._assessment(request, item)
             if approved_amount is None or Decimal(approved_amount) != amount:
@@ -741,16 +742,16 @@ class ReturnService(BaseService):
                 result = dispatch()  # ngoài transaction, đúng một lần cho giao dịch vừa tạo
             except PaymentGatewayError:
                 # Lỗi/timeout: KHÔNG coi là thất bại — giao dịch giữ Pending (vẫn giữ tiền), không tạo giao dịch mới.
-                self._note_refund_outcome(actor, request_id, "Chưa xác định kết quả hoàn tiền từ cổng (lỗi/timeout); "
+                self._note_refund_outcome(actor, request_id, "Chưa xác định kết quả hoàn tiền từ cổng (lỗi/timeout), "
                                           "giao dịch giữ Pending. Tra cứu cổng và đối soát trước khi thử lại.")
                 raise
             if result.Status == TX_SUCCESS:
                 self._complete_if_refunded(actor, request_id)
             elif result.Status == TX_PENDING:
-                self._note_refund_outcome(actor, request_id, "Cổng chưa xác nhận hoàn tiền (Pending); chờ đối soát "
+                self._note_refund_outcome(actor, request_id, "Cổng chưa xác nhận hoàn tiền (Pending), chờ đối soát "
                                           "hoặc xác nhận chuyển khoản thủ công.")
             else:
-                self._note_refund_outcome(actor, request_id, f"Cổng trả kết quả hoàn tiền {status_label(result.Status, TRANSACTION_STATUS_LABELS)}; "
+                self._note_refund_outcome(actor, request_id, f"Cổng trả kết quả hoàn tiền {status_label(result.Status, TRANSACTION_STATUS_LABELS)}, "
                                           "có thể tạo lại giao dịch hoàn tiền.")
         return self.get_return_request(actor, request_id)
 
@@ -767,11 +768,11 @@ class ReturnService(BaseService):
                 raise BusinessRuleError("Không tìm thấy giao dịch hoàn tiền đã liên kết", code="return_refund_missing")
             if refund.Status == TX_PENDING:
                 raise BusinessRuleError(
-                    "Giao dịch hoàn tiền chưa có kết quả xác nhận (Pending); tra cứu cổng/đối soát trước khi thử lại",
+                    "Giao dịch hoàn tiền chưa có kết quả xác nhận (Pending), tra cứu cổng/đối soát trước khi thử lại",
                     code="return_refund_pending",
                 )
             if refund.Status != TX_SUCCESS:
-                raise BusinessRuleError(f"Giao dịch hoàn tiền không thành công ({status_label(refund.Status, TRANSACTION_STATUS_LABELS)}); có thể tạo lại giao dịch",
+                raise BusinessRuleError(f"Giao dịch hoàn tiền không thành công ({status_label(refund.Status, TRANSACTION_STATUS_LABELS)}), có thể tạo lại giao dịch",
                                         code="return_refund_failed")
             self._complete(request, actor.user_id, "Hoàn tất: giao dịch hoàn tiền đã thành công.")
             return self._admin_detail(request)
@@ -780,12 +781,12 @@ class ReturnService(BaseService):
 
     def _check_window(self, order: Order) -> None:
         if self.policy.window_days is None:
-            raise BusinessRuleError("Chưa cấu hình chính sách thời hạn đổi trả; chưa thể tiếp nhận yêu cầu",
+            raise BusinessRuleError("Chưa cấu hình chính sách thời hạn đổi trả, chưa thể tiếp nhận yêu cầu",
                                     code="return_policy_not_configured")
         if order.DeliveredAt is None:
             raise BusinessRuleError("Chưa ghi nhận thời điểm giao hàng thành công", code="delivery_not_recorded")
         if order.DeliveredAt.tzinfo is None or order.DeliveredAt > self.now():
-            raise BusinessRuleError("Thời điểm giao hàng không hợp lệ (thiếu múi giờ hoặc sau thời điểm hiện tại); "
+            raise BusinessRuleError("Thời điểm giao hàng không hợp lệ (thiếu múi giờ hoặc sau thời điểm hiện tại), "
                                     "cần kiểm tra dữ liệu đơn hàng", code="invalid_delivery_time")
         deadline = return_deadline(order.DeliveredAt, self.policy.window_days)
         if vietnam_date(self.now()) > deadline:
@@ -867,14 +868,14 @@ class ReturnService(BaseService):
         if request.ProductSerialId is not None:
             serial = self._lock_request_serial(request, item, expected_status=SERIAL_RETURNED)
             serial.Status, serial.OrderItemId = SERIAL_AVAILABLE, None
-            described = f"{described[:-1]}; serial {serial.SerialNumber} → Available."
+            described = f"{described[:-1]}, serial {serial.SerialNumber} → Available."
         self.serials.flush()
         return described
 
     def _lock_request_serial(self, request: ReturnRequest, item: OrderItem, *, expected_status: str) -> ProductSerial:
         serial = self.serials.get_by_id_for_update(request.ProductSerialId)
         if serial is None or serial.OrderItemId != item.OrderItemId or serial.Status != expected_status:
-            raise BusinessRuleError("Serial/IMEI của yêu cầu không ở trạng thái mong đợi; cần kiểm tra thủ công",
+            raise BusinessRuleError("Serial/IMEI của yêu cầu không ở trạng thái mong đợi, cần kiểm tra thủ công",
                                     code="serial_state_inconsistent")
         return serial
 

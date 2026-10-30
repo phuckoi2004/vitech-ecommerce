@@ -236,7 +236,7 @@ class InventoryService(BaseService):
                 )
             if change > 0 and not self._has_cost_basis(variant):
                 raise BusinessRuleError(
-                    "Biến thể chưa có giá vốn; khai báo tồn đầu kỳ trước khi tăng tồn", code="opening_required"
+                    "Biến thể chưa có giá vốn, khai báo tồn đầu kỳ trước khi tăng tồn", code="opening_required"
                 )
             affected: list[ProductSerial] = []
             if variant.IsSerialTracked:
@@ -325,7 +325,7 @@ class InventoryService(BaseService):
                 line, variant = by_variant[variant_id], locked[variant_id]
                 if variant.StockQuantity > 0 and not self._has_cost_basis(variant):
                     raise BusinessRuleError(
-                        f"Biến thể {variant.Sku} còn tồn nhưng chưa có giá vốn đầu kỳ; khai báo tồn đầu kỳ trước khi nhận hàng",
+                        f"Biến thể {variant.Sku} còn tồn nhưng chưa có giá vốn đầu kỳ, khai báo tồn đầu kỳ trước khi nhận hàng",
                         code="opening_required",
                     )
                 serials = self._normalize_serials(line.serial_numbers)

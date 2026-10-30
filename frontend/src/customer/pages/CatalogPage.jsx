@@ -85,7 +85,7 @@ function Results({ title, fixedBrandId }) {
     </ol></nav>
     <h1 className={title ? 'search-title' : 'sr-only'}>{heading}</h1>
     {exchange.active && <div className="my-4 rounded-lg border border-red-200 bg-red-50 p-4"><h2>Chọn sản phẩm đổi · {exchange.data.RequestCode}</h2>
-      <p>Chỉ hiển thị danh mục của máy đã mua. Đổi 1 máy; giá trị dùng đổi tối đa {Number(exchange.data.CreditLimit).toLocaleString('vi-VN')}đ.</p>
+      <p>Chỉ hiển thị danh mục của máy đã mua. Đổi 1 máy, giá trị dùng đổi tối đa {Number(exchange.data.CreditLimit).toLocaleString('vi-VN')}đ.</p>
       <Link to={returnRequestPath(exchange.id)}>← Quay lại phiếu</Link></div>}
     <p className="search-summary" role="status">{firstLoad ? 'Đang tìm sản phẩm…' : results.error && !results.products.length
       ? 'Chưa tải được kết quả' : <>Tìm thấy <strong>{results.total}</strong> sản phẩm{keyword && <> cho từ khoá <strong>'{keyword}'</strong></>}</>}</p>

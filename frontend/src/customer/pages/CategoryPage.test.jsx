@@ -207,6 +207,20 @@ test('an old link drops options the category no longer offers and keeps the home
   expect(productCalls(calls)[0].query).toMatchObject({ spec: ['ram:8gb'], min_price: '5000000', max_price: '9999999.99' })
 })
 
+test('a filtered link shows loading, never "0 sản phẩm", while the category filters are still loading', async () => {
+  let release
+  const filters = new Promise((resolve) => { release = resolve })
+  const calls = mockApi({ overrides: { '/categories/phone/filters': () => filters } })
+  renderAt('/danh-muc/dien-thoai?spec=ram:8gb')
+  expect(await screen.findByText('Đang tải sản phẩm…')).toBeInTheDocument()
+  expect(screen.queryByText('0 sản phẩm')).not.toBeInTheDocument()
+  expect(screen.queryByRole('heading', { name: 'Không có sản phẩm phù hợp' })).not.toBeInTheDocument()
+  expect(productCalls(calls)).toHaveLength(0)
+  release(json(FILTERS))
+  expect(await screen.findByText('25 sản phẩm')).toBeInTheDocument()
+  expect(productCalls(calls)[0].query).toMatchObject({ spec: ['ram:8gb'] })
+})
+
 test('no match offers to clear the filters', async () => {
   mockApi({ total: 0 })
   renderAt('/danh-muc/dien-thoai?stock=1')

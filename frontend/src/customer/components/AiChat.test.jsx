@@ -7,6 +7,8 @@ import { makeAuth } from '../../test/auth.js'
 import AiChat from './AiChat.jsx'
 import ChatDraftProvider from './ChatDraftProvider.jsx'
 import { turnStorageKey } from './ai-chat-state.js'
+import { comparisonFixture } from '../../test/ai-comparison.js'
+import { compatibilityFixture } from '../../test/ai-compatibility.js'
 
 const conversation = { ConversationId: 'ai1', Mode: 'AI', Status: 'Open', CreatedAt: '2026-10-22T08:00:00Z', Messages: [] }
 const message = (id, type, content, metadata = null) => ({ MessageId: id, ConversationId: 'ai1', SenderType: type,
@@ -71,6 +73,61 @@ async function ask(content = 'Laptop dưới 20 triệu') {
   fireEvent.click(screen.getByRole('button', { name: 'Gửi câu hỏi AI' }))
 }
 afterEach(() => { vi.unstubAllGlobals(); vi.useRealTimers(); sessionStorage.clear() })
+
+test('Smart Compare and compatibility stay visible together after conversation reload', async () => {
+  const old = message('comparison-answer', 'AI', 'So sánh hai laptop.', { Comparison: comparisonFixture() })
+  const checked = message('compatibility-answer', 'AI', 'Kiểm tra laptop với màn hình.', { Compatibility: compatibilityFixture() })
+  const calls = mockApi({ open: { ...conversation, Messages: [old, checked] } })
+  const first = renderChat()
+  expect(await screen.findByRole('table')).toBeInTheDocument()
+  expect(await screen.findByRole('heading', { name: 'VIETECH AI – KIỂM TRA TƯƠNG THÍCH' })).toBeInTheDocument()
+  first.unmount()
+  renderChat()
+  expect(await screen.findByRole('table')).toBeInTheDocument()
+  expect(await screen.findByRole('heading', { name: 'VIETECH AI – KIỂM TRA TƯƠNG THÍCH' })).toBeInTheDocument()
+  expect(calls.filter((call) => call.method === 'POST')).toHaveLength(0)
+})
+
+test('compatibility response uses the existing managed turn and preserves the normal composer', async () => {
+  mockApi({ post: (body) => {
+    const data = result(body)
+    data.AiMessages[0].Metadata = { Compatibility: compatibilityFixture() }
+    return data
+  } })
+  renderChat()
+  await ask('Laptop này có kết nối được màn hình 4K 144Hz không?')
+  expect(await screen.findByRole('heading', { name: 'VIETECH AI – KIỂM TRA TƯƠNG THÍCH' })).toBeInTheDocument()
+  expect(screen.getByRole('textbox', { name: 'Câu hỏi cho AI' })).toBeEnabled()
+})
+
+test('comparison survives remount from conversation history without another model request', async () => {
+  const answer = message('comparison-answer', 'AI', 'Đối chiếu hai phiên bản.', { Comparison: comparisonFixture() })
+  const calls = mockApi({ open: { ...conversation, Messages: [answer] } })
+  const first = renderChat()
+  expect(await screen.findByRole('table')).toBeInTheDocument()
+  first.unmount()
+  renderChat()
+  expect(await screen.findByRole('table')).toBeInTheDocument()
+  expect(screen.getByText('Nhận xét')).toBeInTheDocument()
+  expect(calls.filter((call) => call.method === 'POST')).toHaveLength(0)
+})
+
+test('new comparison response appears inside the existing message without duplicating product cards', async () => {
+  mockApi({ post: (body) => {
+    const response = result(body)
+    response.AiMessages[0].Metadata = { Comparison: comparisonFixture(3) }
+    response.AiMessages.push({ ...message('card', 'AI', ''), MessageType: 'Product', Metadata: {
+      AiAnswerMessageId: 'answer', ProductName: 'Duplicated card', Slug: 'laptop-1', Price: '18000000',
+    } })
+    return response
+  } })
+  renderChat()
+  await ask('So sánh 3 sản phẩm trên')
+  const table = await screen.findByRole('table')
+  expect(within(table).getAllByRole('columnheader')).toHaveLength(4)
+  expect(screen.queryByText('Duplicated card')).not.toBeInTheDocument()
+  expect(screen.getByRole('textbox', { name: 'Câu hỏi cho AI' })).toBeEnabled()
+})
 
 test('guests see a login link preserving the current product and make no chat requests', () => {
   const calls = mockApi()

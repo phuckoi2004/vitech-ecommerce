@@ -229,7 +229,7 @@ def test_promotion_and_warranty_question_is_answered_from_policy_data(store, res
     text = reply.AiMessages[0].Content
     assert reply.Status == "Completed" and cards(reply) == []
     assert text.startswith("Khuyến mãi:") and "\n\nBảo hành:" in text
-    assert "VIETECH300K: giảm 300.000 đ; đơn tối thiểu 5.000.000 đ; hạn 01/11/2026" in text
+    assert "VIETECH300K: giảm 300.000 đ, đơn tối thiểu 5.000.000 đ, hạn 01/11/2026" in text
     assert "tính từ ngày giao hàng thành công" in text
     assert "Thời hạn bảo hành của các mẫu vừa giới thiệu:\n- 1." in text and "12 tháng" in text
     meta = s.question("Thông tin khuyến mãi bảo hành như nào")

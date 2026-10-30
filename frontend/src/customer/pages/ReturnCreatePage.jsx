@@ -131,7 +131,7 @@ export default function ReturnCreatePage() {
           </>}
         </RequestCard>
         <RequestCard id="return-reason" number="02" title="Thông tin yêu cầu đổi trả">
-          <p>Đổi mới 1 sản phẩm. Còn hàng sẽ đổi đúng phiên bản đã mua; hết hàng có thể chọn sản phẩm cùng danh mục.</p>
+          <p>Đổi mới 1 sản phẩm. Còn hàng sẽ đổi đúng phiên bản đã mua, hết hàng có thể chọn sản phẩm cùng danh mục.</p>
           <div className="cw-fields">
             <Field id="cr-reason" label="Lý do đổi trả *"><select id="cr-reason" className="cacc-input" value={reason} disabled={busy} onChange={(event) => setReason(event.target.value)}>
               <option value="">Chọn lý do đổi trả</option>{REASONS.map((value) => <option key={value}>{value}</option>)}</select></Field>
@@ -147,7 +147,7 @@ export default function ReturnCreatePage() {
         <RequestCard id="return-resolution" number="04" title="Phương án xử lý">
           <div className="cw-policy"><strong>Đổi sản phẩm mới</strong>
             <p>Đổi mới sang sản phẩm tương tự. Bạn chỉ được chọn một sản phẩm khác trong cùng danh mục khi sản phẩm cần đổi đã hết hàng.</p></div>
-          <p className="cw-help">Miễn phí giao hàng tiêu chuẩn. Sản phẩm đổi vẫn được áp dụng khuyến mãi. Nếu chọn sản phẩm có giá cao hơn, bạn thanh toán thêm phần chênh lệch; phần chênh lệch còn dư không được hoàn lại.</p>
+          <p className="cw-help">Miễn phí giao hàng tiêu chuẩn. Sản phẩm đổi vẫn được áp dụng khuyến mãi. Nếu chọn sản phẩm có giá cao hơn, bạn thanh toán thêm phần chênh lệch, phần chênh lệch còn dư không được hoàn lại.</p>
         </RequestCard>
       </div><aside className="cw-sidebar">
         <RequestCard id="return-contact" number="05" title="Thông tin liên hệ">
@@ -165,12 +165,12 @@ export default function ReturnCreatePage() {
           <li>Yêu cầu được xét theo thời hạn, tình trạng và chính sách của sản phẩm đã mua.</li>
           <li>Gửi yêu cầu trong hạn được hiển thị sau khi chọn sản phẩm.</li>
           <li>VieTech sẽ kiểm tra thực tế trước khi xác nhận phương án xử lý.</li>
-          <li>Theo dõi kết quả tại mục Bảo hành và đổi trả. Có thể hủy trước khi chốt đơn đổi; sau khi chốt sẽ không được hủy.</li>
+          <li>Theo dõi kết quả tại mục Bảo hành và đổi trả. Có thể hủy trước khi chốt đơn đổi, sau khi chốt sẽ không được hủy.</li>
         </ul></div>
       </aside></div>
       {item && item.OriginalInStock === false && <p className="my-4 text-sm font-medium text-red-600">
         * Bạn được dùng giá trị {Number(item.ExchangeCreditLimit || 0).toLocaleString('vi-VN')}đ để đổi một sản phẩm cùng danh mục.
-        Chọn máy giá cao hơn sẽ thanh toán phần bù; giá bằng hoặc thấp hơn không cần trả thêm. Phần dư không hoàn lại.
+        Chọn máy giá cao hơn sẽ thanh toán phần bù, giá bằng hoặc thấp hơn không cần trả thêm. Phần dư không hoàn lại.
       </p>}
       <div className="cw-card cw-confirm">
         <label><input type="checkbox" checked={consent} disabled={busy} onChange={(event) => setConsent(event.target.checked)} />

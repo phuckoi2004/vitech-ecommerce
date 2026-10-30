@@ -255,7 +255,7 @@ class WarrantyService(BaseService):
                 self._notify_customer(request, "Đã nhận yêu cầu bảo hành",
                                       f"Yêu cầu {request.RequestCode} đã được ghi nhận và chờ tiếp nhận sản phẩm.")
                 self._notify_operators(request, "Yêu cầu bảo hành mới",
-                                       f"Khách hàng gửi yêu cầu {request.RequestCode}; chờ tiếp nhận sản phẩm.")
+                                       f"Khách hàng gửi yêu cầu {request.RequestCode}, chờ tiếp nhận sản phẩm.")
             return self._customer_detail(request)
 
     def cancel_warranty_request(
@@ -317,7 +317,7 @@ class WarrantyService(BaseService):
             request, _ = self._lock(request_id)
             stage = self.progress_stage(request)
             if stage != data.ExpectedStage:
-                raise ConflictError("Phiếu đã thay đổi; hãy tải lại trước khi chuyển giai đoạn", code="service_request_stale")
+                raise ConflictError("Phiếu đã thay đổi, hãy tải lại trước khi chuyển giai đoạn", code="service_request_stale")
             if stage not in ("New", "Inspecting", "Repairing", "Finished"):
                 raise BusinessRuleError("Phiếu đã đóng", code="service_request_closed")
             if stage != "Repairing" and (data.ResultType is not None or data.ResultNote is not None):
@@ -335,7 +335,7 @@ class WarrantyService(BaseService):
                 event = "Đang xử lý bảo hành."
             elif stage == "Repairing":
                 if data.ResultType not in ("Repaired", "PartReplaced", "NotRepairable"):
-                    raise BusinessRuleError("Cần chọn kết quả bảo hành; tạm thời không hỗ trợ đổi máy", code="warranty_result_required")
+                    raise BusinessRuleError("Cần chọn kết quả bảo hành, tạm thời không hỗ trợ đổi máy", code="warranty_result_required")
                 note = required_text(data.ResultNote, code="result_note_required", message="Cần ghi nhận kết quả gửi cho khách")
                 request.Status = PROCESSING
                 request.ResultType, request.ResultNote = data.ResultType, note
@@ -344,7 +344,7 @@ class WarrantyService(BaseService):
                 event = f"Kết quả bảo hành: {_RESULT_LABELS[data.ResultType]}. {note}"
             else:
                 if request.ResultType == RESULT_PRODUCT_REPLACED:
-                    raise BusinessRuleError("Phiếu đổi máy cũ cần được xử lý riêng; tạm thời không hỗ trợ đổi máy", code="warranty_replacement_paused")
+                    raise BusinessRuleError("Phiếu đổi máy cũ cần được xử lý riêng, tạm thời không hỗ trợ đổi máy", code="warranty_replacement_paused")
                 request.Status, request.CompletedAt = COMPLETED, now
                 event = "Đã trả sản phẩm cho khách, đóng phiếu bảo hành."
             self._history(request, actor.user_id, old, request.Status, compose_note(event, note),
@@ -632,7 +632,7 @@ class WarrantyService(BaseService):
                 raise BusinessRuleError(f"Yêu cầu đang ở trạng thái {status_label(old, WARRANTY_STATUS_LABELS)}, không thể từ chối",
                                         code="invalid_warranty_transition")
             if request.ReceivedAt is None:
-                raise BusinessRuleError("Chưa tiếp nhận sản phẩm; yêu cầu chưa vào quá trình xử lý",
+                raise BusinessRuleError("Chưa tiếp nhận sản phẩm, yêu cầu chưa vào quá trình xử lý",
                                         code="warranty_not_received")
             if request.ResultApprovedAt is not None:
                 raise BusinessRuleError("Kết quả đã được duyệt, không thể từ chối yêu cầu",
@@ -734,7 +734,7 @@ class WarrantyService(BaseService):
         stored = stored_warranty_period(serial.WarrantyStartDate, serial.WarrantyEndDate)
         if stored != expected:
             raise BusinessRuleError(
-                f"Thời hạn bảo hành đã lưu của serial {serial.SerialNumber} không khớp dữ liệu đơn hàng; "
+                f"Thời hạn bảo hành đã lưu của serial {serial.SerialNumber} không khớp dữ liệu đơn hàng, "
                 "cần kiểm tra thủ công",
                 code="warranty_data_inconsistent",
             )
@@ -775,7 +775,7 @@ class WarrantyService(BaseService):
     def _require_other_reviewer(request: WarrantyRequest, actor: Actor) -> None:
         """Người đề xuất không tự duyệt/từ chối đề xuất của mình; không rõ người đề xuất thì phải đề xuất lại."""
         if request.ResultProposedByUserId is None:
-            raise BusinessRuleError("Không xác định được người đề xuất; cần đề xuất lại kết quả",
+            raise BusinessRuleError("Không xác định được người đề xuất, cần đề xuất lại kết quả",
                                     code="warranty_result_proposer_unknown")
         if request.ResultProposedByUserId == actor.user_id:
             raise BusinessRuleError("Người đề xuất không được tự duyệt hoặc từ chối đề xuất của mình",
@@ -791,7 +791,7 @@ class WarrantyService(BaseService):
     def _lock_request_serial(self, request: WarrantyRequest, item: OrderItem) -> ProductSerial:
         serial = self.serials.get_by_id_for_update(request.ProductSerialId)
         if serial is None or serial.OrderItemId != item.OrderItemId:
-            raise BusinessRuleError("Serial/IMEI của yêu cầu không còn khớp dòng đơn hàng; cần kiểm tra thủ công",
+            raise BusinessRuleError("Serial/IMEI của yêu cầu không còn khớp dòng đơn hàng, cần kiểm tra thủ công",
                                     code="serial_state_inconsistent")
         return serial
 
@@ -801,7 +801,7 @@ class WarrantyService(BaseService):
             return
         serial = self._lock_request_serial(request, item)
         if serial.Status != SERIAL_WARRANTY:
-            raise BusinessRuleError("Serial/IMEI không ở trạng thái đang bảo hành; cần kiểm tra thủ công",
+            raise BusinessRuleError("Serial/IMEI không ở trạng thái đang bảo hành, cần kiểm tra thủ công",
                                     code="serial_state_inconsistent")
         serial.Status = SERIAL_SOLD
 
@@ -819,7 +819,7 @@ class WarrantyService(BaseService):
         self.variant_service.change_stock({item.ProductVariantId: -1})  # khóa biến thể trước serial, chặn tồn âm
         original = self._lock_request_serial(request, item)
         if original.Status != SERIAL_WARRANTY:
-            raise BusinessRuleError("Serial cũ không ở trạng thái đang bảo hành; cần kiểm tra thủ công",
+            raise BusinessRuleError("Serial cũ không ở trạng thái đang bảo hành, cần kiểm tra thủ công",
                                     code="serial_state_inconsistent")
         replacement = self.serials.get_by_id_for_update(replacement_id)
         if replacement is None:

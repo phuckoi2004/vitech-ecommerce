@@ -24,13 +24,15 @@ from app.prompts.vietech_ai import VIETECH_SYSTEM_PROMPT
 from app.prompts.vietech_ai_protocol import VIETECH_TOOL_PROTOCOL
 from app.repositories.chat import ConversationRepository, MessageRepository
 from app.repositories.user import UserRepository
-from app.schemas.ai_chat import AiMessageCancel, AiMessageCreate, AiTurnResponse, PresentAnswerArguments
+from app.schemas.ai_chat import (AiMessageCancel, AiMessageCreate, AiTurnResponse, PresentAnswerArguments,
+                                  ProductSelection)
 from app.schemas.chat import MessageResponse
 
 from .actor import Actor, require_role
 from .base import BaseService
-from .ai_intent import ConversationState, PastTurn, slots_from_constraints
+from .ai_intent import ConversationState, PastTurn, new_shopping_request, slots_from_constraints
 from .ai_tools import AiTools, GroundingContext, TOOL_SCHEMAS, tool_definitions
+from .compatibility_intent import compatibility_question
 from .exceptions import AiUnavailableError, BusinessRuleError, ConflictError, NotFoundError, TooManyRequestsError
 
 logger = logging.getLogger(__name__)
@@ -44,10 +46,21 @@ REPAIR_NOTE = (
 FINAL_NOTE = "Đã hết lượt tra cứu. Gọi present_answer ngay với các sản phẩm đã tra cứu trong lượt này."
 # Marks a turn the backend answered itself (an unresolvable "máy thứ ba"), without a model call.
 RULES_MODEL = "vietech-rules"
+# One retry of a provider 5xx/connection failure, after a short pause, only if the retried call still has this much time.
+PROVIDER_RETRY_DELAY_SECONDS = 1
+PROVIDER_RETRY_MIN_SECONDS = 8
 # Questions the backend can answer from data it already read; when the model fails (provider error, malformed or
 # over-long tool use) the backend's own answer is shown instead of an error. Quota errors still fail (cool-down).
 BACKEND_ANSWERS = {"explain_recommendation": "explain", "policy_inquiry": "policy", "promotion_inquiry": "offers",
                    "product_description": "chat"}
+# When the backend already holds a complete grounded answer, the model only words it (or picks among ranked products),
+# so the customer waits at most this long for that wording before the backend's own answer is shown (p95 ≤ 15 s target,
+# docs/stage10-ai-evaluation.md). Other turns keep the full AI_TIMEOUT_SECONDS.
+WORDING_BUDGET_SECONDS = 10
+# Gemini answers almost every call within 12 s, but now and then a call stalls for 40–120 s that a fresh request
+# answers at once (acceptance runs of 29/10/2026: N01 timed out at 120 s, S03/S04 took 80–93 s). Once per turn, a call
+# with enough turn time left is cut at this point and sent again with the rest. The cut call may still use quota.
+STALL_SECONDS = 15
 # The persona (how to advise) followed by the backend contract (how to read the turn data and end the turn).
 SYSTEM_PROMPT = VIETECH_SYSTEM_PROMPT.strip() + "\n\n" + VIETECH_TOOL_PROTOCOL
 
@@ -66,7 +79,50 @@ def turn_note(context):
     if context.policy:
         parts.append("CHÍNH SÁCH VÀ ƯU ĐÃI VIETECH (backend đọc từ cấu hình, catalog và list_offers; chỉ dùng đúng nội "
                      "dung này):\n" + json.dumps(context.policy, ensure_ascii=False))
+    if context.compatibility:
+        parts.append("KẾT QUẢ KIỂM TRA TƯƠNG THÍCH ĐÃ XÁC MINH (backend quyết định, không được thay đổi trạng thái, "
+                     "thông số hoặc điều kiện):\n" + json.dumps(context.compatibility, ensure_ascii=False))
+        parts.append("CÁC CÂU GIẢI THÍCH AN TOÀN: chọn tối đa 6 Id phù hợp, theo thứ tự dễ hiểu trong "
+                     "compatibility_explanation_ids; không viết thêm kết luận tự do:\n"
+                     + json.dumps(context.compatibility_options, ensure_ascii=False))
     return "\n\n".join(parts)
+
+
+def salvaged_decision(raw):
+    """A final answer repaired only in ways that cannot add a fact: products dropped from an intent that carries none
+    (handoff, chat, clarify…), unknown fields and repeated selections dropped, explanation ids kept only for a
+    compatibility answer, and an over-long message dropped so the backend's own text is shown. None if still invalid."""
+    if not isinstance(raw, str) or len(raw) > 4000:
+        return None
+    try:
+        data = json.loads(raw)
+    except ValueError:
+        return None
+    if not isinstance(data, dict):
+        return None
+    data = {key: value for key, value in data.items() if key in PresentAnswerArguments.model_fields}
+    products = data.get("products")
+    if data.get("intent") in ("clarify", "handoff", "no_results", "offers", "chat"):
+        data["products"] = []
+    elif isinstance(products, list):
+        known = ProductSelection.model_fields
+        cleaned, seen = [], set()
+        for item in products:
+            if isinstance(item, dict):
+                item = {key: value for key, value in item.items() if key in known}
+                identity = (item.get("product_id"), item.get("product_variant_id") if data.get("intent") == "compare" else None)
+                if identity not in seen:
+                    seen.add(identity)
+                    cleaned.append(item)
+        data["products"] = cleaned[:5]
+    if isinstance(data.get("message"), str) and len(data["message"]) > 1500:
+        data["message"] = None
+    if data.get("intent") != "compatibility":
+        data.pop("compatibility_explanation_ids", None)
+    try:
+        return PresentAnswerArguments.model_validate(data)
+    except ValidationError:
+        return None
 
 
 def model_text(text: str) -> str:
@@ -77,13 +133,13 @@ def model_text(text: str) -> str:
 
 class AiChatService(BaseService):
     def __init__(self, session, *, settings: AiSettings, model: ChatModel, state: StateStore,
-                 timer=time.monotonic, **kwargs):
+                 timer=time.monotonic, sleep=time.sleep, **kwargs):
         super().__init__(session, **kwargs)
         self.settings, self.model, self.state = settings, model, state
         self.conversations = ConversationRepository(session)
         self.messages = MessageRepository(session)
         self.users = UserRepository(session)
-        self.timer = timer
+        self.timer, self.sleep = timer, sleep
 
     def ask(self, actor: Actor, conversation_id: uuid.UUID, data: AiMessageCreate) -> AiTurnResponse:
         require_role(actor, "Customer")
@@ -103,22 +159,66 @@ class AiChatService(BaseService):
         try:
             context = GroundingContext(data.Content, state=state)
             self._analyze(actor, conversation_id, data.ClientRequestId, ticket, context, history)
-            if context.intent.clarification:
+            cooldown = self._cooldown_remaining()
+            if context.intent.transaction:
+                # "Đặt giúp tôi … và thanh toán luôn": the assistant never orders or pays, so the answer is fixed; a
+                # model round once answered it with a product list that placed nothing (S05).
+                completion = ChatCompletion("", RULES_MODEL)
+                decision = PresentAnswerArguments(intent="handoff")
+            elif context.intent.intent == "comparison_guidance":
+                completion = ChatCompletion("", RULES_MODEL)
+                decision = PresentAnswerArguments(intent="chat")
+            elif context.intent.clarification:
                 # "Máy thứ ba" after a two-item list: ask which product is meant instead of guessing.
                 completion = ChatCompletion("", RULES_MODEL)
                 decision = PresentAnswerArguments(intent="clarify", clarification="products")
+            elif context.comparison is not None:
+                # Smart Compare with its exact SKUs resolved: the table and its analysis come from the catalog and the
+                # Recommendation Engine, and model wording is never shown for them (AiTools._comparison). A model round
+                # could not change the answer; it would only add latency, quota use and a failure mode.
+                completion = ChatCompletion("", RULES_MODEL)
+                decision = PresentAnswerArguments(intent="compare", products=[
+                    {"product_id": ref["ProductId"], "product_variant_id": ref["ProductVariantId"]}
+                    for ref in context.intent.references])
+            elif ((context.intent.recommending or context.intent.comparison_search)
+                  and context.prefetched is not None and not context.prefetched["Products"]
+                  and not context.hidden):
+                # Nothing in the catalog passes the hard filters. The model may not loosen the customer's conditions, so
+                # more searches cannot change that: the backend answers (nearest product above the budget included).
+                # "Everything suitable was already shown" (hidden) still goes to the model, which suggests what to relax.
+                completion = ChatCompletion("", RULES_MODEL)
+                decision = PresentAnswerArguments(intent="no_results")
+            elif cooldown and context.compatibility is not None:
+                # Gemini is cooling down after a quota error. The verified rule result and its backend explanation
+                # do not need the model, so the customer still gets them instead of a quota error.
+                context.compatibility_fallback = True
+                completion, decision = ChatCompletion("", RULES_MODEL), PresentAnswerArguments(intent="compatibility")
+            elif cooldown:
+                raise AiUnavailableError("AI tạm hết hạn mức. Vui lòng thử lại sau.", code="ai_quota_exceeded",
+                                         retry_after_seconds=cooldown)
             else:
+                ranked = self._ranked_answer(context)
+                budget = WORDING_BUDGET_SECONDS if (
+                    context.compatibility is not None or ranked is not None
+                    or (BACKEND_ANSWERS.get(context.intent.intent) and not self._offers_missing(context))) else None
                 try:
                     completion, decision = self._reply_with_tools(actor, conversation_id, data.ClientRequestId,
-                                                                  ticket, history, context)
+                                                                  ticket, history, context, budget=budget)
                 except AiUnavailableError as error:
                     fallback = BACKEND_ANSWERS.get(context.intent.intent)
-                    if fallback is None or error.code == "ai_quota_exceeded" or (
-                            fallback == "offers" and not context.offer_scopes and not context.policy):
+                    if context.compatibility is not None:
+                        context.compatibility_fallback = True
+                        self._provider_cooldown(error)
+                        fallback = "compatibility"
+                    elif fallback is None and ranked is not None:
+                        fallback = "recommend"  # The backend's ranked candidates, in its own order and wording.
+                    if fallback is None or (error.code == "ai_quota_exceeded" and fallback != "compatibility") or (
+                            fallback == "offers" and self._offers_missing(context)):
                         raise
                     logger.warning("AI model failed, backend answer used request_id=%s intent=%s code=%s",
                                    data.ClientRequestId, context.intent.intent, error.code)
-                    completion, decision = ChatCompletion("", RULES_MODEL), PresentAnswerArguments(intent=fallback)
+                    completion = ChatCompletion("", RULES_MODEL)
+                    decision = ranked if fallback == "recommend" else PresentAnswerArguments(intent=fallback)
             return self._finish(actor, conversation_id, data.ClientRequestId, ticket, completion, decision, context)
         except Exception as error:
             self._fail(conversation_id, data.ClientRequestId, ticket, error)
@@ -197,6 +297,15 @@ class AiChatService(BaseService):
             attempts = (question.Metadata or {}).get("AiAttemptCount", 0) if question else 0
             if attempts >= self.settings.max_attempts:
                 raise ConflictError("Yêu cầu đã hết số lần thử lại", code="ai_retry_limit")
+            history = state = None
+            cooldown = self._cooldown_remaining()
+            if cooldown:
+                # Only a laptop/monitor check can be answered without Gemini; anything else is refused before it is
+                # saved, as before. ask() checks the analysed intent again.
+                history, state = self._history(conversation_id)
+                if not compatibility_question(data.Content, state, new_request=new_shopping_request(data.Content)):
+                    raise AiUnavailableError("AI tạm hết hạn mức. Vui lòng thử lại sau.", code="ai_quota_exceeded",
+                                             retry_after_seconds=cooldown)
             self._rate_limit(actor)
             ticket = str(uuid.uuid4())
             metadata = {
@@ -214,7 +323,8 @@ class AiChatService(BaseService):
             else:
                 question.Metadata = metadata
             self.messages.flush()
-            history, state = self._history(conversation_id)
+            if state is None:  # Completed turns only: the request just claimed is not part of its own history.
+                history, state = self._history(conversation_id)
             history.append({"role": "user", "content": model_text(data.Content)})
             return self._response(question), ticket, history, state
 
@@ -241,29 +351,71 @@ class AiChatService(BaseService):
             if not isinstance(raw, str) or len(raw) > 4000:  # Includes the model's message of up to 1.500 characters.
                 raise ValueError
             return PresentAnswerArguments.model_validate_json(raw)
-        except (ValueError, ValidationError):
+        except ValidationError as error:
+            # Field names only (never the content), to see which rule the model keeps breaking.
+            fields = ",".join(sorted({".".join(map(str, item["loc"])) or "answer" for item in error.errors()}))
+            logger.warning("AI final answer invalid fields=%s", fields)
+            raise AiUnavailableError("AI chưa trả được kết quả có cấu trúc hợp lệ.", code="ai_invalid_output") from None
+        except ValueError:
             raise AiUnavailableError("AI chưa trả được kết quả có cấu trúc hợp lệ.", code="ai_invalid_output") from None
 
-    def _reply_with_tools(self, actor, conversation_id, request_id, ticket, history, context):
-        deadline = self.timer() + self.settings.timeout_seconds
+    def _ranked_answer(self, context):
+        """The backend's own recommendation when its ranked, hard-filtered search found products: the top candidates
+        (as many as asked, at most max_products). finish() re-reads and re-ranks them like a model's choice."""
+        if not context.intent.recommending or not (context.prefetched or {}).get("Products"):
+            return None
+        count = min(self.settings.max_products, context.intent.requested_count or self.settings.max_products)
+        return PresentAnswerArguments(intent="recommend", products=[
+            {"product_id": product["ProductId"]} for product in context.prefetched["Products"][:count]])
+
+    @staticmethod
+    def _offers_missing(context):
+        return context.intent.intent == "promotion_inquiry" and not context.offer_scopes and not context.policy
+
+    def _reply_with_tools(self, actor, conversation_id, request_id, ticket, history, context, *, budget=None):
+        """`budget`: seconds the model may take when the backend already has an answer to fall back on."""
+        deadline = self.timer() + (min(budget, self.settings.timeout_seconds) if budget else self.settings.timeout_seconds)
         messages = list(history)
         prompt_tokens = completion_tokens = 0
         call_ids = set()
         result_chars = 0
         repaired_final = False
+        provider_retried = stall_retried = False
         # One extra final-only call exists only for a repair requested in the last round.
         for round_index in range(self.settings.max_tool_rounds + 2):
             self._check_active(actor, conversation_id, request_id, ticket)
             remaining = deadline - self.timer()
             if remaining <= 0:
                 raise AiUnavailableError("AI phản hồi quá thời gian chờ.")
-            last = round_index >= self.settings.max_tool_rounds
+            last = context.compatibility is not None or round_index >= self.settings.max_tool_rounds
             if round_index == self.settings.max_tool_rounds:
                 messages.append({"role": "system", "content": FINAL_NOTE})
             try:
                 call_started = self.timer()
-                response = self.model.complete(messages, tools=tool_definitions(final_only=last),
-                                               timeout_seconds=remaining)
+                response = None
+                while response is None:
+                    left = deadline - self.timer()
+                    cut = not stall_retried and left >= STALL_SECONDS + PROVIDER_RETRY_MIN_SECONDS
+                    try:
+                        response = self.model.complete(messages, tools=tool_definitions(final_only=last),
+                                                       timeout_seconds=STALL_SECONDS if cut else left)
+                    except AiUnavailableError as error:
+                        # A stalled call cut at STALL_SECONDS, a provider 5xx or a dropped connection is sent once more
+                        # per turn, the same request, while enough of the turn's time is left; the turn's own timeout,
+                        # a quota error or invalid output is not.
+                        if error.timed_out and cut:
+                            stall_retried, pause, reason = True, 0, "stalled call"
+                        elif (error.transient and not provider_retried
+                              and deadline - self.timer() >= PROVIDER_RETRY_MIN_SECONDS + PROVIDER_RETRY_DELAY_SECONDS):
+                            provider_retried, pause, reason = True, PROVIDER_RETRY_DELAY_SECONDS, "transient failure"
+                        else:
+                            raise
+                        logger.warning("AI provider %s, retrying once request_id=%s round=%d",
+                                       reason, request_id, round_index + 1)
+                        if pause:
+                            self.sleep(pause)
+                        self._check_active(actor, conversation_id, request_id, ticket)
+                        call_started = self.timer()
             except AiUnavailableError as error:
                 # The provider rejected a malformed tool call before returning it (stage 10.7); ask once to redo it.
                 if error.code != "ai_invalid_output" or repaired_final:
@@ -291,7 +443,12 @@ class AiChatService(BaseService):
                     return completion, self._decision(calls[0].arguments)
                 except AiUnavailableError:
                     if repaired_final or last:
-                        raise
+                        # No repair round left: keep what can be kept without adding a fact, else fail as before.
+                        salvaged = salvaged_decision(calls[0].arguments)
+                        if salvaged is None:
+                            raise
+                        logger.warning("AI final answer salvaged request_id=%s intent=%s", request_id, salvaged.intent)
+                        return completion, salvaged
                     repaired_final = True
                     invalid = calls[0]
                     if not invalid.id or invalid.id in call_ids:
@@ -386,7 +543,9 @@ class AiChatService(BaseService):
                 # Internal (customers only get ReplyToMessageId): the shown products, in order, for "máy thứ hai"
                 # and for not repeating them when the customer asks for more.
                 "Metadata": {"ReplyToMessageId": str(question.MessageId), "ProductReferences": references,
-                             "AnswerIntent": notes["AnswerIntent"]},
+                             "AnswerIntent": notes["AnswerIntent"],
+                             **({"Comparison": notes["Comparison"]} if notes.get("Comparison") else {}),
+                             **({"Compatibility": notes["Compatibility"]} if notes.get("Compatibility") else {})},
                 "IsRead": False, "SentAt": self.now(),
             })
             card_ids = []
@@ -425,6 +584,9 @@ class AiChatService(BaseService):
         except SQLAlchemyError:
             # A later retry can recover the expired lease if the database is temporarily unavailable.
             logger.warning("Could not save failed AI request status")
+        self._provider_cooldown(error)
+
+    def _provider_cooldown(self, error):
         if getattr(error, "code", None) == "ai_quota_exceeded" and error.retry_after_seconds:
             key = f"ai-provider-cooldown:{self.settings.model}"
             until = self.now().timestamp() + error.retry_after_seconds
@@ -514,13 +676,15 @@ class AiChatService(BaseService):
         return AiTurnResponse(ClientRequestId=metadata["ClientRequestId"], Status=metadata["AiProcessingStatus"],
                               CustomerMessage=MessageResponse.model_validate(question), AiMessages=replies)
 
+    def _cooldown_remaining(self):
+        """Seconds left of the provider cooldown set after a quota error, or None."""
+        cooldown = self.state.get(f"ai-provider-cooldown:{self.settings.model}") or {}
+        remaining = cooldown.get("until", 0) - self.now().timestamp()
+        return int(remaining) + 1 if remaining > 0 else None
+
     def _rate_limit(self, actor):
         key = f"ai-send:{actor.user_id}"
         now = self.now().timestamp()
-        cooldown = self.state.get(f"ai-provider-cooldown:{self.settings.model}") or {}
-        if cooldown.get("until", 0) > now:
-            raise AiUnavailableError("AI tạm hết hạn mức. Vui lòng thử lại sau.", code="ai_quota_exceeded",
-                                     retry_after_seconds=int(cooldown["until"] - now) + 1)
         with self.state.lock(key):
             record = self.state.get(key) or {"times": []}
             times = [t for t in record["times"] if t > now - 60]

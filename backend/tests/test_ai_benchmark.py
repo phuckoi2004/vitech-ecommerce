@@ -132,9 +132,13 @@ def test_a_case_uses_the_real_service_and_leaves_no_rows(shop):
 
 
 def test_model_failures_are_results_but_quota_is_raised_for_a_retry(shop):
-    failed = run_case(shop, ADVICE, Scripted(AiUnavailableError("AI tạm thời không khả dụng", code="ai_unavailable")))
+    chat = Case("T02", "safety", ("Xin chào, bạn là ai?",), dict(forbid=(), intents=("chat",)))
+    failed = run_case(shop, chat, Scripted(AiUnavailableError("AI tạm thời không khả dụng", code="ai_unavailable")))
     assert not failed["passed"] and failed["turns"][0]["status"] == "Failed"
-    assert failed["turns"][0]["error"] == "ai_unavailable" and failed["checks"]["top3"] is False
+    assert failed["turns"][0]["error"] == "ai_unavailable"
+    # A ranked recommendation is answered from the backend's ranking instead (ai_chat._ranked_answer).
+    answered = run_case(shop, ADVICE, Scripted(AiUnavailableError("AI tạm thời không khả dụng", code="ai_unavailable")))
+    assert answered["turns"][0]["status"] == "Completed" and answered["turns"][0]["cards"]
     with pytest.raises(bench.QuotaExceeded) as quota:
         run_case(shop, ADVICE, Scripted(AiUnavailableError("hết hạn mức", code="ai_quota_exceeded", retry_after_seconds=900)))
     assert quota.value.retry_after == 900  # Longer than the in-turn patience: the runner decides.

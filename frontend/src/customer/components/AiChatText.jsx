@@ -1,3 +1,5 @@
+import { customerAiText } from './ai-customer-wording.js'
+
 // A small, text-only Markdown subset. Model content never becomes HTML or a link.
 function inline(text) {
   return text.split(/(\*\*[^*\n]+\*\*|__[^_\n]+__|`[^`\n]+`|\*[^*\n]+\*)/g).map((part, index) => {
@@ -11,7 +13,7 @@ function inline(text) {
 }
 
 export default function AiChatText({ content }) {
-  const lines = (content ?? '').replace(/\\r\\n|\\n|\\r/g, '\n').replace(/\r\n?/g, '\n').split('\n')
+  const lines = customerAiText(content).replace(/\\r\\n|\\n|\\r/g, '\n').replace(/\r\n?/g, '\n').split('\n')
   const blocks = []
   let current
   function append(kind, text, start) {

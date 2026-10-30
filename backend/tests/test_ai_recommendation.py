@@ -184,9 +184,9 @@ def test_hard_filters_then_ranked_top_k_with_reasons_from_confirmed_facts(laptop
     assert all("Score" not in c.Metadata and "Ranking" not in c.Metadata for c in cards)
     answer = response.AiMessages[0].Content
     assert answer.index("dev-pro") < answer.index("office-basic")
-    assert ("Phù hợp: RAM 16 GB; SSD 512 GB; CPU AMD Ryzen 7 7735HS (nhóm hiệu năng cao); RAM nâng cấp được; "
+    assert ("Phù hợp: RAM 16 GB, SSD 512 GB, CPU AMD Ryzen 7 7735HS (nhóm hiệu năng cao), RAM nâng cấp được, "
             "trong ngân sách 20.000.000 đ.") in answer
-    assert "Lưu ý: RAM 8 GB (dưới 16 GB); SSD 256 GB (dưới 512 GB); CPU Intel Core i3-1215U (nhóm phổ thông)." in answer
+    assert "Lưu ý: RAM 8 GB (dưới 16 GB), SSD 256 GB (dưới 512 GB), CPU Intel Core i3-1215U (nhóm phổ thông)." in answer
     assert "Thông tin sản phẩm từ catalog" not in answer and "yêu thích" not in answer
     assert "AiRanking" not in (response.CustomerMessage.Metadata or {})
     ranking = question_metadata(s, "Laptop học lập trình dưới 20 triệu")["AiRanking"]

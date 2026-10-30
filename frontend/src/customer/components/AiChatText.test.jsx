@@ -32,3 +32,25 @@ test('unfinished formatting from the model keeps all of the original words', () 
   expect(container.textContent).toContain('__Mã chưa đóng')
   expect(container.textContent).toContain(tick + 'mã chưa đóng')
 })
+
+test('the old comparison introduction is presented directly while product names and list order stay intact', () => {
+  const { container } = render(<AiChatText content={'Mình đã đối chiếu các phiên bản sau bằng dữ liệu hiện tại của VieTech:\n1. iPhone 17 Pro — Bạc · 256 GB.\n2. Samsung Galaxy S26 Ultra — Đen · 256 GB.\n\nChưa đủ dữ liệu để xác nhận thời lượng pin.'} />)
+  expect(container.textContent).not.toMatch(/dữ liệu|đối chiếu|xác minh|căn cứ/i)
+  expect(screen.getByRole('heading', { name: 'So sánh các mẫu sau' })).toBeInTheDocument()
+  expect(container.querySelectorAll('ol li')).toHaveLength(2)
+  expect(container.querySelector('ol li')).toHaveTextContent('iPhone 17 Pro — Bạc · 256 GB.')
+  expect(screen.getByText('Chưa thể xác nhận thời lượng pin.')).toBeInTheDocument()
+})
+
+test('wording cleanup preserves indented list continuations and negative video capabilities', () => {
+  const { container } = render(<AiChatText content={'- Cổng USB-C:\n  chỉ truyền dữ liệu, không xuất hình.\n- HDMI 2.0: 3840×2160 @ 60 Hz.'} />)
+  expect(container.querySelectorAll('ul li')).toHaveLength(2)
+  expect(container.querySelector('ul li')).toHaveTextContent('Cổng USB-C: chỉ truyền tệp, không xuất hình.')
+  expect(container.querySelectorAll('p')).toHaveLength(0)
+  expect(container).toHaveTextContent('HDMI 2.0: 3840×2160 @ 60 Hz.')
+})
+
+test('the removed default sentence disappears from saved messages without adding another sentence', () => {
+  const { container } = render(<AiChatText content={'RAM: 16 GB.\n\nChưa thể chọn một mẫu phù hợp hơn với nhu cầu của bạn.'} />)
+  expect(container.textContent).toBe('RAM: 16 GB.')
+})

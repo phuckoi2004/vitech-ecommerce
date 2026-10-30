@@ -30,7 +30,7 @@
 .ai-chat-avatar svg { width: 19px; height: 19px; }
 .ai-chat-workspace { position: relative; display: flex; flex: 1; min-height: 0; overflow: hidden; }
 .ai-chat-main { display: flex; flex-direction: column; flex: 1; min-height: 0; min-width: 0; }
-.ai-chat-thread { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.ai-chat-thread { display: flex; flex-direction: column; flex: 1; min-height: 0; min-width: 0; }
 .ai-chat-empty { display: flex; flex: 1; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 28px; text-align: center; overflow-y: auto; }
 .ai-chat-empty h3 { margin: 0; font-size: 22px; line-height: 1.4; letter-spacing: -.5px; }
 .ai-chat-empty p { max-width: 320px; margin: 0 0 6px; color: var(--color-muted-600); line-height: 1.7; font-size: 13px; }
@@ -139,7 +139,71 @@
 .ai-chat-history-empty svg { width: 26px; height: 26px; color: var(--color-muted-400); }
 .ai-chat-pages { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-top: 12px; font-size: 11px; color: var(--color-muted-600); }
 .ai-chat-pages button { padding: 6px 8px; border: 1px solid var(--color-line); border-radius: 7px; background: var(--color-surface); color: var(--color-ink-900); font-size: 11px; }
+.ai-comparison { container-type: inline-size; min-width: 0; max-width: 100%; margin-top: 16px; font-size: 12px; line-height: 1.6; }
+.ai-comparison h4 { margin: 0 0 8px; font-size: 13px; font-weight: 700; }
+.ai-comparison-hint { margin: 0 0 8px; font-size: 11px; color: var(--color-muted-600); }
+.ai-comparison-scroll { width: 100%; max-width: 100%; overflow-x: auto; overscroll-behavior-x: contain; border: 1px solid var(--color-line-soft); border-radius: 12px; scrollbar-width: thin; }
+.ai-comparison-scroll:focus-visible { outline: 2px solid var(--color-accent-500); outline-offset: 2px; }
+/* Two SKUs fit side by side in the 460px panel (360px of table); a third scrolls inside the table, never the chat. */
+.ai-comparison-table { width: 100%; min-width: calc(90px + var(--ai-comparison-columns, 3) * 132px); border-collapse: separate; border-spacing: 0; table-layout: fixed; text-align: left; }
+.ai-comparison-table th, .ai-comparison-table td { padding: 11px; vertical-align: top; border-bottom: 1px solid var(--color-line-soft); border-right: 1px solid var(--color-line-soft); overflow-wrap: anywhere; }
+.ai-comparison-table th:first-child { position: sticky; left: 0; z-index: 1; width: 90px; background: var(--color-surface-subtle); font-weight: 600; }
+/* The swipe hint only where the table is wider than the message (minimum width above plus the 2px frame). */
+@container (min-width: 356px) { .ai-comparison-hint.is-two-columns { display: none; } }
+@container (min-width: 488px) { .ai-comparison-hint { display: none; } }
+.ai-comparison-table thead th { background: var(--color-surface); }
+.ai-comparison-table tr:last-child td, .ai-comparison-table tbody tr:last-child th { border-bottom: 0; }
+.ai-comparison-table tr > :last-child { border-right: 0; }
+.ai-comparison-table thead strong, .ai-comparison-table thead small, .ai-comparison-table thead a { display: block; margin-top: 7px; }
+.ai-comparison-table thead small { font-size: 10px; font-weight: 400; color: var(--color-muted-600); }
+.ai-comparison-table a { color: var(--color-accent-600); font-size: 11px; font-weight: 600; }
+.ai-comparison-table img, .ai-comparison-image-fallback { display: block; width: 72px; height: 76px; object-fit: contain; }
+.ai-comparison-image-fallback { display: grid; place-items: center; background: var(--color-surface-muted); border-radius: 10px; color: var(--color-accent-500); }
+.ai-comparison-table .is-missing { color: var(--color-muted-600); font-style: italic; }
+.ai-comparison-spec-lines > span { display: block; }
+.ai-comparison-spec-lines > span + span { margin-top: 6px; }
+.ai-comparison-multiline { white-space: pre-line; }
+.ai-comparison-variant { color: var(--color-muted-600); font-size: 11px; }
+.ai-comparison-analysis { margin-top: 14px; padding: 14px; background: var(--color-surface-subtle); border: 1px solid var(--color-line-soft); border-radius: 12px; }
+.ai-comparison-analysis h4 { color: var(--color-accent-600); font-size: 11px; letter-spacing: .5px; }
+.ai-comparison-analysis h5 { margin: 14px 0 6px; font-size: 12px; font-weight: 650; }
+.ai-comparison-analysis p { margin: 6px 0; }
+.ai-comparison-analysis ul { margin: 6px 0; padding-left: 18px; list-style: disc; }
+.ai-comparison-analysis li + li { margin-top: 5px; }
+.ai-comparison-analysis > small { display: block; margin-top: 12px; color: var(--color-muted-600); font-size: 10px; }
+.ai-comparison-verdict + .ai-comparison-verdict { border-top: 1px solid var(--color-line-soft); margin-top: 14px; }
 @keyframes ai-chat-pulse { 0%, 70%, 100% { opacity: .4; transform: translateY(0); } 35% { opacity: 1; transform: translateY(-3px); } }
+.ai-compatibility { min-width: 0; max-width: 100%; margin-top: 16px; font-size: 12px; line-height: 1.65; overflow-wrap: anywhere; }
+.ai-compatibility h4 { margin: 0 0 10px; font-size: 12px; line-height: 1.6; font-weight: 700; color: var(--color-accent-600); }
+.ai-compatibility h5 { margin: 16px 0 7px; font-size: 12px; font-weight: 650; }
+.ai-compatibility h6 { margin: 0 0 7px; font-size: 12px; font-weight: 650; }
+.ai-compatibility p { margin: 7px 0; }
+.ai-compatibility ul { margin: 7px 0; padding-left: 18px; list-style: disc; }
+.ai-compatibility li + li { margin-top: 5px; }
+.ai-compatibility-status { display: inline-flex; align-items: flex-start; gap: 7px; max-width: 100%; padding: 5px 8px; border-radius: 7px; font-size: 11px; font-weight: 600; background: var(--color-surface-muted); color: var(--color-ink-900); }
+.ai-compatibility-status > span { display: inline-grid; flex-shrink: 0; place-items: center; width: 17px; height: 17px; border: 1px solid currentColor; border-radius: 50%; line-height: 1; }
+.ai-compatibility-status.is-compatible { color: var(--color-success-600); background: var(--color-success-50); }
+.ai-compatibility-status.is-incompatible { color: var(--color-brand-600); background: var(--color-brand-50); }
+.ai-compatibility-status.is-requires_adapter { color: var(--color-accent-600); background: var(--color-accent-50); }
+.ai-compatibility-status.is-unknown, .ai-compatibility-status.is-unrequested { color: var(--color-muted-600); }
+.ai-compatibility-overview, .ai-compatibility-explanation, .ai-compatibility-missing { padding: 12px; border: 1px solid var(--color-line-soft); border-radius: 12px; background: var(--color-surface-subtle); }
+.ai-compatibility-products { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr)); gap: 10px; margin-top: 12px; }
+.ai-compatibility-product { min-width: 0; padding: 12px; border: 1px solid var(--color-line-soft); border-radius: 12px; }
+.ai-compatibility-product > small { display: block; margin-bottom: 6px; color: var(--color-muted-600); font-size: 10px; }
+.ai-compatibility-product > a { display: flex; gap: 10px; align-items: center; color: inherit; text-decoration: none; }
+.ai-compatibility-product > a > span { min-width: 0; }
+.ai-compatibility-product strong, .ai-compatibility-product a small, .ai-compatibility-detail-link { display: block; }
+.ai-compatibility-product a small { margin-top: 3px; color: var(--color-muted-600); font-size: 10px; }
+.ai-compatibility-product img, .ai-compatibility-image-fallback { display: block; flex-shrink: 0; width: 52px; height: 60px; object-fit: contain; }
+.ai-compatibility-image-fallback { display: grid; place-items: center; border-radius: 8px; color: var(--color-accent-500); background: var(--color-surface-muted); font-weight: 700; }
+.ai-compatibility-detail-link { margin-top: 4px; color: var(--color-accent-600); font-size: 10px; }
+.ai-compatibility-criteria { display: grid; gap: 9px; }
+.ai-compatibility-criteria > div { min-width: 0; padding: 12px; border: 1px solid var(--color-line-soft); border-radius: 12px; }
+.ai-compatibility details { min-width: 0; margin-top: 8px; font-size: 11px; }
+.ai-compatibility summary { cursor: pointer; color: var(--color-accent-600); }
+.ai-compatibility-missing, .ai-compatibility-explanation { margin-top: 13px; }
+.ai-compatibility-missing h5, .ai-compatibility-explanation h5 { margin-top: 0; }
+.ai-compatibility-muted { color: var(--color-muted-600); font-size: 10px; }
 @keyframes ai-chat-slide { from { transform: translateX(-12px); opacity: .7; } to { transform: translateX(0); opacity: 1; } }
 @media (max-width: 600px) {
   .shop-chat-panel.shop-chat-panel-ai { right: 10px; width: calc(100vw - 20px); max-width: calc(100vw - 20px); height: min(720px, calc(100dvh - 132px - env(safe-area-inset-bottom, 0px))); border-radius: 20px; }

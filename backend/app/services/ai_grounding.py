@@ -36,7 +36,18 @@ _NETWORK = re.compile(r"\b[2-6]g\b")
 _CODE = re.compile(r"\b(?=[A-Z0-9]*\d)(?=[A-Z0-9]*[A-Z])[A-Z0-9]{5,}\b")
 
 _INTERNAL = re.compile(r"search_products|get_product|list_offers|present_answer|\branking\b|system prompt|system instruction"
-                       r"|\bapi[ _]?key\b|gemini_api|function call|\bjson\b|thong tin san pham tu catalog")
+                       r"|\bapi[ _]?key\b|gemini_api|function call|\bjson\b"
+                       r"|\b(?:catalog(?:ue)?|specifications)\b"
+                       r"|\b(?:products|product_?variants|product_?images|categories|brands|conversations|messages|users"
+                       r"|wishlists|wishlist_?items|carts|cart_?items|orders|order_?items|coupons|promotions"
+                       r"|promotion_?products|promotion_?categories|news_?articles|banners|product_?serials"
+                       r"|warranty_?requests|return_?requests|service_?request_?(?:attachments|histories)"
+                       r"|suppliers|purchase_?orders|purchase_?order_?items|purchase_?receipts|purchase_?receipt_?items"
+                       r"|shipping_?methods|order_?status_?histories|payment_?reconciliations|reviews|review_?images"
+                       r"|payment_?webhook_?events|stock_?adjustments|stock_?adjustment_?serials|payment_?methods"
+                       r"|payment_?transactions|shipment_?returns|shipment_?return_?items|addresses|notifications)\b"
+                       r"|\b(?:product_?variant_?id|product_?id|variant_?id|brand_?id|category_?id|cost_?price"
+                       r"|stock_?quantity|warranty_?months|video_?by_?variant)\b")
 _PERSONAL = re.compile(r"\bda mua\b|\bda (?:tung )?(?:yeu thich|them vao yeu thich)\b|\blich su mua\b|\bwishlist\b"
                        r"|\bdanh sach yeu thich\b|\bgio hang cua ban\b")
 _CLAIMS = re.compile(r"\btra gop\b|\btang kem\b|\bqua tang\b|\bmien phi (?:van chuyen|giao hang)\b|\bfreeship\b"
@@ -45,7 +56,16 @@ _CLAIMS = re.compile(r"\btra gop\b|\btang kem\b|\bqua tang\b|\bmien phi (?:van c
                      r"|\b(?:ca|tron|mot|1|hai|2|ba|3) ngay\b")
 _PROMOTION = re.compile(r"\b(?:dang|duoc)\s+(?:giam|khuyen mai|sale|uu dai)\b|\bgiam (?:gia|ngay|them)\b|\bkhuyen mai\b"
                         r"|\bvoucher\b|\bcoupon\b|\bma giam\b")
+# Whether two devices work together is decided by the compatibility rules (services/compatibility.py) only. A
+# product or comparison answer may quote a port from the catalog, never conclude that a pair connects or outputs.
+_COMPATIBILITY = re.compile(r"\btuong thich\b|\bxuat (?:duoc )?(?:hinh|video|tin hieu)\b"
+                            r"|\bxuat\b(?:\s+\S+){0,6}?\s+(?:ra|sang|len|toi) man hinh\b"
+                            r"|\bket noi (?:duoc |truc tiep |tot )?(?:voi|toi|ra|vao|sang) (?:man hinh|laptop|may)\b"
+                            r"|\b(?:noi|cam) (?:duoc |truc tiep )?(?:voi|vao|sang) (?:man hinh|laptop|may)\b"
+                            r"|\b(?:can|dung|qua|them) (?:mot |1 )?(?:adapter|bo chuyen|cap chuyen)\b")
 _CONTACT = re.compile(r"[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}|(?<!\d)(?:\+?84|0)(?:[ .-]?\d){8,10}(?!\d)|https?://|www\.")
+_PROCESS_LANGUAGE = re.compile(r"\bdu lieu\b|\bdata\b|\bdoi chieu\b|\bxac minh\b|\bco can cu\b"
+                               r"|\bnguon thong tin\b|\bdua tren (?:thong tin|thong so)\b")
 
 
 @dataclass
@@ -176,6 +196,8 @@ def check_message(message, facts: Facts):
     folded = fold(plain)
     if _INTERNAL.search(folded):
         issues.append("lộ chi tiết nội bộ")
+    if _PROCESS_LANGUAGE.search(folded):
+        issues.append("kể quy trình xử lý thay vì tư vấn")
     if _CONTACT.search(clean):
         issues.append("chứa liên hệ/đường dẫn")
     if _PERSONAL.search(folded):
@@ -186,6 +208,11 @@ def check_message(message, facts: Facts):
     for match in _CLAIMS.finditer(folded):
         if match[0] not in every.folded:
             issues.append(f"khẳng định không có dữ liệu: {match[0]}")
+    # Against catalog texts only: the customer's own question ("xuất 4K ra màn hình B được không?") is not a verdict.
+    stated = " ".join(fold(str(text)) for p in facts.products for text in p.texts if text)
+    for match in _COMPATIBILITY.finditer(folded):
+        if match[0] not in stated:
+            issues.append(f"khẳng định tương thích chưa qua kiểm tra: {match[0]}")
     if _PROMOTION.search(folded) and not facts.promotions:
         issues.append("nhắc ưu đãi khi chưa tra cứu ưu đãi")
     for code in _CODE.findall(clean):

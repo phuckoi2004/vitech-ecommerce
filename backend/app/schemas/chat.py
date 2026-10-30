@@ -10,10 +10,11 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from pydantic import Field, model_validator
+from pydantic import Field, ValidationError, model_validator
 
 from app.models.chat import MESSAGE_CONTENT_MAX_LENGTH
-
+from .ai_comparison import ComparisonSnapshot
+from .ai_compatibility import CompatibilitySnapshot
 from .common import (
     ConversationMode,
     ConversationStatus,
@@ -82,6 +83,16 @@ class MessageResponse(_MessageFields):
             # Processing leases/usage belong to the server, not customer history.
             public = {key: value for key, value in self.Metadata.items()
                       if key in {"ClientRequestId", "AiProcessingStatus", "ReplyToMessageId"}}
+            if self.SenderType == "AI" and self.Metadata.get("Comparison"):
+                try:
+                    public["Comparison"] = ComparisonSnapshot.model_validate(self.Metadata["Comparison"]).model_dump(mode="json")
+                except (ValidationError, TypeError):
+                    pass  # Old/malformed metadata must not break loading an entire conversation.
+            if self.SenderType == "AI" and self.Metadata.get("Compatibility"):
+                try:
+                    public["Compatibility"] = CompatibilitySnapshot.model_validate(self.Metadata["Compatibility"]).model_dump(mode="json")
+                except (ValidationError, TypeError):
+                    pass
             self.Metadata = public or None
         return self
 

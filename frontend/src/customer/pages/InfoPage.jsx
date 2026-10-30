@@ -3,9 +3,9 @@ import { Link } from 'react-router-dom'
 import ErrorState from '../../components/shared/ErrorState.jsx'
 import LoadingState from '../../components/shared/LoadingState.jsx'
 import useApiData from '../../hooks/useApiData.js'
-import { listPaymentMethods, listShippingMethods } from '../../lib/catalog-api.js'
+import { getStorePolicies, listPaymentMethods, listShippingMethods } from '../../lib/catalog-api.js'
 import { formatMoney } from '../../lib/format.js'
-import { ACCOUNT_PATH, CART_PATH, CHAT_PATH, INFO_PATHS, SEARCH_PATH } from '../routes/paths.js'
+import { ACCOUNT_PATH, CART_PATH, CHAT_PATH, INFO_PATHS, RETURN_CREATE_PATH, SEARCH_PATH, WARRANTY_CREATE_PATH } from '../routes/paths.js'
 import './ShoppingPages.css'
 
 function Methods({ shipping = false }) {
@@ -18,6 +18,13 @@ function Methods({ shipping = false }) {
     <strong>{method.Name}</strong>{method.Description && <p>{method.Description}</p>}
     {shipping && <p>Phí cơ bản: {formatMoney(method.BaseFee)} · Thời gian dự kiến: {method.EstimatedDays === 0 ? 'Trong ngày' : `${method.EstimatedDays} ngày`}</p>}
   </li>)}</ul>
+}
+
+function AfterSalesPolicy({ kind }) {
+  const policy = useApiData('store-policies', (signal) => getStorePolicies({ signal }))
+  if (policy.loading) return <LoadingState />
+  if (policy.error) return <ErrorState message={policy.error} onRetry={policy.reload} />
+  return policy.data[kind].map((paragraph) => <p key={paragraph}>{paragraph}</p>)
 }
 
 // Describes the available customer features. Unknown store/contact details remain explicitly unpublished.
@@ -50,6 +57,7 @@ const PAGES = {
   afterSales: { title: 'Đổi trả & bảo hành', paragraphs: [
     'Khi cần hỗ trợ sau mua hàng, hãy cung cấp mã đơn, sản phẩm, tình trạng gặp phải và serial/IMEI nếu thiết bị có quản lý serial.',
     'Nhân viên sẽ kiểm tra thông tin mua hàng, thời hạn và điều kiện áp dụng trước khi tiếp nhận yêu cầu.',
+    'Yêu cầu đổi sản phẩm và yêu cầu bảo hành có quy trình riêng. VieTech hiện chưa tiếp nhận yêu cầu trả hàng hoàn tiền mới, hãy xem chính sách tương ứng bên dưới.',
   ], links: [['Chính sách đổi trả', INFO_PATHS.returns], ['Chính sách bảo hành', INFO_PATHS.warranty], ['Liên hệ hỗ trợ', INFO_PATHS.contact]] },
   privacy: { title: 'Chính sách bảo mật', paragraphs: [
     'Thông tin tài khoản, địa chỉ, đơn hàng và nội dung hỗ trợ được sử dụng để cung cấp dịch vụ mua hàng, giao hàng và chăm sóc khách hàng.',
@@ -61,14 +69,10 @@ const PAGES = {
     'Giá bán, tình trạng còn hàng và điều kiện ưu đãi có thể được cập nhật. Giá, tồn kho và tổng tiền được hệ thống kiểm tra lại khi đặt hàng.',
     'Yêu cầu hủy đơn, đổi trả và bảo hành được xử lý theo trạng thái đơn và điều kiện áp dụng. Hãy liên hệ nhân viên khi cần hỗ trợ.',
   ], links: [['Chính sách bảo mật', INFO_PATHS.privacy], ['Đổi trả & bảo hành', INFO_PATHS.afterSales]] },
-  returns: { title: 'Chính sách đổi trả', paragraphs: [
-    'Yêu cầu đổi trả cần gắn với sản phẩm trong đơn đã giao của bạn, đáp ứng thời hạn và điều kiện áp dụng của cửa hàng.',
-    'Nhân viên kiểm tra thông tin đơn, số lượng, serial/IMEI và tình trạng thực tế của sản phẩm trước khi quyết định xử lý. Khoản hoàn tiền được xác nhận theo kết quả xử lý yêu cầu.',
-  ], links: [['Hướng dẫn hỗ trợ sau mua', INFO_PATHS.afterSales], ['Liên hệ nhân viên', INFO_PATHS.contact]] },
-  warranty: { title: 'Chính sách bảo hành', paragraphs: [
-    'Thời hạn bảo hành được ghi trên trang sản phẩm. Việc tiếp nhận phụ thuộc thông tin mua hàng, thời hạn và kết quả kiểm tra điều kiện bảo hành.',
-    'Khi cần bảo hành, hãy cung cấp thông tin đơn hàng, mô tả tình trạng và serial/IMEI của thiết bị nếu có.',
-  ], links: [['Tìm sản phẩm', SEARCH_PATH], ['Liên hệ nhân viên', INFO_PATHS.contact]] },
+  returns: { title: 'Chính sách đổi trả', policy: 'Returns',
+    links: [['Tạo yêu cầu đổi sản phẩm', RETURN_CREATE_PATH], ['Hướng dẫn hỗ trợ sau mua', INFO_PATHS.afterSales], ['Liên hệ nhân viên', INFO_PATHS.contact]] },
+  warranty: { title: 'Chính sách bảo hành', policy: 'Warranty',
+    links: [['Tạo yêu cầu bảo hành', WARRANTY_CREATE_PATH], ['Tìm sản phẩm', SEARCH_PATH], ['Liên hệ nhân viên', INFO_PATHS.contact]] },
 }
 
 export default function InfoPage({ page }) {
@@ -77,7 +81,8 @@ export default function InfoPage({ page }) {
   return <div className="shopping-page info-page">
     <h1>{content.title}</h1>
     <section className="shopping-panel info-content">
-      {content.paragraphs.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
+      {content.policy ? <AfterSalesPolicy kind={content.policy} />
+        : content.paragraphs.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
       {content.methods && <Methods shipping={content.methods === 'shipping'} />}
     </section>
     <nav className="shopping-actions" aria-label="Thông tin liên quan">

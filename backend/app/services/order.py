@@ -329,7 +329,7 @@ class OrderService(BaseService):
                 for operator in self.users.list_users(role=role):
                     self.notifications.notify(
                         operator.UserId, title="Đơn hàng mới chờ xác nhận",
-                        content=f"Đơn hàng {order.OrderCode} vừa được đặt, tổng {total}đ ({payment.Name}); chờ xác nhận.",
+                        content=f"Đơn hàng {order.OrderCode} vừa được đặt, tổng {total}đ ({payment.Name}), chờ xác nhận.",
                         notification_type="NewOrder", action_url=f"/admin/orders/{order.OrderId}",
                         reference_type="Order", reference_id=order.OrderId,
                     )
@@ -987,7 +987,7 @@ class OrderService(BaseService):
     def _notify_staff_refund_needed(self, order: Order) -> None:
         """Đơn đã thanh toán bị hủy: báo Staff/Admin đang hoạt động xử lý hoàn tiền (chưa coi là đã hoàn)."""
         self._notify_staff(order, "Cần hoàn tiền",
-                           f"Đơn hàng {order.OrderCode} đã hủy khi đã thanh toán; cần xử lý hoàn tiền.")
+                           f"Đơn hàng {order.OrderCode} đã hủy khi đã thanh toán, cần xử lý hoàn tiền.")
 
     def _notify_staff(self, order: Order, title: str, content: str) -> None:
         """Thông báo về một đơn hàng cho mọi Staff/Admin đang hoạt động."""
@@ -1060,7 +1060,7 @@ class OrderService(BaseService):
         codes = self.returns.list_open_request_codes_for_order(order.OrderId)
         if codes:
             raise BusinessRuleError(
-                f"Đơn còn yêu cầu đổi/trả đang xử lý ({', '.join(codes)}); hoàn tất, từ chối hoặc hủy yêu cầu trước "
+                f"Đơn còn yêu cầu đổi/trả đang xử lý ({', '.join(codes)}), hoàn tất, từ chối hoặc hủy yêu cầu trước "
                 "khi chuyển Completed",
                 code="order_has_open_returns",
             )

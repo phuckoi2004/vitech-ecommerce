@@ -30,7 +30,7 @@ PAUSED_STEPS = (("inspect", {"RestockedQuantity": 1, "DamagedQuantity": 0}),
                 ("approve", {"CompensationAmount": "100000.00"}), ("refund", None), ("confirm-refund", None))
 
 
-def test_exchange_completes_only_after_order_commit_and_restocks_original(api, admin, staff, customer):
+def test_success_exchange_completes_only_after_order_commit_and_restocks_original(api, admin, staff, customer):
     shop = api.shop(stock=5, price="100000.00")
     line = api.delivered_line(customer, staff, shop, quantity=2)
     request_id = expect(request_return(api, customer, line["order_item_id"]), 201)["ReturnRequestId"]

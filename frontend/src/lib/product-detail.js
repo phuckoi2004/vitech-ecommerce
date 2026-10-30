@@ -52,7 +52,7 @@ export function specificationText(value, depth = 0) {
   if (typeof value === 'boolean') return value ? 'Có' : 'Không'
   if (Array.isArray(value)) return value.map((item) => specificationText(item, depth + 1)).filter(Boolean).join(', ')
   if (typeof value === 'object') return Object.entries(value)
-    .map(([name, item]) => [name, specificationText(item, depth + 1)].filter(Boolean).join(': ')).join('; ')
+    .map(([name, item]) => [name, specificationText(item, depth + 1)].filter(Boolean).join(': ')).join(', ')
   return String(value)
 }
 

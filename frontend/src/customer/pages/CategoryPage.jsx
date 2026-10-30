@@ -69,14 +69,16 @@ function Results({ category, listing, priceRange, specs, waiting, onClear }) {
     return { ...response, cards: await loadProductCards(response.Items, { signal }) }
   })
   const remaining = results.remaining
-  const firstLoad = results.loading && !results.products.length
+  // While the chosen criteria wait for the category's filters no request runs yet: that is loading, not "0 sản phẩm".
+  const loading = waiting || results.loading
+  const firstLoad = loading && !results.products.length
 
   return <>
     <Card title={`${category.Name} nổi bật`} className="catalog-results">
       <p className="sr-only" role="status">{firstLoad ? 'Đang tải sản phẩm…' : `${results.total} sản phẩm`}</p>
       {results.products.length > 0 || firstLoad ? <ul className="catalog-products">
         {results.products.map((product) => <li key={product.id}><ProductCard product={product} /></li>)}
-        {results.loading && Array.from({ length: firstLoad ? 10 : 5 }, (_, index) => <li key={`loading-${index}`}><ProductCardSkeleton /></li>)}
+        {loading && Array.from({ length: firstLoad ? 10 : 5 }, (_, index) => <li key={`loading-${index}`}><ProductCardSkeleton /></li>)}
       </ul> : !results.error && <EmptyState title="Không có sản phẩm phù hợp" description="Hãy thử bỏ bớt tiêu chí hoặc chọn mức giá khác."
         headingLevel={3} action={hasListingFilters(listing) && <button type="button" className="catalog-clear" onClick={onClear}>Xóa bộ lọc</button>} />}
       {results.error && <ErrorState message={results.error} onRetry={results.retry} />}

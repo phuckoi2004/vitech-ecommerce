@@ -51,7 +51,7 @@ function BrandEditor({ brand, onBusy, onClose, onDone }) {
     <BrandError message={error} />
     <fieldset disabled={busy || uploading} className="grid min-w-0 grid-cols-2 gap-4 border-0 p-0">
       <Field id="brand-name" label="Tên thương hiệu" className="col-span-full" required maxLength={255} value={form.Name} onChange={(event) => change('Name', event.target.value)} />
-      <Field id="brand-slug" label="Đường dẫn (slug)" className="col-span-full" required maxLength={300} pattern="[a-z0-9]+(-[a-z0-9]+)*" hint="Được gợi ý từ tên thương hiệu; bạn có thể chỉnh lại." value={form.Slug} onChange={(event) => change('Slug', event.target.value)} />
+      <Field id="brand-slug" label="Đường dẫn (slug)" className="col-span-full" required maxLength={300} pattern="[a-z0-9]+(-[a-z0-9]+)*" hint="Được gợi ý từ tên thương hiệu, bạn có thể chỉnh lại." value={form.Slug} onChange={(event) => change('Slug', event.target.value)} />
       <Field id="brand-description" label="Mô tả" className="col-span-full"><textarea id="brand-description" className={PRODUCT_CONTROL} rows={4} value={form.Description} onChange={(event) => change('Description', event.target.value)} /></Field>
       <div className="col-span-full"><AdminImagePicker title="Logo thương hiệu" name="logo thương hiệu" multiple={false} images={form.LogoUrl ? [{ ImageUrl: form.LogoUrl, IsDefault: true }] : []} onChange={(images) => change('LogoUrl', images[0]?.ImageUrl ?? '')} onUploadBusy={(value) => { setUploading(value); onBusy(value) }} /></div>
       <Field id="brand-status" label="Trạng thái" className="col-span-full"><select id="brand-status" className={PRODUCT_CONTROL} value={form.IsActive ? 'active' : 'hidden'} onChange={(event) => change('IsActive', event.target.value === 'active')}>

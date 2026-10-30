@@ -19,6 +19,8 @@ def _letters():
         if char.islower() and len(parts) > 1 and parts[0].isascii() and parts[0].isalpha():
             pairs.append((char, parts[0]))
     pairs.append(("đ", "d"))
+    # Typographic dashes in stored names ("HP 14‑EM0023AU" uses U+2011) match the hyphen customers type.
+    pairs += [(dash, "-") for dash in "‐‑‒–—−"]
     return "".join(marked for marked, _ in pairs), "".join(plain for _, plain in pairs)
 
 

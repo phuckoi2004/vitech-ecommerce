@@ -296,7 +296,7 @@ class PromotionService(BaseService):
             promotion = self._lock(promotion_id)
             if self.coupons.list_by_promotion(promotion_id):
                 raise BusinessRuleError(
-                    "Khuyến mãi đã có mã giảm giá; hãy hủy (Cancelled) thay vì xóa", code="promotion_in_use"
+                    "Khuyến mãi đã có mã giảm giá, hãy hủy (Cancelled) thay vì xóa", code="promotion_in_use"
                 )
             self.promotions.delete(promotion)
 

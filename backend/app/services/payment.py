@@ -244,7 +244,7 @@ class PaymentService(BaseService):
                 return self._qr_payment_response(order, ready[0])
             if pending:
                 raise ConflictError(
-                    "Yêu cầu thanh toán QR của đơn đang được xử lý; thử lại sau hoặc hủy yêu cầu đang chờ",
+                    "Yêu cầu thanh toán QR của đơn đang được xử lý, thử lại sau hoặc hủy yêu cầu đang chờ",
                     code="qr_payment_in_progress",
                 )
             placeholder = self.transactions.create(
@@ -267,7 +267,7 @@ class PaymentService(BaseService):
             logger.warning("Tạo yêu cầu thanh toán QR không thành công; giao dịch %s được hủy", transaction_id)
             self._abandon_qr_request(transaction_id)
             raise PaymentGatewayError(
-                "Không tạo được yêu cầu thanh toán QR; vui lòng thử lại", code="qr_payment_unavailable"
+                "Không tạo được yêu cầu thanh toán QR, vui lòng thử lại", code="qr_payment_unavailable"
             ) from exc
         return self._attach_qr(transaction_id, request)
 
@@ -316,7 +316,7 @@ class PaymentService(BaseService):
                     result,
                     "Thanh toán sai số tiền",
                     f"Đơn hàng {order.OrderCode} nhận {result.amount} thay vì {transaction.Amount}. "
-                    "Đơn chưa được ghi nhận đã thanh toán; kiểm tra và xử lý thủ công.",
+                    "Đơn chưa được ghi nhận đã thanh toán, kiểm tra và xử lý thủ công.",
                 )
                 amount_mismatch = True
                 response = PaymentTransactionResponse.model_validate(transaction)
@@ -385,7 +385,7 @@ class PaymentService(BaseService):
         self._notify(
             order,
             "Đã nhận thanh toán",
-            f"Đơn hàng {order.OrderCode} đã bị hủy trước khi nhận được thanh toán; cửa hàng sẽ hoàn tiền.",
+            f"Đơn hàng {order.OrderCode} đã bị hủy trước khi nhận được thanh toán, cửa hàng sẽ hoàn tiền.",
         )
         return "payment_after_cancellation"
 
@@ -499,7 +499,7 @@ class PaymentService(BaseService):
                 result,
                 "Thanh toán sai số tiền",
                 f"Đơn hàng {order.OrderCode} nhận {transfer.amount} thay vì {transaction.Amount}. "
-                "Đơn chưa được ghi nhận đã thanh toán; kiểm tra và xử lý thủ công.",
+                "Đơn chưa được ghi nhận đã thanh toán, kiểm tra và xử lý thủ công.",
                 webhook_event_id=transfer.webhook_event_id,
             )
             return "amount_mismatch", transaction.PaymentTransactionId
@@ -658,7 +658,7 @@ class PaymentService(BaseService):
             self.transactions.flush()
             response = self._qr_payment_response(order, transaction) if still_payable else None
         if code_taken:
-            raise PaymentGatewayError("Mã thanh toán bị trùng; vui lòng tạo lại yêu cầu", code="payment_code_collision")
+            raise PaymentGatewayError("Mã thanh toán bị trùng, vui lòng tạo lại yêu cầu", code="payment_code_collision")
         if not still_payable:
             raise BusinessRuleError(
                 "Yêu cầu thanh toán đã bị hủy hoặc đơn không còn chờ thanh toán", code="payment_request_cancelled"
@@ -885,7 +885,7 @@ class PaymentService(BaseService):
                 raise BusinessRuleError(f"Giao dịch hoàn tiền đã có kết quả ({status_label(refund.Status, TRANSACTION_STATUS_LABELS)})", code="refund_not_pending")
             if refund.CreatedByUserId is not None and refund.CreatedByUserId == actor.user_id:
                 raise BusinessRuleError(
-                    "Người lập giao dịch hoàn tiền không được tự xác nhận; cần Admin khác xác nhận",
+                    "Người lập giao dịch hoàn tiền không được tự xác nhận, cần Admin khác xác nhận",
                     code="refund_self_confirmation_not_allowed",
                 )
             if success:
@@ -1018,7 +1018,7 @@ class PaymentService(BaseService):
             # Không ghi chi tiết lỗi của cổng vào log (có thể chứa thông tin nhạy cảm).
             logger.warning("Gọi cổng hoàn tiền không thành công; giao dịch %s chờ đối soát", refund_id)
             raise PaymentGatewayError(
-                f"Chưa xác định được kết quả hoàn tiền; giao dịch {refund_id} đang chờ đối soát",
+                f"Chưa xác định được kết quả hoàn tiền, giao dịch {refund_id} đang chờ đối soát",
                 code="refund_pending_reconciliation",
             ) from exc
         return self._record_gateway_result(refund_id, result)
@@ -1068,12 +1068,12 @@ class PaymentService(BaseService):
         paid = sum((t.Amount for t in self._payments(order.OrderId, status=TX_SUCCESS)), Decimal("0"))
         succeeded = self.transactions.sum_refunds_by_source(order.OrderId, statuses=(TX_SUCCESS,))
         if sum(succeeded.values(), _ZERO) + refund.Amount > paid:
-            raise BusinessRuleError("Tổng tiền hoàn thành công sẽ vượt số đã thanh toán; cần kiểm tra dữ liệu",
+            raise BusinessRuleError("Tổng tiền hoàn thành công sẽ vượt số đã thanh toán, cần kiểm tra dữ liệu",
                                     code="refund_exceeds_paid")
         source = self.transactions.get_by_id(refund.RefundOfPaymentTransactionId)
         if source is None or source.Status != TX_SUCCESS or (
                 succeeded.get(source.PaymentTransactionId, _ZERO) + refund.Amount > source.Amount):
-            raise BusinessRuleError("Tổng tiền hoàn thành công sẽ vượt khoản thanh toán nguồn; cần kiểm tra dữ liệu",
+            raise BusinessRuleError("Tổng tiền hoàn thành công sẽ vượt khoản thanh toán nguồn, cần kiểm tra dữ liệu",
                                     code="refund_exceeds_source_payment")
 
     def _lock_refund_source(
@@ -1109,7 +1109,7 @@ class PaymentService(BaseService):
             source = next((t for t in candidates if remaining(t) >= amount), None)
             if source is None:
                 raise BusinessRuleError(
-                    "Không có khoản thanh toán nào còn đủ để hoàn số tiền này; chọn khoản nguồn và số tiền phù hợp",
+                    "Không có khoản thanh toán nào còn đủ để hoàn số tiền này, chọn khoản nguồn và số tiền phù hợp",
                     code="refund_requires_source_payment",
                 )
         source = self.transactions.get_by_id_for_update(source.PaymentTransactionId)

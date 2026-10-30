@@ -119,7 +119,7 @@ def paused_service_workflow():
     # TODO: restore the former repair-centre/independent-approval/return-finance
     # workflows only after business consultation. Retain the service implementations
     # and stored financial evidence; no active HTTP endpoint may trigger them.
-    raise BusinessRuleError("Luồng xử lý cũ đang tạm dừng; dùng chuyển giai đoạn của phiếu", code="service_workflow_paused")
+    raise BusinessRuleError("Luồng xử lý cũ đang tạm dừng, dùng chuyển giai đoạn của phiếu", code="service_workflow_paused")
 
 
 @admin_router.post("/warranty-requests/{request_id}/advance", response_model=AdminWarrantyRequestDetailResponse)

@@ -95,6 +95,12 @@ Dữ liệu cũ chỉ có `AiConstraints` vẫn đọc được. Cửa sổ ng�
 3. Giá thực bán của biến thể (giá sau khuyến mãi tự động từ PricingService, `match_variant_price`) nằm trong ngân sách; cùng một biến thể phải vừa giá vừa còn hàng.
 4. Đúng hãng bắt buộc; loại hãng bị loại trừ.
 5. Loại sản phẩm khách đã từ chối, và khi khách xin thêm thì loại sản phẩm đã giới thiệu trong nhóm nhu cầu hiện tại (mục 6).
+6. RAM/bộ nhớ tối thiểu khách ghi rõ trong câu hỏi tư vấn, ví dụ "RAM 16GB", "16GB RAM", "SSD 512GB", "ổ cứng 1TB", "bộ nhớ 256GB" (`memory_minimums`, bổ sung 29/10/2026 sau nghiệm thu AR01/AR03).
+   - Dung lượng được đọc theo SKU, giống cách Smart Compare đọc (`normalized_specs`).
+   - SKU không ghi dung lượng thì không qua bộ lọc này.
+   - Câu nối tiếp trong cùng nhóm nhu cầu giữ điều kiện, như với ngân sách.
+   - Câu hỏi về một mẫu đã nêu tên ("Máy thứ nhất có RAM 16GB không?") không bị lọc.
+   - "RAM dưới 16GB" hoặc "16GB/512GB" không có nhãn không được đọc.
 
 Ứng viên đọc theo trang 30 sản phẩm, tối đa 60 ứng viên đạt lọc cứng (danh mục lớn nhất của VieTech có 35 sản phẩm), thông số tải theo lô một lần. Không giới hạn 3 sản phẩm ở bước tìm kiếm.
 
@@ -299,7 +305,7 @@ Script tạm chạy 8 lượt trên qua `AiChatService` + `GeminiChatModel` th�
 - Catalog thiếu nhiều thông số (khối lượng, công suất sạc, tần số quét laptop), nên các tiêu chí này thường bị loại hoặc ghi “chưa có dữ liệu”.
 - Chống lặp dựa trên 12 lượt gần nhất trong cùng hội thoại; quay lại danh mục cũ sau khi đã đổi danh mục được tính là nhóm mới.
 - Kiểm tra message xác minh số, mã, tên hãng và các khẳng định đã liệt kê. Nó không hiểu ngữ nghĩa câu, ví dụ một nhận xét định tính sai nhưng không có số liệu. Dòng nhắc nhiều sản phẩm chỉ được so với dữ liệu của các sản phẩm đó gộp lại.
-- Gemini Free có lúc trả 503/quá hạn mức; adapter cố ý không tự retry, khách dùng nút thử lại.
+- Gemini Free có lúc trả 503/quá hạn mức. Adapter không tự retry; từ 29/10/2026, service gửi lại một lần với lỗi 503/mất kết nối và lượt gọi bị treo (mục 16). Lỗi còn lại thì khách dùng nút thử lại.
 - Văn bản dự phòng của backend vẫn có cấu trúc liệt kê. Nó chỉ xuất hiện khi văn bản của Gemini không đạt kiểm tra.
 
 ## 13. Bổ sung: hỏi chính sách, hỏi vì sao đề xuất và mô tả chi tiết sản phẩm (22/10/2026, tối)
@@ -393,3 +399,52 @@ Xác minh: **364 kiểm thử backend đạt, 7 bỏ qua, 45 subtests đạt** (
 Kiểm thử bổ sung ở tests/test_ai_five_products.py: giới hạn schema/cấu hình, đủ 5 thẻ, giới hạn thấp hơn, bổ sung từ 3 lên 5, giữ số lượng qua lượt hỏi thêm, không lặp 5 mẫu trước, tham chiếu thứ 4/5, bảo hành đủ 5 máy và kích thước kết quả đọc nhóm. Test frontend xác nhận hiển thị 5 thẻ theo thứ tự, bỏ thẻ thứ 6.
 
 Xác minh cho cập nhật này: **344 kiểm thử AI/chat backend đạt, 7 bỏ qua, 45 subtests đạt**; **32 kiểm thử frontend đạt**; production build và lint thành công. Gemini thật đã hoàn tất luồng hỏi nhu cầu laptop → tư vấn 5 mẫu dưới 20 triệu cho lập trình → hỏi pin máy thứ năm, trên catalog giả trong SQLite bộ nhớ. Bước hỏi thêm không gọi model; không truy cập database cửa hàng.
+
+## 16. Độ trễ, lỗi nhà cung cấp và yêu cầu đặt hàng (29/10/2026, sau nghiệm thu)
+
+Nghiệm thu với Gemini thật (`output/final-data-acceptance/`) cho thấy ba vấn đề:
+- p95 vượt mục tiêu 15 giây.
+- Một số lượt lỗi vì Gemini trả HTTP 503.
+- Một lượt tư vấn danh sách sản phẩm khi khách yêu cầu đặt hàng và thanh toán (S05).
+
+Cách xử lý (`services/ai_chat.py`):
+
+| Trường hợp | Xử lý |
+|---|---|
+| Lọc cứng không còn sản phẩm nào, chưa có mẫu bị ẩn vì đã giới thiệu | Backend trả lời `no_results` (kèm mẫu gần nhất trên ngân sách), không gọi model. Model không được nới điều kiện của khách, nên gọi thêm cũng không đổi kết quả. |
+| Backend đã có câu trả lời đầy đủ: danh sách đã xếp hạng, kết quả tương thích, giải thích đề xuất, chính sách, ưu đãi, mô tả sản phẩm | Model có tối đa `WORDING_BUDGET_SECONDS` = 10 giây. Quá hạn hoặc lỗi thì hiển thị câu trả lời của backend. Lỗi hết hạn mức vẫn báo lỗi, trừ kết quả tương thích. |
+| Gemini trả 5xx hoặc mất kết nối | Gửi lại đúng yêu cầu đó một lần mỗi lượt, sau 1 giây, nếu còn ít nhất 9 giây. |
+| Một lượt gọi bị treo | Gemini thường trả lời dưới 12 giây, nhưng khoảng 7% lượt gọi trong các lần chạy treo 36–120 giây. Mỗi lượt có một lần: nếu còn ít nhất 23 giây, lượt gọi được cắt ở `STALL_SECONDS` = 15 giây và gửi lại với thời gian còn lại. |
+| Khách yêu cầu trợ lý đặt hàng, thêm vào giỏ hoặc thanh toán thay ("Đặt giúp tôi…", "thanh toán luôn bằng thẻ…", "chốt đơn") | Backend trả câu cố định `ORDER_ACTION`, không gọi model, không kèm thẻ sản phẩm (`ai_intent._TRANSACTION`). Câu này cho biết trợ lý không đặt hàng hay thanh toán thay khách, chỉ cách tự đặt từ giỏ hàng, và nhắc khách không gửi số thẻ/OTP trong khung chat. |
+
+Câu hỏi về thanh toán ("Có thanh toán khi nhận hàng không?", "Thanh toán trả góp được không?") và câu nhờ tư vấn ("Mua giúp mẹ cái điện thoại nào tốt?") không bị coi là yêu cầu đặt hàng.
+
+Câu trả lời dự phòng của backend được ghi `AiModel = vietech-rules` khi không gọi model. Khi model lỗi rồi mới dùng câu dự phòng, log có dòng `AI model failed, backend answer used`. Báo cáo nghiệm thu tách riêng hai loại này với câu trả lời của Gemini.
+
+Hạn chế:
+- Lượt gọi bị cắt vẫn có thể bị Gemini tính vào hạn mức token.
+- Lượt không có câu dự phòng (trò chuyện, hỏi một mẫu cụ thể) mà treo hai lần vẫn chờ đến `AI_TIMEOUT_SECONDS`.
+- Nhận diện yêu cầu đặt hàng dùng mẫu cụm từ. Cách nói khác vẫn do Gemini xử lý theo prompt, như trước.
+
+Kiểm thử: `tests/test_ai_acceptance_fixes.py` gồm:
+- thử lại sau 503;
+- cắt lượt gọi treo, và lần treo thứ hai thì không cắt lại;
+- ngân sách 10 giây và câu dự phòng xếp hạng;
+- lọc cứng rỗng không gọi model;
+- 8 câu yêu cầu đặt hàng/thanh toán và 10 câu không phải yêu cầu đặt hàng;
+- câu trả lời cố định cho S05.
+
+`tests/test_ai_gemini.py` kiểm tra cờ `transient`/`timed_out` của adapter.
+
+Xác minh (29/10/2026):
+- Backend: 2.338 passed, 138 skipped, 0 failed.
+- Vitest: 1.367/1.367; build và lint đạt.
+- Gemini thật, 64 ca, chạy lại sau từng bước sửa:
+
+  | Lần chạy | p95 | Trung vị | Lượt lỗi | Ghi chú |
+  |---|---|---|---|---|
+  | Lần 2 | 13,0 s | 5,5 s | 1 | N01 treo 120 s |
+  | Lần 3 | 11,3 s | 6,1 s | 0 | S05 trả câu cố định trong 1,7 s |
+
+  Hai lần này không gặp 503 hay lượt gọi treo. Vì vậy, gửi lại sau 503 và cắt lượt treo mới kiểm chứng bằng unit test.
+- Báo cáo: `output/final-data-acceptance/ROUND2_REPORT.md`.

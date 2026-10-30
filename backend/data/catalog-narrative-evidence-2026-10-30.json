@@ -1,0 +1,670 @@
+{
+  "Operation": "enrich_scoped_content",
+  "ReviewedAt": "2026-10-30",
+  "Rule": "Không thêm bảng, cột, khóa JSON hoặc kiểu giá trị, chi tiết chưa có ô riêng được viết thành đoạn ở đúng phần mô tả",
+  "Products": [
+    {
+      "ProductId": "023280df-e3a5-40e0-8b39-028ff7a8bd81",
+      "Name": "Samsung Galaxy S25 Plus 256GB",
+      "Sources": [
+        "https://images.samsung.com/is/content/samsung/assets/ba/news/local/samsung-galaxy-s25-serija-postavlja-standard-ai-telefona-kao-pravog-ai-saputnika/S25_series_specs.pdf"
+      ],
+      "Scope": "Galaxy S25 và S25+, mục OS chung Android 15, One UI 7 khi ra mắt, không khẳng định phiên bản đang cài năm 2026",
+      "Fields": {},
+      "DescriptionEdits": [
+        {
+          "Section": "Hiệu năng",
+          "Before": "<h2>Hiệu năng Snapdragon 8 Elite dành cho Galaxy (3nm)</h2><p><strong>Snapdragon 8 Elite dành cho Galaxy (3nm)</strong> là bộ xử lý trung tâm của máy, phối hợp cùng RAM <strong>12 GB</strong> để lưu dữ liệu của các tác vụ đang chạy. Từ mở ứng dụng, chỉnh sửa ảnh đến xử lý thông báo, các thành phần này cùng đảm nhiệm những thao tác bạn dùng thường xuyên trên điện thoại.</p>",
+          "After": "<h2>Hiệu năng Snapdragon 8 Elite dành cho Galaxy (3nm)</h2><p><strong>Snapdragon 8 Elite dành cho Galaxy (3nm)</strong> là bộ xử lý trung tâm của máy, phối hợp cùng RAM <strong>12 GB</strong> để lưu dữ liệu của các tác vụ đang chạy. Từ mở ứng dụng, chỉnh sửa ảnh đến xử lý thông báo, các thành phần này cùng đảm nhiệm những thao tác bạn dùng thường xuyên trên điện thoại.</p><p>Galaxy S25 Plus ra mắt với Android 15 và giao diện One UI 7, cung cấp các công cụ quản lý ứng dụng và cá nhân hóa thiết bị.</p>"
+        }
+      ]
+    },
+    {
+      "ProductId": "02c6faf1-5206-4075-8274-852f0ecebafb",
+      "Name": "Laptop Gaming Gigabyte Eagle GL6J-9LJR2VNF93SH",
+      "Sources": [
+        "https://www.gigabyte.com/Laptop/GIGABYTE-EAGLE-GL6J/sp"
+      ],
+      "Scope": "GL6J, 9LJ, Ryzen 5 7533HS, RTX 3050, hãng ghi xấp xỉ và phụ thuộc cấu hình",
+      "Fields": {},
+      "DescriptionEdits": [
+        {
+          "Section": "intro",
+          "Before": "<p><strong>Laptop Gaming Gigabyte Eagle GL6J-9LJR2VNF93SH</strong> có màn hình 16 inch, RAM 16GB và cấu hình lưu trữ 512GB SSD1 PCIe (M.2 2280) Gen4x4 2x M.2 SSD (Supports 2x PCIe NVMe M.2 SSD, Up to 4TB). Điểm nhấn của cấu hình nằm ở GPU rời cùng bộ xử lý dành cho laptop, để bạn cân nhắc giữa công việc và nhu cầu giải trí có tải đồ họa.</p>",
+          "After": "<p><strong>Laptop Gaming Gigabyte Eagle GL6J-9LJR2VNF93SH</strong> có màn hình 16 inch, RAM 16GB và cấu hình lưu trữ 512GB SSD1 PCIe (M.2 2280) Gen4x4 2x M.2 SSD (Supports 2x PCIe NVMe M.2 SSD, Up to 4TB). Điểm nhấn của cấu hình nằm ở GPU rời cùng bộ xử lý dành cho laptop, để bạn cân nhắc giữa công việc và nhu cầu giải trí có tải đồ họa.</p><p>Máy có trọng lượng khoảng 2,2 kg, giúp bạn cân nhắc khối lượng mang theo cùng bộ sạc và phụ kiện.</p>"
+        }
+      ]
+    },
+    {
+      "ProductId": "0722fdbd-92de-4514-bb9b-d864abceb827",
+      "Name": "Xiaomi 17T Pro 5G 12GB 512GB",
+      "Sources": [
+        "https://www.mi.com/vn/product/xiaomi-17t-pro/specs/"
+      ],
+      "Scope": "Xiaomi 17T Pro 12 GB 512 GB, trang Việt Nam, không lấy thông số của bản 17T",
+      "Fields": {
+        "Tính năng màn hình": "Độ phân giải 2772 x 1280 pixel (1.5K), 447 PPI, Tần số quét tối đa 144 Hz, Độ sáng tối đa 3500 nits, tối thiểu 1 nit, 68 tỷ màu, dải màu điện ảnh DCI-P3, DC dimming, HDR10+, Dolby Vision, chứng nhận TÜV Rheinland Low Blue Light (Hardware Solution), Flicker Free, Circadian Friendly, Intelligent Eye Care"
+      },
+      "DescriptionEdits": [
+        {
+          "Section": "Màn hình",
+          "Before": "<h2>Màn hình 6.83 inch – AMOLED</h2><p>Màn hình <strong>6.83 inch</strong>, <strong>AMOLED</strong> tạo không gian để đọc nội dung, quan sát ảnh và theo dõi nhiều chi tiết trong cùng một khung hình. Tấm nền OLED kiểm soát ánh sáng ở từng điểm ảnh, thể hiện vùng tối sâu và tạo độ tương phản rõ khi xem phim hoặc ảnh chụp.</p><p>Các đặc điểm hiển thị được công bố gồm Độ sáng tối đa 3500 nits, tối thiểu 1 nit, 68 tỷ màu, dải màu điện ảnh DCI-P3, DC dimming, HDR10+, Dolby Vision.</p><p><img src=\"https://cdn2.cellphones.com.vn/800x/media/catalog/product/s/l/slider-xiaomi-17t-pro-5g.jpg\" alt=\"Xiaomi 17T Pro 5G 12GB 512GB – thiết kế sản phẩm 1\"></p>",
+          "After": "<h2>Màn hình 6.83 inch – AMOLED</h2><p>Màn hình <strong>6.83 inch</strong>, <strong>AMOLED</strong> tạo không gian để đọc nội dung, quan sát ảnh và theo dõi nhiều chi tiết trong cùng một khung hình. Tấm nền OLED kiểm soát ánh sáng ở từng điểm ảnh, thể hiện vùng tối sâu và tạo độ tương phản rõ khi xem phim hoặc ảnh chụp.</p><p>Các đặc điểm hiển thị được công bố gồm Độ sáng tối đa 3500 nits, tối thiểu 1 nit, 68 tỷ màu, dải màu điện ảnh DCI-P3, DC dimming, HDR10+, Dolby Vision.</p><p>Màn hình có độ phân giải 2772 x 1280 pixel (1.5K), mật độ 447 PPI và tần số quét tối đa 144 Hz, giúp hiển thị chữ và chi tiết ảnh rõ hơn trên không gian 6,83 inch.</p><p><img src=\"https://cdn2.cellphones.com.vn/800x/media/catalog/product/s/l/slider-xiaomi-17t-pro-5g.jpg\" alt=\"Xiaomi 17T Pro 5G 12GB 512GB – thiết kế sản phẩm 1\"></p>"
+        },
+        {
+          "Section": "Hiệu năng",
+          "Before": "<h2>Hiệu năng MediaTek Dimensity 9500</h2><p><strong>MediaTek Dimensity 9500</strong> là bộ xử lý trung tâm của máy, phối hợp cùng RAM <strong>12 GB</strong> để lưu dữ liệu của các tác vụ đang chạy. Từ mở ứng dụng, chỉnh sửa ảnh đến xử lý thông báo, các thành phần này cùng đảm nhiệm những thao tác bạn dùng thường xuyên trên điện thoại.</p>",
+          "After": "<h2>Hiệu năng MediaTek Dimensity 9500</h2><p><strong>MediaTek Dimensity 9500</strong> là bộ xử lý trung tâm của máy, phối hợp cùng RAM <strong>12 GB</strong> để lưu dữ liệu của các tác vụ đang chạy. Từ mở ứng dụng, chỉnh sửa ảnh đến xử lý thông báo, các thành phần này cùng đảm nhiệm những thao tác bạn dùng thường xuyên trên điện thoại.</p><p>Máy ra mắt với Xiaomi HyperOS 3, hỗ trợ quản lý ứng dụng và cá nhân hóa giao diện.</p>"
+        },
+        {
+          "Section": "Pin",
+          "Before": "<h2>Pin 7000mAh cho nhịp sử dụng hằng ngày</h2><p>Viên pin <strong>7000mAh</strong> cung cấp năng lượng cho màn hình, bộ xử lý và các kết nối của thiết bị. Bạn có thể sử dụng máy khi di chuyển, tham gia các buổi học hoặc theo dõi nội dung giải trí mà không phải luôn cắm nguồn.</p><p>Thời gian hoạt động thay đổi theo độ sáng, kết nối mạng và loại ứng dụng. Các con số dung lượng hoặc thời lượng công bố nên được đối chiếu với đúng chế độ sử dụng, thay vì xem là một mức thời gian cố định cho mọi tác vụ.</p>",
+          "After": "<h2>Pin 7000mAh cho nhịp sử dụng hằng ngày</h2><p>Viên pin <strong>7000mAh</strong> cung cấp năng lượng cho màn hình, bộ xử lý và các kết nối của thiết bị. Bạn có thể sử dụng máy khi di chuyển, tham gia các buổi học hoặc theo dõi nội dung giải trí mà không phải luôn cắm nguồn.</p><p>Máy hỗ trợ sạc có dây tối đa 100 W và sạc không dây tối đa 50 W, sạc PPS đạt đến 100 W khi dùng bộ sạc tương thích.</p>"
+        }
+      ]
+    },
+    {
+      "ProductId": "1b20538b-c72e-46b7-beca-d91aa18a485d",
+      "Name": "HONOR Pad V9 Wifi 8GB 256GB",
+      "Sources": [
+        "https://www.honor.com/my/tablets/honor-pad-v9/spec/"
+      ],
+      "Scope": "Camera trước của đúng HONOR Pad V9, 8 MP f/2.0 FF, chỉ dùng phần camera chung, giữ nguyên RAM 8 GB của bản Việt Nam, không chép RAM Turbo của bản Malaysia",
+      "Fields": {},
+      "DescriptionEdits": [
+        {
+          "Section": "Camera",
+          "Before": "<h2>Camera 13MP cho nhiều nhu cầu ghi hình</h2><p>Camera sau gồm <strong>13MP, f/2.0</strong>. Hệ thống camera cho phép lưu lại khung cảnh, chụp tài liệu và ghi nhớ những chi tiết cần thiết trong ngày.</p><p><img src=\"https://cdn2.cellphones.com.vn/800x/media/catalog/product/m/a/may-tinh-bang-honor-pad-v9-wifi-1.jpg\" alt=\"HONOR Pad V9 Wifi 8GB 256GB – thiết kế sản phẩm 2\"></p>",
+          "After": "<h2>Camera 13MP cho nhiều nhu cầu ghi hình</h2><p>Camera sau gồm <strong>13MP, f/2.0</strong>. Hệ thống camera cho phép lưu lại khung cảnh, chụp tài liệu và ghi nhớ những chi tiết cần thiết trong ngày.</p><p>Camera trước 8 MP với khẩu độ f/2.0 và lấy nét cố định phục vụ ảnh selfie, học trực tuyến và cuộc gọi video.</p><p><img src=\"https://cdn2.cellphones.com.vn/800x/media/catalog/product/m/a/may-tinh-bang-honor-pad-v9-wifi-1.jpg\" alt=\"HONOR Pad V9 Wifi 8GB 256GB – thiết kế sản phẩm 2\"></p>"
+        }
+      ]
+    },
+    {
+      "ProductId": "1f588664-d34b-4897-a266-d4f8b61b435d",
+      "Name": "Chuột Gaming có dây Asus TUF M3 Gen 2",
+      "Sources": [
+        "https://www.asus.com/uk/accessories/mice-and-mouse-pads/asus-mouse-and-mouse-pad/asus-tuf-gaming-m3-gen-ii/"
+      ],
+      "Scope": "ASUS TUF Gaming M3 Gen II có dây, cảm biến quang học 100–8000 DPI, 1000 Hz, 59 g, không dùng M3 thế hệ đầu 84 g",
+      "Fields": {
+        "Độ phân giải": "100–8000 DPI, cảm biến quang học"
+      },
+      "DescriptionEdits": [
+        {
+          "Section": "Cảm biến",
+          "Before": "<h2>Cảm biến và độ nhạy điều khiển</h2><p>Độ phân giải: <strong>8000 DPI</strong>.</p><p>Độ nhạy xác định quãng đường con trỏ dịch chuyển tương ứng với thao tác tay. Mức DPI phù hợp cần được chọn cùng độ phân giải màn hình và thói quen di chuột.</p><p><img src=\"https://cdn2.cellphones.com.vn/800x/media/catalog/product/t/u/tuf-m3-gen-2-7.png\" alt=\"Chuột Gaming có dây Asus TUF M3 Gen 2 – thiết kế sản phẩm 1\"></p>",
+          "After": "<h2>Cảm biến và độ nhạy điều khiển</h2><p>Cảm biến quang học điều chỉnh từ 100 đến 8000 DPI, nút DPI trên thân chuột cho phép chuyển nhanh giữa bốn mức độ nhạy, tần số gửi tín hiệu đạt 1000 Hz.</p><p>Độ nhạy xác định quãng đường con trỏ dịch chuyển tương ứng với thao tác tay. Mức DPI phù hợp cần được chọn cùng độ phân giải màn hình và thói quen di chuột.</p><p><img src=\"https://cdn2.cellphones.com.vn/800x/media/catalog/product/t/u/tuf-m3-gen-2-7.png\" alt=\"Chuột Gaming có dây Asus TUF M3 Gen 2 – thiết kế sản phẩm 1\"></p>"
+        },
+        {
+          "Section": "intro",
+          "Before": "<p><strong>Chuột Gaming có dây Asus TUF M3 Gen 2</strong> của ASUS có những đặc điểm sau của đúng mã sản phẩm. Cảm biến và kết nối là nền tảng cho thao tác trỏ, kéo thả và điều khiển ứng dụng.</p>",
+          "After": "<p><strong>Chuột Gaming có dây Asus TUF M3 Gen 2</strong> của ASUS có những đặc điểm sau của đúng mã sản phẩm. Cảm biến và kết nối là nền tảng cho thao tác trỏ, kéo thả và điều khiển ứng dụng.</p><p>Chuột nặng 59 g, thân chuột tạo dáng cho tay phải và có sáu nút lập trình được bằng Armoury Crate.</p>"
+        }
+      ]
+    },
+    {
+      "ProductId": "28cafea8-a143-4f26-9af7-22f3a8456d54",
+      "Name": "iPhone Air 256GB",
+      "Sources": [
+        "https://www.ifixit.com/Teardown/iPhone+Air+Chip+ID/195913"
+      ],
+      "Scope": "Chip ID trực tiếp, mẫu iPhone Air Mỹ 256 GB, Samsung K3KLMLM0FM-HGGV 12 GB LPDDR5X, chỉ lấy bộ nhớ của nền tảng Air, không suy diễn dung lượng pin hoặc SIM Việt Nam",
+      "Fields": {},
+      "DescriptionEdits": [
+        {
+          "Section": "Hiệu năng",
+          "Before": "<h2>Hiệu năng Chip A19 Pro</h2><p><strong>Chip A19 Pro</strong> là bộ xử lý trung tâm của máy. Từ mở ứng dụng, chỉnh sửa ảnh đến xử lý thông báo, các thành phần này cùng đảm nhiệm những thao tác bạn dùng thường xuyên trên điện thoại.</p><p>Máy ra mắt với <strong>iOS 26</strong>. Giao diện hệ điều hành cung cấp các công cụ quản lý ứng dụng, lưu trữ và cá nhân hóa thiết bị.</p>",
+          "After": "<h2>Hiệu năng Chip A19 Pro</h2><p><strong>Chip A19 Pro</strong> là bộ xử lý trung tâm của máy. Từ mở ứng dụng, chỉnh sửa ảnh đến xử lý thông báo, các thành phần này cùng đảm nhiệm những thao tác bạn dùng thường xuyên trên điện thoại.</p><p>Máy ra mắt với <strong>iOS 26</strong>. Giao diện hệ điều hành cung cấp các công cụ quản lý ứng dụng, lưu trữ và cá nhân hóa thiết bị.</p><p>RAM 12 GB chuẩn LPDDR5X phối hợp với bộ xử lý để duy trì các ứng dụng đang mở và chuyển đổi giữa những tác vụ thường dùng.</p>"
+        }
+      ],
+      "SourceKind": "primary_teardown"
+    },
+    {
+      "ProductId": "29b6c625-7fe5-4046-9061-2bddc9157887",
+      "Name": "MacBook Neo 13 inch A18 Pro 2026 6CPU 5GPU 8GB 256GB",
+      "Sources": [
+        "https://www.apple.com/vn/macbook-neo/specs/"
+      ],
+      "Scope": "MacBook Neo A18 Pro 13 inch, 256 GB hoặc 512 GB Touch ID cùng khung máy",
+      "Fields": {},
+      "DescriptionEdits": [
+        {
+          "Section": "intro",
+          "Before": "<p><strong>MacBook Neo 13 inch A18 Pro 2026 6CPU 5GPU 8GB 256GB</strong> có màn hình 13 inch, RAM 8GB và cấu hình lưu trữ 256GB. Máy tập trung vào trải nghiệm làm việc trên một thiết bị di động, với màn hình, bàn phím và các kết nối sẵn sàng cho những tác vụ thường dùng.</p>",
+          "After": "<p><strong>MacBook Neo 13 inch A18 Pro 2026 6CPU 5GPU 8GB 256GB</strong> có màn hình 13 inch, RAM 8GB và cấu hình lưu trữ 256GB. Máy tập trung vào trải nghiệm làm việc trên một thiết bị di động, với màn hình, bàn phím và các kết nối sẵn sàng cho những tác vụ thường dùng.</p><p>Máy có trọng lượng 1,23 kg, giúp bạn cân nhắc khối lượng mang theo cùng bộ sạc và phụ kiện.</p>"
+        }
+      ]
+    },
+    {
+      "ProductId": "29f8a626-4747-4936-aaf1-96b8cfad00b5",
+      "Name": "Laptop Acer Gaming Nitro ProPanel ANV15-52-50VA",
+      "Sources": [
+        "https://store.acer.com/vi-vn/laptop-gaming-acer-nitro-propanel-anv15-52-50va"
+      ],
+      "Scope": "SKU NH.QUBSV.002, Core 5 210H, RTX 3050",
+      "Fields": {},
+      "DescriptionEdits": [
+        {
+          "Section": "intro",
+          "Before": "<p><strong>Laptop Acer Gaming Nitro ProPanel ANV15-52-50VA</strong> có màn hình 15.6 inch, RAM 16GB và cấu hình lưu trữ 512GB PCIe NVMe SSD (Nâng cấp tối đa 4TB). Điểm nhấn của cấu hình nằm ở GPU rời cùng bộ xử lý dành cho laptop, để bạn cân nhắc giữa công việc và nhu cầu giải trí có tải đồ họa.</p>",
+          "After": "<p><strong>Laptop Acer Gaming Nitro ProPanel ANV15-52-50VA</strong> có màn hình 15.6 inch, RAM 16GB và cấu hình lưu trữ 512GB PCIe NVMe SSD (Nâng cấp tối đa 4TB). Điểm nhấn của cấu hình nằm ở GPU rời cùng bộ xử lý dành cho laptop, để bạn cân nhắc giữa công việc và nhu cầu giải trí có tải đồ họa.</p><p>Máy có trọng lượng 2,1 kg, giúp bạn cân nhắc khối lượng mang theo cùng bộ sạc và phụ kiện.</p>"
+        }
+      ]
+    },
+    {
+      "ProductId": "2c6b2135-0b8f-4982-9523-6aa51c008b2d",
+      "Name": "Laptop MSI Modern 15 F1MG-1225VN",
+      "Sources": [
+        "https://www.msi.com/Business-Productivity/Modern-15-F1MX/Specification"
+      ],
+      "Scope": "Modern 15 F1MG, cả hai cột có cùng trọng lượng, đã gồm pin",
+      "Fields": {},
+      "DescriptionEdits": [
+        {
+          "Section": "intro",
+          "Before": "<p><strong>Laptop MSI Modern 15 F1MG-1225VN</strong> có màn hình 15.6 inch, RAM 16GB và cấu hình lưu trữ 512GB. Máy tập trung vào trải nghiệm làm việc trên một thiết bị di động, với màn hình, bàn phím và các kết nối sẵn sàng cho những tác vụ thường dùng.</p>",
+          "After": "<p><strong>Laptop MSI Modern 15 F1MG-1225VN</strong> có màn hình 15.6 inch, RAM 16GB và cấu hình lưu trữ 512GB. Máy tập trung vào trải nghiệm làm việc trên một thiết bị di động, với màn hình, bàn phím và các kết nối sẵn sàng cho những tác vụ thường dùng.</p><p>Máy có trọng lượng 1,7 kg, giúp bạn cân nhắc khối lượng mang theo cùng bộ sạc và phụ kiện.</p>"
+        }
+      ]
+    },
+    {
+      "ProductId": "2ddcf84c-d3cc-4268-9d7b-014d4bc6bec6",
+      "Name": "Điện thoại iPhone 16 Pro Max 256GB",
+      "Sources": [
+        "https://support.apple.com/vi-vn/121032"
+      ],
+      "Scope": "Trang Apple Việt Nam đúng mẫu máy, thời lượng tối đa xem video và streaming theo phép thử Apple, không quy đổi thành mAh hoặc cam kết thời lượng mọi tác vụ",
+      "Fields": {},
+      "DescriptionEdits": [
+        {
+          "Section": "Pin",
+          "Before": "<h2>Pin và thời lượng sử dụng</h2><p>Bạn có thể sử dụng máy khi di chuyển, tham gia các buổi học hoặc theo dõi nội dung giải trí mà không phải luôn cắm nguồn.</p><p>Thời gian hoạt động thay đổi theo độ sáng, kết nối mạng và loại ứng dụng. Các con số dung lượng hoặc thời lượng công bố nên được đối chiếu với đúng chế độ sử dụng, thay vì xem là một mức thời gian cố định cho mọi tác vụ.</p>",
+          "After": "<h2>Pin và thời lượng sử dụng</h2><p>Pin sạc lithium-ion tích hợp có thời gian xem video lên đến 33 giờ và xem video trực tuyến lên đến 29 giờ theo phép thử của Apple.</p><p>Máy hỗ trợ sạc đến 50% trong khoảng 30 phút qua USB-C với bộ tiếp hợp từ 20 W, bộ tiếp hợp được bán riêng.</p>"
+        }
+      ]
+    },
+    {
+      "ProductId": "2ec2e638-3524-4903-a00c-7142b9d62f74",
+      "Name": "Laptop MSI Cyborg 15 A13UC-2082VN",
+      "Sources": [
+        "https://www.msi.com/Laptop/Cyborg-15-A13UX/Specification"
+      ],
+      "Scope": "Cyborg 15 A13UC, bốn cột cùng trọng lượng đã gồm pin",
+      "Fields": {},
+      "DescriptionEdits": [
+        {
+          "Section": "intro",
+          "Before": "<p><strong>Laptop MSI Cyborg 15 A13UC-2082VN</strong> có màn hình 15.6 inch, RAM 16GB và cấu hình lưu trữ 512GB NVMe PCIe Gen4 (Max 4TB). Điểm nhấn của cấu hình nằm ở GPU rời cùng bộ xử lý dành cho laptop, để bạn cân nhắc giữa công việc và nhu cầu giải trí có tải đồ họa.</p>",
+          "After": "<p><strong>Laptop MSI Cyborg 15 A13UC-2082VN</strong> có màn hình 15.6 inch, RAM 16GB và cấu hình lưu trữ 512GB NVMe PCIe Gen4 (Max 4TB). Điểm nhấn của cấu hình nằm ở GPU rời cùng bộ xử lý dành cho laptop, để bạn cân nhắc giữa công việc và nhu cầu giải trí có tải đồ họa.</p><p>Máy có trọng lượng 1,98 kg, giúp bạn cân nhắc khối lượng mang theo cùng bộ sạc và phụ kiện.</p>"
+        }
+      ]
+    },
+    {
+      "ProductId": "39e995c0-e329-40bb-8851-b7632265c956",
+      "Name": "Apple MacBook Air M2 2024 8CPU 8GPU 16GB 256GB I Chính hãng Apple Việt Nam",
+      "Sources": [
+        "https://support.apple.com/vi-vn/111867"
+      ],
+      "Scope": "Khung máy MacBook Air M2 13,6 inch, không suy diễn năm ra mắt từ tên bán hàng 2024",
+      "Fields": {},
+      "DescriptionEdits": [
+        {
+          "Section": "intro",
+          "Before": "<p><strong>Apple MacBook Air M2 2024 8CPU 8GPU 16GB 256GB I Chính hãng Apple Việt Nam</strong> có màn hình 13.6 inch, RAM 16GB và cấu hình lưu trữ 256GB. Máy tập trung vào trải nghiệm làm việc trên một thiết bị di động, với màn hình, bàn phím và các kết nối sẵn sàng cho những tác vụ thường dùng.</p>",
+          "After": "<p><strong>Apple MacBook Air M2 2024 8CPU 8GPU 16GB 256GB I Chính hãng Apple Việt Nam</strong> có màn hình 13.6 inch, RAM 16GB và cấu hình lưu trữ 256GB. Máy tập trung vào trải nghiệm làm việc trên một thiết bị di động, với màn hình, bàn phím và các kết nối sẵn sàng cho những tác vụ thường dùng.</p><p>Máy có trọng lượng 1,24 kg, giúp bạn cân nhắc khối lượng mang theo cùng bộ sạc và phụ kiện.</p>"
+        }
+      ]
+    },
+    {
+      "ProductId": "3c3fdc24-e8b7-426a-bb76-ee3bb34a77f6",
+      "Name": "Laptop HP Victus 15-FA2731TX B85LNPA",
+      "Sources": [
+        "https://www.hp.com/bd-en/products/laptops/product-details/product-specifications/2102910871"
+      ],
+      "Scope": "HP Victus 15-fa2731TX, đúng product number B85LNPA",
+      "Fields": {},
+      "DescriptionEdits": [
+        {
+          "Section": "intro",
+          "Before": "<p><strong>Laptop HP Victus 15-FA2731TX B85LNPA</strong> có màn hình 15.6 inch, RAM 16GB và cấu hình lưu trữ 512GB SSD1 PCIe (M.2 2280). Điểm nhấn của cấu hình nằm ở GPU rời cùng bộ xử lý dành cho laptop, để bạn cân nhắc giữa công việc và nhu cầu giải trí có tải đồ họa.</p>",
+          "After": "<p><strong>Laptop HP Victus 15-FA2731TX B85LNPA</strong> có màn hình 15.6 inch, RAM 16GB và cấu hình lưu trữ 512GB SSD1 PCIe (M.2 2280). Điểm nhấn của cấu hình nằm ở GPU rời cùng bộ xử lý dành cho laptop, để bạn cân nhắc giữa công việc và nhu cầu giải trí có tải đồ họa.</p><p>Máy có trọng lượng 2,29 kg, giúp bạn cân nhắc khối lượng mang theo cùng bộ sạc và phụ kiện.</p>"
+        }
+      ]
+    },
+    {
+      "ProductId": "3eac0d12-1d03-4dc7-8b14-e2e14c063d83",
+      "Name": "MacBook Air M5 13 inch 2026 10CPU 10GPU 24GB 1TB Sạc 70W",
+      "Sources": [
+        "https://www.apple.com/vn/macbook-air/specs/"
+      ],
+      "Scope": "MacBook Air M5, đúng kích thước 13 hoặc 15 inch, trọng lượng theo khung máy",
+      "Fields": {},
+      "DescriptionEdits": [
+        {
+          "Section": "intro",
+          "Before": "<p><strong>MacBook Air M5 13 inch 2026 10CPU 10GPU 24GB 1TB Sạc 70W</strong> có màn hình 13.6 inch, RAM 24GB và cấu hình lưu trữ 1TB. Máy tập trung vào trải nghiệm làm việc trên một thiết bị di động, với màn hình, bàn phím và các kết nối sẵn sàng cho những tác vụ thường dùng.</p>",
+          "After": "<p><strong>MacBook Air M5 13 inch 2026 10CPU 10GPU 24GB 1TB Sạc 70W</strong> có màn hình 13.6 inch, RAM 24GB và cấu hình lưu trữ 1TB. Máy tập trung vào trải nghiệm làm việc trên một thiết bị di động, với màn hình, bàn phím và các kết nối sẵn sàng cho những tác vụ thường dùng.</p><p>Máy có trọng lượng 1,23 kg, giúp bạn cân nhắc khối lượng mang theo cùng bộ sạc và phụ kiện.</p>"
+        }
+      ]
+    },
+    {
+      "ProductId": "432e86c1-650a-4e80-be59-81f7a11fe5aa",
+      "Name": "Bàn phím gaming ASUS ROG Azoth 96 HE Black",
+      "Sources": [
+        "https://rog.asus.com/keyboards/keyboards/pbt-keycaps/rog-azoth-96-he/",
+        "https://rog.asus.com/se/keyboards/keyboards/compact/rog-azoth-96-he/spec/"
+      ],
+      "Scope": "ROG Azoth 96 HE, HFX V2 từ tính, Hall sensor, không lấy switch NX của Azoth thường, polling 8000 Hz chỉ USB hoặc RF 2.4 GHz, không áp dụng Bluetooth",
+      "Fields": {
+        "Phương thức kết nối": "USB Type-C có dây, không dây RF 2.4 GHz ROG SpeedNova 8K, Bluetooth 5.0, polling tối đa 8000 Hz với USB hoặc RF 2.4 GHz"
+      },
+      "DescriptionEdits": [
+        {
+          "Section": "Hoàn thiện",
+          "Before": "<h2>Hoàn thiện và thao tác gõ</h2><p>Chất liệu vỏ: <strong>Kim loại</strong>.</p><p>Chất liệu keycap và cấu tạo bàn phím tạo nên bề mặt tiếp xúc khi gõ. Cảm giác thao tác còn phụ thuộc loại switch và cách đặt tay của người dùng.</p>",
+          "After": "<h2>Hoàn thiện và thao tác gõ</h2><p>Chất liệu vỏ: <strong>Kim loại</strong>.</p><p>Bàn phím dùng switch từ tính ROG HFX V2 và cảm biến Hall, điểm nhận phím điều chỉnh từ 0,1 đến 3,5 mm với bước 0,01 mm, cho phép chọn độ nhạy theo cách gõ.</p>"
+        },
+        {
+          "Section": "Đèn nền",
+          "Before": "<h2>Đèn nền và tương thích</h2><p>Đèn LED: <strong>RGB</strong>.</p><p>Thông tin đèn nền và hệ điều hành giúp bạn đối chiếu cách sử dụng trong góc làm việc. Chức năng tùy chỉnh phím hoặc đèn, nếu có, cần phần mềm tương thích của đúng phiên bản.</p><p><img src=\"https://cdn.hstatic.net/products/200000722513/ban-phim-gaming-asus-rog-azoth-96-he-black-3_a8acb4b5c51549a98452f4ad44f20669.jpg\" alt=\"Bàn phím gaming ASUS ROG Azoth 96 HE Black – thiết kế sản phẩm 3\"></p>",
+          "After": "<h2>Đèn nền và tương thích</h2><p>Đèn LED: <strong>RGB</strong>.</p><p>Bàn phím hỗ trợ Windows 11 và macOS 10.11 trở lên, các thiết lập điểm nhận phím và chức năng phím có thể điều chỉnh qua Gear Link.</p><p><img src=\"https://cdn.hstatic.net/products/200000722513/ban-phim-gaming-asus-rog-azoth-96-he-black-3_a8acb4b5c51549a98452f4ad44f20669.jpg\" alt=\"Bàn phím gaming ASUS ROG Azoth 96 HE Black – thiết kế sản phẩm 3\"></p>"
+        },
+        {
+          "Section": "Kết nối",
+          "Before": "<h2>Kết nối với thiết bị</h2><p>Phương thức kết nối: <strong>Wireless 2.4GHz, USB Type-C to Type-A, Bluetooth 5.0</strong>.</p><p>Các chế độ kết nối giúp bố trí bàn phím cùng máy tính hoặc thiết bị hỗ trợ. Với kết nối không dây, độ ổn định còn phụ thuộc khoảng cách và môi trường đặt thiết bị.</p><p><img src=\"https://cdn.hstatic.net/products/200000722513/ban-phim-gaming-asus-rog-azoth-96-he-black-10_d3058f7cdb394356ab5312ddfc196070.jpg\" alt=\"Bàn phím gaming ASUS ROG Azoth 96 HE Black – thiết kế sản phẩm 2\"></p>",
+          "After": "<h2>Kết nối với thiết bị</h2><p>Phương thức kết nối: <strong>Wireless 2.4GHz, USB Type-C to Type-A, Bluetooth 5.0</strong>.</p><p>Kết nối có dây USB và không dây RF 2,4 GHz hỗ trợ tần số gửi tín hiệu tối đa 8000 Hz, Bluetooth 5.0 là chế độ kết nối riêng.</p><p><img src=\"https://cdn.hstatic.net/products/200000722513/ban-phim-gaming-asus-rog-azoth-96-he-black-10_d3058f7cdb394356ab5312ddfc196070.jpg\" alt=\"Bàn phím gaming ASUS ROG Azoth 96 HE Black – thiết kế sản phẩm 2\"></p>"
+        }
+      ]
+    },
+    {
+      "ProductId": "525a37fe-1e65-4b55-9b24-acbded12e174",
+      "Name": "MacBook Air M5 13 inch 2026 10CPU 8GPU 16GB 512GB",
+      "Sources": [
+        "https://www.apple.com/vn/macbook-air/specs/"
+      ],
+      "Scope": "MacBook Air M5, đúng kích thước 13 hoặc 15 inch, trọng lượng theo khung máy",
+      "Fields": {},
+      "DescriptionEdits": [
+        {
+          "Section": "intro",
+          "Before": "<p><strong>MacBook Air M5 13 inch 2026 10CPU 8GPU 16GB 512GB</strong> có màn hình 13.6 inch, RAM 16GB và cấu hình lưu trữ 512GB. Máy tập trung vào trải nghiệm làm việc trên một thiết bị di động, với màn hình, bàn phím và các kết nối sẵn sàng cho những tác vụ thường dùng.</p>",
+          "After": "<p><strong>MacBook Air M5 13 inch 2026 10CPU 8GPU 16GB 512GB</strong> có màn hình 13.6 inch, RAM 16GB và cấu hình lưu trữ 512GB. Máy tập trung vào trải nghiệm làm việc trên một thiết bị di động, với màn hình, bàn phím và các kết nối sẵn sàng cho những tác vụ thường dùng.</p><p>Máy có trọng lượng 1,23 kg, giúp bạn cân nhắc khối lượng mang theo cùng bộ sạc và phụ kiện.</p>"
+        }
+      ]
+    },
+    {
+      "ProductId": "53c531a6-aa37-417a-81f3-b084cb14ca8a",
+      "Name": "Laptop ASUS Zenbook S 14 UX5406AA-SU348W",
+      "Sources": [
+        "https://www.asus.com/vn/laptops/for-home/zenbook/asus-zenbook-s-14-ux5406/techspec/"
+      ],
+      "Scope": "UX5406AA, hai cột cùng trọng lượng",
+      "Fields": {},
+      "DescriptionEdits": [
+        {
+          "Section": "intro",
+          "Before": "<p><strong>Laptop ASUS Zenbook S 14 UX5406AA-SU348W</strong> có màn hình 14 inch, RAM 16GB và cấu hình lưu trữ 512GB M.2 NVMe PCIe 4.0 SSD. Máy tập trung vào trải nghiệm làm việc trên một thiết bị di động, với màn hình, bàn phím và các kết nối sẵn sàng cho những tác vụ thường dùng.</p>",
+          "After": "<p><strong>Laptop ASUS Zenbook S 14 UX5406AA-SU348W</strong> có màn hình 14 inch, RAM 16GB và cấu hình lưu trữ 512GB M.2 NVMe PCIe 4.0 SSD. Máy tập trung vào trải nghiệm làm việc trên một thiết bị di động, với màn hình, bàn phím và các kết nối sẵn sàng cho những tác vụ thường dùng.</p><p>Máy có trọng lượng 1,2 kg, giúp bạn cân nhắc khối lượng mang theo cùng bộ sạc và phụ kiện.</p>"
+        }
+      ]
+    },
+    {
+      "ProductId": "541a9613-7276-4e76-85d6-b45a18a6a974",
+      "Name": "iPhone 17 Pro 256GB",
+      "Sources": [
+        "https://www.ifixit.com/Teardown/iPhone+17+Pro+Chip+ID/196117",
+        "https://support.apple.com/vi-vn/125090"
+      ],
+      "Scope": "Chip ID trực tiếp iPhone 17 Pro 256 GB, Samsung K3KLMLM0FM-HGGV 12 GB LPDDR5X, không dùng cho iPhone 17 thường hoặc Pro Max\nTrang Apple Việt Nam đúng mẫu máy, thời lượng tối đa xem video và streaming theo phép thử Apple, không quy đổi thành mAh hoặc cam kết thời lượng mọi tác vụ",
+      "Fields": {},
+      "DescriptionEdits": [
+        {
+          "Section": "Hiệu năng",
+          "Before": "<h2>Hiệu năng Chip A19 Pro</h2><p><strong>Chip A19 Pro</strong> là bộ xử lý trung tâm của máy. Từ mở ứng dụng, chỉnh sửa ảnh đến xử lý thông báo, các thành phần này cùng đảm nhiệm những thao tác bạn dùng thường xuyên trên điện thoại.</p><p>Máy ra mắt với <strong>iOS 26</strong>. Giao diện hệ điều hành cung cấp các công cụ quản lý ứng dụng, lưu trữ và cá nhân hóa thiết bị.</p>",
+          "After": "<h2>Hiệu năng Chip A19 Pro</h2><p><strong>Chip A19 Pro</strong> là bộ xử lý trung tâm của máy. Từ mở ứng dụng, chỉnh sửa ảnh đến xử lý thông báo, các thành phần này cùng đảm nhiệm những thao tác bạn dùng thường xuyên trên điện thoại.</p><p>Máy ra mắt với <strong>iOS 26</strong>. Giao diện hệ điều hành cung cấp các công cụ quản lý ứng dụng, lưu trữ và cá nhân hóa thiết bị.</p><p>RAM 12 GB chuẩn LPDDR5X phối hợp với bộ xử lý để duy trì các ứng dụng đang mở và chuyển đổi giữa những tác vụ thường dùng.</p>"
+        },
+        {
+          "Section": "Pin",
+          "Before": "<h2>Pin và thời lượng sử dụng</h2><p>Bạn có thể sử dụng máy khi di chuyển, tham gia các buổi học hoặc theo dõi nội dung giải trí mà không phải luôn cắm nguồn.</p><p>Thời gian hoạt động thay đổi theo độ sáng, kết nối mạng và loại ứng dụng. Các con số dung lượng hoặc thời lượng công bố nên được đối chiếu với đúng chế độ sử dụng, thay vì xem là một mức thời gian cố định cho mọi tác vụ.</p>",
+          "After": "<h2>Pin và thời lượng sử dụng</h2><p>Pin sạc lithium-ion tích hợp có thời gian xem video lên đến 31 giờ và xem video trực tuyến lên đến 28 giờ theo phép thử của Apple.</p><p>Máy hỗ trợ sạc đến 50% trong 20 phút qua USB-C với bộ tiếp hợp từ 40 W, bộ tiếp hợp được bán riêng.</p>"
+        }
+      ],
+      "SourceKind": "primary_teardown"
+    },
+    {
+      "ProductId": "6139416e-b238-4dca-85db-24c96459c13a",
+      "Name": "Huawei MatePad 11.5 S 2026 12GB 256GB - Kèm bàn phím",
+      "Sources": [
+        "https://consumer.huawei.com/vn/tablets/matepad-11-5-s-2026/specs/",
+        "https://consumer.huawei.com/nl/tablets/matepad-11-5-s-2026/specs/"
+      ],
+      "Scope": "MatePad 11.5 S 2026, 12 GB 256 GB HarmonyOS 4.3, Kirin T92C 6 nhân từ trang Hà Lan đúng bản quốc tế S 2026, không dùng MatePad 11.5 2026 bản không S, sạc từ trang Việt Nam",
+      "Fields": {
+        "Pin": "8800 mAh, hỗ trợ HUAWEI SuperCharge tối đa 40 W (10 V/4 A), cần bộ sạc và cáp HUAWEI tương thích"
+      },
+      "DescriptionEdits": [
+        {
+          "Section": "Hiệu năng",
+          "Before": "<h2>Hiệu năng</h2><p>Cấu hình máy đảm nhiệm việc xử lý ứng dụng và nội dung, phối hợp cùng RAM <strong>12 GB</strong> để lưu dữ liệu của các tác vụ đang chạy. Khi chuyển giữa ứng dụng học tập, trang web và tài liệu, bộ xử lý thực hiện các phép tính còn RAM giúp duy trì dữ liệu làm việc.</p><p>Máy ra mắt với <strong>HarmonyOS 4.3</strong>. Giao diện hệ điều hành cung cấp các công cụ quản lý ứng dụng, lưu trữ và cá nhân hóa thiết bị.</p>",
+          "After": "<h2>Hiệu năng</h2><p>Bộ xử lý Kirin T92C 6 nhân phối hợp với RAM 12 GB để xử lý ứng dụng và duy trì các tác vụ đang mở.</p><p>Máy ra mắt với <strong>HarmonyOS 4.3</strong>. Giao diện hệ điều hành cung cấp các công cụ quản lý ứng dụng, lưu trữ và cá nhân hóa thiết bị.</p>"
+        },
+        {
+          "Section": "Pin",
+          "Before": "<h2>Pin 8800 mAh cho nhịp sử dụng hằng ngày</h2><p>Viên pin <strong>8800 mAh</strong> cung cấp năng lượng cho màn hình, bộ xử lý và các kết nối của thiết bị. Bạn có thể sử dụng máy khi di chuyển, tham gia các buổi học hoặc theo dõi nội dung giải trí mà không phải luôn cắm nguồn.</p><p>Thời gian hoạt động thay đổi theo độ sáng, kết nối mạng và loại ứng dụng. Các con số dung lượng hoặc thời lượng công bố nên được đối chiếu với đúng chế độ sử dụng, thay vì xem là một mức thời gian cố định cho mọi tác vụ.</p>",
+          "After": "<h2>Pin 8800 mAh cho nhịp sử dụng hằng ngày</h2><p>Viên pin <strong>8800 mAh</strong> cung cấp năng lượng cho màn hình, bộ xử lý và các kết nối của thiết bị. Bạn có thể sử dụng máy khi di chuyển, tham gia các buổi học hoặc theo dõi nội dung giải trí mà không phải luôn cắm nguồn.</p><p>Pin hỗ trợ HUAWEI SuperCharge tối đa 40 W với bộ sạc và cáp HUAWEI tương thích, giúp bổ sung năng lượng khi cần mang máy ra ngoài.</p>"
+        }
+      ]
+    },
+    {
+      "ProductId": "6bb60139-5c76-4ade-8767-c2a15d38e0c8",
+      "Name": "MacBook Air M4 13 inch 2025 10CPU 8GPU 16GB 256GB",
+      "Sources": [
+        "https://support.apple.com/vi-vn/122209"
+      ],
+      "Scope": "MacBook Air 13 inch M4 2025",
+      "Fields": {},
+      "DescriptionEdits": [
+        {
+          "Section": "intro",
+          "Before": "<p><strong>MacBook Air M4 13 inch 2025 10CPU 8GPU 16GB 256GB</strong> có màn hình 13.6 inch, RAM 16GB và cấu hình lưu trữ 256GB. Máy tập trung vào trải nghiệm làm việc trên một thiết bị di động, với màn hình, bàn phím và các kết nối sẵn sàng cho những tác vụ thường dùng.</p>",
+          "After": "<p><strong>MacBook Air M4 13 inch 2025 10CPU 8GPU 16GB 256GB</strong> có màn hình 13.6 inch, RAM 16GB và cấu hình lưu trữ 256GB. Máy tập trung vào trải nghiệm làm việc trên một thiết bị di động, với màn hình, bàn phím và các kết nối sẵn sàng cho những tác vụ thường dùng.</p><p>Máy có trọng lượng 1,24 kg, giúp bạn cân nhắc khối lượng mang theo cùng bộ sạc và phụ kiện.</p>"
+        }
+      ]
+    },
+    {
+      "ProductId": "6e3210b3-ca80-489c-b2ab-16b8b0c34c01",
+      "Name": "MacBook Air M5 13 inch 2026 10CPU 8GPU 16GB 512GB Sạc 70W",
+      "Sources": [
+        "https://www.apple.com/vn/macbook-air/specs/"
+      ],
+      "Scope": "MacBook Air M5, đúng kích thước 13 hoặc 15 inch, trọng lượng theo khung máy",
+      "Fields": {},
+      "DescriptionEdits": [
+        {
+          "Section": "intro",
+          "Before": "<p><strong>MacBook Air M5 13 inch 2026 10CPU 8GPU 16GB 512GB Sạc 70W</strong> có màn hình 13.6 inch, RAM 16GB và cấu hình lưu trữ 512GB. Máy tập trung vào trải nghiệm làm việc trên một thiết bị di động, với màn hình, bàn phím và các kết nối sẵn sàng cho những tác vụ thường dùng.</p>",
+          "After": "<p><strong>MacBook Air M5 13 inch 2026 10CPU 8GPU 16GB 512GB Sạc 70W</strong> có màn hình 13.6 inch, RAM 16GB và cấu hình lưu trữ 512GB. Máy tập trung vào trải nghiệm làm việc trên một thiết bị di động, với màn hình, bàn phím và các kết nối sẵn sàng cho những tác vụ thường dùng.</p><p>Máy có trọng lượng 1,23 kg, giúp bạn cân nhắc khối lượng mang theo cùng bộ sạc và phụ kiện.</p>"
+        }
+      ]
+    },
+    {
+      "ProductId": "75b331dd-0edc-409c-b2f1-a7b82e59bebb",
+      "Name": "Laptop ASUS Vivobook 14 X1404VA-EB355W",
+      "Sources": [
+        "https://www.asus.com/vn/laptops/for-home/vivobook/asus-vivobook-14-x1404/techspec/"
+      ],
+      "Scope": "X1404VA, ba cột cùng trọng lượng",
+      "Fields": {},
+      "DescriptionEdits": [
+        {
+          "Section": "intro",
+          "Before": "<p><strong>Laptop ASUS Vivobook 14 X1404VA-EB355W</strong> có màn hình 14 inch, RAM 16GB và cấu hình lưu trữ 512GB M.2 NVMe PCIe 4.0 SSD. Máy tập trung vào trải nghiệm làm việc trên một thiết bị di động, với màn hình, bàn phím và các kết nối sẵn sàng cho những tác vụ thường dùng.</p>",
+          "After": "<p><strong>Laptop ASUS Vivobook 14 X1404VA-EB355W</strong> có màn hình 14 inch, RAM 16GB và cấu hình lưu trữ 512GB M.2 NVMe PCIe 4.0 SSD. Máy tập trung vào trải nghiệm làm việc trên một thiết bị di động, với màn hình, bàn phím và các kết nối sẵn sàng cho những tác vụ thường dùng.</p><p>Máy có trọng lượng 1,4 kg, giúp bạn cân nhắc khối lượng mang theo cùng bộ sạc và phụ kiện.</p>"
+        }
+      ]
+    },
+    {
+      "ProductId": "78362f83-76aa-41db-8237-682b3595bfbe",
+      "Name": "Laptop HP Omnibook 5 AI 16-AF1048TU BZ7Q9PA",
+      "Sources": [
+        "https://www.hp.com/lk-en/products/laptops/product-details/product-specifications/2103166657"
+      ],
+      "Scope": "OmniBook 5 16-af1048TU, đúng product number BZ7Q9PA",
+      "Fields": {},
+      "DescriptionEdits": [
+        {
+          "Section": "intro",
+          "Before": "<p><strong>Laptop HP Omnibook 5 AI 16-AF1048TU BZ7Q9PA</strong> có màn hình 16 inch, RAM 16GB và cấu hình lưu trữ 512GB SSD PCIe (M.2 2280). Máy tập trung vào trải nghiệm làm việc trên một thiết bị di động, với màn hình, bàn phím và các kết nối sẵn sàng cho những tác vụ thường dùng.</p>",
+          "After": "<p><strong>Laptop HP Omnibook 5 AI 16-AF1048TU BZ7Q9PA</strong> có màn hình 16 inch, RAM 16GB và cấu hình lưu trữ 512GB SSD PCIe (M.2 2280). Máy tập trung vào trải nghiệm làm việc trên một thiết bị di động, với màn hình, bàn phím và các kết nối sẵn sàng cho những tác vụ thường dùng.</p><p>Máy có trọng lượng 1,77 kg, giúp bạn cân nhắc khối lượng mang theo cùng bộ sạc và phụ kiện.</p>"
+        }
+      ]
+    },
+    {
+      "ProductId": "7baec7f1-93e9-4303-b99c-28b905c9999e",
+      "Name": "iPhone 16 128GB",
+      "Sources": [
+        "https://support.apple.com/vi-vn/121029"
+      ],
+      "Scope": "Trang Apple Việt Nam đúng mẫu máy, thời lượng tối đa xem video và streaming theo phép thử Apple, không quy đổi thành mAh hoặc cam kết thời lượng mọi tác vụ",
+      "Fields": {},
+      "DescriptionEdits": [
+        {
+          "Section": "Pin",
+          "Before": "<h2>Pin và thời lượng sử dụng</h2><p>Bạn có thể sử dụng máy khi di chuyển, tham gia các buổi học hoặc theo dõi nội dung giải trí mà không phải luôn cắm nguồn.</p><p>Thời gian hoạt động thay đổi theo độ sáng, kết nối mạng và loại ứng dụng. Các con số dung lượng hoặc thời lượng công bố nên được đối chiếu với đúng chế độ sử dụng, thay vì xem là một mức thời gian cố định cho mọi tác vụ.</p>",
+          "After": "<h2>Pin và thời lượng sử dụng</h2><p>Pin sạc lithium-ion tích hợp có thời gian xem video lên đến 22 giờ và xem video trực tuyến lên đến 18 giờ theo phép thử của Apple.</p><p>Máy hỗ trợ sạc đến 50% trong khoảng 30 phút qua USB-C với bộ tiếp hợp từ 20 W, bộ tiếp hợp được bán riêng.</p>"
+        }
+      ]
+    },
+    {
+      "ProductId": "825d8f90-b1f2-42d0-88d2-34f3e09cd1d0",
+      "Name": "iPhone 17 Pro Max 512GB",
+      "Sources": [
+        "https://support.apple.com/vi-vn/125091"
+      ],
+      "Scope": "Trang Apple Việt Nam đúng mẫu máy, thời lượng tối đa xem video và streaming theo phép thử Apple, không quy đổi thành mAh hoặc cam kết thời lượng mọi tác vụ",
+      "Fields": {},
+      "DescriptionEdits": [
+        {
+          "Section": "Pin",
+          "Before": "<h2>Pin và thời lượng sử dụng</h2><p>Bạn có thể sử dụng máy khi di chuyển, tham gia các buổi học hoặc theo dõi nội dung giải trí mà không phải luôn cắm nguồn.</p><p>Thời gian hoạt động thay đổi theo độ sáng, kết nối mạng và loại ứng dụng. Các con số dung lượng hoặc thời lượng công bố nên được đối chiếu với đúng chế độ sử dụng, thay vì xem là một mức thời gian cố định cho mọi tác vụ.</p>",
+          "After": "<h2>Pin và thời lượng sử dụng</h2><p>Pin sạc lithium-ion tích hợp có thời gian xem video lên đến 37 giờ và xem video trực tuyến lên đến 33 giờ theo phép thử của Apple.</p><p>Máy sử dụng pin sạc lithium-ion tích hợp và cổng USB-C để sạc pin.</p>"
+        }
+      ]
+    },
+    {
+      "ProductId": "83f104bf-4295-43db-b15c-1016ecbf433e",
+      "Name": "Laptop HP 14‑EM0023AU D0BG7PA",
+      "Sources": [
+        "https://www.hp.com/bd-en/products/laptops/product-details/product-specifications/2103584352"
+      ],
+      "Scope": "HP 14-em0023AU, đúng product number D0BG7PA",
+      "Fields": {},
+      "DescriptionEdits": [
+        {
+          "Section": "intro",
+          "Before": "<p><strong>Laptop HP 14‑EM0023AU D0BG7PA</strong> có màn hình 14 inch, RAM 16GB và cấu hình lưu trữ 512 GB PCIe NVMeTM M.2 SSD. Máy tập trung vào trải nghiệm làm việc trên một thiết bị di động, với màn hình, bàn phím và các kết nối sẵn sàng cho những tác vụ thường dùng.</p>",
+          "After": "<p><strong>Laptop HP 14‑EM0023AU D0BG7PA</strong> có màn hình 14 inch, RAM 16GB và cấu hình lưu trữ 512 GB PCIe NVMeTM M.2 SSD. Máy tập trung vào trải nghiệm làm việc trên một thiết bị di động, với màn hình, bàn phím và các kết nối sẵn sàng cho những tác vụ thường dùng.</p><p>Máy có trọng lượng 1,4 kg, giúp bạn cân nhắc khối lượng mang theo cùng bộ sạc và phụ kiện.</p>"
+        }
+      ]
+    },
+    {
+      "ProductId": "86245c8c-397d-4965-849b-7eb0a1de0560",
+      "Name": "MacBook Air M5 15 inch 2026 10CPU 10GPU 16GB 512GB",
+      "Sources": [
+        "https://www.apple.com/vn/macbook-air/specs/"
+      ],
+      "Scope": "MacBook Air M5, đúng kích thước 13 hoặc 15 inch, trọng lượng theo khung máy",
+      "Fields": {},
+      "DescriptionEdits": [
+        {
+          "Section": "intro",
+          "Before": "<p><strong>MacBook Air M5 15 inch 2026 10CPU 10GPU 16GB 512GB</strong> có màn hình 15.3 inch, RAM 16GB và cấu hình lưu trữ 512GB. Máy tập trung vào trải nghiệm làm việc trên một thiết bị di động, với màn hình, bàn phím và các kết nối sẵn sàng cho những tác vụ thường dùng.</p>",
+          "After": "<p><strong>MacBook Air M5 15 inch 2026 10CPU 10GPU 16GB 512GB</strong> có màn hình 15.3 inch, RAM 16GB và cấu hình lưu trữ 512GB. Máy tập trung vào trải nghiệm làm việc trên một thiết bị di động, với màn hình, bàn phím và các kết nối sẵn sàng cho những tác vụ thường dùng.</p><p>Máy có trọng lượng 1,51 kg, giúp bạn cân nhắc khối lượng mang theo cùng bộ sạc và phụ kiện.</p>"
+        }
+      ]
+    },
+    {
+      "ProductId": "90620f8a-5464-4cbd-8766-6a62a0a59a34",
+      "Name": "Laptop HP Omnibook 5 16-AG1068AU BZ7T0PA",
+      "Sources": [
+        "https://www.hp.com/lk-en/products/laptops/product-details/product-specifications/2103166699"
+      ],
+      "Scope": "OmniBook 5 16-ag1068AU, đúng product number BZ7T0PA",
+      "Fields": {},
+      "DescriptionEdits": [
+        {
+          "Section": "intro",
+          "Before": "<p><strong>Laptop HP Omnibook 5 16-AG1068AU BZ7T0PA</strong> có màn hình 16 inch, RAM 16GB và cấu hình lưu trữ 512 GB PCIe Gen4 NVMe M.2 SSD. Máy tập trung vào trải nghiệm làm việc trên một thiết bị di động, với màn hình, bàn phím và các kết nối sẵn sàng cho những tác vụ thường dùng.</p>",
+          "After": "<p><strong>Laptop HP Omnibook 5 16-AG1068AU BZ7T0PA</strong> có màn hình 16 inch, RAM 16GB và cấu hình lưu trữ 512 GB PCIe Gen4 NVMe M.2 SSD. Máy tập trung vào trải nghiệm làm việc trên một thiết bị di động, với màn hình, bàn phím và các kết nối sẵn sàng cho những tác vụ thường dùng.</p><p>Máy có trọng lượng 1,79 kg, giúp bạn cân nhắc khối lượng mang theo cùng bộ sạc và phụ kiện.</p>"
+        }
+      ]
+    },
+    {
+      "ProductId": "9e9d4c77-95ac-400f-91b8-413ed357b05c",
+      "Name": "Laptop ASUS Vivobook 14 X1407CA-LY203W",
+      "Sources": [
+        "https://www.asus.com/vn/laptops/for-home/vivobook/asus-vivobook-14-x1407/techspec/"
+      ],
+      "Scope": "X1407CA, hai cột cùng trọng lượng",
+      "Fields": {},
+      "DescriptionEdits": [
+        {
+          "Section": "intro",
+          "Before": "<p><strong>Laptop ASUS Vivobook 14 X1407CA-LY203W</strong> có màn hình 14 inch, RAM 16GB và cấu hình lưu trữ 512GB M.2 NVMe PCIe 4.0 SSD. Máy tập trung vào trải nghiệm làm việc trên một thiết bị di động, với màn hình, bàn phím và các kết nối sẵn sàng cho những tác vụ thường dùng.</p>",
+          "After": "<p><strong>Laptop ASUS Vivobook 14 X1407CA-LY203W</strong> có màn hình 14 inch, RAM 16GB và cấu hình lưu trữ 512GB M.2 NVMe PCIe 4.0 SSD. Máy tập trung vào trải nghiệm làm việc trên một thiết bị di động, với màn hình, bàn phím và các kết nối sẵn sàng cho những tác vụ thường dùng.</p><p>Máy có trọng lượng 1,46 kg, giúp bạn cân nhắc khối lượng mang theo cùng bộ sạc và phụ kiện.</p>"
+        }
+      ]
+    },
+    {
+      "ProductId": "a7106eeb-63aa-49e0-8816-0174a6133bbb",
+      "Name": "Laptop HP Victus 15-FA2451TX D17WPPA",
+      "Sources": [
+        "https://www.hp.com/bd-en/products/laptops/product-details/product-specifications/2103611923"
+      ],
+      "Scope": "HP Victus 15-fa2451TX, đúng product number D17WPPA",
+      "Fields": {},
+      "DescriptionEdits": [
+        {
+          "Section": "intro",
+          "Before": "<p><strong>Laptop HP Victus 15-FA2451TX D17WPPA</strong> có màn hình 15.6 inch, RAM 16GB và cấu hình lưu trữ 512GB SSD1 PCIe (M.2 2280). Điểm nhấn của cấu hình nằm ở GPU rời cùng bộ xử lý dành cho laptop, để bạn cân nhắc giữa công việc và nhu cầu giải trí có tải đồ họa.</p>",
+          "After": "<p><strong>Laptop HP Victus 15-FA2451TX D17WPPA</strong> có màn hình 15.6 inch, RAM 16GB và cấu hình lưu trữ 512GB SSD1 PCIe (M.2 2280). Điểm nhấn của cấu hình nằm ở GPU rời cùng bộ xử lý dành cho laptop, để bạn cân nhắc giữa công việc và nhu cầu giải trí có tải đồ họa.</p><p>Máy có trọng lượng 2,29 kg, giúp bạn cân nhắc khối lượng mang theo cùng bộ sạc và phụ kiện.</p>"
+        }
+      ]
+    },
+    {
+      "ProductId": "af1642ca-c06a-416a-8514-db105f4b4d99",
+      "Name": "Laptop Acer Swift Air 14 SFA14-I31-55NR",
+      "Sources": [
+        "https://store.acer.com/vi-vn/laptop-swift-air-14-sfa14-i31-55nr",
+        "https://global-download.acer.com/GDFiles/Document/User%20Manual/User%20Manual_Acer_1.0_A_A.pdf?BC=ACER&LC=en&OS=ALL&SC=AAP_7&Step1=&Step2=&Step3=SWIFT+SFA14-I31&acerid=639184060932297246"
+      ],
+      "Scope": "SKU NX.W4JSV.001, Core 5 320, 12 GB, 512 GB\nĐồng bộ đoạn cổng với giá trị đã được xác nhận ở đợt trước, tổng hai cổng USB-C, không tạo thêm cổng thứ ba từ chức năng DC-in",
+      "Fields": {},
+      "DescriptionEdits": [
+        {
+          "Section": "intro",
+          "Before": "<p><strong>Laptop Acer Swift Air 14 SFA14-I31-55NR</strong> có màn hình 14 inch, RAM 12GB và cấu hình lưu trữ 512GB PCIe NVMe SSD (Nâng cấp tối đa 2TB). Máy tập trung vào trải nghiệm làm việc trên một thiết bị di động, với màn hình, bàn phím và các kết nối sẵn sàng cho những tác vụ thường dùng.</p>",
+          "After": "<p><strong>Laptop Acer Swift Air 14 SFA14-I31-55NR</strong> có màn hình 14 inch, RAM 12GB và cấu hình lưu trữ 512GB PCIe NVMe SSD (Nâng cấp tối đa 2TB). Máy tập trung vào trải nghiệm làm việc trên một thiết bị di động, với màn hình, bàn phím và các kết nối sẵn sàng cho những tác vụ thường dùng.</p><p>Máy có trọng lượng 1,19 kg, giúp bạn cân nhắc khối lượng mang theo cùng bộ sạc và phụ kiện.</p>"
+        },
+        {
+          "Section": "Kết nối",
+          "Before": "<h2>Kết nối và nguồn điện</h2><p>Các cổng được công bố gồm 2x USB-C (USB4 40Gbps, Thunderbolt 4, sạc 5V/3A), 1x USB-C (DC-in 20V/100W), 1x USB-A 3.2 Gen 1. Bạn có thể đối chiếu những cổng này với màn hình, chuột, bàn phím hoặc thiết bị lưu trữ đang dùng để bố trí góc làm việc.</p><p>Thông tin pin: <strong>70 Wh 3-cell Li-ion battery, 3-pin 100 W PD PCR 50%, TCO 9.0 AC adapter</strong>. Khi sử dụng xa nguồn điện, thời lượng thay đổi theo độ sáng màn hình và mức tải ứng dụng, lúc làm việc cố định, bộ sạc tương thích giúp duy trì nguồn điện cho máy.</p><p><img src=\"https://cdn2.cellphones.com.vn/800x/media/catalog/product/l/a/laptop_acer_swift_air_14_sfa14-i31-55nr_-_3.png\" alt=\"Laptop Acer Swift Air 14 SFA14-I31-55NR – thiết kế sản phẩm 3\"></p>",
+          "After": "<h2>Kết nối và nguồn điện</h2><p>Máy có tổng cộng hai cổng USB-C hỗ trợ USB4, Thunderbolt 4, xuất hình DisplayPort và nhận nguồn, cùng một cổng USB-A 3.2 Gen 1 để kết nối phụ kiện.</p><p>Thông tin pin: <strong>70 Wh 3-cell Li-ion battery, 3-pin 100 W PD PCR 50%, TCO 9.0 AC adapter</strong>. Khi sử dụng xa nguồn điện, thời lượng thay đổi theo độ sáng màn hình và mức tải ứng dụng, lúc làm việc cố định, bộ sạc tương thích giúp duy trì nguồn điện cho máy.</p><p><img src=\"https://cdn2.cellphones.com.vn/800x/media/catalog/product/l/a/laptop_acer_swift_air_14_sfa14-i31-55nr_-_3.png\" alt=\"Laptop Acer Swift Air 14 SFA14-I31-55NR – thiết kế sản phẩm 3\"></p>"
+        }
+      ]
+    },
+    {
+      "ProductId": "c05692d5-06cf-4e5d-b4e8-6ec09d3fa3d8",
+      "Name": "MacBook Neo 13 inch A18 Pro 2026 6CPU 5GPU 8GB 512GB Touch ID",
+      "Sources": [
+        "https://www.apple.com/vn/macbook-neo/specs/"
+      ],
+      "Scope": "MacBook Neo A18 Pro 13 inch, 256 GB hoặc 512 GB Touch ID cùng khung máy",
+      "Fields": {},
+      "DescriptionEdits": [
+        {
+          "Section": "intro",
+          "Before": "<p><strong>MacBook Neo 13 inch A18 Pro 2026 6CPU 5GPU 8GB 512GB Touch ID</strong> có màn hình 13 inch, RAM 8GB và cấu hình lưu trữ 512GB. Máy tập trung vào trải nghiệm làm việc trên một thiết bị di động, với màn hình, bàn phím và các kết nối sẵn sàng cho những tác vụ thường dùng.</p>",
+          "After": "<p><strong>MacBook Neo 13 inch A18 Pro 2026 6CPU 5GPU 8GB 512GB Touch ID</strong> có màn hình 13 inch, RAM 8GB và cấu hình lưu trữ 512GB. Máy tập trung vào trải nghiệm làm việc trên một thiết bị di động, với màn hình, bàn phím và các kết nối sẵn sàng cho những tác vụ thường dùng.</p><p>Máy có trọng lượng 1,23 kg, giúp bạn cân nhắc khối lượng mang theo cùng bộ sạc và phụ kiện.</p>"
+        }
+      ]
+    },
+    {
+      "ProductId": "c09a4635-29b0-4a8b-aa47-4d6d31649659",
+      "Name": "Laptop ASUS VivoBook 14 X1407CA-LY008W",
+      "Sources": [
+        "https://www.asus.com/vn/laptops/for-home/vivobook/asus-vivobook-14-x1407/techspec/"
+      ],
+      "Scope": "X1407CA, hai cột cùng trọng lượng",
+      "Fields": {},
+      "DescriptionEdits": [
+        {
+          "Section": "intro",
+          "Before": "<p><strong>Laptop ASUS VivoBook 14 X1407CA-LY008W</strong> có màn hình 14 inch, RAM 16GB và cấu hình lưu trữ 512GB M.2 NVMe PCIe 4.0 SSD. Máy tập trung vào trải nghiệm làm việc trên một thiết bị di động, với màn hình, bàn phím và các kết nối sẵn sàng cho những tác vụ thường dùng.</p>",
+          "After": "<p><strong>Laptop ASUS VivoBook 14 X1407CA-LY008W</strong> có màn hình 14 inch, RAM 16GB và cấu hình lưu trữ 512GB M.2 NVMe PCIe 4.0 SSD. Máy tập trung vào trải nghiệm làm việc trên một thiết bị di động, với màn hình, bàn phím và các kết nối sẵn sàng cho những tác vụ thường dùng.</p><p>Máy có trọng lượng 1,46 kg, giúp bạn cân nhắc khối lượng mang theo cùng bộ sạc và phụ kiện.</p>"
+        }
+      ]
+    },
+    {
+      "ProductId": "c717bbff-6b08-4cbe-a91f-68cd291333f8",
+      "Name": "Laptop ASUS TUF Gaming F16 FX607VJ-RL034W",
+      "Sources": [
+        "https://www.asus.com/vn/laptops/for-gaming/tuf-gaming/asus-tuf-gaming-f16-2024/techspec/"
+      ],
+      "Scope": "FX607VJ, hai cột cùng trọng lượng",
+      "Fields": {},
+      "DescriptionEdits": [
+        {
+          "Section": "intro",
+          "Before": "<p><strong>Laptop ASUS TUF Gaming F16 FX607VJ-RL034W</strong> có màn hình 16 inch, RAM 16GB và cấu hình lưu trữ 512GB PCIe 4.0 NVMe M.2 SSD (2 Khe cắm M.2 hỗ trợ SATA hoặc NVMe, tối đa 2TB). Điểm nhấn của cấu hình nằm ở GPU rời cùng bộ xử lý dành cho laptop, để bạn cân nhắc giữa công việc và nhu cầu giải trí có tải đồ họa.</p>",
+          "After": "<p><strong>Laptop ASUS TUF Gaming F16 FX607VJ-RL034W</strong> có màn hình 16 inch, RAM 16GB và cấu hình lưu trữ 512GB PCIe 4.0 NVMe M.2 SSD (2 Khe cắm M.2 hỗ trợ SATA hoặc NVMe, tối đa 2TB). Điểm nhấn của cấu hình nằm ở GPU rời cùng bộ xử lý dành cho laptop, để bạn cân nhắc giữa công việc và nhu cầu giải trí có tải đồ họa.</p><p>Máy có trọng lượng 2,27 kg, giúp bạn cân nhắc khối lượng mang theo cùng bộ sạc và phụ kiện.</p>"
+        }
+      ]
+    },
+    {
+      "ProductId": "cdcea719-cf05-4376-a4c6-b6b7d181bf26",
+      "Name": "iPhone 16e 128GB",
+      "Sources": [
+        "https://www.ifixit.com/Teardown/iPhone+16e+Chip+ID/182268"
+      ],
+      "Scope": "Chip ID trực tiếp mẫu iPhone 16e Mỹ, SK hynix H58G66CK8HX139 8 GB LPDDR5X, chỉ lấy bộ nhớ nền tảng, không dùng dung lượng pin hoặc cấu hình SIM khu vực",
+      "Fields": {},
+      "DescriptionEdits": [
+        {
+          "Section": "Hiệu năng",
+          "Before": "<h2>Hiệu năng Chip A18</h2><p><strong>Chip A18</strong> là bộ xử lý trung tâm của máy. Từ mở ứng dụng, chỉnh sửa ảnh đến xử lý thông báo, các thành phần này cùng đảm nhiệm những thao tác bạn dùng thường xuyên trên điện thoại.</p><p>Máy ra mắt với <strong>iOS 18</strong>. Giao diện hệ điều hành cung cấp các công cụ quản lý ứng dụng, lưu trữ và cá nhân hóa thiết bị.</p>",
+          "After": "<h2>Hiệu năng Chip A18</h2><p><strong>Chip A18</strong> là bộ xử lý trung tâm của máy. Từ mở ứng dụng, chỉnh sửa ảnh đến xử lý thông báo, các thành phần này cùng đảm nhiệm những thao tác bạn dùng thường xuyên trên điện thoại.</p><p>Máy ra mắt với <strong>iOS 18</strong>. Giao diện hệ điều hành cung cấp các công cụ quản lý ứng dụng, lưu trữ và cá nhân hóa thiết bị.</p><p>RAM 8 GB chuẩn LPDDR5X phối hợp với bộ xử lý để duy trì các ứng dụng đang mở và chuyển đổi giữa những tác vụ thường dùng.</p>"
+        }
+      ],
+      "SourceKind": "primary_teardown"
+    },
+    {
+      "ProductId": "d277162f-fdc3-4444-96ad-c729f566115a",
+      "Name": "MacBook Air M5 13 inch 2026 10CPU 10GPU 16GB 1TB",
+      "Sources": [
+        "https://www.apple.com/vn/macbook-air/specs/"
+      ],
+      "Scope": "MacBook Air M5, đúng kích thước 13 hoặc 15 inch, trọng lượng theo khung máy",
+      "Fields": {},
+      "DescriptionEdits": [
+        {
+          "Section": "intro",
+          "Before": "<p><strong>MacBook Air M5 13 inch 2026 10CPU 10GPU 16GB 1TB</strong> có màn hình 13.6 inch, RAM 16GB và cấu hình lưu trữ 1TB. Máy tập trung vào trải nghiệm làm việc trên một thiết bị di động, với màn hình, bàn phím và các kết nối sẵn sàng cho những tác vụ thường dùng.</p>",
+          "After": "<p><strong>MacBook Air M5 13 inch 2026 10CPU 10GPU 16GB 1TB</strong> có màn hình 13.6 inch, RAM 16GB và cấu hình lưu trữ 1TB. Máy tập trung vào trải nghiệm làm việc trên một thiết bị di động, với màn hình, bàn phím và các kết nối sẵn sàng cho những tác vụ thường dùng.</p><p>Máy có trọng lượng 1,23 kg, giúp bạn cân nhắc khối lượng mang theo cùng bộ sạc và phụ kiện.</p>"
+        }
+      ]
+    },
+    {
+      "ProductId": "dca876de-e1ea-408c-bb26-6fbc7f4752c4",
+      "Name": "Laptop Acer Gaming Aspire 7 A715-59G-59RD",
+      "Sources": [
+        "https://store.acer.com/vi-vn/laptop-acer-gaming-aspire-7-a715-59g-59rd"
+      ],
+      "Scope": "Acer Việt Nam, đúng mã A715-59G-59RD",
+      "Fields": {},
+      "DescriptionEdits": [
+        {
+          "Section": "intro",
+          "Before": "<p><strong>Laptop Acer Gaming Aspire 7 A715-59G-59RD</strong> có màn hình 15.6 inch, RAM 16GB và cấu hình lưu trữ 512GB PCIe NVMe SSD (Nâng cấp tối đa 4TB). Điểm nhấn của cấu hình nằm ở GPU rời cùng bộ xử lý dành cho laptop, để bạn cân nhắc giữa công việc và nhu cầu giải trí có tải đồ họa.</p>",
+          "After": "<p><strong>Laptop Acer Gaming Aspire 7 A715-59G-59RD</strong> có màn hình 15.6 inch, RAM 16GB và cấu hình lưu trữ 512GB PCIe NVMe SSD (Nâng cấp tối đa 4TB). Điểm nhấn của cấu hình nằm ở GPU rời cùng bộ xử lý dành cho laptop, để bạn cân nhắc giữa công việc và nhu cầu giải trí có tải đồ họa.</p><p>Máy có trọng lượng 2,1 kg, giúp bạn cân nhắc khối lượng mang theo cùng bộ sạc và phụ kiện.</p>"
+        }
+      ]
+    },
+    {
+      "ProductId": "ef5eebdd-dd1d-4747-b6e2-701575e1b777",
+      "Name": "Laptop MSI Katana 15 B13VEK-2440VN",
+      "Sources": [
+        "https://www.msi.com/Laptop/Katana-15-B13VX/Specification"
+      ],
+      "Scope": "Katana 15 B13VEK, ba cột cùng trọng lượng đã gồm pin",
+      "Fields": {},
+      "DescriptionEdits": [
+        {
+          "Section": "intro",
+          "Before": "<p><strong>Laptop MSI Katana 15 B13VEK-2440VN</strong> có màn hình 15.6 inch, RAM 16GB và cấu hình lưu trữ 1TB*1, 2x M.2 SSD slot (NVMe PCIe Gen4). Điểm nhấn của cấu hình nằm ở GPU rời cùng bộ xử lý dành cho laptop, để bạn cân nhắc giữa công việc và nhu cầu giải trí có tải đồ họa.</p>",
+          "After": "<p><strong>Laptop MSI Katana 15 B13VEK-2440VN</strong> có màn hình 15.6 inch, RAM 16GB và cấu hình lưu trữ 1TB*1, 2x M.2 SSD slot (NVMe PCIe Gen4). Điểm nhấn của cấu hình nằm ở GPU rời cùng bộ xử lý dành cho laptop, để bạn cân nhắc giữa công việc và nhu cầu giải trí có tải đồ họa.</p><p>Máy có trọng lượng 2,25 kg, giúp bạn cân nhắc khối lượng mang theo cùng bộ sạc và phụ kiện.</p>"
+        }
+      ]
+    }
+  ]
+}

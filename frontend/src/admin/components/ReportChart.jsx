@@ -65,7 +65,7 @@ export default function ReportChart({ tab = 'revenue', points = [], loading, err
         {hasData && revenue && points.map((p, i) => p.Profit != null && <circle key={i} cx={x(i)} cy={y(Number(p.Profit))} r="4" fill={Number(p.Profit) < 0 ? '#e11d2e' : '#16a34a'} pointerEvents="none" />)}
         {!hasData && <text x={78 + plotWidth / 2} y="126" textAnchor="middle" className="fill-admin-muted text-sm">Chưa có dữ liệu trong kỳ đã chọn.</text>}
       </svg></div>
-      <figcaption className="mt-1 text-xs text-admin-muted">{onPoint ? 'Bấm vào một tháng để xem báo cáo. * Tháng hiện tại chưa kết thúc.' : revenue ? 'Theo ngày giao hàng. Lãi gộp trước điều chỉnh trả hàng; điểm thiếu giá nhập không được nối đường.' : purchases ? 'Theo ngày tạo phiếu; trạng thái được cập nhật đến thời điểm xem báo cáo.' : 'Theo ngày đặt hàng; trạng thái được cập nhật đến thời điểm xem báo cáo.'}</figcaption>
+      <figcaption className="mt-1 text-xs text-admin-muted">{onPoint ? 'Bấm vào một tháng để xem báo cáo. * Tháng hiện tại chưa kết thúc.' : revenue ? 'Theo ngày giao hàng. Lãi gộp trước điều chỉnh trả hàng, điểm thiếu giá nhập không được nối đường.' : purchases ? 'Theo ngày tạo phiếu, trạng thái được cập nhật đến thời điểm xem báo cáo.' : 'Theo ngày đặt hàng, trạng thái được cập nhật đến thời điểm xem báo cáo.'}</figcaption>
     </figure>}
   </section>
 }

@@ -63,7 +63,7 @@ export default function CouponEditor({ row, promotions, promotionId, now, busy, 
         <Field label="Mô tả chương trình"><textarea aria-label="Mô tả chương trình" readOnly placeholder="—" className={CONTROL + ' h-16! resize-none bg-admin-page! py-2.5 text-admin-muted!'} value={program?.Description ?? ''} /></Field>
       </div>
     </fieldset>
-    <p className="m-0 text-[11px] leading-relaxed text-admin-muted">Các ô nền xám lấy từ chương trình mẹ và không thể chỉnh sửa tại đây. Để trống giới hạn lượt dùng nếu không giới hạn; nhập 0 nghĩa là hết lượt.</p>
+    <p className="m-0 text-[11px] leading-relaxed text-admin-muted">Các ô nền xám lấy từ chương trình mẹ và không thể chỉnh sửa tại đây. Để trống giới hạn lượt dùng nếu không giới hạn, nhập 0 nghĩa là hết lượt.</p>
     {(validation || failure) && <p role="alert" className="m-0 rounded-lg bg-red-50 p-3 text-xs text-admin-red">{validation || couponError(failure)}</p>}
     <div className="flex justify-end gap-2"><PromotionPopupButton secondary disabled={busy} onClick={onClose}>Hủy</PromotionPopupButton><PromotionPopupButton type="submit" disabled={busy || !valid}>{busy ? 'Đang lưu…' : row ? 'Cập nhật mã' : 'Thêm mã giảm giá'}</PromotionPopupButton></div>
   </form>

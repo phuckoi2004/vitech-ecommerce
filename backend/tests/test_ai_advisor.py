@@ -364,15 +364,10 @@ def test_a_cheaper_product_does_not_pass_a_better_fit_on_a_hairs_breadth():
 
 def test_an_empty_search_over_budget_names_the_nearest_product(store):
     s = store
-    seen = {}
-
-    def nothing(messages):
-        seen.update(turn_data(messages)["search"])
-        return finish("no_results")
-
-    svc = s.service(ScriptedModel([nothing], s.counters))
-    response = s.ask(svc, "Laptop ASUS dưới 11 triệu")
-    assert seen["Products"] == [] and seen["NearestAboveBudget"]["Name"] == "Laptop ASUS Vivobook 15 X1504ZA"
+    model = ScriptedModel([], s.counters)
+    response = s.ask(s.service(model), "Laptop ASUS dưới 11 triệu")
+    # Nothing passes the hard filters, so the backend answers without a model round (ai_chat.ask).
+    assert model.calls == []
     assert "Mẫu gần nhất là Laptop ASUS Vivobook 15 X1504ZA với giá 11.990.000 đ" in response.AiMessages[0].Content
 
 

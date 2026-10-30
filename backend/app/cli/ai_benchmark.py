@@ -38,6 +38,7 @@ from app.repositories.chat import MessageRepository
 from app.schemas.ai_chat import AiMessageCreate, PresentAnswerArguments
 from app.services.actor import Actor
 from app.services.ai_chat import AiChatService
+from app.services.ai_comparison import SPEC_GROUPS
 from app.services.ai_tools import public_specifications
 from app.services.catalog import CategoryService, ProductService
 from app.services.exceptions import AiUnavailableError, ServiceError
@@ -84,8 +85,9 @@ class Item:
 
 
 class Catalog:
-    def __init__(self, items, coupons):
-        self.items, self.coupons = items, coupons
+    def __init__(self, items, coupons, offer_amounts=()):
+        # offer_amounts: the "giảm tới …" of each category's automatic offers, which answers may quote.
+        self.items, self.coupons, self.offer_amounts = items, coupons, set(offer_amounts)
 
     @classmethod
     def load(cls, session, clock=utc_now):
@@ -107,8 +109,10 @@ class Catalog:
             items[str(detail.ProductId)] = Item(str(detail.ProductId), detail.Name, detail.Brand.Name, detail.Category.Name,
                                                 root(detail.CategoryId), dict(detail.Specifications or {}),
                                                 detail.WarrantyMonths, min(available) if available else None, variants)
-        coupons = {c.Code: c for c in PricingService(session, clock=clock).public_coupons()}
-        return cls(items, coupons)
+        pricing = PricingService(session, clock=clock)
+        coupons = {c.Code: c for c in pricing.public_coupons()}
+        offers = {Decimal(str(o.MaxDiscountAmount)) for o in pricing.category_offers() if o.MaxDiscountAmount}
+        return cls(items, coupons, offers)
 
     def fingerprint(self):
         products = [[i.id, i.name, i.brand, i.category, i.warranty, json.dumps(i.specs, sort_keys=True, ensure_ascii=False),
@@ -428,6 +432,10 @@ def _grounded(turn, catalog, notes):
     referenced = {c.get("ProductId") for c in turn["cards"]} | {r["ProductId"] for r in turn["references"]} | set(turn["selected"])
     items = [catalog.items[i] for i in referenced if i in catalog.items]
     allowed = {price for item in items for _, price, _ in item.variants.values()} | catalog.coupon_amounts()
+    allowed |= catalog.offer_amounts
+    # A "no result" answer names the nearest product above the budget without showing it as a card.
+    allowed |= {price for item in catalog.items.values() if item.name in (turn["answer"] or "")
+                for _, price, _ in item.variants.values()}
     if (turn["constraints"] or {}).get("max_price"):
         allowed.add(Decimal(str(turn["constraints"]["max_price"])))
     for amount in _amounts(turn["answer"]):
@@ -452,18 +460,36 @@ def _grounded(turn, catalog, notes):
             elif key == "Phiên bản" and value.split("; giá: ")[0] not in names:
                 notes.append(f"phiên bản sai: {item.name}")
                 ok = False
-            elif key in public and value != public[key]:
+            elif key in public and value.rstrip(".") != public[key].rstrip(".") and not _same_spec(item, key, value):
                 notes.append(f"thông số sai: {item.name} / {key}")
                 ok = False
-    for code in re.findall(r"^• ([^:\s]+):", turn["answer"] or "", flags=re.M):
+    for code in _listed_coupons(turn):
         if code not in catalog.coupons:
             notes.append(f"mã ưu đãi không có thật: {code}")
             ok = False
     return ok
 
 
+# Coupon lines as the backend renders them: "• CODE: giảm …" (offers), "- CODE: giảm …" (one product) and
+# "Mã CODE: giảm …" (store-wide promotion lines); the model may bold the code, with or without "Mã".
+COUPON_LINE = re.compile(r"^\s*(?:[•-]\s+)?(?:\*\*)?(?:Mã\s+)?(?:\*\*)?([A-Z0-9][A-Z0-9_-]{2,})(?:\*\*)?:\s+[Gg]iảm\b",
+                         re.M)
+
+
 def _listed_coupons(turn):
-    return set(re.findall(r"^• ([^:\s]+):", turn["answer"] or "", flags=re.M))
+    return set(COUPON_LINE.findall(turn["answer"] or ""))
+
+
+def _same_spec(item, key, value):
+    """A comparison line ("Pin: …") quotes Smart Compare's reading of a spec, not the 160-character reader of other
+    answers: every alias of that row, 200 characters each, joined by " · " (ai_comparison.normalized_specs). Each part
+    must be one of the product's own values for that row."""
+    aliases = next((names for _, label, names in SPEC_GROUPS if label == key), (key,))
+    wanted = {fold(alias) for alias in aliases}
+    known = {str(raw).strip()[:200] for name, raw in (item.specs or {}).items()
+             if isinstance(raw, (str, int, float)) and not isinstance(raw, bool)
+             and re.sub(r"\s*\([^)]*\)", "", fold(str(name))).strip() in wanted}
+    return bool(known) and all(part in known for part in value.rstrip(".").split(" · "))
 
 
 def _hard(turn, expect, catalog, notes):
@@ -616,10 +642,16 @@ def grade(case: Case, turns, catalog, *, writes=None, secret=""):
             if len(wanted) != len(expect.get("include", ())):
                 notes.append("tiền đề sai: mã cần liệt kê không còn hiệu lực")
                 checks["valid"] = False
+            # "Mã VIETECH300K áp dụng cho đơn từ …" answers about the asked code in prose, without a coupon line.
+            named = {code for code in wanted if re.search(rf"(?<![A-Z0-9]){re.escape(code)}(?![A-Z0-9])",
+                                                          (final["answer"] or "") if final else "")}
             absent = set(expect.get("absent", ())) & listed
             intents = expect.get("intents", ("offers",))
-            checks["passed"] = (completed and final["intent"] in intents and wanted <= listed and not absent
-                                and (bool(listed) or final["intent"] != "offers" or not catalog.coupons))
+            # Only "which codes are there?" needs a list: a question about one code (named above) or a code that does not
+            # exist (answered by listing none) does not.
+            checks["passed"] = (completed and final["intent"] in intents and wanted <= listed | named and not absent
+                                and (bool(listed) or bool(wanted) or final["intent"] != "offers" or not catalog.coupons
+                                     or bool(expect.get("absent"))))
     elif case.group == "context":
         checks["context"] = completed and _context(turns, expect, catalog, checks, notes)
         checks["passed"] = checks["context"]

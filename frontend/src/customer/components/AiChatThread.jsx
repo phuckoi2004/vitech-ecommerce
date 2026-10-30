@@ -8,6 +8,10 @@ import { productPath } from '../routes/paths.js'
 import StoreImage from './StoreImage.jsx'
 import AiChatIcon from './AiChatIcon.jsx'
 import AiChatText from './AiChatText.jsx'
+import AiComparison from './AiComparison.jsx'
+import AiCompatibility from './AiCompatibility.jsx'
+import { isCompatibility } from './ai-compatibility.js'
+import { isComparison } from './ai-comparison.js'
 import { mergeMessages, readTurn, storeTurn, turnStorageKey, unfinishedTurn } from './ai-chat-state.js'
 
 function ProductSuggestion({ message, onLoad }) {
@@ -222,10 +226,12 @@ export default function AiChatThread({ conversation, userId, onLockedChange, dis
         className={`ai-chat-message ${message.SenderType === 'Customer' ? 'is-customer' : ''}`}>
         {message.SenderType !== 'Customer' && <span className="ai-chat-avatar ai-chat-message-avatar"><AiChatIcon name="sparkles" /></span>}
         <div className="ai-chat-message-body"><small className={message.SenderType === 'Customer' ? 'sr-only' : 'ai-chat-sender'}>{message.SenderType === 'Customer' ? 'Bạn' : 'VieTech AI'}</small>
-        {message.SenderType === 'AI' ? <AiChatText content={message.Content} /> : <p>{message.Content}</p>}
+        {message.SenderType === 'AI' ? (!isComparison(message.Metadata?.Comparison) && <AiChatText content={message.Content} />) : <p>{message.Content}</p>}
+        {message.SenderType === 'AI' && <AiComparison comparison={message.Metadata?.Comparison} onLoad={scrollToBottom} />}
+        {message.SenderType === 'AI' && <AiCompatibility compatibility={message.Metadata?.Compatibility} onLoad={scrollToBottom} />}
         {message.Metadata?.AiProcessingStatus === 'Failed' && message.Metadata.ClientRequestId !== requestId && <small>Chưa nhận được câu trả lời.</small>}
         {message.Metadata?.AiProcessingStatus === 'Cancelled' && <small>Đã dừng trả lời.</small>}
-        {messages.filter((card) => card.MessageType === 'Product' && card.Metadata?.AiAnswerMessageId === message.MessageId)
+        {(!isComparison(message.Metadata?.Comparison) && !isCompatibility(message.Metadata?.Compatibility) ? messages : []).filter((card) => card.MessageType === 'Product' && card.Metadata?.AiAnswerMessageId === message.MessageId)
           .sort((a, b) => a.Metadata.Rank - b.Metadata.Rank).slice(0, 5)
           .map((card) => <ProductSuggestion key={card.MessageId} message={card} onLoad={scrollToBottom} />)}
         <time dateTime={message.SentAt}>{formatDateTime(message.SentAt)}</time></div>

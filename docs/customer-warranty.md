@@ -1,5 +1,7 @@
 # Bảo hành phía khách hàng
 
+**Cập nhật hiện hành 30/10/2026:** chính sách công khai và chatbot dùng chung nội dung trong [chính sách hậu mãi](after-sales-policies.md). Luồng bảo hành hiện tại chỉ công bố kết quả sửa chữa, thay linh kiện hoặc không thể bảo hành; đổi máy đang tạm dừng. Phí gửi/nhận, thời gian xử lý và điều kiện loại trừ cụ thể cần nhân viên xác nhận theo từng trường hợp.
+
 Cập nhật ngày 21/10/2026. Tham chiếu giao diện Figma `aLG7De0fgbWCfaIpzIrPii`, frame `874:368` và luồng đang hoạt động trong `docs/api-endpoints.md` (15/10/2026).
 
 ## Giao diện và đường dẫn

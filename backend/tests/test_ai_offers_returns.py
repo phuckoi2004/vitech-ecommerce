@@ -64,7 +64,7 @@ def test_ai_offers_hide_only_codes_used_twice_by_the_signed_in_customer(store, r
     text = reply.AiMessages[0].Content
     assert "TWICE100" not in text
     assert all(code in text for code in ("FRESH100", "ONCE100", "CANCEL100", "OTHER100"))
-    assert "tối đa 2 lượt/khách" in text
+    assert "lượt/khách" not in text
 
 
 @pytest.mark.parametrize("question", [

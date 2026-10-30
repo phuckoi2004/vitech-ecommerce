@@ -61,7 +61,7 @@ function ReturnDetail({ id }) {
       {item.CompensationApprovedAt && item.CompensationAmount != null && <div className="cw-result"><h2>Số tiền được xác nhận: <Money value={item.CompensationAmount} /></h2></div>}
       <div className="cw-policy cw-history-note"><p>Phiếu hoàn tất khi đơn đổi đã chốt và nhân viên xử lý xong. Máy cũ chỉ được nhập lại tồn khi phiếu hoàn tất.</p></div>
       {item.Exchange?.OrderId && <div className="cw-result"><h2>Đơn đổi trả {item.Exchange.OrderCode}</h2>
-        <p>{item.Exchange.Committed ? 'Đã chốt đơn đổi.' : 'Chưa thanh toán phần bù. Mở đơn đổi trả để tiếp tục thanh toán; nếu QR hết hạn, tải lại phiếu để tiếp tục.'}</p>
+        <p>{item.Exchange.Committed ? 'Đã chốt đơn đổi.' : 'Chưa thanh toán phần bù. Mở đơn đổi trả để tiếp tục thanh toán, nếu QR hết hạn, tải lại phiếu để tiếp tục.'}</p>
         <Link className="cw-primary" to={orderPath(item.Exchange.OrderId)}>Xem đơn đổi trả</Link></div>}
       {item.Attachments?.length > 0 && <section className="cw-detail-section"><h2>Minh chứng đã gửi</h2><ul className="cw-attachments">
         {item.Attachments.filter((entry) => /^https:\/\//i.test(entry.FileUrl)).map((entry, index) => <li key={entry.ServiceRequestAttachmentId}>

@@ -18,6 +18,12 @@ from .common import NewsArticleStatus, RequestSchema, ResponseSchema, check_end_
 # ---------------------------------------------------------------------------
 
 
+class AfterSalesPolicyResponse(ResponseSchema):
+    ReturnWindowDays: int | None = Field(default=None, ge=1)
+    Warranty: list[str]
+    Returns: list[str]
+
+
 class NewsArticleCreate(RequestSchema):
     """Admin tạo bài viết. Mặc định Draft; ngày đăng/người tạo do server quyết định."""
 

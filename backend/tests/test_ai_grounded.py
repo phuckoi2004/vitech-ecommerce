@@ -107,8 +107,9 @@ def grounded_shop():
         session = Session(engine, autoflush=False)
         sessions.append(session)
         model = ScriptedModel(steps, counters)
-        return AiChatService(session, settings=AiSettings(api_key="test", timeout_seconds=20), model=model, state=state,
-                             clock=lambda: now.value, **kwargs), model
+        settings = kwargs.pop("settings", None) or AiSettings(api_key="test", timeout_seconds=20)
+        return AiChatService(session, settings=settings, model=model, state=state, clock=lambda: now.value,
+                             **kwargs), model
 
     yield SimpleNamespace(engine=engine, cid=cid, actor=actor, products=products, variants=variants,
                           service=service, now=now, counters=counters)
@@ -450,7 +451,7 @@ def test_rank_without_previous_cards_means_the_latest_search_order(grounded_shop
     # A model asking for a rank the list does not have still gets the tool error.
     s.now.value += timedelta(seconds=1)
     unknown, model = s.service([[call("get_product", rank=3)], {"intent": "clarify", "clarification": "products"}])
-    ask(s, unknown, "Có gì khác biệt giữa các bản không?")
+    ask(s, unknown, "Đọc thông tin asus-zen")
     assert json.loads(model.calls[1][0][-1]["content"])["error"] == "ai_reference_not_found"
 
 
@@ -465,7 +466,7 @@ def test_a_comparison_reads_its_products_in_one_call(grounded_shop):
     missing = str(uuid.uuid4())
     svc, model = s.service([[call("get_product", product_ids=[s.products["asus-zen"], s.products["lenovo-idea"], missing])],
                             compare])
-    compared = ask(s, svc, "So sánh asus-zen và lenovo-idea")
+    compared = ask(s, svc, "So sánh hai mẫu laptop đáng mua nhất")  # Subjects the model picks, not the backend.
     products = seen[0]["Products"]
     assert [p["ProductId"] for p in products] == [s.products["asus-zen"], s.products["lenovo-idea"], missing]
     assert products[0]["Specifications"]["RAM"] == "16 GB" and products[2]["error"] == "product_not_found"
@@ -473,7 +474,7 @@ def test_a_comparison_reads_its_products_in_one_call(grounded_shop):
     assert len(model.calls) == 2  # One round reads both products.
     twice, model = s.service([[call("get_product", product_ids=[s.products["asus-zen"]] * 2)],
                               {"intent": "clarify", "clarification": "products"}])
-    ask(s, twice, "So sánh hai lần cùng một máy")
+    ask(s, twice, "Đọc thông tin asus-zen")
     assert json.loads(model.calls[1][0][-1]["content"])["error"] == "invalid_tool_arguments"
 
 
@@ -486,7 +487,7 @@ def test_a_comparison_naming_one_brand_does_not_filter_by_it(grounded_shop):
         return finish("no_results")
 
     svc, _ = s.service([[call("search_products", keyword="zen")], compare])
-    ask(s, svc, "So sánh máy Lenovo idea với mẫu zen")
+    ask(s, svc, "So sánh máy Lenovo idea hay mẫu zen")  # Not split into names the backend resolves itself.
     assert [p["ProductId"] for p in seen[0]["Products"]] == [s.products["asus-zen"]]
     assert seen[0]["Constraints"]["brand_id"] is None
 
@@ -540,8 +541,9 @@ def test_a_tool_call_rejected_by_the_provider_gets_one_bounded_repair(grounded_s
     assert result.Status == "Completed" and len(model.calls) == 2
     assert model.calls[1][0][-1] == {"role": "system", "content": REPAIR_NOTE}
     twice, _ = s.service([rejected, rejected])
+    # A question the backend has no answer of its own for (a ranked recommendation would fall back to the ranking).
     with pytest.raises(AiUnavailableError) as error:
-        ask(s, twice, "Laptop Lenovo dưới 20 triệu")
+        ask(s, twice, "Bạn có thể giúp gì cho tôi?")
     assert error.value.code == "ai_invalid_output"
 
 
@@ -612,7 +614,7 @@ def test_excess_tool_rounds_and_total_deadline_are_bounded(grounded_shop):
     steps = [[call("get_product", product_id=s.products["asus-zen"])] for _ in range(5)]
     svc, _ = s.service(steps)
     with pytest.raises(AiUnavailableError) as error:
-        ask(s, svc)
+        ask(s, svc, "Bạn có thể giúp gì cho tôi?")  # No backend answer to fall back on.
     assert error.value.code == "ai_tool_limit"
     timer = SimpleNamespace(value=0)
 

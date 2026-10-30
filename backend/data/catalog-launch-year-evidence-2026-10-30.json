@@ -1,0 +1,1759 @@
+{
+  "Operation": "add_launch_year",
+  "ReviewedAt": "2026-10-31",
+  "Rule": "Chỉ thêm Năm ra mắt vào JSON thông số nếu chưa có thời điểm ra mắt, không sửa các thông số khác hoặc cấu trúc database",
+  "Products": [
+    {
+      "ProductId": "39e995c0-e329-40bb-8851-b7632265c956",
+      "Name": "Apple MacBook Air M2 2024 8CPU 8GPU 16GB 256GB I Chính hãng Apple Việt Nam",
+      "Year": "2022",
+      "ModelMatch": "Apple MacBook Air M2 2024 8CPU 8GPU 16GB 256GB I Chính hãng Apple Việt Nam",
+      "Scope": "Năm giới thiệu dòng MacBook Air M2 13,6 inch, không lấy năm đổi cấu hình RAM tiêu chuẩn làm năm ra mắt dòng máy",
+      "Basis": "Apple xác định dòng máy MacBook Air M2 là đời 2022, RAM 16 GB là cấu hình có sẵn của dòng này, hậu tố 2024 của nhà bán lẻ không đổi năm giới thiệu thiết kế",
+      "Sources": [
+        "https://support.apple.com/en-us/111867"
+      ]
+    },
+    {
+      "ProductId": "82f70638-d191-439b-8ccd-d4bfe81183c5",
+      "Name": "Bàn phím Apple Magic Keyboard + Touch ID 2024 (MXCK3)",
+      "Year": "2024",
+      "ModelMatch": "Bàn phím Apple Magic Keyboard + Touch ID 2024 (MXCK3)",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Thông báo ngày 28/10/2024 đưa Magic Keyboard sang USB-C, khớp MXCK3 có Touch ID",
+      "Sources": [
+        "https://www.apple.com/newsroom/2024/10/apple-introduces-new-imac-supercharged-by-m4-and-apple-intelligence/"
+      ]
+    },
+    {
+      "ProductId": "46a8be69-1e0e-44cc-a078-5f0d274a9137",
+      "Name": "Bàn phím Bluetooth Logitech Pebble Key 2 K380S",
+      "Year": "2023",
+      "ModelMatch": "Bàn phím Bluetooth Logitech Pebble Key 2 K380S",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Thông báo ngày 06/09/2023 giới thiệu Pebble Keys 2 K380s",
+      "Sources": [
+        "https://www.logitech.com/blog/2023/09/06/make-your-statement-with-logitechs-pebble-2-collection/"
+      ]
+    },
+    {
+      "ProductId": "671d8658-4f19-4f90-a866-345de3cc121b",
+      "Name": "Bàn phím Bluetooth Targus EcoSmart AKB868AP",
+      "Year": "2023",
+      "ModelMatch": "Bàn phím Bluetooth Targus EcoSmart AKB868AP",
+      "Scope": "Năm bắt đầu bán dòng Energy Harvesting EcoSmart AKB868, thông báo giải thưởng trước đó vào 11/2022 không phải thời điểm mở bán",
+      "Basis": "Thông cáo Targus CES ngày 03/01/2023 nêu bàn phím Energy Harvesting EcoSmart 104 phím bắt đầu bán tháng kế tiếp, phân biệt Ergonomic EcoSmart",
+      "Sources": [
+        "https://us.targus.com/blogs/press-room/targus-launches-premium-collection-of-sustainable-ecosmart-tech-accessories"
+      ]
+    },
+    {
+      "ProductId": "c563a3cf-9e51-4bd0-aad8-57822c9e315b",
+      "Name": "Bàn phím Gaming có dây HE Magnetic Mchose Ace68 Air Rapid Trigger Snow White",
+      "Year": "2025",
+      "ModelMatch": "Bàn phím Gaming có dây HE Magnetic Mchose Ace68 Air Rapid Trigger Snow White",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Hồ sơ nhà sản xuất nộp tại iF Design cho Ace 68 Air ghi riêng Date of Launch 2025, không dùng năm giải thưởng hoặc Ace68 khác",
+      "Sources": [
+        "https://ifdesign.com/en/winner-ranking/project/ace-68-air/741679"
+      ]
+    },
+    {
+      "ProductId": "a28f90db-59b4-4d69-a9bd-101af183a77e",
+      "Name": "Bàn phím cơ ASUS ROG Falchion Ace 75 HE V2 Black",
+      "Year": "2026",
+      "ModelMatch": "Bàn phím cơ ASUS ROG Falchion Ace 75 HE V2 Black",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Thông báo ROG tại CES 2026 giới thiệu Falchion Ace 75 HE với HFX V2, V2 trong tên bán hàng là switch, không suy thành thế hệ bàn phím mới",
+      "Sources": [
+        "https://press.asus.com/news/press-releases/rog-ces-2026-gaming-innovations/"
+      ]
+    },
+    {
+      "ProductId": "6f14abad-235d-4ef6-a0ee-b1f12c88351e",
+      "Name": "Bàn phím cơ không dây AULA F75 đen",
+      "Year": "2024",
+      "ModelMatch": "Bàn phím cơ không dây AULA F75 đen",
+      "Scope": "Mốc giới thiệu dòng AULA F75 3 chế độ tại kênh bán lẻ Việt Nam",
+      "Basis": "Bài giới thiệu đúng Aula F75 3 chế độ ghi rõ thời điểm ra mắt 06/2024, không áp dụng cho F75 có dây trắng",
+      "Sources": [
+        "https://cellphones.com.vn/sforum/black-friday-gaming-gear"
+      ]
+    },
+    {
+      "ProductId": "6df1db09-3aad-42df-9d6a-151a95c83752",
+      "Name": "Bàn phím cơ không dây Logitech Alto Keys K98M Xám Đen",
+      "Year": "2024",
+      "ModelMatch": "Bàn phím cơ không dây Logitech Alto Keys K98M Xám Đen",
+      "Scope": "Năm giới thiệu đầu tiên dòng Alto Keys K98M tại Trung Quốc, không khẳng định thời điểm mở bán Việt Nam",
+      "Basis": "Bài đăng ra mắt trực tiếp của lãnh đạo Logitech Delphine Donne tại Bắc Kinh tháng 8/2024, mã bài đăng 7234852926488211458 có mốc thời gian 2024-08-29, không lấy đợt mở rộng Bắc Mỹ 2025 hoặc Nhật 2026",
+      "Sources": [
+        "https://www.linkedin.com/posts/delphinedonne_innovation-china-logitech-activity-7234852926488211458-fy-e",
+        "https://support.logi.com/hc/en-ca/articles/25931654638103-Firmware-Release-Notes-Alto-Keys-K98M"
+      ]
+    },
+    {
+      "ProductId": "432e86c1-650a-4e80-be59-81f7a11fe5aa",
+      "Name": "Bàn phím gaming ASUS ROG Azoth 96 HE Black",
+      "Year": "2025",
+      "ModelMatch": "Bàn phím gaming ASUS ROG Azoth 96 HE Black",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Thông cáo do ASUS Computer GmbH phát hành ngày 02/12/2025 công bố ROG Azoth 96 HE, không nhầm với Azoth thường",
+      "Sources": [
+        "https://www.mynewsdesk.com/de/asus-dach/pressreleases/asus-republic-of-gamers-announces-azoth-96-he-3422906"
+      ]
+    },
+    {
+      "ProductId": "4614849b-2898-44c5-b96e-8f29c6955665",
+      "Name": "Bàn phím gaming có dây Logitech G515 TKL",
+      "Year": "2024",
+      "ModelMatch": "Bàn phím gaming có dây Logitech G515 TKL",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Thông báo Logitech ngày 25/06/2024 ghi riêng wired edition coming later this year, không dùng bản không dây thay SKU",
+      "Sources": [
+        "https://news.logitech.com/press-releases/news-details/2024/Introducing-Logitechs-G515--A-Next-Generation-Low-Profile-Keyboard-for-High-Performance-Gaming/default.aspx"
+      ]
+    },
+    {
+      "ProductId": "1f588664-d34b-4897-a266-d4f8b61b435d",
+      "Name": "Chuột Gaming có dây Asus TUF M3 Gen 2",
+      "Year": "2023",
+      "ModelMatch": "Chuột Gaming có dây Asus TUF M3 Gen 2",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Thông cáo do ASUS JAPAN phát hành năm 2023 giới thiệu TUF Gaming M3 Gen II, không dùng M3 thế hệ đầu",
+      "Sources": [
+        "https://prtimes.jp/main/html/rd/p/000000948.000017808.html"
+      ]
+    },
+    {
+      "ProductId": "9db32c15-a23a-49b5-9e70-f16e7a4c596f",
+      "Name": "Chuột gaming không dây Logitech Pro X3 Superstrike Lightspeed Black",
+      "Year": "2026",
+      "ModelMatch": "Chuột gaming không dây Logitech Pro X3 Superstrike Lightspeed Black",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Logitech giới thiệu PRO X3 SUPERSTRIKE ngày 23/09/2026, không nhầm với X2 ra đầu năm 2026",
+      "Sources": [
+        "https://www.logitech.com/blog/2026/09/23/logitech-g-marks-10-years-of-pro-with-a-new-generation-of-competitive-gear/"
+      ]
+    },
+    {
+      "ProductId": "540d358b-eaa6-4714-996e-aee9ae61836d",
+      "Name": "Chuột không dây AKKO Nest Black",
+      "Year": "2025",
+      "ModelMatch": "Chuột không dây AKKO Nest Black",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Mốc lịch sử chính hãng 2025/12 ghi ra mắt Nest 49g PAW3950 8K, khớp đúng thông số mẫu Black",
+      "Sources": [
+        "https://en.akkogear.com/about/"
+      ]
+    },
+    {
+      "ProductId": "6b8f0d5e-c565-462d-90b1-bbca6b0b9c66",
+      "Name": "Chuột không dây Bluetooth Asus MD102",
+      "Year": "2024",
+      "ModelMatch": "Chuột không dây Bluetooth Asus MD102",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Thông báo ASUS MD102 ngày 13/09/2024",
+      "Sources": [
+        "https://press.asus.com/news/press-releases/asus-wireless-mouse-md102-silent-clicks-dual-mode/"
+      ]
+    },
+    {
+      "ProductId": "65df4dfd-eb2e-4c60-a235-4878b301f282",
+      "Name": "Chuột không dây HyperWork Macro MS02 Đen",
+      "Year": "2025",
+      "ModelMatch": "Chuột không dây HyperWork Macro MS02 Đen",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Bài tường thuật ra mắt ghi rõ sáng 10/12/2025, đúng Macro MS02 với màn hình, 9 nút, pin 2 tháng và DPI 6000",
+      "Sources": [
+        "https://cellphones.com.vn/sforum/hyperwork-ra-mat-chuot-macro"
+      ]
+    },
+    {
+      "ProductId": "1000f3e8-59ff-4555-ae56-277b70d842fc",
+      "Name": "Giá treo màn hình E-DRA EMA7304 17-34 inch",
+      "Year": "2025",
+      "ModelMatch": "Giá treo màn hình E-DRA EMA7304 17-34 inch",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Bảng thông số Năm ra mắt ghi 2025 cho giá treo đơn EMA7304",
+      "Sources": [
+        "https://www.dienmayxanh.com/gia-treo-man-hinh/gia-treo-man-hinh-edra-ema7304"
+      ]
+    },
+    {
+      "ProductId": "406a2e3f-d0a8-44e4-aa93-e0b8d1a97050",
+      "Name": "Giá treo màn hình máy tính E-DRA EMA7310 13-32\"",
+      "Year": "2025",
+      "ModelMatch": "Giá treo màn hình máy tính E-DRA EMA7310 13-32\"",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Bảng thông số Năm ra mắt ghi 2025 cho giá treo đơn EMA7310, không dùng năm của EMA7304 thay thế",
+      "Sources": [
+        "https://www.dienmayxanh.com/gia-treo-man-hinh/gia-treo-man-hinh-edra-ema7310/"
+      ]
+    },
+    {
+      "ProductId": "6139416e-b238-4dca-85db-24c96459c13a",
+      "Name": "Huawei MatePad 11.5 S 2026 12GB 256GB - Kèm bàn phím",
+      "Year": "2026",
+      "ModelMatch": "Huawei MatePad 11.5 S 2026 12GB 256GB - Kèm bàn phím",
+      "Scope": "Năm bắt đầu bán dòng MatePad 11.5 S 2026, phân biệt thời điểm công bố sớm toàn cầu tháng 12/2025",
+      "Basis": "Phiếu sản phẩm Huawei model SLG-W09, EPREL 2462142 ghi thời điểm bắt đầu đưa ra thị trường Liên minh 01/01/2026",
+      "Sources": [
+        "https://consumer.huawei.com/dam/content/dam/huawei-cbg-site/weu/de/v4/mkt/v5-ana/2026/new-products/tablets/MatePad-11,5-S-2026/Fiche_matepad11_5_S_2026_de.pdf"
+      ]
+    },
+    {
+      "ProductId": "c717bbff-6b08-4cbe-a91f-68cd291333f8",
+      "Name": "Laptop ASUS TUF Gaming F16 FX607VJ-RL034W",
+      "Year": "2024",
+      "ModelMatch": "Laptop ASUS TUF Gaming F16 FX607VJ-RL034W",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "ASUS đặt FX607VJ trong dòng TUF Gaming F16 (2024)",
+      "Sources": [
+        "https://www.asus.com/laptops/for-gaming/tuf-gaming/asus-tuf-gaming-f16-2024/techspec/"
+      ]
+    },
+    {
+      "ProductId": "c09a4635-29b0-4a8b-aa47-4d6d31649659",
+      "Name": "Laptop ASUS VivoBook 14 X1407CA-LY008W",
+      "Year": "2025",
+      "ModelMatch": "Laptop ASUS VivoBook 14 X1407CA-LY008W",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Thông báo ASUS ngày 21/02/2025 liệt kê riêng X1407CA với Core Ultra 200H, không lấy mốc của X1407QA",
+      "Sources": [
+        "https://www.asus.com/jp/news/dg108djbl8qsnf0e/"
+      ]
+    },
+    {
+      "ProductId": "9e9d4c77-95ac-400f-91b8-413ed357b05c",
+      "Name": "Laptop ASUS Vivobook 14 X1407CA-LY203W",
+      "Year": "2025",
+      "ModelMatch": "Laptop ASUS Vivobook 14 X1407CA-LY203W",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Thông báo ASUS ngày 21/02/2025 liệt kê riêng X1407CA với Core Ultra 200H, không lấy mốc của X1407QA",
+      "Sources": [
+        "https://www.asus.com/jp/news/dg108djbl8qsnf0e/"
+      ]
+    },
+    {
+      "ProductId": "53c531a6-aa37-417a-81f3-b084cb14ca8a",
+      "Name": "Laptop ASUS Zenbook S 14 UX5406AA-SU348W",
+      "Year": "2026",
+      "ModelMatch": "Laptop ASUS Zenbook S 14 UX5406AA-SU348W",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Thông báo ASUS Zenbook S14 2026 UX5406 với Core Ultra Series 3 ngày 07/01/2026, đúng UX5406AA",
+      "Sources": [
+        "https://press.asus.com/news/press-releases/zenbook-s14-2026/"
+      ]
+    },
+    {
+      "ProductId": "29f8a626-4747-4936-aaf1-96b8cfad00b5",
+      "Name": "Laptop Acer Gaming Nitro ProPanel ANV15-52-50VA",
+      "Year": "2025",
+      "ModelMatch": "Laptop Acer Gaming Nitro ProPanel ANV15-52-50VA",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Acer công bố Nitro V 15 ANV15-52 ngày 06/01/2025",
+      "Sources": [
+        "https://news.acer.com/acer-launches-new-nitro-v-series-laptops-expanding-its-essential-gaming-portfolio"
+      ]
+    },
+    {
+      "ProductId": "af1642ca-c06a-416a-8514-db105f4b4d99",
+      "Name": "Laptop Acer Swift Air 14 SFA14-I31-55NR",
+      "Year": "2026",
+      "ModelMatch": "Laptop Acer Swift Air 14 SFA14-I31-55NR",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Thông báo Acer ngày 29/05/2026 liệt kê SFA14-I31, không lấy năm 2025 của SFA14-61M",
+      "Sources": [
+        "https://news.acer.com/acer-launches-new-swift-air-14-powered-by-latest-intel-core-series-3-processors"
+      ]
+    },
+    {
+      "ProductId": "83f104bf-4295-43db-b15c-1016ecbf433e",
+      "Name": "Laptop HP 14‑EM0023AU D0BG7PA",
+      "Year": "2023",
+      "ModelMatch": "Laptop HP 14‑EM0023AU D0BG7PA",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "HP ghi Release month and year January 2023 cho 14-em0000, khớp dòng 14-em0023AU",
+      "Sources": [
+        "https://support.hp.com/in-en/document/ish_7421478-7421545-16"
+      ]
+    },
+    {
+      "ProductId": "90620f8a-5464-4cbd-8766-6a62a0a59a34",
+      "Name": "Laptop HP Omnibook 5 16-AG1068AU BZ7T0PA",
+      "Year": "2025",
+      "ModelMatch": "Laptop HP Omnibook 5 16-AG1068AU BZ7T0PA",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "HP ghi Release month and year February 2025 cho 16-ag1000, khớp dòng 16-ag1068AU",
+      "Sources": [
+        "https://support.hp.com/sk-en/document/ish_11973644-11973695-16"
+      ]
+    },
+    {
+      "ProductId": "78362f83-76aa-41db-8237-682b3595bfbe",
+      "Name": "Laptop HP Omnibook 5 AI 16-AF1048TU BZ7Q9PA",
+      "Year": "2025",
+      "ModelMatch": "Laptop HP Omnibook 5 AI 16-AF1048TU BZ7Q9PA",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "HP ghi Release month and year February 2025 cho 16-af1000, khớp dòng 16-af1048TU",
+      "Sources": [
+        "https://support.hp.com/gb-en/document/ish_11975128-11975172-16"
+      ]
+    },
+    {
+      "ProductId": "6387130a-6c5b-41f1-8016-e98a6647ecd6",
+      "Name": "Laptop HP Omnibook X Flip 14-FM0088TU BZ7Q2PA",
+      "Year": "2025",
+      "ModelMatch": "Laptop HP Omnibook X Flip 14-FM0088TU BZ7Q2PA",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Trang hãng ghi công bố OmniBook X Flip 14-fm tháng 3/2025",
+      "Sources": [
+        "https://jp.ext.hp.com/notebooks/personal/omnibook_x_flip_14_fm/"
+      ]
+    },
+    {
+      "ProductId": "c5242c6b-d136-4113-8d5e-d9bfeee07dd6",
+      "Name": "Laptop HP ProBook 4 G1I 16 BQ5D8PT",
+      "Year": "2025",
+      "ModelMatch": "Laptop HP ProBook 4 G1I 16 BQ5D8PT",
+      "Scope": "Đúng cấu hình Việt Nam BQ5D8PT",
+      "Basis": "Thông số đúng SKU BQ5D8PT ghi Thời điểm ra mắt 2025",
+      "Sources": [
+        "https://www.thegioididong.com/laptop/hp-probook-4-g1i-16-ultra-5-225h-bq5d8pt"
+      ]
+    },
+    {
+      "ProductId": "a7106eeb-63aa-49e0-8816-0174a6133bbb",
+      "Name": "Laptop HP Victus 15-FA2451TX D17WPPA",
+      "Year": "2024",
+      "ModelMatch": "Laptop HP Victus 15-FA2451TX D17WPPA",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "HP ghi Release month and year December 2024 cho 15-fa2000, khớp 15-fa2451TX và 15-fa2731TX, không lấy năm CPU làm năm ra mắt",
+      "Sources": [
+        "https://support.hp.com/hk-en/document/ish_11685781-11685825-16"
+      ]
+    },
+    {
+      "ProductId": "3c3fdc24-e8b7-426a-bb76-ee3bb34a77f6",
+      "Name": "Laptop HP Victus 15-FA2731TX B85LNPA",
+      "Year": "2024",
+      "ModelMatch": "Laptop HP Victus 15-FA2731TX B85LNPA",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "HP ghi Release month and year December 2024 cho 15-fa2000, khớp 15-fa2451TX và 15-fa2731TX, không lấy năm CPU làm năm ra mắt",
+      "Sources": [
+        "https://support.hp.com/hk-en/document/ish_11685781-11685825-16"
+      ]
+    },
+    {
+      "ProductId": "0e1514e7-6b0b-4654-a23e-b774ed4e0da9",
+      "Name": "Laptop Lenovo IdeaPad Slim 3 14AHP10 83K9004RVN",
+      "Year": "2026",
+      "ModelMatch": "Laptop Lenovo IdeaPad Slim 3 14AHP10 83K9004RVN",
+      "Scope": "Đúng cấu hình Việt Nam 83K9004RVN với Ryzen 7 155",
+      "Basis": "Thông số đúng MTM 83K9004RVN với Ryzen 7 155 ghi Thời điểm ra mắt 08/2026, không lấy năm của cấu hình 14AHP10 khác",
+      "Sources": [
+        "https://www.thegioididong.com/laptop/lenovo-ideapad-slim-3-14ahp10-r7-155-83k9004rvn"
+      ]
+    },
+    {
+      "ProductId": "c69d9eee-5a4f-4ed9-993a-f4c3a4819c7e",
+      "Name": "Laptop Lenovo IdeaPad Slim 3 14IWC11 83RQ002PVN",
+      "Year": "2026",
+      "ModelMatch": "Laptop Lenovo IdeaPad Slim 3 14IWC11 83RQ002PVN",
+      "Scope": "Đúng cấu hình Việt Nam 83RQ002PVN",
+      "Basis": "Thông số đúng MTM 83RQ002PVN ghi Thời điểm ra mắt 2026",
+      "Sources": [
+        "https://www.thegioididong.com/laptop/lenovo-ideapad-slim-3-14iwc11-core-5-320-83rq002pvn"
+      ]
+    },
+    {
+      "ProductId": "bd3f39aa-bf15-47ea-bf8e-7fdc6ee8b257",
+      "Name": "Laptop Lenovo LOQ 15IRH11E 83Y9003VVN",
+      "Year": "2026",
+      "ModelMatch": "Laptop Lenovo LOQ 15IRH11E 83Y9003VVN",
+      "Scope": "Đúng cấu hình Việt Nam MTM 83Y9003VVN",
+      "Basis": "PSREF đúng MTM 83Y9003VVN ghi Announce Date 2026-08-31",
+      "Sources": [
+        "https://psref.lenovo.com/Detail/LOQ_15IRH11E?M=83Y9003VVN"
+      ]
+    },
+    {
+      "ProductId": "bbf9557a-ee5a-4c0e-a489-1a1c3b8e4abc",
+      "Name": "Laptop Lenovo Legion 5 15IRX10 83LY00HRVN",
+      "Year": "2025",
+      "ModelMatch": "Laptop Lenovo Legion 5 15IRX10 83LY00HRVN",
+      "Scope": "Đúng bản Việt Nam 83LY00HRVN, dòng Legion 5 15IRX10",
+      "Basis": "Niêm yết đúng MTM 83LY00HRVN có mục năm ra mắt 2025",
+      "Sources": [
+        "https://www.thegioididong.com/laptop/lenovo-gaming-legion-5-15irx10-i7-13650hx-83ly00hrvn"
+      ]
+    },
+    {
+      "ProductId": "ef5eebdd-dd1d-4747-b6e2-701575e1b777",
+      "Name": "Laptop MSI Katana 15 B13VEK-2440VN",
+      "Year": "2023",
+      "ModelMatch": "Laptop MSI Katana 15 B13VEK-2440VN",
+      "Scope": "Năm giới thiệu dòng Katana 15 B13V với RTX 4050, không khẳng định ngày mở bán riêng SKU 2440VN",
+      "Basis": "Thông báo MSI Nhật Bản liệt kê Katana 15 B13V dùng Core i7-13620H và RTX 4050, ngày bán từ cuối tháng 2/2023",
+      "Sources": [
+        "https://jp.msi.com/news/detail/gaming2023-141404"
+      ]
+    },
+    {
+      "ProductId": "6bf219cb-cd92-4636-a223-6f86297a52aa",
+      "Name": "Loa Bluetooth Bose SoundLink Max",
+      "Year": "2024",
+      "ModelMatch": "Loa Bluetooth Bose SoundLink Max",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Thông báo SoundLink Max ngày 02/05/2024",
+      "Sources": [
+        "https://www.bose.com/pressroom/bose-soundlink-max"
+      ]
+    },
+    {
+      "ProductId": "7c6efaa2-b50a-4664-95a2-acb80244ca0a",
+      "Name": "Loa Bluetooth Bose Soundlink Flex 2",
+      "Year": "2024",
+      "ModelMatch": "Loa Bluetooth Bose Soundlink Flex 2",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Trang đúng thế hệ Flex 2 ghi Sold from 2024",
+      "Sources": [
+        "https://support.bose.co.uk/article/product-specifications-bose-soundlink-flex-portable-speaker-2nd-gen"
+      ]
+    },
+    {
+      "ProductId": "79115373-fa26-401b-b59c-83b9201c611a",
+      "Name": "Loa Bluetooth Harman Kardon Aura Studio 5",
+      "Year": "2025",
+      "ModelMatch": "Loa Bluetooth Harman Kardon Aura Studio 5",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Thông cáo Harman International Japan nêu Aura Studio 5 Bluetooth bán từ 13/11/2025, không lấy năm của bản Wi-Fi 2026",
+      "Sources": [
+        "https://prtimes.jp/main/html/rd/p/000000504.000012767.html"
+      ]
+    },
+    {
+      "ProductId": "e85557ff-a3c4-465a-b5a7-b9be634a1ee7",
+      "Name": "Loa Bluetooth Harman Kardon Go + Play 3",
+      "Year": "2023",
+      "ModelMatch": "Loa Bluetooth Harman Kardon Go + Play 3",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Thông báo Go + Play 3 ngày 11/07/2023",
+      "Sources": [
+        "https://news.harman.com/releases/harman-kardon-go-%2B-play-3-delivers-outstanding-audio-with-a-refined-aesthetic"
+      ]
+    },
+    {
+      "ProductId": "69a91cbb-d209-4350-be0f-0725da30df83",
+      "Name": "Loa Bluetooth Harman Kardon Onyx Studio 8",
+      "Year": "2022",
+      "ModelMatch": "Loa Bluetooth Harman Kardon Onyx Studio 8",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Thông báo Onyx Studio 8 ngày 30/08/2022",
+      "Sources": [
+        "https://news.harman.com/releases/portable-elegance-and-rich-stereo-sound-with-the-harman-kardonR-onyx-studio-8"
+      ]
+    },
+    {
+      "ProductId": "7a826d1e-219e-435c-8b77-5aeaaaa57d0a",
+      "Name": "Loa Bluetooth JBL Boombox 3",
+      "Year": "2022",
+      "ModelMatch": "Loa Bluetooth JBL Boombox 3",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Thông báo JBL Boombox 3 ngày 04/01/2022",
+      "Sources": [
+        "https://news.harman.com/releases/jbl-turns-it-way-up-with-the-addition-of-the-boombox-3"
+      ]
+    },
+    {
+      "ProductId": "f7bc973b-c5db-47aa-ae45-126c0942a714",
+      "Name": "Loa Bluetooth JBL Boombox 4",
+      "Year": "2025",
+      "ModelMatch": "Loa Bluetooth JBL Boombox 4",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Thông báo JBL Boombox 4 ngày 03/09/2025",
+      "Sources": [
+        "https://news.jbl.com/en-CEU/253630-jbl-boombox-4-massive-power-iconic-bass-and-a-lighter-build/"
+      ]
+    },
+    {
+      "ProductId": "4780eabc-e79a-4966-b2d6-05651a819826",
+      "Name": "Loa Bluetooth JBL Charge 5",
+      "Year": "2021",
+      "ModelMatch": "Loa Bluetooth JBL Charge 5",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Thông báo JBL Charge 5 ngày 15/04/2021, bán từ 21/05/2021",
+      "Sources": [
+        "https://www.harman.com/japan/pages/jbl_charge_5.aspx"
+      ]
+    },
+    {
+      "ProductId": "a6b766d3-9765-4b64-b9e5-6c2ab25c2afb",
+      "Name": "Loa Bluetooth Marshall Acton III",
+      "Year": "2022",
+      "ModelMatch": "Loa Bluetooth Marshall Acton III",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Mục thời điểm ra mắt Acton III ghi được giới thiệu quý 3/2022",
+      "Sources": [
+        "https://cellphones.com.vn/loa-bluetooth-marshall-acton-iii.html"
+      ],
+      "SourceFile": "9235e052ace6cdcf.html",
+      "SourceSha256": "2db0cec6eb827bc0417fccd92c5171c0c6f5ed62d76e059f4d99d44469137f6f"
+    },
+    {
+      "ProductId": "b68a323b-e40d-4c67-9bc0-4985f39bc987",
+      "Name": "Loa Bluetooth Marshall Emberton III",
+      "Year": "2024",
+      "ModelMatch": "Loa Bluetooth Marshall Emberton III",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Báo cáo của Marshall xác nhận Emberton III ra mắt trong quý 3/2024",
+      "Sources": [
+        "https://group.marshall.com/2024/11/13/marshall-group-reports-strong-profitable-growth-in-the-third-quarter/"
+      ]
+    },
+    {
+      "ProductId": "2ae7d82e-932a-40a2-9ec3-a45fbfa06395",
+      "Name": "Loa Bluetooth Marshall Middleton",
+      "Year": "2023",
+      "ModelMatch": "Loa Bluetooth Marshall Middleton",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Báo cáo thường niên 2023 ghi Marshall đã ra mắt Middleton trong năm",
+      "Sources": [
+        "https://group.marshall.com/wp-content/uploads/2024/05/Marshall_AR_2023_Final.pdf"
+      ]
+    },
+    {
+      "ProductId": "e9ac80ca-2bbe-4193-b460-a6602e60acc4",
+      "Name": "Loa Bluetooth Sony SRS-XB100 Extra Bass",
+      "Year": "2023",
+      "ModelMatch": "Loa Bluetooth Sony SRS-XB100 Extra Bass",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Thông báo Sony SRS-XB100 ngày 09/05/2023",
+      "Sources": [
+        "https://www.sony.jp/CorporateCruise/Press/202305/23-0509/"
+      ]
+    },
+    {
+      "ProductId": "33958dce-f797-409b-82cd-e3bda6153546",
+      "Name": "Loa Bluetooth Sony ULT Field 3",
+      "Year": "2025",
+      "ModelMatch": "Loa Bluetooth Sony ULT Field 3",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Thông cáo Sony tháng 4/2025 giới thiệu cả ULT FIELD 3 và ULT FIELD 5",
+      "Sources": [
+        "https://www.sony.com.au/microsite/consumerpressreleases/articles/20250410_Press-Release_Sony_Sony_introduces_three_new_speakers_in_the_ULT_POWER_SOUND_range_featuring_global_superstar_Post_Malone_in_a_brand_collaboration.pdf"
+      ]
+    },
+    {
+      "ProductId": "b90696b4-83fd-4a1b-a95d-a4c60b27d4ca",
+      "Name": "Loa Bluetooth Sony ULT Field 5",
+      "Year": "2025",
+      "ModelMatch": "Loa Bluetooth Sony ULT Field 5",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Thông cáo Sony tháng 4/2025 giới thiệu cả ULT FIELD 3 và ULT FIELD 5",
+      "Sources": [
+        "https://www.sony.com.au/microsite/consumerpressreleases/articles/20250410_Press-Release_Sony_Sony_introduces_three_new_speakers_in_the_ULT_POWER_SOUND_range_featuring_global_superstar_Post_Malone_in_a_brand_collaboration.pdf"
+      ]
+    },
+    {
+      "ProductId": "9ffb8f7f-d16e-4461-b67d-c0241aa29a5a",
+      "Name": "Loa kiểm âm Bluetooth Edifier MR3",
+      "Year": "2024",
+      "ModelMatch": "Loa kiểm âm Bluetooth Edifier MR3",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Thông báo Edifier MR3 ngày 18/10/2024",
+      "Sources": [
+        "https://www.edifier.com/news/press/new-mr3-monitor-speaker"
+      ]
+    },
+    {
+      "ProductId": "6bb60139-5c76-4ade-8767-c2a15d38e0c8",
+      "Name": "MacBook Air M4 13 inch 2025 10CPU 8GPU 16GB 256GB",
+      "Year": "2025",
+      "ModelMatch": "MacBook Air M4 13 inch 2025 10CPU 8GPU 16GB 256GB",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Thông báo MacBook Air M4 tháng 3/2025",
+      "Sources": [
+        "https://www.apple.com/newsroom/2025/03/apple-introduces-the-new-macbook-air-with-the-m4-chip-and-a-sky-blue-color/"
+      ]
+    },
+    {
+      "ProductId": "d277162f-fdc3-4444-96ad-c729f566115a",
+      "Name": "MacBook Air M5 13 inch 2026 10CPU 10GPU 16GB 1TB",
+      "Year": "2026",
+      "ModelMatch": "MacBook Air M5 13 inch 2026 10CPU 10GPU 16GB 1TB",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Thông báo ngày 03/03/2026, MacBook Air M5 ở cả hai kích thước",
+      "Sources": [
+        "https://www.apple.com/newsroom/2026/03/apple-introduces-the-new-macbook-air-with-m5/"
+      ]
+    },
+    {
+      "ProductId": "3eac0d12-1d03-4dc7-8b14-e2e14c063d83",
+      "Name": "MacBook Air M5 13 inch 2026 10CPU 10GPU 24GB 1TB Sạc 70W",
+      "Year": "2026",
+      "ModelMatch": "MacBook Air M5 13 inch 2026 10CPU 10GPU 24GB 1TB Sạc 70W",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Thông báo ngày 03/03/2026, MacBook Air M5 ở cả hai kích thước",
+      "Sources": [
+        "https://www.apple.com/newsroom/2026/03/apple-introduces-the-new-macbook-air-with-m5/"
+      ]
+    },
+    {
+      "ProductId": "525a37fe-1e65-4b55-9b24-acbded12e174",
+      "Name": "MacBook Air M5 13 inch 2026 10CPU 8GPU 16GB 512GB",
+      "Year": "2026",
+      "ModelMatch": "MacBook Air M5 13 inch 2026 10CPU 8GPU 16GB 512GB",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Thông báo ngày 03/03/2026, MacBook Air M5 ở cả hai kích thước",
+      "Sources": [
+        "https://www.apple.com/newsroom/2026/03/apple-introduces-the-new-macbook-air-with-m5/"
+      ]
+    },
+    {
+      "ProductId": "6e3210b3-ca80-489c-b2ab-16b8b0c34c01",
+      "Name": "MacBook Air M5 13 inch 2026 10CPU 8GPU 16GB 512GB Sạc 70W",
+      "Year": "2026",
+      "ModelMatch": "MacBook Air M5 13 inch 2026 10CPU 8GPU 16GB 512GB Sạc 70W",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Thông báo ngày 03/03/2026, MacBook Air M5 ở cả hai kích thước",
+      "Sources": [
+        "https://www.apple.com/newsroom/2026/03/apple-introduces-the-new-macbook-air-with-m5/"
+      ]
+    },
+    {
+      "ProductId": "86245c8c-397d-4965-849b-7eb0a1de0560",
+      "Name": "MacBook Air M5 15 inch 2026 10CPU 10GPU 16GB 512GB",
+      "Year": "2026",
+      "ModelMatch": "MacBook Air M5 15 inch 2026 10CPU 10GPU 16GB 512GB",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Thông báo ngày 03/03/2026, MacBook Air M5 ở cả hai kích thước",
+      "Sources": [
+        "https://www.apple.com/newsroom/2026/03/apple-introduces-the-new-macbook-air-with-m5/"
+      ]
+    },
+    {
+      "ProductId": "29b6c625-7fe5-4046-9061-2bddc9157887",
+      "Name": "MacBook Neo 13 inch A18 Pro 2026 6CPU 5GPU 8GB 256GB",
+      "Year": "2026",
+      "ModelMatch": "MacBook Neo 13 inch A18 Pro 2026 6CPU 5GPU 8GB 256GB",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Thông báo MacBook Neo ngày 04/03/2026",
+      "Sources": [
+        "https://www.apple.com/newsroom/2026/03/say-hello-to-macbook-neo/"
+      ]
+    },
+    {
+      "ProductId": "c05692d5-06cf-4e5d-b4e8-6ec09d3fa3d8",
+      "Name": "MacBook Neo 13 inch A18 Pro 2026 6CPU 5GPU 8GB 512GB Touch ID",
+      "Year": "2026",
+      "ModelMatch": "MacBook Neo 13 inch A18 Pro 2026 6CPU 5GPU 8GB 512GB Touch ID",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Thông báo MacBook Neo ngày 04/03/2026",
+      "Sources": [
+        "https://www.apple.com/newsroom/2026/03/say-hello-to-macbook-neo/"
+      ]
+    },
+    {
+      "ProductId": "5ef786f5-ca65-4be6-a5b5-4f71d2691cbc",
+      "Name": "Meizu Lucky 08 5G 8GB 256GB",
+      "Year": "2024",
+      "ModelMatch": "Meizu Lucky 08 5G 8GB 256GB",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Đoạn giới thiệu đúng Lucky 08 nêu ra mắt Trung Quốc tháng 9/2024, phân biệt thời điểm bán ở Việt Nam năm 2025",
+      "Sources": [
+        "https://cellphones.com.vn/dien-thoai-meizu-lucky-08-8gb-256gb.html"
+      ],
+      "SourceFile": "950811a0e80fd2c1.html",
+      "SourceSha256": "d2a5fbdf864bded101443fc26bd3734843b899453b45cdb947a0f10d29121fe8"
+    },
+    {
+      "ProductId": "4e16f4a8-996a-4810-9037-57326a1e174d",
+      "Name": "Màn hình Gaming LG UltraGear 27G610A-B 27 inch",
+      "Year": "2025",
+      "ModelMatch": "Màn hình Gaming LG UltraGear 27G610A-B 27 inch",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "LG công bố 동일 모델의 출시년월 2025-09, tức thời điểm giới thiệu đúng model 27G610A",
+      "Sources": [
+        "https://www.lge.co.kr/product/monitors/27g610a"
+      ]
+    },
+    {
+      "ProductId": "1ed340b9-02e6-49d3-b40d-211e9bdbeae8",
+      "Name": "Màn hình Gaming LG UltraGear 27G850A-B",
+      "Year": "2025",
+      "ModelMatch": "Màn hình Gaming LG UltraGear 27G850A-B",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "LG công bố 동일 모델의 출시년월 2025-02, tức thời điểm giới thiệu đúng model 27G850A",
+      "Sources": [
+        "https://www.lge.co.kr/product/monitors/27g850a"
+      ]
+    },
+    {
+      "ProductId": "4b94cd26-3648-49d5-969c-13316fb87eca",
+      "Name": "Màn hình LG 24U411A-B 24 inch",
+      "Year": "2025",
+      "ModelMatch": "Màn hình LG 24U411A-B 24 inch",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "LG công bố 동일 모델의 출시년월 2025-08, tức thời điểm giới thiệu đúng model 24U411A",
+      "Sources": [
+        "https://www.lge.co.kr/product/monitors/24u411a"
+      ]
+    },
+    {
+      "ProductId": "79127e04-ac3b-4679-81f3-a485f07502fa",
+      "Name": "Màn hình LG 24U631A-B 24 inch",
+      "Year": "2025",
+      "ModelMatch": "Màn hình LG 24U631A-B 24 inch",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "LG công bố 동일 모델의 출시년월 2025-02, tức thời điểm giới thiệu đúng model 24U631A",
+      "Sources": [
+        "https://www.lge.co.kr/product/monitors/24u631a"
+      ]
+    },
+    {
+      "ProductId": "453729c5-e758-4d22-bc81-b11f6229e5bd",
+      "Name": "Màn hình MSI Pro MP275 E2 27 inch",
+      "Year": "2024",
+      "ModelMatch": "Màn hình MSI Pro MP275 E2 27 inch",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Ô Năm ra mắt ghi 2024 cho PRO MP275 E2",
+      "Sources": [
+        "https://www.thegioididong.com/man-hinh-may-tinh/msi-pro-mp275-e2-27-inch-fhd-ips-120hz-1ms"
+      ]
+    },
+    {
+      "ProductId": "9c384149-98c5-4ec1-96b2-2206462aef0a",
+      "Name": "Màn hình Viewsonic VA2708-2K-MHD 27 inch",
+      "Year": "2024",
+      "ModelMatch": "Màn hình Viewsonic VA2708-2K-MHD 27 inch",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Thông số Năm ra mắt ghi 2024, đúng VA2708-2K-MHD 100 Hz, không lấy của bản 4K",
+      "Sources": [
+        "https://www.thegioididong.com/man-hinh-may-tinh/man-hinh-viewsonic-va2708-2k-mhd-27-inch-2k-ips-100hz-1ms"
+      ]
+    },
+    {
+      "ProductId": "8a9c1ae1-d780-4435-8a5a-6edd56b8e283",
+      "Name": "Màn hình Xiaomi A27I 2026 27 inch",
+      "Year": "2026",
+      "ModelMatch": "Màn hình Xiaomi A27I 2026 27 inch",
+      "Scope": "Bản A27i 2026 tại Việt Nam, không dùng năm của A27i 100 Hz",
+      "Basis": "Ô Năm ra mắt ghi 2026 cho bản A27i 144 Hz đang bán tại Việt Nam",
+      "Sources": [
+        "https://www.thegioididong.com/man-hinh-may-tinh/man-hinh-xiaomi-a27i-2026-27-inch-full-hd-ips-144hz-6ms"
+      ]
+    },
+    {
+      "ProductId": "8fe5c0ed-ed00-46b7-bb3d-a5e5ffb3e976",
+      "Name": "Màn hình Xiaomi A27QI 2026 27 inch",
+      "Year": "2026",
+      "ModelMatch": "Màn hình Xiaomi A27QI 2026 27 inch",
+      "Scope": "Bản A27Qi 2026 tại Việt Nam, không dùng năm của A27Qi 100 Hz",
+      "Basis": "Ô Năm ra mắt ghi 2026 cho bản A27Qi 120 Hz tại Việt Nam",
+      "Sources": [
+        "https://www.thegioididong.com/man-hinh-may-tinh/xiaomi-27-inch-qhd-a27qi-2026"
+      ]
+    },
+    {
+      "ProductId": "7b6e5dbc-ab5c-4890-89f9-5857ecff0ddb",
+      "Name": "Màn hình di động ASUS ZenScreen MB169CK 16 inch",
+      "Year": "2025",
+      "ModelMatch": "Màn hình di động ASUS ZenScreen MB169CK 16 inch",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Ô Năm ra mắt ghi 2025 cho ZenScreen MB169CK",
+      "Sources": [
+        "https://www.thegioididong.com/man-hinh-may-tinh/asus-zenscreen-15-6-inch-full-hd-mb169ck"
+      ]
+    },
+    {
+      "ProductId": "ddebeacc-6110-4859-9c4e-da6f55cc2e8c",
+      "Name": "Màn hình di động MSI Pro MP165 E6 16 inch",
+      "Year": "2025",
+      "ModelMatch": "Màn hình di động MSI Pro MP165 E6 16 inch",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Ô Năm ra mắt ghi 2025 cho PRO MP165 E6",
+      "Sources": [
+        "https://www.thegioididong.com/man-hinh-may-tinh/msi-pro-15-6-inch-full-hd-mp165-e6"
+      ]
+    },
+    {
+      "ProductId": "75af6fcc-0113-4381-abec-3dfa124b0f88",
+      "Name": "Màn hình di động VSP VP1560FS1 15.6 inch",
+      "Year": "2026",
+      "ModelMatch": "Màn hình di động VSP VP1560FS1 15.6 inch",
+      "Scope": "Niêm yết Việt Nam đúng VSP VP1560FS1",
+      "Basis": "Ô Năm ra mắt ghi 2026 cho VSP VP1560FS1",
+      "Sources": [
+        "https://www.thegioididong.com/man-hinh-may-tinh/man-hinh-di-dong-vsp-vp1560fs1-15-6-inch-full-hd-ips-60hz-5ms"
+      ]
+    },
+    {
+      "ProductId": "fabb06c3-9246-4ba5-8d41-75678cfe682e",
+      "Name": "Màn hình gaming ASUS TUF VG27AQ5F 27 inch",
+      "Year": "2025",
+      "ModelMatch": "Màn hình gaming ASUS TUF VG27AQ5F 27 inch",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Đoạn giới thiệu VG27AQ5F nêu ra mắt tháng 06/2025",
+      "Sources": [
+        "https://cellphones.com.vn/man-hinh-asus-tuf-vg27aq5f-27-inch.html"
+      ],
+      "SourceFile": "3467af177bcfb7cd.html",
+      "SourceSha256": "7714bbd8a7adbc222128bce7267a4ba8467438d8cbda3506f87df11b40299034"
+    },
+    {
+      "ProductId": "d7779d2f-af22-45c1-ba34-674c45b9d3f5",
+      "Name": "Màn hình gaming Lenovo Legion R27S 68CCGAC1VN 27 inch",
+      "Year": "2025",
+      "ModelMatch": "Màn hình gaming Lenovo Legion R27S 68CCGAC1VN 27 inch",
+      "Scope": "Năm giới thiệu dòng Legion R27s 68CC, không coi ngày của MTM TK là ngày mở bán riêng MTM Việt Nam",
+      "Basis": "PSREF chính hãng của dòng R27s mã 68CCGAC1 ghi Announce Date 2025-06-13, cùng màn 27 inch IPS 144Hz, HDMI 2.1 TMDS và DP 1.2",
+      "Sources": [
+        "https://psref.lenovo.com/Detail/Lenovo_Legion_R27s?M=68CCGAC1TK"
+      ]
+    },
+    {
+      "ProductId": "994b21cc-e898-4fd8-8c5f-e011fa2081b3",
+      "Name": "Màn hình văn phòng Dell U2424H 24 inch",
+      "Year": "2024",
+      "ModelMatch": "Màn hình văn phòng Dell U2424H 24 inch",
+      "Scope": "Niêm yết chính hãng Việt Nam U2424H",
+      "Basis": "Ô Năm ra mắt trên niêm yết Việt Nam ghi 2024, phân biệt mốc giới thiệu ở Trung Quốc cuối 2023",
+      "Sources": [
+        "https://www.thegioididong.com/man-hinh-may-tinh/dell-ultrasharp-u2424h-23-8-inch-fhd-ips-120hz-5ms"
+      ]
+    },
+    {
+      "ProductId": "9edc406b-2c8f-4019-8df0-524b294d96eb",
+      "Name": "Máy tính bảng Teclast T50 Plus 6GB 256GB",
+      "Year": "2024",
+      "ModelMatch": "Máy tính bảng Teclast T50 Plus 6GB 256GB",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Thông cáo Teclast ngày 29/07/2024 giới thiệu T50 Plus dùng T620, 256GB, 90Hz và pin 8000mAh, 16GB quảng bá gồm 6GB thật và 10GB mở rộng",
+      "Sources": [
+        "https://prtimes.jp/main/html/rd/p/000000480.000080488.html"
+      ]
+    },
+    {
+      "ProductId": "da73c0f4-2156-43f3-915d-ca2460f69544",
+      "Name": "Máy tính bảng Teclast Wifi P30 4GB 128GB",
+      "Year": "2024",
+      "ModelMatch": "Máy tính bảng Teclast Wifi P30 4GB 128GB",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Mục Teclast P30 Wifi bao nhiêu tiền nêu ra mắt năm 2024",
+      "Sources": [
+        "https://cellphones.com.vn/may-tinh-bang-teclast-p30-wifi.html"
+      ],
+      "SourceFile": "fd4568f76c497f43.html",
+      "SourceSha256": "173474f23ebb88166c9954e87a6d103a0bb31e2d52e72d45f7e67a33936a0ac1"
+    },
+    {
+      "ProductId": "29f0ab57-34a9-456d-8173-4ea2a9509019",
+      "Name": "Nubia Pad Pro 8GB 256GB",
+      "Year": "2025",
+      "ModelMatch": "Nubia Pad Pro 8GB 256GB",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Thông báo của nubia ngày 05/06/2025 nêu ngày ra mắt chính thức 12/06/2025",
+      "Sources": [
+        "https://eu.nubia.com/blogs/news/meet-the-nubia-pad-pro-power-performance-and-a-launch-you-don-t-want-to-miss"
+      ]
+    },
+    {
+      "ProductId": "de876d59-8a41-4fa3-8975-4b5215b35ce9",
+      "Name": "OPPO Find X8 16GB 512GB",
+      "Year": "2024",
+      "ModelMatch": "OPPO Find X8 16GB 512GB",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Mục thời điểm ra mắt nêu Find X8 được giới thiệu quốc tế và Việt Nam tháng 11/2024",
+      "Sources": [
+        "https://cellphones.com.vn/dien-thoai-oppo-find-x8.html"
+      ],
+      "SourceFile": "a73a884b92a0a369.html",
+      "SourceSha256": "d078b25501eb9af8688a3889ef3e66d8573123a49bf11a9d6a3383b45e6c6811"
+    },
+    {
+      "ProductId": "4c615f3f-0036-446a-84e0-b8b52e68bdc1",
+      "Name": "Pin sạc dự phòng Anker A1695 25.000mAh 165W tích hợp cáp rút gọn",
+      "Year": "2025",
+      "ModelMatch": "Pin sạc dự phòng Anker A1695 25.000mAh 165W tích hợp cáp rút gọn",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Thông cáo Anker Innovations tại CES 2025 công bố power bank 25K 165W với hai cáp tích hợp, đúng dòng A1695",
+      "Sources": [
+        "https://www.prnewswire.com/apac/news-releases/redefining-charging-anker-innovations-showcases-smart-and-sustainable-solutions-at-ces-302344616.html"
+      ]
+    },
+    {
+      "ProductId": "ec8afac3-2044-4d94-a4e1-acaf59a3a0c4",
+      "Name": "Pin sạc dự phòng Apple iPhone Air Magsafe MGPG4VN/A chính hãng",
+      "Year": "2025",
+      "ModelMatch": "Pin sạc dự phòng Apple iPhone Air Magsafe MGPG4VN/A chính hãng",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Phụ kiện iPhone Air MagSafe Battery giới thiệu cùng iPhone Air tháng 9/2025",
+      "Sources": [
+        "https://www.apple.com/newsroom/2025/09/introducing-iphone-air-a-powerful-new-iphone-with-a-breakthrough-design/"
+      ]
+    },
+    {
+      "ProductId": "136dadde-cfc5-43f5-9650-562c030e790c",
+      "Name": "Pin sạc dự phòng Baseus Enercore CR11 kèm cáp rút gọn 20000mAh 67W",
+      "Year": "2025",
+      "ModelMatch": "Pin sạc dự phòng Baseus Enercore CR11 kèm cáp rút gọn 20000mAh 67W",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Thông cáo của Baseus đăng nguyên mục Pressemitteilungen ngày 01/07/2025 giới thiệu CR11 20000 mAh 67W, không lấy ngày của bản 100W",
+      "Sources": [
+        "https://www.hartware.de/2025/07/01/baseus-produktstart-drei-neue-produkte-kommen-auf-den-markt/"
+      ]
+    },
+    {
+      "ProductId": "68d323c8-676f-43ed-8b50-29febaa34a0d",
+      "Name": "Pin sạc dự phòng Samsung EB-P4520X 20000 mAh 45W",
+      "Year": "2024",
+      "ModelMatch": "Pin sạc dự phòng Samsung EB-P4520X 20000 mAh 45W",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Thông báo Samsung ngày 03/04/2024 nêu EB-P4520, bán từ 18/04/2024",
+      "Sources": [
+        "https://images.samsung.com/is/content/samsung/assets/jp/explore/news/galaxy-battery-pack-20000mah/NewsRelease_galaxy-battery-pack-20000mah_240403.pdf"
+      ]
+    },
+    {
+      "ProductId": "8c4266e1-4421-40f0-bd1d-b0b8f2a8f227",
+      "Name": "Tai nghe Bluetooth Apple AirPods 4",
+      "Year": "2024",
+      "ModelMatch": "Tai nghe Bluetooth Apple AirPods 4",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Apple Support ghi Year introduced: 2024 cho AirPods 4",
+      "Sources": [
+        "https://support.apple.com/en-gb/121203"
+      ]
+    },
+    {
+      "ProductId": "eb77d9ac-c592-415e-9895-4ae782eeaf4c",
+      "Name": "Tai nghe Bluetooth Apple AirPods 5 2026 Sạc Có Dây (MKFW4)",
+      "Year": "2026",
+      "ModelMatch": "Tai nghe Bluetooth Apple AirPods 5 2026 Sạc Có Dây (MKFW4)",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Thông báo AirPods 5 ngày 09/09/2026, phân biệt hai hộp sạc trong danh mục",
+      "Sources": [
+        "https://www.apple.com/newsroom/2026/09/apple-introduces-airpods-5-with-best-in-class-open-ear-active-noise-cancellation/"
+      ]
+    },
+    {
+      "ProductId": "c953d146-c56f-419f-aa8a-170d2eae4433",
+      "Name": "Tai nghe Bluetooth Apple AirPods 5 2026 Sạc Không Dây (MKFT4)",
+      "Year": "2026",
+      "ModelMatch": "Tai nghe Bluetooth Apple AirPods 5 2026 Sạc Không Dây (MKFT4)",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Thông báo AirPods 5 ngày 09/09/2026, phân biệt hai hộp sạc trong danh mục",
+      "Sources": [
+        "https://www.apple.com/newsroom/2026/09/apple-introduces-airpods-5-with-best-in-class-open-ear-active-noise-cancellation/"
+      ]
+    },
+    {
+      "ProductId": "052523e5-a94b-4aed-bc09-9e4dd190a285",
+      "Name": "Tai nghe Bluetooth Apple AirPods Pro 2 2023 USB-C",
+      "Year": "2023",
+      "ModelMatch": "Tai nghe Bluetooth Apple AirPods Pro 2 2023 USB-C",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Đúng bản USB-C công bố tháng 9/2023, không dùng mốc 2022 của bản Lightning",
+      "Sources": [
+        "https://www.apple.com/newsroom/2023/09/apple-upgrades-airpods-pro-2nd-generation-with-usb-c-charging/"
+      ]
+    },
+    {
+      "ProductId": "03e5bed3-a26e-49df-8c8d-e1bca43cc8ba",
+      "Name": "Tai nghe Bluetooth Samsung Galaxy Buds Core (ANC)",
+      "Year": "2025",
+      "ModelMatch": "Tai nghe Bluetooth Samsung Galaxy Buds Core (ANC)",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Thông báo Samsung Việt Nam ngày 27/08/2025",
+      "Sources": [
+        "https://news.samsung.com/vn/samsung-chinh-thuc-ra-mat-galaxy-buds-core-voi-am-thanh-chat-luong-cao-cho-nguoi-dung-pho-thong"
+      ]
+    },
+    {
+      "ProductId": "bb4532ca-4e8f-4ded-94e7-f3f8570e1401",
+      "Name": "Tai nghe Bluetooth Sony WI-C100",
+      "Year": "2022",
+      "ModelMatch": "Tai nghe Bluetooth Sony WI-C100",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Thông báo Sony ngày 14/06/2022, WI-C100 bán từ 24/06/2022",
+      "Sources": [
+        "https://www.sony.jp/headphone/whatsnew/WI-C100/202206/22-0614/"
+      ]
+    },
+    {
+      "ProductId": "70c2f018-0d1e-4b5a-b5a9-5feeab35e511",
+      "Name": "Tai nghe Bluetooth True Wireless Anker Soundcore K20i - A3994",
+      "Year": "2024",
+      "ModelMatch": "Tai nghe Bluetooth True Wireless Anker Soundcore K20i - A3994",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Trang chính hãng đúng A3994 ghi 発売月 2024年8月 cho Soundcore K20i",
+      "Sources": [
+        "https://www.ankerjapan.com/products/a3994"
+      ]
+    },
+    {
+      "ProductId": "fe2140ce-7866-46c4-8c6f-dfc8b64a4d51",
+      "Name": "Tai nghe Bluetooth True Wireless Anker Soundcore R50I NC",
+      "Year": "2024",
+      "ModelMatch": "Tai nghe Bluetooth True Wireless Anker Soundcore R50I NC",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Bài tường thuật ghi nhận thông báo chính thức Soundcore nhận ngày 17/05/2024 và đợt ra mắt 25/05-07/06/2024, đúng R50i NC, không dựa ngày đăng lại hướng dẫn",
+      "Sources": [
+        "https://telset.id/gizmo/soundcore-luncurkan-tws-r50i-nc-bawa-fitur-noise-canceling"
+      ]
+    },
+    {
+      "ProductId": "70fe83a7-97e7-4610-9eac-faada7efdb25",
+      "Name": "Tai nghe Bluetooth True Wireless Anker Soundcore R50i A3949",
+      "Year": "2023",
+      "ModelMatch": "Tai nghe Bluetooth True Wireless Anker Soundcore R50i A3949",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Mục Anker Soundcore R50i ra mắt khi nào nêu rõ năm 2023 cho R50i thường, không áp dụng R50i NC",
+      "Sources": [
+        "https://fptshop.com.vn/tin-tuc/danh-gia/tai-nghe-anker-soundcore-r50i-co-tot-khong-199491"
+      ]
+    },
+    {
+      "ProductId": "9f1e9e86-5661-4d82-9295-302aeba165f9",
+      "Name": "Tai nghe Bluetooth True Wireless Anker Soundcore R60i NC",
+      "Year": "2025",
+      "ModelMatch": "Tai nghe Bluetooth True Wireless Anker Soundcore R60i NC",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Thông cáo Anker Innovations ngày 12/11/2025 giới thiệu R60i NC với LDAC, 6 micro, pin 50h và IP55, khớp thông số sản phẩm, không dựa vào hậu tố A3959 sai trong URL nhà bán lẻ",
+      "Sources": [
+        "https://www.prnewswire.com/apac/news-releases/soundcore-r60i-nc-arrives-in-malaysia-with-smarter-active-noise-cancellation-and-powerful-audio-302612328.html"
+      ]
+    },
+    {
+      "ProductId": "cd8bd1aa-3f40-48ba-a8f3-abf07a9de7db",
+      "Name": "Tai nghe Bluetooth True Wireless Bose Quietcomfort Ultra Earbuds 2",
+      "Year": "2025",
+      "ModelMatch": "Tai nghe Bluetooth True Wireless Bose Quietcomfort Ultra Earbuds 2",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Trang hỗ trợ QuietComfort Ultra Earbuds 2nd Gen ghi Sold from 2025",
+      "Sources": [
+        "https://support.bose.com/article/quietcomfort-ultra-earbuds-2nd-gen-voice-prompt-changes?language=en_US"
+      ]
+    },
+    {
+      "ProductId": "253e406a-e6bd-451e-9255-ff021222fb16",
+      "Name": "Tai nghe Bluetooth True Wireless JBL Tune Buds 2",
+      "Year": "2025",
+      "ModelMatch": "Tai nghe Bluetooth True Wireless JBL Tune Buds 2",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Thông báo CES ngày 06/01/2025 liệt kê riêng JBL Tune Buds 2",
+      "Sources": [
+        "https://news.harman.com/releases/journey-past-the-ordinary-and-discover-new-ways-to-listen-with-jbls-next-generation-headphones"
+      ]
+    },
+    {
+      "ProductId": "522a274c-ef5c-4fba-ad08-d8771136dd54",
+      "Name": "Tai nghe Bluetooth True Wireless JBL Wave Beam",
+      "Year": "2023",
+      "ModelMatch": "Tai nghe Bluetooth True Wireless JBL Wave Beam",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Thông báo Harman ngày 18/01/2023 giới thiệu và mở bán JBL Wave Beam, không nhầm Wave Buds hay Wave Beam 2",
+      "Sources": [
+        "https://www.harman.com/japan/pages/jbl_wave_beam.aspx"
+      ]
+    },
+    {
+      "ProductId": "b9e6a408-ca49-4285-b92c-7de5a09bf6fa",
+      "Name": "Tai nghe Bluetooth True Wireless JBL Wave Buds",
+      "Year": "2022",
+      "ModelMatch": "Tai nghe Bluetooth True Wireless JBL Wave Buds",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Thông báo WAVE BUDS ngày 01/11/2022, bán từ 04/11/2022",
+      "Sources": [
+        "https://www.harman.com/Japan/pages/jbl_wave_buds.aspx"
+      ]
+    },
+    {
+      "ProductId": "dbca90cd-1645-4583-a0ce-57a28929a06a",
+      "Name": "Tai nghe Bluetooth True Wireless Samsung Galaxy Buds 3",
+      "Year": "2024",
+      "ModelMatch": "Tai nghe Bluetooth True Wireless Samsung Galaxy Buds 3",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Samsung ghi Buds3 và Buds3 Pro được giới thiệu tại Unpacked ngày 10/07/2024",
+      "Sources": [
+        "https://developer.samsung.com/sdp/news/en/2024/07/25/july-2024-newsletter-galaxy-unpacked-2024-galaxy-z-fold6-z-flip6-and-buds3-series-announced-and-other-latest-news"
+      ]
+    },
+    {
+      "ProductId": "bcb14411-4c81-48a4-babd-49d6bf0b35f5",
+      "Name": "Tai nghe Bluetooth True Wireless Samsung Galaxy Buds 3 Pro",
+      "Year": "2024",
+      "ModelMatch": "Tai nghe Bluetooth True Wireless Samsung Galaxy Buds 3 Pro",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Samsung ghi Buds3 và Buds3 Pro được giới thiệu tại Unpacked ngày 10/07/2024",
+      "Sources": [
+        "https://developer.samsung.com/sdp/news/en/2024/07/25/july-2024-newsletter-galaxy-unpacked-2024-galaxy-z-fold6-z-flip6-and-buds3-series-announced-and-other-latest-news"
+      ]
+    },
+    {
+      "ProductId": "940691ca-90cc-44b3-91f1-19475a0349d6",
+      "Name": "Tai nghe Bluetooth True Wireless Sony WF-C510",
+      "Year": "2024",
+      "ModelMatch": "Tai nghe Bluetooth True Wireless Sony WF-C510",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Thông báo Sony WF-C510 ngày 27/08/2024",
+      "Sources": [
+        "https://www.sony.jp/CorporateCruise/Press/202408/24-0827/"
+      ]
+    },
+    {
+      "ProductId": "07ce6bc9-0da1-4ec8-ac23-5a348ddb96f3",
+      "Name": "Tai nghe Bluetooth Xiaomi Redmi Buds 8 Pro",
+      "Year": "2026",
+      "ModelMatch": "Tai nghe Bluetooth Xiaomi Redmi Buds 8 Pro",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Trang sự kiện Xiaomi ngày 28/02/2026 giới thiệu REDMI Buds 8 Pro",
+      "Sources": [
+        "https://www.mi.com/global/event/2026/xiaomi-launch-february-2026/"
+      ]
+    },
+    {
+      "ProductId": "0347feec-3a16-4396-baa2-c216114aeb12",
+      "Name": "Tai nghe Bluetooth chụp tai Marshall Major 5",
+      "Year": "2024",
+      "ModelMatch": "Tai nghe Bluetooth chụp tai Marshall Major 5",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Trang hỗ trợ Major V ghi Released in 2024",
+      "Sources": [
+        "https://www.marshall.com/cw/en/support/headphones/support-for-major-v"
+      ]
+    },
+    {
+      "ProductId": "8bdeb9e3-57b0-4fd6-988a-f8191bcfd8eb",
+      "Name": "Tai nghe Bluetooth thể thao Anker Soundcore C50i",
+      "Year": "2025",
+      "ModelMatch": "Tai nghe Bluetooth thể thao Anker Soundcore C50i",
+      "Scope": "Năm giới thiệu Soundcore C50i tại Việt Nam",
+      "Basis": "Tường thuật và ảnh của tác giả tại sự kiện Soundcore Việt Nam đầu tháng 11/2025 nêu C50i cùng giá mở bán 1,5 triệu đồng, không lấy đợt ra mắt Nhật 02/2026",
+      "Sources": [
+        "https://thanhnien.vn/soundcore-ra-mat-dong-tai-nghe-open-ear-wireless-stereo-185251103181907391.htm"
+      ]
+    },
+    {
+      "ProductId": "5c587864-8e1b-4727-8a11-ef4a901c6d88",
+      "Name": "Tai nghe Samsung Galaxy Buds 4",
+      "Year": "2026",
+      "ModelMatch": "Tai nghe Samsung Galaxy Buds 4",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Thông báo Buds4 và Buds4 Pro tại Unpacked tháng 2/2026",
+      "Sources": [
+        "https://news.samsung.com/global/samsung-unveils-all-new-galaxy-buds4-series-with-ultimate-sound"
+      ]
+    },
+    {
+      "ProductId": "802a3d7c-ca1e-4c8e-9a1f-9ebdf4ad50f2",
+      "Name": "Tai nghe Samsung Galaxy Buds 4 Pro",
+      "Year": "2026",
+      "ModelMatch": "Tai nghe Samsung Galaxy Buds 4 Pro",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Thông báo Buds4 và Buds4 Pro tại Unpacked tháng 2/2026",
+      "Sources": [
+        "https://news.samsung.com/global/samsung-unveils-all-new-galaxy-buds4-series-with-ultimate-sound"
+      ]
+    },
+    {
+      "ProductId": "21a2843f-2687-419b-bfdc-7f634474d28e",
+      "Name": "Tai nghe TWS Huawei Freebuds Neo",
+      "Year": "2026",
+      "ModelMatch": "Tai nghe TWS Huawei Freebuds Neo",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Trang hỗ trợ đúng FreeBuds Neo ghi 発売年月 2026年10月, không lấy năm của FreeBuds SE",
+      "Sources": [
+        "https://consumer.huawei.com/jp/support/audio/freebuds-neo/"
+      ]
+    },
+    {
+      "ProductId": "2eb2b8b7-e545-479a-8052-658ac112bf19",
+      "Name": "Tai nghe bluetooth Bose Quietcomfort Earbuds",
+      "Year": "2024",
+      "ModelMatch": "Tai nghe bluetooth Bose Quietcomfort Earbuds",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Trang Bose QCE app nêu QuietComfort Earbuds Released 2024, khớp bản 8,5 giờ, không dùng bản 2020",
+      "Sources": [
+        "https://www.bose.com/apps/bose-qc-earbuds-app"
+      ]
+    },
+    {
+      "ProductId": "2d4b6e42-eaee-4535-8bed-d1c0b692ff30",
+      "Name": "Tai nghe chụp tai Bose Quietcomfort Ultra Gen 2",
+      "Year": "2025",
+      "ModelMatch": "Tai nghe chụp tai Bose Quietcomfort Ultra Gen 2",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Bảng của hãng ghi QuietComfort Ultra Headphones 2nd Gen bán từ tháng 9/2025, không nhầm QuietComfort thường 2nd Gen năm 2026",
+      "Sources": [
+        "https://support.bose.com/article/quietcomfort-headphones-2nd-gen-whats-new-in-the-latest-generation?language=en_US"
+      ]
+    },
+    {
+      "ProductId": "421461d6-4269-443c-a8b0-c0acc36eb6d9",
+      "Name": "Tai nghe chụp tai Sony MDR-ZX110AP",
+      "Year": "2014",
+      "ModelMatch": "Tai nghe chụp tai Sony MDR-ZX110AP",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Thông báo Sony ngày 24/02/2014 liệt kê riêng MDR-ZX110AP và giá bán cuối tháng 2, phân biệt ZX110 không micro",
+      "Sources": [
+        "https://www.sony.com.cn/newscenter/1923.htm"
+      ]
+    },
+    {
+      "ProductId": "26e7ce85-2299-4573-b7e1-8636a7fd419b",
+      "Name": "Tai nghe không dây JBL Wave Buds 2",
+      "Year": "2024",
+      "ModelMatch": "Tai nghe không dây JBL Wave Buds 2",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Mục khi nào ra mắt trên trang đúng Wave Buds 2 ghi ngày 17/12/2024, không gộp với Tune Buds 2",
+      "Sources": [
+        "https://cellphones.com.vn/tai-nghe-khong-day-jbl-wave-buds-2.html"
+      ],
+      "SourceFile": "3a89dd4fb87d9580.html",
+      "SourceSha256": "5bf1610674f5cb427b26303e77d12f38b53d8e6759035179942070450918d49c"
+    },
+    {
+      "ProductId": "0722fdbd-92de-4514-bb9b-d864abceb827",
+      "Name": "Xiaomi 17T Pro 5G 12GB 512GB",
+      "Year": "2026",
+      "ModelMatch": "Xiaomi 17T Pro 5G 12GB 512GB",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Bảng đối chiếu đặt Xiaomi 17T Pro ở cột đầu, thời điểm ra mắt 05/2026, đối chiếu cùng 17T",
+      "Sources": [
+        "https://cellphones.com.vn/dien-thoai-xiaomi-17t-pro.html"
+      ],
+      "SourceFile": "c134e4a898294aca.html",
+      "SourceSha256": "0e712a16718885511dfc57f13a8975713e2ab6a52b8386755bd9b21eaac1502b"
+    },
+    {
+      "ProductId": "eef12026-f179-4230-86a8-9468e0495476",
+      "Name": "Xiaomi Poco Pad X1 8GB 512GB",
+      "Year": "2025",
+      "ModelMatch": "Xiaomi Poco Pad X1 8GB 512GB",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "FAQ chính hãng nêu ngày ra mắt POCO Pad X1 là 26/11/2025",
+      "Sources": [
+        "https://www.mi.com/global/support/faq/details/KA-628084/"
+      ]
+    },
+    {
+      "ProductId": "9e156a56-f818-4e55-bb12-3c50d48119e1",
+      "Name": "Xiaomi Redmi Note 14 Pro Plus 5G 8GB 256GB",
+      "Year": "2025",
+      "ModelMatch": "Xiaomi Redmi Note 14 Pro Plus 5G 8GB 256GB",
+      "Scope": "Phiên bản chính hãng Việt Nam camera chính 200 MP, giới thiệu năm 2025",
+      "Basis": "Bản Việt Nam camera chính 200 MP ra mắt ngày 10/01/2025, không dùng mốc 2024 của bản Trung Quốc",
+      "Sources": [
+        "https://cellphones.com.vn/dien-thoai-xiaomi-redmi-note-14-pro-plus.html"
+      ],
+      "SourceFile": "213b783688ce06ca.html",
+      "SourceSha256": "709afbc5cd1c8b7b12a09008a6a340c6303382b19fb4fbb660d855db1c445683"
+    },
+    {
+      "ProductId": "ed695107-5bf4-4175-86ad-c1ec72bbb11b",
+      "Name": "iPad A16 Wifi 256GB 2025",
+      "Year": "2025",
+      "ModelMatch": "iPad A16 Wifi 256GB 2025",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Thông báo iPad Air M3 và iPad A16 tháng 3/2025",
+      "Sources": [
+        "https://www.apple.com/ca/newsroom/2025/03/apple-introduces-ipad-air-with-powerful-m3-chip-and-new-magic-keyboard/"
+      ]
+    },
+    {
+      "ProductId": "a4dfa505-4678-4270-94b6-a2a7efb7f571",
+      "Name": "iPad Air 11 inch M3 Wifi 128GB 2025",
+      "Year": "2025",
+      "ModelMatch": "iPad Air 11 inch M3 Wifi 128GB 2025",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Thông báo iPad Air M3 và iPad A16 tháng 3/2025",
+      "Sources": [
+        "https://www.apple.com/ca/newsroom/2025/03/apple-introduces-ipad-air-with-powerful-m3-chip-and-new-magic-keyboard/"
+      ]
+    },
+    {
+      "ProductId": "e4624f94-c91d-467f-9fb2-955f33029deb",
+      "Name": "iPad Air 11 inch M4 Wifi 128GB 2026",
+      "Year": "2026",
+      "ModelMatch": "iPad Air 11 inch M4 Wifi 128GB 2026",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Thông báo iPad Air M4 ở cả hai kích thước tháng 3/2026",
+      "Sources": [
+        "https://www.apple.com/ca/newsroom/2026/03/apple-introduces-the-new-ipad-air-powered-by-m4/"
+      ]
+    },
+    {
+      "ProductId": "34d629bb-cc25-4820-ace1-b0e9bf70a7a4",
+      "Name": "iPad Air 13 inch M4 Wifi 128GB 2026",
+      "Year": "2026",
+      "ModelMatch": "iPad Air 13 inch M4 Wifi 128GB 2026",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Thông báo iPad Air M4 ở cả hai kích thước tháng 3/2026",
+      "Sources": [
+        "https://www.apple.com/ca/newsroom/2026/03/apple-introduces-the-new-ipad-air-powered-by-m4/"
+      ]
+    },
+    {
+      "ProductId": "492d0faa-9e3b-4777-a50b-91f056fc57d7",
+      "Name": "Điện thoại Itel P55 Plus NFC 8GB 256GB",
+      "Year": "2024",
+      "ModelMatch": "Điện thoại Itel P55 Plus NFC 8GB 256GB",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Kho thông cáo chính hãng có bài uid 250 ngày 01/03/2024 ra mắt itel P55+ với 45W và 5000mAh, phân biệt P55 và P55 5G",
+      "Sources": [
+        "https://www.itel-life.com/id/products/brand/press-room?cHash=ad7fb875434632abc45321859417e2c8&tx_news_news%5Baction%5D=ajax&tx_news_news%5Bcontroller%5D=Record"
+      ]
+    },
+    {
+      "ProductId": "b289e3d5-89d5-4e5b-b830-296fd4b5fbda",
+      "Name": "Điện thoại Meizu Mblu 22 Pro NFC 4GB 128GB",
+      "Year": "2025",
+      "ModelMatch": "Điện thoại Meizu Mblu 22 Pro NFC 4GB 128GB",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Thông báo sự kiện 20/05/2025 của Meizu liệt kê MEIZU Mblu 22 Pro",
+      "Sources": [
+        "https://www.meizu.com/hk/news/1760"
+      ]
+    },
+    {
+      "ProductId": "a7d6ee0e-9cfd-4e37-baba-c8029263eaf6",
+      "Name": "Điện thoại Meizu Mblu Note 21 Pro NFC 8GB 256GB",
+      "Year": "2024",
+      "ModelMatch": "Điện thoại Meizu Mblu Note 21 Pro NFC 8GB 256GB",
+      "Scope": "Năm giới thiệu dòng hoặc thế hệ sản phẩm, không phải năm sản xuất từng lô",
+      "Basis": "Mục thời điểm ra mắt nêu Meizu Note 21 Pro công bố toàn cầu tháng 9/2024",
+      "Sources": [
+        "https://cellphones.com.vn/dien-thoai-meizu-mblu-note-21-pro.html"
+      ],
+      "SourceFile": "786594040da12df4.html",
+      "SourceSha256": "9cd0196db98fc4d73ef3b54645ed21d50294b6a36a0edf9ffad45ecf3f020b9f"
+    }
+  ],
+  "ExistingDatesRetained": [
+    {
+      "ProductId": "023280df-e3a5-40e0-8b39-028ff7a8bd81",
+      "Name": "Samsung Galaxy S25 Plus 256GB",
+      "Date": "02-2025"
+    },
+    {
+      "ProductId": "0314a05a-4cc4-40c4-92f3-33a4a1f86cca",
+      "Name": "Honor Pad X8b Wifi 6GB 128GB",
+      "Date": "6/2026"
+    },
+    {
+      "ProductId": "061efc53-8bcc-4781-a7e7-6b5652424abd",
+      "Name": "Samsung Galaxy S26 Ultra 5G 12GB 256GB",
+      "Date": "02/2026"
+    },
+    {
+      "ProductId": "0955bb1a-2bde-4b32-8bc3-73bae3a7319f",
+      "Name": "OPPO Reno10 Pro+ 5G 12GB 256GB",
+      "Date": "09/2023"
+    },
+    {
+      "ProductId": "14474ba2-58a2-4b2e-91a4-35e24386587c",
+      "Name": "HONOR 600 5G 8GB 256GB",
+      "Date": "06/2026"
+    },
+    {
+      "ProductId": "167d49db-0140-405e-8e0d-96146d0aa5da",
+      "Name": "OPPO A7 Pro 5G 6GB 256GB",
+      "Date": "10/2026"
+    },
+    {
+      "ProductId": "1b20538b-c72e-46b7-beca-d91aa18a485d",
+      "Name": "HONOR Pad V9 Wifi 8GB 256GB",
+      "Date": "06/2026"
+    },
+    {
+      "ProductId": "1b8a0abb-ede5-41cf-8b3c-ae278c5cf8e6",
+      "Name": "Lenovo Legion Tab Gen 5 12GB 256GB",
+      "Date": "01/2026"
+    },
+    {
+      "ProductId": "1bf77592-1467-4c18-8162-a90c07319b86",
+      "Name": "Xiaomi 17T 5G 12GB 512GB",
+      "Date": "5/2026"
+    },
+    {
+      "ProductId": "1eae23c4-400b-41a1-bdcb-f338b95e668f",
+      "Name": "Xiaomi POCO F9 Ultra 5G 16GB 512GB",
+      "Date": "8/2026"
+    },
+    {
+      "ProductId": "1fb02f31-fb91-49c2-8a09-f96c21128c7e",
+      "Name": "HONOR X7d 5G 8GB 256GB",
+      "Date": "10/2025"
+    },
+    {
+      "ProductId": "28cafea8-a143-4f26-9af7-22f3a8456d54",
+      "Name": "iPhone Air 256GB",
+      "Date": "09/2025"
+    },
+    {
+      "ProductId": "2a4671ec-7215-42f7-9e2d-3d10f79105c0",
+      "Name": "Xiaomi Pad 8 Pro 8GB 128GB",
+      "Date": "02/2026"
+    },
+    {
+      "ProductId": "2bb31327-234f-4c5c-9d30-9251863bfb63",
+      "Name": "iPhone 17 256GB",
+      "Date": "09/2025"
+    },
+    {
+      "ProductId": "2ddcf84c-d3cc-4268-9d7b-014d4bc6bec6",
+      "Name": "Điện thoại iPhone 16 Pro Max 256GB",
+      "Date": "09/2024"
+    },
+    {
+      "ProductId": "2e0f859a-471e-4874-bbde-f977d29cc3a9",
+      "Name": "Samsung Galaxy Z Fold8 Ultra 5G 12GB 256GB",
+      "Date": "08/2026"
+    },
+    {
+      "ProductId": "307bed5f-a07a-4b84-9c5a-a15ec1ec9e9b",
+      "Name": "iPhone 18 Pro 1TB",
+      "Date": "09/2026"
+    },
+    {
+      "ProductId": "307fca78-7fbf-4e04-8dd3-c13d80206493",
+      "Name": "Lenovo Yoga Tab Wifi 12GB 256GB TB710 ZAG60105VN - Kèm bút, bàn phím",
+      "Date": "08/2025"
+    },
+    {
+      "ProductId": "32dc5729-ae8b-48dd-ae3e-deb5c6d19c9f",
+      "Name": "Xiaomi Redmi Note 17 Pro Max 5G 8GB 512GB",
+      "Date": "08/2026"
+    },
+    {
+      "ProductId": "37891e9a-79bc-40f9-b9e0-1363c4e37023",
+      "Name": "iPhone 13 128GB",
+      "Date": "09/2021"
+    },
+    {
+      "ProductId": "49b47fb9-3027-4122-81c1-7930aa761af1",
+      "Name": "Samsung Galaxy A57 5G 8GB 128GB",
+      "Date": "03/2026"
+    },
+    {
+      "ProductId": "541a9613-7276-4e76-85d6-b45a18a6a974",
+      "Name": "iPhone 17 Pro 256GB",
+      "Date": "09/2025"
+    },
+    {
+      "ProductId": "6131fb78-1097-4faa-b93e-26545ea20147",
+      "Name": "Samsung Galaxy S25 Ultra 12GB 256GB",
+      "Date": "02-2025"
+    },
+    {
+      "ProductId": "66a386f3-5716-4ee4-9d83-417c9421e475",
+      "Name": "Lenovo Idea Tab Pro Gen 2 Matte Edition 8GB 256GB ZAHD0452VN - Kèm bút, bàn phím",
+      "Date": "03/2026"
+    },
+    {
+      "ProductId": "6cf635af-c09d-47c6-8c96-6ac3a807c65c",
+      "Name": "Huawei MatePad Papermatte 11.5 inch 2025 8GB 256GB - Kèm bàn phím",
+      "Date": "10/2025"
+    },
+    {
+      "ProductId": "7baec7f1-93e9-4303-b99c-28b905c9999e",
+      "Name": "iPhone 16 128GB",
+      "Date": "09/2024"
+    },
+    {
+      "ProductId": "825d8f90-b1f2-42d0-88d2-34f3e09cd1d0",
+      "Name": "iPhone 17 Pro Max 512GB",
+      "Date": "09/2025"
+    },
+    {
+      "ProductId": "8b399cc3-3666-4a40-8428-dd03043b3a0a",
+      "Name": "Samsung Galaxy A37 5G 8GB 128GB",
+      "Date": "03/2026"
+    },
+    {
+      "ProductId": "8b7cad26-6622-4b6c-9bc8-62f549df9e27",
+      "Name": "Samsung Galaxy A07 5G 4GB 128GB",
+      "Date": "01/2026"
+    },
+    {
+      "ProductId": "94f54fdc-4e5f-4cfe-acd4-5528b9651ab2",
+      "Name": "Samsung Galaxy Tab S10 FE Wifi 12GB 256GB",
+      "Date": "04-2025"
+    },
+    {
+      "ProductId": "99906263-f9da-4bf5-b099-df8c45c51466",
+      "Name": "OPPO Find N3 16GB 512GB",
+      "Date": "10/2023"
+    },
+    {
+      "ProductId": "a0928382-271a-473b-a4a2-550019918439",
+      "Name": "HONOR 600S 5G 6GB 128GB",
+      "Date": "10/2026"
+    },
+    {
+      "ProductId": "a9116967-f7dc-402b-a0b5-7312926529a1",
+      "Name": "Lenovo Idea Tab Plus Matte Edition Wifi 8GB 128GB ZAG70981VN - Kèm bút, bàn phím",
+      "Date": "03/2026"
+    },
+    {
+      "ProductId": "b1a6a8f1-6885-40f2-885f-276237e803f4",
+      "Name": "Samsung Galaxy Tab A11 Wifi 4GB 64GB",
+      "Date": "09/2025"
+    },
+    {
+      "ProductId": "c757c790-bd87-4119-b3b9-1ebd2db91cc5",
+      "Name": "OPPO Reno16 F 5G 8GB 256GB",
+      "Date": "06/2026"
+    },
+    {
+      "ProductId": "cd0109e7-c57c-49c3-8cee-06e01a2df143",
+      "Name": "OPPO Reno15 5G 12GB 256GB",
+      "Date": "01/2026"
+    },
+    {
+      "ProductId": "cdcea719-cf05-4376-a4c6-b6b7d181bf26",
+      "Name": "iPhone 16e 128GB",
+      "Date": "02/2025"
+    },
+    {
+      "ProductId": "d41ceef9-d9ff-415a-a846-20ddeb260707",
+      "Name": "Xiaomi Redmi Pad 2 9.7 inch Wifi 4GB 64GB",
+      "Date": "04/2026"
+    },
+    {
+      "ProductId": "dc687f3f-c9fb-4cd7-a323-902dec6e63c3",
+      "Name": "iPhone 18 Pro Max 1TB",
+      "Date": "09/2026"
+    },
+    {
+      "ProductId": "e4fb6580-5b75-4c68-b2d6-680803d2f0ee",
+      "Name": "Samsung Galaxy S26",
+      "Date": "2/2026"
+    },
+    {
+      "ProductId": "e78b16c5-be33-41fa-9349-43e3d616eb86",
+      "Name": "OPPO Find X5 Pro 5G 12GB 256GB",
+      "Date": "05/2022"
+    },
+    {
+      "ProductId": "f34b67f9-1f3b-4c7e-8c55-6998e1ade57c",
+      "Name": "Nubia Neo 5 GT Special Edition 12GB 256GB",
+      "Date": "07/2026"
+    }
+  ],
+  "Unresolved": [
+    {
+      "ProductId": "be69c264-f529-4ac2-ad30-13e96bba7133",
+      "Name": "Bàn phím cơ Dareu EK75 Pro Cloudy Aqua Dream Switch",
+      "Reason": "Nguồn ra mắt 2023 đề cập màu và switch khác, cần xác nhận riêng bản Cloudy Aqua Dream"
+    },
+    {
+      "ProductId": "562ccb9a-97e5-49b3-ae30-5db7a0c93239",
+      "Name": "Bàn phím cơ có dây AULA F75 trắng",
+      "Reason": "Chưa có mốc ra mắt riêng của bản có dây, không dùng mốc F75 ba chế độ"
+    },
+    {
+      "ProductId": "190b55bc-f717-4584-89c3-cb32a56081e6",
+      "Name": "Bàn phím cơ có dây Aula AG60 Xám",
+      "Reason": "Có bản cơ 61 phím và bản switch từ tính cùng tên, chưa xác nhận năm của bản cơ xám đang bán"
+    },
+    {
+      "ProductId": "0bae4ae6-85f0-4e86-86c3-cb72dcd65756",
+      "Name": "Bàn phím cơ gaming E-Dra EK398X Beta đen xám",
+      "Reason": "Bài hướng dẫn của hãng không xác định thời điểm giới thiệu, không lấy năm bài viết làm năm ra mắt"
+    },
+    {
+      "ProductId": "5c7eb5b4-ef7b-4248-8255-1cd7bc8417a7",
+      "Name": "Bàn phím cơ gaming không dây DareU Flex 75 Black Grey 3 Mode Pegasus switch",
+      "Reason": "Chưa có thông báo ra mắt rõ ngày cho bản Black Grey Pegasus"
+    },
+    {
+      "ProductId": "d438d848-79f1-47ea-9bdf-74c3ad6a26f7",
+      "Name": "Bàn phím cơ không dây Mchose G75 Pro Tri-Mode Blue",
+      "Reason": "Cần tách G75 Pro đời đầu và G75 V2, ngày chứng nhận hoặc niêm yết không xác định năm ra mắt"
+    },
+    {
+      "ProductId": "f410280b-0950-4251-8633-51b0f6772d88",
+      "Name": "Chuột AKKO AG ONE 8K Joy of Life",
+      "Reason": "Cần xác nhận mã bản Joy of Life 8K và cảm biến, không dùng mốc của AG ONE khác"
+    },
+    {
+      "ProductId": "c81fa5ce-bcc4-4a4a-8925-f1dc5c5c2404",
+      "Name": "Chuột gaming không dây E-Dra Thunderbird TM620W Triple Mode",
+      "Reason": "Chưa có thông báo ra mắt hoặc trường năm ra mắt đủ rõ cho đúng mẫu, không suy từ năm bài viết, bình luận, bảo hành hay ngày chứng nhận"
+    },
+    {
+      "ProductId": "fee78a03-d9b0-415e-b520-de35d4d9b2be",
+      "Name": "Chuột gaming không dây Logitech G304 X Superlight Black",
+      "Reason": "Cần xác nhận part number của Superlight Black, thông số đang lưu chưa khớp bản G304 X HERO 25K được giới thiệu cuối 2025"
+    },
+    {
+      "ProductId": "e08685a0-fafa-4dbb-9e15-6bdc42fe7264",
+      "Name": "Chuột không dây Asus Marshmallow MD100 Lite",
+      "Reason": "Cần mốc riêng MD100 Lite, không dùng thông báo MD100 đời đầu 2022"
+    },
+    {
+      "ProductId": "47bd49cd-014f-45e2-ac13-7aa949a8bc29",
+      "Name": "Chuột không dây Dareu LM135G Silent",
+      "Reason": "Chưa có thông báo ra mắt hoặc trường năm ra mắt đủ rõ cho đúng mẫu, không suy từ năm bài viết, bình luận, bảo hành hay ngày chứng nhận"
+    },
+    {
+      "ProductId": "433239e1-7ef1-4f94-afea-bcb6922f284c",
+      "Name": "Chuột không dây HyperWork Silentium Gen 2 MS01 Đen",
+      "Reason": "Nguồn giới thiệu nằm sát 31/12/2025 và 01/2026, cần xác nhận mốc chính thức của hãng"
+    },
+    {
+      "ProductId": "6945eb57-bfe4-4402-9ba7-e227e912483a",
+      "Name": "Chuột không dây Lenovo ThinkPad Essential",
+      "Reason": "Tên chung chưa có part number để phân biệt các đời chuột ThinkPad Essential"
+    },
+    {
+      "ProductId": "f0bc7b5b-0adc-4b6e-ac74-4b73a690de0b",
+      "Name": "Chuột không dây Rapoo M310 Silent",
+      "Reason": "Chưa có thông báo ra mắt hoặc trường năm ra mắt đủ rõ cho đúng mẫu, không suy từ năm bài viết, bình luận, bảo hành hay ngày chứng nhận"
+    },
+    {
+      "ProductId": "b04f4523-54f8-485a-966c-b76bc893975a",
+      "Name": "Chuột không dây Rapoo M330",
+      "Reason": "Chưa có thông báo ra mắt hoặc trường năm ra mắt đủ rõ cho đúng mẫu, không suy từ năm bài viết, bình luận, bảo hành hay ngày chứng nhận"
+    },
+    {
+      "ProductId": "c9e71761-f56b-4b83-9c28-4324c2eb5d62",
+      "Name": "Chuột không dây Ugreen Silent MU006",
+      "Reason": "Tài liệu và chứng nhận 2022 không phải thông báo ra mắt sản phẩm"
+    },
+    {
+      "ProductId": "75b331dd-0edc-409c-b2f1-a7b82e59bebb",
+      "Name": "Laptop ASUS Vivobook 14 X1404VA-EB355W",
+      "Reason": "Bản Core 7 150U được cập nhật sau đời X1404 đầu tiên, không dùng mốc 2023 cho SKU này"
+    },
+    {
+      "ProductId": "47d17c4d-f489-47cf-838d-034caa5aff61",
+      "Name": "Laptop Acer Aspire Lite 14 AL14-44P-R0SP",
+      "Reason": "Chưa có mốc giới thiệu rõ năm cho đúng cấu hình AL14-44P-R0SP"
+    },
+    {
+      "ProductId": "dca876de-e1ea-408c-bb26-6fbc7f4752c4",
+      "Name": "Laptop Acer Gaming Aspire 7 A715-59G-59RD",
+      "Reason": "Nguồn ra mắt theo dòng có cấu hình CPU khác, chưa xác nhận bản Core 5 210H 59RD"
+    },
+    {
+      "ProductId": "7409bad9-03d5-44fb-8c2c-133128a8584b",
+      "Name": "Laptop Dell 14 DC14250 DC4C5375W1 - Bảo hành 2 năm",
+      "Reason": "Chứng nhận P185G dùng chung Inspiron 5440 và DC14250, ngày của hồ sơ chung không chứng minh năm giới thiệu tên DC14250"
+    },
+    {
+      "ProductId": "7c33fae9-2b49-4913-8543-2560ea7aaedd",
+      "Name": "Laptop Dell 14 DC14250 DC4C5386W",
+      "Reason": "Chứng nhận P185G dùng chung Inspiron 5440 và DC14250, ngày của hồ sơ chung không chứng minh năm giới thiệu tên DC14250"
+    },
+    {
+      "ProductId": "02c6faf1-5206-4075-8274-852f0ecebafb",
+      "Name": "Laptop Gaming Gigabyte Eagle GL6J-9LJR2VNF93SH",
+      "Reason": "Các bài ra mắt 2026 chưa đối chiếu được ngày giới thiệu đúng SKU 9LJR2VNF93SH từ hãng"
+    },
+    {
+      "ProductId": "2ec2e638-3524-4903-a00c-7142b9d62f74",
+      "Name": "Laptop MSI Cyborg 15 A13UC-2082VN",
+      "Reason": "Thông báo Nhật 2026 là SKU 6022JP, chưa chứng minh mốc riêng của 2082VN"
+    },
+    {
+      "ProductId": "2c6b2135-0b8f-4982-9523-6aa51c008b2d",
+      "Name": "Laptop MSI Modern 15 F1MG-1225VN",
+      "Reason": "Ngày thị trường của hồ sơ ENERGY STAR dùng chung các dòng và ngày giới thiệu SKU Nhật khác nhau, chưa chốt đúng F1MG-1225VN"
+    },
+    {
+      "ProductId": "bbc7f7cd-ecb3-425c-abd7-44c08136a61e",
+      "Name": "Màn hình ASUS VU249CFE-P 24 inch",
+      "Reason": "Các nguồn ghi mốc dòng chung hoặc bản B/M, chưa xác nhận riêng bản P"
+    },
+    {
+      "ProductId": "f3d4e7f7-658c-4f6f-8cf5-841fac4d5e8d",
+      "Name": "Màn hình E-Dra EGM24F120PV 24 inch",
+      "Reason": "Chưa có thông báo ra mắt hoặc trường năm ra mắt đủ rõ cho đúng mẫu, không suy từ năm bài viết, bình luận, bảo hành hay ngày chứng nhận"
+    },
+    {
+      "ProductId": "4ae21f7b-967c-4bdc-9578-cef977ea24b3",
+      "Name": "Màn hình EDRA EGM27F120H 27 inch",
+      "Reason": "Chưa có thông báo ra mắt hoặc trường năm ra mắt đủ rõ cho đúng mẫu, không suy từ năm bài viết, bình luận, bảo hành hay ngày chứng nhận"
+    },
+    {
+      "ProductId": "779b55eb-c42d-4df6-b2d7-31d4a292183b",
+      "Name": "Màn hình E‑Dra EGM22F100V 22 inch",
+      "Reason": "Chưa có thông báo ra mắt hoặc trường năm ra mắt đủ rõ cho đúng mẫu, không suy từ năm bài viết, bình luận, bảo hành hay ngày chứng nhận"
+    },
+    {
+      "ProductId": "5bd4c6af-39da-427d-93c9-ca09410e022f",
+      "Name": "Màn hình Gaming LG UltraGear 25G523-B 25 inch",
+      "Reason": "Chưa tìm được trường thời điểm giới thiệu đúng LG 25G523-B"
+    },
+    {
+      "ProductId": "f3dc75eb-8a91-4337-8ddd-d0b005b3c829",
+      "Name": "Màn hình Gaming Philips 27M2N3500PF 27 inch",
+      "Reason": "Phiếu thông số và ngày xuất tài liệu chưa chứng minh năm giới thiệu, cần mốc thị trường của đúng model"
+    },
+    {
+      "ProductId": "feeb29a7-c55f-4107-a065-b39812e02351",
+      "Name": "Màn hình MSI Pro MP242L 24 inch",
+      "Reason": "Ngày driver và ngày chứng nhận không được dùng làm năm ra mắt"
+    },
+    {
+      "ProductId": "44121b7e-255f-4218-b200-9193f7048029",
+      "Name": "Màn hình Samsung Odyssey G5 LS32CG552 32 inch",
+      "Reason": "Cần tách CG552 và DG552, nguồn thị trường và model year chưa thống nhất"
+    },
+    {
+      "ProductId": "b960005a-a501-48e5-8ccc-ece6952fd0ed",
+      "Name": "Màn hình VSP IP2409S 24 inch",
+      "Reason": "Cần xác nhận chính xác phiên bản VSP và tần số quét, không dùng mốc của sản phẩm DUAN cùng mã"
+    },
+    {
+      "ProductId": "01622e62-720c-4974-a31a-5f25b31820b6",
+      "Name": "Pin sạc dự phòng Aukey PB-N83S 10000mAh PD 20W & QC 3.0",
+      "Reason": "Chưa có thông báo ra mắt hoặc trường năm ra mắt đủ rõ cho đúng mẫu, không suy từ năm bài viết, bình luận, bảo hành hay ngày chứng nhận"
+    },
+    {
+      "ProductId": "5c03323b-1f8d-4ac7-90e6-2e0d0e5442a0",
+      "Name": "Pin sạc dự phòng Cuktech 10 Mini PB1055 10000mAh 55W",
+      "Reason": "Nguồn ra mắt Hàn Quốc 2025 không xác định mốc giới thiệu đầu tiên hoặc mốc bán tại Việt Nam"
+    },
+    {
+      "ProductId": "38a132e0-b516-41f6-b4e0-ab43cc454740",
+      "Name": "Pin sạc dự phòng Energizer QM5000BK 5000mAh /3.7V Li-Polymer",
+      "Reason": "Chưa có thông báo ra mắt hoặc trường năm ra mắt đủ rõ cho đúng mẫu, không suy từ năm bài viết, bình luận, bảo hành hay ngày chứng nhận"
+    },
+    {
+      "ProductId": "7176c285-c92c-44ac-8de7-365b87c9ff39",
+      "Name": "Pin sạc dự phòng Mophie Essentials Snap+ 10000mAh có chân đứng",
+      "Reason": "Nguồn giới thiệu hệ sinh thái 2024-2025 chưa xác nhận riêng Essentials Snap+ Stand 10000mAh"
+    },
+    {
+      "ProductId": "86eed8e7-2a26-44a4-ab8e-8b1e4114b973",
+      "Name": "Pin sạc dự phòng Robot RT180S 10000mAh 12W",
+      "Reason": "Chưa có thông báo ra mắt hoặc trường năm ra mắt đủ rõ cho đúng mẫu, không suy từ năm bài viết, bình luận, bảo hành hay ngày chứng nhận"
+    },
+    {
+      "ProductId": "b3658b49-1b36-4604-bd39-c7504d1d3b5c",
+      "Name": "Pin sạc dự phòng StarGO Power 60000mAh 22.5W nhiều cổng kết nối có đèn pin",
+      "Reason": "Chưa có thông báo ra mắt hoặc trường năm ra mắt đủ rõ cho đúng mẫu, không suy từ năm bài viết, bình luận, bảo hành hay ngày chứng nhận"
+    },
+    {
+      "ProductId": "ac397791-3e00-4dc5-8934-04b018fe9884",
+      "Name": "Tai nghe Bluetooth True Wireless Baseus Bass BS2 Lite",
+      "Reason": "Các trang tổng hợp và ngày chứng nhận chưa đủ làm bằng chứng ra mắt BS2 Lite"
+    },
+    {
+      "ProductId": "bbea114e-5805-48a9-bb8a-ca7cb1f914e9",
+      "Name": "Tai nghe Bluetooth chụp tai Alpha Works Lite 500",
+      "Reason": "Chưa có thông báo ra mắt hoặc trường năm ra mắt đủ rõ cho đúng mẫu, không suy từ năm bài viết, bình luận, bảo hành hay ngày chứng nhận"
+    },
+    {
+      "ProductId": "71353189-de72-4abc-8013-48ad0307266c",
+      "Name": "Tai nghe Sony MDR E9LP",
+      "Reason": "Có nguồn lưu trữ đề cập 2011, chưa đối chiếu được toàn bộ thông báo gốc đúng model để chốt năm"
+    }
+  ]
+}

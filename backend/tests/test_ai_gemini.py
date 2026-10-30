@@ -170,6 +170,8 @@ def test_provider_errors_are_sanitized_and_not_retried(monkeypatch, status, code
     with pytest.raises(AiUnavailableError) as error:
         GeminiChatModel(AiSettings(api_key="secret-test")).complete([{"role": "user", "content": "Hi"}])
     assert error.value.code == code and "secret" not in str(error.value) and len(calls) == 1
+    # Only a provider-side 5xx is worth the service's one retry; quota and configuration errors are not.
+    assert error.value.transient == (status >= 500)
     if status == 429:
         assert error.value.retry_after_seconds == 18
 
@@ -220,6 +222,9 @@ def test_network_errors_are_mapped_without_retry(monkeypatch, exception):
     with pytest.raises(AiUnavailableError) as error:
         GeminiChatModel(AiSettings(api_key="test")).complete([])
     assert len(calls) == 1 and "secret-test" not in str(error.value)
+    # A dropped connection may be retried by the service; a timeout only when the service cut a stalled call short.
+    assert error.value.transient == (exception is httpx.ConnectError)
+    assert error.value.timed_out == (exception is httpx.ReadTimeout)
 
 
 def test_usage_counts_thinking_and_does_not_expose_thoughts(monkeypatch):

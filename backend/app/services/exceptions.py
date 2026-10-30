@@ -86,6 +86,10 @@ class AiUnavailableError(ServiceError):
 
     code = "ai_unavailable"
 
-    def __init__(self, message: str, *, code: str | None = None, retry_after_seconds: int | None = None):
+    def __init__(self, message: str, *, code: str | None = None, retry_after_seconds: int | None = None,
+                 transient: bool = False, timed_out: bool = False):
         super().__init__(message, code=code)
         self.retry_after_seconds = retry_after_seconds
+        # A provider-side hiccup (HTTP 5xx, dropped connection) that one immediate retry may get past; internal only.
+        self.transient = transient
+        self.timed_out = timed_out  # The call ran out of the time it was given; internal only.

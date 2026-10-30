@@ -180,7 +180,7 @@ def test_an_unexpected_selection_error_is_a_500_with_the_standard_error_body_and
     response = test_client.post(path, headers=auth())
     assert response.status_code == 500
     assert response.json() == {
-        "detail": "Không chọn được bản ghi để xử lý; tác vụ chưa xử lý bản ghi nào. Vui lòng thử lại sau.",
+        "detail": "Không chọn được bản ghi để xử lý, tác vụ chưa xử lý bản ghi nào. Vui lòng thử lại sau.",
         "code": "job_selection_failed",
     }
     assert "private-value" not in response.text
@@ -194,7 +194,8 @@ def test_a_database_error_at_selection_stays_a_503(client, path):
     app.dependency_overrides[internal.get_payment_webhook_service] = lambda: broken
     response = test_client.post(path, headers=auth())
     assert response.status_code == 503
-    assert response.json() == {"detail": "Không thể xử lý dữ liệu lúc này. Vui lòng thử lại"}
+    # Same body as every database error (main.database_error_handler); the code lets clients tell it from a 503 of AI.
+    assert response.json() == {"detail": "Không thể xử lý dữ liệu lúc này. Vui lòng thử lại", "code": "database_unavailable"}
 
 
 def test_internal_routes_are_hidden_from_the_public_schema():

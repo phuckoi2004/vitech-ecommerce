@@ -92,7 +92,7 @@ class ShippingMethodService(BaseService):
                 raise NotFoundError("Không tìm thấy phương thức vận chuyển", code="shipping_method_not_found")
             if self.orders.exists_by_shipping_method(shipping_method_id):
                 raise BusinessRuleError(
-                    "Phương thức vận chuyển đã được dùng trong đơn hàng; ngừng sử dụng bằng IsActive = false",
+                    "Phương thức vận chuyển đã được dùng trong đơn hàng, ngừng sử dụng bằng IsActive = false",
                     code="shipping_method_in_use",
                 )
             self.methods.delete(method)

@@ -17,14 +17,16 @@ function PoField({ label, children, className = '' }) {
 export function ReceiveForm({ po, variants, busy, run, onError }) {
   const [values, setValues] = useState({})
   const [note, setNote] = useState('')
-  return <form className="flex flex-col gap-4" onSubmit={async (event) => {
+  // noValidate: purchaseReceiveBody checks quantities and the exact Serial/IMEI count and shows its own message; the
+  // browser's "required" bubble would stop the form first with a vaguer, browser-language text.
+  return <form className="flex flex-col gap-4" noValidate onSubmit={async (event) => {
     event.preventDefault()
     let body
     try { body = purchaseReceiveBody(po, values, variants.data ?? [], note) } catch (error) { onError(error.message); return }
     const result = await run((token) => receivePurchase(token, po.PurchaseOrderId, body), 'update', 'Đã ghi nhận hàng thực nhận.')
     if (result) { setValues({}); setNote('') }
   }}>
-    <p className="m-0 text-xs text-admin-muted">Nhập số lượng thực nhận trong lần này; có thể nhận từng phần. Chỉ xác nhận sau khi kiểm đếm hàng và Serial/IMEI thực tế.</p>
+    <p className="m-0 text-xs text-admin-muted">Nhập số lượng thực nhận trong lần này, có thể nhận từng phần. Chỉ xác nhận sau khi kiểm đếm hàng và Serial/IMEI thực tế.</p>
     {po.Items.filter((item) => item.ReceivedQuantity < item.OrderedQuantity).map((item) => {
       const variant = variants.data?.find((entry) => entry.ProductVariantId === item.ProductVariantId)
       const value = values[item.PurchaseOrderItemId] ?? { Quantity: '', SerialNumbers: '' }

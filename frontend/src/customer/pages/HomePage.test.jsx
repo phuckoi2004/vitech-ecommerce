@@ -476,7 +476,10 @@ describe('category menu beside the banner', () => {
     await screen.findByText('Không có sản phẩm phù hợp')
     expect(router.state.location.pathname).toBe('/danh-muc/dien-thoai')
     // The menu's range is not one of the category's own, yet it stays chosen and removable on the category page.
-    fireEvent.click(screen.getByRole('button', { name: 'Xem theo giá' }))
+    // A chip with a chosen value shows that value (its criterion is the title), as in CategoryPage.test.jsx.
+    const chip = screen.getByRole('button', { name: 'Dưới 5 triệu' })
+    expect(chip).toHaveAttribute('title', 'Xem theo giá')
+    fireEvent.click(chip)
     expect(within(screen.getByRole('dialog', { name: 'Xem theo giá' })).getByRole('button', { name: 'Dưới 5 triệu' }))
       .toHaveAttribute('aria-pressed', 'true')
     expect(calls.some((call) => call.startsWith('/products?') && call.includes('category_id=c-phone') && call.includes('max_price=4999999.99'))).toBe(true)

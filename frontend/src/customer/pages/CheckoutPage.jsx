@@ -270,7 +270,7 @@ function NormalCheckoutPage() {
 function paymentNote(method) {
   if (!method) return 'Đơn hàng chỉ được tạo khi bạn xác nhận.'
   if (method.Code === 'COD') return 'Đơn hàng chỉ được tạo khi bạn xác nhận. Bạn thanh toán khi nhận hàng.'
-  return 'Đơn hàng chỉ được tạo khi bạn xác nhận. Sau đó VieTech hiển thị mã QR và thông tin chuyển khoản; vui lòng '
+  return 'Đơn hàng chỉ được tạo khi bạn xác nhận. Sau đó VieTech hiển thị mã QR và thông tin chuyển khoản, vui lòng '
     + 'thanh toán trong 15 phút, quá hạn đơn hàng được huỷ tự động.'
 }
 

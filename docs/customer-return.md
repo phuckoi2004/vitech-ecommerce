@@ -1,5 +1,7 @@
 # Đổi/trả phía khách hàng
 
+**Cập nhật hiện hành 30/10/2026:** yêu cầu mới chỉ đổi 1 sản phẩm (`Exchange`), chưa hỗ trợ yêu cầu trả hàng hoàn tiền mới. Phiên bản cũ còn hàng thì đổi đúng phiên bản; hết hàng thì chọn sản phẩm cùng danh mục, bù phần giá cao hơn, không hoàn phần dư. Nội dung công khai và chatbot được đồng bộ qua [chính sách hậu mãi](after-sales-policies.md). Các mục bên dưới ghi lại đợt triển khai giao diện 21/10; nội dung về tạo `Return`, số lượng lớn hơn 1 và hình thức trả hàng không còn là luồng tiếp nhận yêu cầu mới.
+
 Cập nhật ngày 21/10/2026. Tham chiếu Figma `aLG7De0fgbWCfaIpzIrPii`, frame `874:405`; quy tắc đang hoạt động trong `ReturnService`, `ReturnPolicy` và `docs/api-endpoints.md`.
 
 ## Giao diện

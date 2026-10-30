@@ -114,9 +114,9 @@ class GeminiChatModel:
                     generation_config=config, store=False,
                 )
         except (APITimeoutError, httpx.TimeoutException):
-            raise AiUnavailableError("AI phản hồi quá thời gian chờ. Vui lòng thử lại.") from None
+            raise AiUnavailableError("AI phản hồi quá thời gian chờ. Vui lòng thử lại.", timed_out=True) from None
         except (APIConnectionError, httpx.TransportError):
-            raise AiUnavailableError("Chưa kết nối được AI. Vui lòng thử lại.") from None
+            raise AiUnavailableError("Chưa kết nối được AI. Vui lòng thử lại.", transient=True) from None
         except APIResponseValidationError:
             raise AiUnavailableError("AI trả kết quả không hợp lệ.", code="ai_invalid_output") from None
         except APIStatusError as error:
@@ -126,7 +126,9 @@ class GeminiChatModel:
             if error.status_code in (400, 401, 403, 404):
                 raise AiUnavailableError("Kết nối AI cần được kiểm tra cấu hình.",
                                          code="ai_provider_configuration_error") from None
-            raise AiUnavailableError("AI tạm thời không khả dụng. Vui lòng thử lại.") from None
+            # 500/503 "overloaded/internal": the same request usually succeeds a moment later (AiChatService retries once).
+            raise AiUnavailableError("AI tạm thời không khả dụng. Vui lòng thử lại.",
+                                     transient=error.status_code >= 500) from None
         except (ValidationError, ValueError, TypeError):
             raise AiUnavailableError("AI trả kết quả không hợp lệ.", code="ai_invalid_output") from None
         if response.status not in ("completed", "requires_action") or response.errors:

@@ -62,7 +62,7 @@ export default function AdminImagePicker({ images, onChange, name = 'sản phẩ
     <h3 className="m-0 text-[9px] leading-[11px] font-medium text-admin-muted">{title}</h3>
     <div className="flex h-[38px] items-center gap-2 rounded-lg border border-admin-border bg-white px-2.5" onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); void upload(event.dataTransfer.files) }}>
       {images[0] && <PickerImage key={images[0].ImageUrl} src={images[0].ImageUrl} alt={variant === 'news' ? 'Ảnh đại diện tin tức' : 'Ảnh ' + name} className="h-[30px] w-12 shrink-0 rounded object-contain" />}
-      <button type="button" disabled={unavailable} onClick={() => input.current?.click()} className="flex-1 cursor-pointer border-0 bg-transparent p-0 text-left text-[9px] text-admin-text disabled:cursor-wait disabled:opacity-50">{busy ? progress : images.length ? 'Thay ảnh từ máy' : 'Chọn ảnh từ máy (JPG, PNG, WEBP; tối đa 2 MB)'}</button>
+      <button type="button" disabled={unavailable} onClick={() => input.current?.click()} className="flex-1 cursor-pointer border-0 bg-transparent p-0 text-left text-[9px] text-admin-text disabled:cursor-wait disabled:opacity-50">{busy ? progress : images.length ? 'Thay ảnh từ máy' : 'Chọn ảnh từ máy (JPG, PNG, WEBP, tối đa 2 MB)'}</button>
       {images[0] && canRemove(images[0]) && <button type="button" disabled={unavailable} onClick={() => remove(0)} className="cursor-pointer text-[9px] text-admin-red disabled:opacity-50" aria-label={variant === 'news' ? 'Bỏ ảnh đại diện' : 'Bỏ ảnh ' + name}>Bỏ ảnh</button>}
       {fileInput}
     </div>
@@ -77,7 +77,7 @@ export default function AdminImagePicker({ images, onChange, name = 'sản phẩ
     <div className="flex min-h-[150px] flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-admin-border bg-admin-page p-4" onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); void upload(event.dataTransfer.files) }}>
       {!images.length && <p className="m-0 text-[13px] font-semibold text-admin-muted">Chưa có ảnh {name}</p>}
       {!disabled && <ProductButton secondary disabled={busy} onClick={() => input.current?.click()}>{images.length ? multiple ? '+ Thêm ảnh' : 'Thay ảnh từ máy' : 'Chọn ảnh từ máy'}</ProductButton>}
-      {!disabled && <p className="m-0 text-[11px] text-admin-muted">Hoặc kéo thả ảnh vào đây. JPG, PNG, WEBP; tối đa 2 MB mỗi ảnh.</p>}
+      {!disabled && <p className="m-0 text-[11px] text-admin-muted">Hoặc kéo thả ảnh vào đây. JPG, PNG, WEBP, tối đa 2 MB mỗi ảnh.</p>}
       {progress && <p role="status" className="m-0 text-xs text-admin-muted">{progress}</p>}
       {fileInput}
     </div>

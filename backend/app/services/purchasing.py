@@ -138,7 +138,7 @@ class SupplierService(BaseService):
             )
             if in_use:
                 raise BusinessRuleError(
-                    "Nhà cung cấp đang được sử dụng; hãy ngừng hoạt động (IsActive = false)", code="supplier_in_use"
+                    "Nhà cung cấp đang được sử dụng, hãy ngừng hoạt động (IsActive = false)", code="supplier_in_use"
                 )
             self.suppliers.delete(supplier)
 

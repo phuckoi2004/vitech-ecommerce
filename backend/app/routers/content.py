@@ -19,17 +19,25 @@ from app.schemas import (
     PageResponse,
 )
 from app.services.content import ContentService
-from app.schemas.content import NewsArticleViewResponse
+from app.schemas.content import AfterSalesPolicyResponse, NewsArticleViewResponse
+from app.services.after_sales_policy import StorePolicyService
 
-from .dependencies import CurrentActor, InternalOnly, Page, PageSize, get_content_service
+from .dependencies import CurrentActor, InternalOnly, Page, PageSize, get_content_service, get_store_policy_service
 
 router = APIRouter(tags=["Nội dung"])
 admin_router = APIRouter(prefix="/admin", tags=["Quản lý nội dung"], dependencies=[InternalOnly])
 
 Content = Annotated[ContentService, Depends(get_content_service)]
+Policies = Annotated[StorePolicyService, Depends(get_store_policy_service)]
 
 
 # ------------------------------------------------------------------ public
+
+
+@router.get("/store-policies", response_model=AfterSalesPolicyResponse)
+def get_store_policies(response: Response, service: Policies):
+    response.headers["Cache-Control"] = "no-store"
+    return service.get_store_policies()
 
 
 @router.get("/news", response_model=PageResponse[NewsArticleSummary])

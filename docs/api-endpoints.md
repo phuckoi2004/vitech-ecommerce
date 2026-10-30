@@ -2,6 +2,14 @@
 
 Tài liệu sinh từ code router (`backend/app/routers`). Chạy backend rồi mở `/docs` để xem schema chi tiết và thử API.
 
+## Chính sách hậu mãi công khai — bổ sung 30/10/2026
+
+| Method | Đường dẫn | Quyền | Trả về | Service |
+|---|---|---|---|---|
+| GET | `/store-policies` | Công khai | `AfterSalesPolicyResponse` (`ReturnWindowDays`, `Warranty`, `Returns`) | `StorePolicyService.get_store_policies` |
+
+Không đọc dữ liệu tài khoản/đơn hàng, trả `Cache-Control: no-store`. Thời hạn đổi lấy cùng `ReturnPolicy` với luồng tạo yêu cầu, không hard-code ở frontend. Nội dung và các giới hạn hiện hành: [Chính sách hậu mãi](after-sales-policies.md).
+
 ## Quy ước
 
 - **Xác thực:** gửi `Authorization: Bearer <access_token>` (lấy từ `/auth/login`).

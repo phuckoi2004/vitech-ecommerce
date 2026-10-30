@@ -1,13 +1,17 @@
 """Store policies the AI chat may state: warranty, exchange/return and how promotions apply.
 
 The rules are the ones the services enforce and the customer pages show (warranty_period.py and "Chính sách bảo hành";
-returns.py/exchange.py and the exchange request page). They are written once here so Gemini and the backend's own
-fallback answer quote the same text; the return window comes from configuration (RETURN_WINDOW_DAYS), never the model.
+returns.py/exchange.py and the exchange request page). Public wording in after_sales_policy.py is shared by Gemini,
+the storefront and the fallback answer; the return window comes from configuration (RETURN_WINDOW_DAYS), never the model.
 """
 
 import re
 
 from .returns import ReturnPolicy
+from .after_sales_policy import (
+    RETURN_CHECK_LINE, RETURN_LINES, RETURN_MODE_LINE, RETURN_STEPS_LINE, WARRANTY_LINES,
+    WARRANTY_REVIEW_LINE, WARRANTY_TIMING_LINE, return_window_line,
+)
 
 # On folded text. "đời máy"/"đời mới" fold like "đổi máy"/"đổi mới", so those are not policy words.
 WARRANTY_TERMS = re.compile(r"\bbao hanh\b")
@@ -16,27 +20,12 @@ RETURN_TERMS = re.compile(r"\b(?:doi tra|doi hang|tra hang|tra lai (?:hang|tien|
                           r"|doi (?:may|moi) (?:duoc|khong)|(?:duoc|muon|can) tra(?: lai)?(?: khong)?)\b")
 POLICY_TERMS = re.compile(rf"{WARRANTY_TERMS.pattern}|{RETURN_TERMS.pattern}|\bchinh sach\b")
 
-WARRANTY_LINES = (
-    "Thời hạn bảo hành tùy từng sản phẩm và được ghi trên trang sản phẩm; sản phẩm ghi 0 tháng không có bảo hành.",
-    "Bảo hành tính từ ngày giao hàng thành công đến hết số tháng bảo hành của sản phẩm.",
-    "Gửi yêu cầu bảo hành trong tài khoản: chọn sản phẩm thuộc đơn đã giao, mô tả lỗi, đính kèm ảnh/video và "
-    "Serial/IMEI nếu có.",
-    "VieTech tiếp nhận, kiểm tra điều kiện bảo hành rồi chuyển trung tâm bảo hành; kết quả (sửa chữa, thay linh kiện, "
-    "đổi máy hoặc không thể bảo hành) được thông báo cho bạn.",
-)
-RETURN_LINES = (
-    "Mỗi yêu cầu đổi mới 1 sản phẩm: còn hàng thì đổi đúng phiên bản đã mua; nếu hết hàng, bạn có thể chọn sản phẩm "
-    "khác cùng danh mục.",
-    "Nếu chọn sản phẩm giá cao hơn, bạn thanh toán thêm phần chênh lệch; phần chênh lệch còn dư không được hoàn lại. "
-    "Đơn đổi được miễn phí giao hàng tiêu chuẩn.",
-    "VieTech đối chiếu chính sách, Serial/IMEI và tình trạng thực tế của sản phẩm rồi thông báo kết quả.",
-)
-PROMOTION_LINE = ("Giá trên trang sản phẩm và thẻ gợi ý đã gồm giảm giá tự động; mã giảm giá được kiểm tra điều kiện "
+PROMOTION_LINE = ("Giá trên trang sản phẩm và thẻ gợi ý đã gồm giảm giá tự động, mã giảm giá được kiểm tra điều kiện "
                   "khi áp dụng ở giỏ hàng.")
 PROMOTION_USAGE_LINES = (
     "Mở giỏ hàng và chọn các sản phẩm muốn mua.",
     "Nhập mã vào ô mã giảm giá rồi chọn áp dụng.",
-    "Kiểm tra số tiền giảm và tổng thanh toán; mã chỉ áp dụng khi giỏ hàng đáp ứng điều kiện sản phẩm, "
+    "Kiểm tra số tiền giảm và tổng thanh toán, mã chỉ áp dụng khi giỏ hàng đáp ứng điều kiện sản phẩm, "
     "giá trị tối thiểu, thời hạn và lượt sử dụng.",
 )
 TITLES = {"Warranty": "Bảo hành", "Returns": "Đổi trả", "Promotion": "Khuyến mãi"}
@@ -81,21 +70,47 @@ def return_message_issue(text):
     return None
 
 
+def warranty_lines(question="", *, has_products=False):
+    from app.core.search_text import fold
+
+    text = fold(question)
+    if re.search(r"\b(?:phi|mien phi|van chuyen|gui may|nhan may|bao lau.*xong|bao nhieu ngay"
+                 r"|thoi gian (?:xu ly|sua)|xu ly.*bao lau|sua.*bao lau)\b", text):
+        return (WARRANTY_TIMING_LINE, "Liên hệ nhân viên VieTech trước khi gửi máy để được hướng dẫn.")
+    if re.search(r"\b(?:roi|vo|vao nuoc|tu y|can thiep|tu choi|loai tru|dieu kien|pham vi)\b", text):
+        return (WARRANTY_REVIEW_LINE, WARRANTY_LINES[2], WARRANTY_TIMING_LINE)
+    if not has_products and re.search(r"\b(?:bao lau|bao nhieu (?:thang|nam)|may (?:thang|nam)|thoi han)\b", text):
+        return (*WARRANTY_LINES[:2], "Bạn cho mình tên hoặc mã mẫu sản phẩm để kiểm tra đúng thời hạn bảo hành nhé?")
+    return (*WARRANTY_LINES, WARRANTY_REVIEW_LINE, WARRANTY_TIMING_LINE)
+
+
+def warranty_message_issue(message):
+    """Decline provider promises for paused replacements, blanket acceptance, fixed turnaround or free service."""
+    from app.core.search_text import fold
+
+    for sentence in re.split(r"[.!?\n]", fold(message or "")):
+        if re.search(r"\b(?:doi may|doi moi|thay may|1 doi 1|mot doi mot)\b", sentence):
+            if not re.search(r"\b(?:khong|chua)\s+(?:(?:ho tro|ap dung|the|duoc phep)\s+)?(?:doi|thay|1 doi 1|mot doi mot)", sentence):
+                return "cam kết đổi máy ngoài quy trình bảo hành hiện hành"
+        if re.search(r"\b(?:mien phi|khong (?:mat|ton) phi|khong tinh phi)\b", sentence):
+            return "cam kết miễn phí bảo hành khi chưa xác nhận điều kiện"
+        if re.search(r"\b(?:xu ly|sua|hoan tat|hoan thanh|tra may|nhan lai|bao hanh)\b.*\b(?:\d+|mot|hai|ba)\s*(?:ngay|gio)\b", sentence):
+            return "cam kết thời gian xử lý bảo hành chưa được xác nhận"
+        if re.search(r"\b(?:bao hanh moi loi|moi loi.*(?:duoc|deu) bao hanh|bao hanh vo dieu kien)\b", sentence):
+            return "cam kết phạm vi bảo hành chưa được xác nhận"
+    return None
+
+
 def return_lines(question=""):
     from app.core.search_text import fold
 
     text = fold(question)
     days = return_window_days()
-    window = (f"Gửi yêu cầu đổi trả trong {days} ngày kể từ ngày giao hàng (ngày giao là ngày thứ nhất)"
-              if days else "Gửi yêu cầu đổi trả trong thời hạn ghi ở trang tạo yêu cầu")
-    window += ", cho sản phẩm thuộc đơn đã giao."
-    mode = "VieTech hiện tiếp nhận yêu cầu đổi sản phẩm, mỗi phiếu đổi 1 sản phẩm; chưa hỗ trợ yêu cầu trả hàng hoàn tiền mới."
-    steps = ("Vào Tài khoản → Bảo hành và đổi trả → Tạo yêu cầu đổi trả; chọn sản phẩm trong đơn đã giao, "
-             "chọn Serial/IMEI nếu có, mô tả lý do và đính kèm ảnh minh chứng nếu cần rồi gửi yêu cầu.")
-    check = "VieTech kiểm tra thời hạn, Serial/IMEI và tình trạng thực tế trước khi xác nhận; chat chưa thể kết luận sản phẩm của bạn đủ điều kiện."
+    window = return_window_line(days)
+    mode, steps, check = RETURN_MODE_LINE, RETURN_STEPS_LINE, RETURN_CHECK_LINE
     if re.search(r"\b(?:trang thai|tien do|den dau|xong chua|duyet chua|da gui|da tao)\b", text):
         return ("Xem tiến trình phiếu trong Tài khoản → Bảo hành và đổi trả → chọn yêu cầu đã gửi.",
-                "Chat AI chưa tra cứu trạng thái phiếu cụ thể; nếu cần kiểm tra thêm, bạn liên hệ nhân viên VieTech.")
+                "Chat AI chưa tra cứu trạng thái phiếu cụ thể, nếu cần kiểm tra thêm, bạn liên hệ nhân viên VieTech.")
     if re.search(r"\b(?:hoan tien|hoan tra|tra hang|tra lai|duoc tra)\b", text):
         return (mode, "Nếu bạn đang có phiếu trả hàng cũ, xem kết quả trong tài khoản hoặc liên hệ nhân viên để kiểm tra.")
     if re.search(r"\b(?:bao lau|bao nhieu ngay|may ngay|thoi han|han doi)\b", text):

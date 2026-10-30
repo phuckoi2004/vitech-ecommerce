@@ -42,19 +42,19 @@ RANK_BY = ("quantity", "revenue")
 MAX_TOP_LIMIT = 100
 
 REVENUE_LIMITATIONS = (
-    "Doanh thu theo đơn đã giao (Delivered/Completed) có Payment Success, mốc DeliveredAt; không phải lợi nhuận.",
-    "Tiền hoàn tính mọi Refund Success của các đơn này đến thời điểm truy vấn; Refund Pending chỉ để tham khảo.",
+    "Doanh thu theo đơn đã giao (Delivered/Completed) có Payment Success, mốc DeliveredAt, không phải lợi nhuận.",
+    "Tiền hoàn tính mọi Refund Success của các đơn này đến thời điểm truy vấn, Refund Pending chỉ để tham khảo.",
     "Khoản thu trùng/thừa chưa hoàn vẫn nằm trong tiền đã thu (xem đối soát thanh toán).",
 )
 COGS_LIMITATIONS = (
-    "Giá vốn theo OrderItems.UnitCost (snapshot lúc đặt hàng); UnitCost = 0 được coi là thiếu giá vốn.",
-    "Chưa trừ giá vốn của hàng trả lại đã nhập kho (chưa có quy tắc định giá lại); chưa tính chi phí máy thay thế "
+    "Giá vốn theo OrderItems.UnitCost (snapshot lúc đặt hàng), UnitCost = 0 được coi là thiếu giá vốn.",
+    "Chưa trừ giá vốn của hàng trả lại đã nhập kho (chưa có quy tắc định giá lại), chưa tính chi phí máy thay thế "
     "bảo hành.",
     "Không tính lợi nhuận.",
 )
 INVENTORY_LIMITATIONS = (
     "StockQuantity là tồn khả dụng (có thể bán) theo ProductVariants.",
-    "Trạng thái serial chỉ có với biến thể quản lý serial; hàng không serial không có dữ liệu riêng cho hàng đang giữ, "
+    "Trạng thái serial chỉ có với biến thể quản lý serial, hàng không serial không có dữ liệu riêng cho hàng đang giữ, "
     "trả về hay hỏng.",
     "Returned gồm cả hàng trả về hỏng và máy cũ sau đổi bảo hành (schema không tách hàng hỏng).",
 )

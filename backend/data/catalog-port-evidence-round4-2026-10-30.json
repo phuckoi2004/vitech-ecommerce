@@ -1,0 +1,158 @@
+{
+  "VerifiedAt": "2026-10-30",
+  "SnapshotFingerprint": "60aa682ae01069fa8b144afd58bd1fe246b73352a57fc38598d844b05ab980d9",
+  "Policy": "Six existing port attributes only; verified manufacturer signal tables and exact model manuals. No new JSON keys, columns, tables, price or stock writes.",
+  "Sources": [
+    {
+      "URL": "https://www.lge.co.kr/monitors/27g610a",
+      "Title": "Màn hình Gaming LG UltraGear 27G610A-B 27 inch manufacturer input specifications",
+      "ReadStatus": "read",
+      "LocalFile": "sources/lg-27g610a.html",
+      "SHA256": "074abf33123ce2fd4a60b0c7a8efb5e078614f846990eafaa74898b1d3eeba4f"
+    },
+    {
+      "URL": "https://www.lge.co.kr/monitors/24u631a",
+      "Title": "Màn hình LG 24U631A-B 24 inch manufacturer input specifications",
+      "ReadStatus": "read",
+      "LocalFile": "sources/lg-24u631a.html",
+      "SHA256": "178acc4644f8bb0d60cd91bdf46eca9e98ea8feed2cb1e55a10a5406c5d0a7e3"
+    },
+    {
+      "URL": "https://www.lge.co.kr/monitors/24u411a",
+      "Title": "Màn hình LG 24U411A-B 24 inch manufacturer input specifications",
+      "ReadStatus": "read",
+      "LocalFile": "sources/lg-24u411a.html",
+      "SHA256": "a510b90b18d41e9d282354f86b1bda3b437d35bcce35a904125b73ec4084d263"
+    },
+    {
+      "URL": "https://www.dell.com/en-us/shop/dell-ultrasharp-24-monitor-u2424h-without-stand/apd/210-bkzb/monitors-monitor-accessories",
+      "Title": "Màn hình văn phòng Dell U2424H 24 inch manufacturer input specifications",
+      "ReadStatus": "read_via_web",
+      "LocalFile": ""
+    },
+    {
+      "URL": "https://dlcdnets.asus.com/pub/ASUS/LCD%20Monitors/MB169CK/ASUS_MB169CK_English.pdf?model=MB169CK",
+      "Title": "Màn hình di động ASUS ZenScreen MB169CK 16 inch manufacturer input specifications",
+      "ReadStatus": "read",
+      "LocalFile": "sources/asus-mb169ck.pdf",
+      "SHA256": "0e174b5ed8f55995ab86d929554d34abd698f1dc55aba7da424dd86ee4d353c4"
+    },
+    {
+      "URL": "https://www.viewsonicglobal.com/public/products_download/user_guide/display/VA2708-2K-HD_VA2708-2K-MHD/VA2708-2K-HD_VA2708-2K-MHD_UG_ENG.pdf",
+      "Title": "Màn hình Viewsonic VA2708-2K-MHD 27 inch manufacturer input specifications",
+      "ReadStatus": "read",
+      "LocalFile": "sources/viewsonic-va2708.pdf",
+      "SHA256": "6018e87395d47eb3403b03f996cecd6acd6a8df2d3b08bc4b2a1e44d5973fd8f"
+    }
+  ],
+  "Values": [
+    {
+      "ProductId": "4e16f4a8-996a-4810-9037-57326a1e174d",
+      "ProductName": "Màn hình Gaming LG UltraGear 27G610A-B 27 inch",
+      "Path": "/Cổng kết nối",
+      "Before": "2 x HDMI; 1 x DisplayPort 1.4; Đầu ra tai nghe (3 đầu cắm)",
+      "Proposed": "2 x HDMI 2.0 (nhận hình tối đa 2560 x 1440 @ 144 Hz); 1 x DisplayPort 1.4 (nhận hình tối đa 2560 x 1440 @ 200 Hz); Đầu ra tai nghe (3 đầu cắm)",
+      "Decision": "correction",
+      "ChangeKind": "clarification",
+      "SourceURL": "https://www.lge.co.kr/monitors/27g610a",
+      "VerifiedAt": "2026-10-30",
+      "Confidence": "high",
+      "ModelMatch": "exact",
+      "RegionScope": "LG 27G610A hardware platform; exact 27G610A-B matched on LG Japan https://www.lg.com/jp/monitors/gaming-monitors/27g610a-b/; input timings only, no regional warranty or bundle copied.",
+      "Reason": "Mục Input signal ghi riêng HDMI2.0: 2560 x 1440 at 144 Hz và DP1.4: 2560 x 1440 at 200 Hz. Giữ số lượng 2 HDMI/1 DP và âm thanh; không lấy 200 Hz của panel gán cho HDMI."
+    },
+    {
+      "ProductId": "79127e04-ac3b-4679-81f3-a485f07502fa",
+      "ProductName": "Màn hình LG 24U631A-B 24 inch",
+      "Path": "/Cổng kết nối",
+      "Before": "HDMI; Headphone out 3-pole (Sound Only); USB-C nhận hình (Power Delivery 15 W)",
+      "Proposed": "HDMI 2.0 (nhận hình tối đa 2560 x 1440 @ 100 Hz); Headphone out 3-pole (Sound Only); USB-C nhận hình (tối đa 2560 x 1440 @ 100 Hz, Power Delivery 15 W)",
+      "Decision": "correction",
+      "ChangeKind": "clarification",
+      "SourceURL": "https://www.lge.co.kr/monitors/24u631a",
+      "VerifiedAt": "2026-10-30",
+      "Confidence": "high",
+      "ModelMatch": "exact",
+      "RegionScope": "Exact LG 24U631A-B confirmed by https://www.lg.com/ca_en/business/monitors-pcs/monitors/lg-monitor/24u631a-b/; same 24U631A platform and single HDMI/USB-C/15W connectivity; signal data only.",
+      "Reason": "Mục Input signal ghi HDMI2.0 & USB-C: 2560 x 1440 at 100. Giữ PD 15 W và đầu ra tai nghe. Đối chiếu đúng 24U631A-B trên LG Canada; không suy từ chuẩn HDMI hoặc khả năng sạc USB-C."
+    },
+    {
+      "ProductId": "4b94cd26-3648-49d5-969c-13316fb87eca",
+      "ProductName": "Màn hình LG 24U411A-B 24 inch",
+      "Path": "/Cổng kết nối",
+      "Before": "D-Sub ; HDMI",
+      "Proposed": "D-Sub (nhận hình tối đa 1920 x 1080 @ 75 Hz); HDMI 2.0 (nhận hình tối đa 1920 x 1080 @ 120 Hz)",
+      "Decision": "correction",
+      "ChangeKind": "clarification",
+      "SourceURL": "https://www.lge.co.kr/monitors/24u411a",
+      "VerifiedAt": "2026-10-30",
+      "Confidence": "high",
+      "ModelMatch": "exact",
+      "RegionScope": "LG 24U411A platform, exact 24U411A-B on https://www.lg.com/us/support/product/lg-24U411A-B.AUSQ?tab=1; no US warranty copied.",
+      "Reason": "LG ghi riêng D-Sub 1920 x 1080 at 75 Hz và HDMI2.0 1920 x 1080 at 120 Hz. Chỉ diễn giải hai cổng đang có; không thêm kết nối DisplayPort/USB-C hoặc coi D-Sub là HDMI."
+    },
+    {
+      "ProductId": "994b21cc-e898-4fd8-8c5f-e011fa2081b3",
+      "ProductName": "Màn hình văn phòng Dell U2424H 24 inch",
+      "Path": "/Cổng kết nối",
+      "Before": "1 x DisplayPort 1.4 (nhận hình, DRR cho Microsoft Windows, HDCP 1.4), 1 x DisplayPort 1.4 (Out, MST, HDCP 1.4), 1 x HDMI 1.4 (nhận hình tối đa 1920 x 1080 @ 120 Hz TMDS, HDCP 1.4), 1 x USB Type-C upstream (chỉ truyền dữ liệu, 10 Gbps), 1 x USB Type-C downstream (10 Gbps, sạc 15 W), 3 x USB Type-A downstream (10 Gbps), Cổng ra âm thanh",
+      "Proposed": "1 x DisplayPort 1.4 (nhận hình tối đa 1920 x 1080 @ 120 Hz, DRR cho Microsoft Windows, HDCP 1.4), 1 x DisplayPort 1.4 (Out, MST, HDCP 1.4), 1 x HDMI 1.4 (nhận hình tối đa 1920 x 1080 @ 120 Hz TMDS, HDCP 1.4), 1 x USB Type-C upstream (chỉ truyền dữ liệu, 10 Gbps), 1 x USB Type-C downstream (10 Gbps, sạc 15 W), 3 x USB Type-A downstream (10 Gbps), Cổng ra âm thanh",
+      "Decision": "correction",
+      "ChangeKind": "clarification",
+      "SourceURL": "https://www.dell.com/en-us/shop/dell-ultrasharp-24-monitor-u2424h-without-stand/apd/210-bkzb/monitors-monitor-accessories",
+      "VerifiedAt": "2026-10-30",
+      "Confidence": "high",
+      "ModelMatch": "exact",
+      "RegionScope": "Exact Dell U2424H display hardware; without-stand SKU has identical display inputs. Only DisplayPort input timing changes.",
+      "Reason": "Dell nêu ngay trong dòng DisplayPort 1.4 input: supports up to FHD 1920 x 1080 120 Hz. Bản without stand cùng U2424H chỉ khác chân đế. Giữ nguyên DP Out MST, HDMI, các USB và audio; không gán chế độ input cho DP Out hoặc USB chỉ dữ liệu."
+    },
+    {
+      "ProductId": "7b6e5dbc-ab5c-4890-89f9-5857ecff0ddb",
+      "ProductName": "Màn hình di động ASUS ZenScreen MB169CK 16 inch",
+      "Path": "/Cổng kết nối",
+      "Before": "1x Mini HDMI",
+      "Proposed": "2 x USB-C (DisplayPort Alt Mode, nhận hình tối đa 1920 x 1080 @ 60 Hz); 1 x Mini HDMI (nhận hình tối đa 1920 x 1080 @ 60 Hz)",
+      "Decision": "correction",
+      "ChangeKind": "clarification",
+      "SourceURL": "https://dlcdnets.asus.com/pub/ASUS/LCD%20Monitors/MB169CK/ASUS_MB169CK_English.pdf?model=MB169CK",
+      "VerifiedAt": "2026-10-30",
+      "Confidence": "high",
+      "ModelMatch": "exact",
+      "RegionScope": "Exact ASUS MB169CK worldwide hardware. USB-C count cross-checked at https://www.asus.com/es/displays-desktops/monitors/zenscreen/asus-zenscreen-mb169ck/techspec/.",
+      "Reason": "Hướng dẫn ASUS MB169CK, trang PDF 23 và 26: đầu vào USB Type-C DisplayPort Alt Mode/Mini HDMI; Supported Timing List đánh dấu 1920x1080-60Hz cho cả HDMI và TYPE-C. Trang I/O và menu chọn USB-C-1/USB-C-2 xác nhận hai USB-C bị thiếu trong catalog. Không gán USB-A hoặc DisplayLink."
+    },
+    {
+      "ProductId": "9c384149-98c5-4ec1-96b2-2206462aef0a",
+      "ProductName": "Màn hình Viewsonic VA2708-2K-MHD 27 inch",
+      "Path": "/Cổng kết nối",
+      "Before": "1x Đầu ra âm thanh 3,5 mm; 2x HDMI 2.0; 1x DisplayPort; Cổng cắm nguồn: DC Socket (Center Positive)",
+      "Proposed": "1x Đầu ra âm thanh 3,5 mm; 2x HDMI 2.0 (nhận hình tối đa 2560 x 1440 @ 100 Hz); 1x DisplayPort 1.4 (nhận hình tối đa 2560 x 1440 @ 100 Hz); Cổng cắm nguồn: DC Socket (Center Positive)",
+      "Decision": "correction",
+      "ChangeKind": "clarification",
+      "SourceURL": "https://www.viewsonicglobal.com/public/products_download/user_guide/display/VA2708-2K-HD_VA2708-2K-MHD/VA2708-2K-HD_VA2708-2K-MHD_UG_ENG.pdf",
+      "VerifiedAt": "2026-10-30",
+      "Confidence": "high",
+      "ModelMatch": "exact",
+      "RegionScope": "Exact VA2708-2K-MHD in the combined VA2708-2K-HD/VA2708-2K-MHD manual linked by https://www.viewsonic.com/global/products/lcd/VA2708-2K-MHD; input timings common to both listed inputs.",
+      "Reason": "Hướng dẫn hãng trang PDF 27 ghi DP1.4 và HDMI2.0 đều 48-100 Hz; trang 28 Supported timings có 2560x1440 @ 60,75,100 Hz. Link manual xuất phát từ đúng trang VA2708-2K-MHD của ViewSonic. Giữ HDMI2.0 theo manual/cấu hình catalog; trang giới thiệu hiện hiển thị HDMI2.1 khác manual nên không tự nâng phiên bản. Không dùng mẫu VA2708-4K hoặc VA2708-2K-HD-2."
+    }
+  ],
+  "ManualReview": [
+    {
+      "Model": "Acer Swift Air 14 SFA14-I31-55NR",
+      "Reason": "Existing exact manual confirms DisplayPort output but no per-port Hz maximum. Do not infer 4K60 from USB4/Thunderbolt."
+    },
+    {
+      "Model": "LG 25G523-B",
+      "Reason": "No exact primary input-timing document found; do not substitute another 25G5xx model."
+    },
+    {
+      "Model": "Apple MacBook Air M4",
+      "Reason": "Tech specs list two external 6K60 displays while localized article 122212 lists higher single-display modes. Preserve prior value pending reconciliation; do not choose the higher number."
+    },
+    {
+      "Model": "ASUS VG27AQ5F / VU249CFE-P / Xiaomi A27I-QI 2026",
+      "Reason": "Current pages give panel resolution and separate frequency ranges. No exact per-input timing table read in this round; do not combine independent maxima into an asserted mode."
+    }
+  ]
+}

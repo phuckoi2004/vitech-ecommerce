@@ -16,6 +16,10 @@ export function listCategoryOffers({ signal } = {}) {
   return request('/pricing/category-offers', { signal })
 }
 
+export function getStorePolicies({ signal } = {}) {
+  return request('/store-policies', { signal })
+}
+
 // PageResponse[ProductSummary]. Without `sort`: relevance for keyword searches, newest for browsing. `specs` are "<Key>:<Value>" options
 // from getCategoryFilters and need a categoryId.
 export function searchProducts({ keyword, categoryId, brandId, includeDescendants = false, minPrice, maxPrice, sort, inStock = false,

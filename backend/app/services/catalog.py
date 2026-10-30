@@ -104,7 +104,7 @@ def reject_inventory_fields(values: Mapping) -> None:
     present = sorted(field for field in INVENTORY_FIELDS if field in values)
     if present:
         raise BusinessRuleError(
-            f"Không cập nhật {', '.join(present)} qua CRUD biến thể; dùng nhận hàng/khai báo tồn đầu kỳ/điều chỉnh kho",
+            f"Không cập nhật {', '.join(present)} qua CRUD biến thể, dùng nhận hàng/khai báo tồn đầu kỳ/điều chỉnh kho",
             code="inventory_field_not_editable",
         )
 
@@ -921,7 +921,7 @@ class ProductVariantService(BaseService):
         ]
         if reasons:
             raise BusinessRuleError(
-                "Không thể tắt quản lý Serial/IMEI: " + "; ".join(reasons)
+                "Không thể tắt quản lý Serial/IMEI: " + ", ".join(reasons)
                 + ". Hãy tạo biến thể mới nếu cần bán không theo serial",
                 code="serial_tracking_in_use",
             )
@@ -1064,7 +1064,7 @@ class ProductSerialService(BaseService):
         """Không xóa cứng Serial/IMEI (giữ lịch sử kho/bán/bảo hành); hàng rời kho: điều chỉnh giảm (WrittenOff)."""
         require_role(actor, *ADMIN_ONLY)
         raise BusinessRuleError(
-            "Không xóa Serial/IMEI; dùng điều chỉnh giảm tồn để loại khỏi kho", code="serial_delete_not_allowed"
+            "Không xóa Serial/IMEI, dùng điều chỉnh giảm tồn để loại khỏi kho", code="serial_delete_not_allowed"
         )
 
     def _get(self, serial_id: uuid.UUID, *, lock: bool = False) -> ProductSerial:
