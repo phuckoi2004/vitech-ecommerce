@@ -6,6 +6,7 @@ import { listCategoryOffers } from '../../../lib/catalog-api.js'
 import { formatDiscountPercent, formatMoney } from '../../../lib/format.js'
 import { categoryPath } from '../../routes/paths.js'
 import { ArrowRightIcon } from '../icons.jsx'
+import StoreImage from '../StoreImage.jsx'
 import ScrollRail from './ScrollRail.jsx'
 
 // Figma's promotional layout, with captions based on actual automatic discounts.
@@ -17,7 +18,7 @@ function Shortcut({ category, offer, loading }) {
     if (/^(laptop|may-tinh-xach-tay)$/.test(category.Slug)) {
       const amount = Number(offer.MaxDiscountAmount)
       headline = `Ưu đãi đến ${amount >= 1_000_000
-        ? `${(amount / 1_000_000).toLocaleString('vi-VN', { maximumFractionDigits: 6 })} TRIỆU`
+        ? `${(amount / 1_000_000).toLocaleString('vi-VN', { maximumFractionDigits: 6 })}\u00a0TRIỆU`
         : formatMoney(amount)}`
     } else headline = `Giảm đến ${formatDiscountPercent(offer.MaxDiscountPercent)}`
   } else if (offer?.AvailableProductCount === 0) {
@@ -25,12 +26,15 @@ function Shortcut({ category, offer, loading }) {
   }
 
   return <li className="home-shortcut">
-    <h3>{category.Name}</h3>
-    <p className="home-shortcut-headline">{headline}</p>
-    <Link className={buttonClassName({ className: 'home-cta' })} to={categoryPath(category.Slug)}
-      aria-label={`Mua ngay: ${category.Name}`}>
-      Mua ngay <ArrowRightIcon className="size-4" />
-    </Link>
+    <div className="home-shortcut-copy">
+      <h3>{category.Name}</h3>
+      <p className="home-shortcut-headline">{headline}</p>
+      <Link className={buttonClassName({ className: 'home-cta' })} to={categoryPath(category.Slug)}
+        aria-label={`Mua ngay: ${category.Name}`}>
+        Mua ngay <ArrowRightIcon className="size-4" />
+      </Link>
+    </div>
+    <StoreImage src={category.ImageUrl} alt="" className="home-shortcut-image" loading="lazy" decoding="async" />
   </li>
 }
 
