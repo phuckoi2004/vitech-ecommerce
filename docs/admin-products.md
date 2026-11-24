@@ -95,7 +95,7 @@ cd D:\vitech-ecommerce\frontend
 npm.cmd run dev -- --configLoader native
 ~~~
 
-Backend dùng auth state memory ở môi trường phát triển; khởi động lại backend có thể khiến phiên cũ hết hiệu lực và cần đăng nhập lại.
+Môi trường local dùng `AUTH_STATE_BACKEND=sqlite` theo `.env.example`, lưu phiên ở `output/runtime/auth-state.sqlite3` (được Git bỏ qua) để giữ đăng nhập khi backend tải lại. Nếu chuyển từ `memory`, cần đăng nhập lại một lần. Production vẫn bắt buộc Redis.
 
 
 ---

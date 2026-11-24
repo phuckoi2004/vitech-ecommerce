@@ -119,4 +119,10 @@ def get_auth_state(settings: AuthSettings) -> StateStore:
         return RedisStateStore(settings.redis_url)
     if settings.app_env not in {"development", "test"}:
         raise StateUnavailable()
+    if settings.state_backend == "sqlite":
+        from pathlib import Path
+        from .sqlite_state import SQLiteStateStore
+
+        path = settings.state_path or Path(__file__).resolve().parents[3] / "output" / "runtime" / "auth-state.sqlite3"
+        return SQLiteStateStore(path)
     return MemoryStateStore()

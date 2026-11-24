@@ -50,12 +50,87 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  vi.useRealTimers()
   cancelPendingRefresh()
   document.cookie = 'vietech_csrf=; Path=/; Max-Age=0'
   vi.unstubAllGlobals()
 })
 
 describe('API calls with the access token', () => {
+  test.each(['Admin', 'Staff', 'Customer'])('a %s access token is refreshed before the first request after fifteen minutes', async (role) => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    const calls = backend({
+      login: sessionData(role), renewed: sessionData(role, 'renewed'),
+      resource: (_url, options) => options.headers.Authorization === 'Bearer renewed-access'
+        ? jsonResponse({ ok: true }) : jsonResponse({ detail: 'Access token hết hạn' }, 401),
+    })
+    const { result } = renderAuth()
+    await waitFor(() => expect(result.current.sessionReady).toBe(true))
+    await act(() => (role === 'Customer' ? result.current.signInCustomer : result.current.signInInternal)('test@example.test', 'Password1!'))
+    setCsrfCookie('csrf-1')
+    vi.setSystemTime(Date.now() + 901000)
+    let response
+    await act(async () => { response = await result.current.withAccessToken((token) => request('/orders', { accessToken: token })) })
+    expect(response).toEqual({ ok: true })
+    expect(refreshCalls(calls)).toHaveLength(1)
+    expect(calls.filter((call) => call.url === '/api/orders').map((call) => call.headers.Authorization)).toEqual(['Bearer renewed-access'])
+    expect(result.current.role).toBe(role)
+    expect(result.current.endReason).toBeNull()
+  })
+
+  test('a delayed 401 reuses the token another request already refreshed', async () => {
+    let releaseOld
+    const oldResponse = new Promise((resolve) => { releaseOld = resolve })
+    const calls = backend({ resource: async (url, options) => {
+      if (options.headers.Authorization === 'Bearer renewed-access') return jsonResponse({ ok: true })
+      if (url === '/api/slow') await oldResponse
+      return jsonResponse({ detail: 'Access token hết hạn' }, 401)
+    } })
+    const { result } = renderAuth()
+    await waitFor(() => expect(result.current.sessionReady).toBe(true))
+    await act(() => result.current.signInInternal('test@example.test', 'Password1!'))
+    setCsrfCookie('csrf-1')
+    await act(async () => {
+      const slow = result.current.withAccessToken((token) => request('/slow', { accessToken: token }))
+      expect(await result.current.withAccessToken((token) => request('/fast', { accessToken: token }))).toEqual({ ok: true })
+      releaseOld()
+      expect(await slow).toEqual({ ok: true })
+    })
+    expect(refreshCalls(calls)).toHaveLength(1)
+    expect(calls.filter((call) => call.url === '/api/slow').map((call) => call.headers.Authorization)).toEqual(['Bearer initial-access', 'Bearer renewed-access'])
+  })
+
+  test('updating the profile does not extend an access token lifetime', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    const calls = backend({ resource: () => jsonResponse({ ok: true }) })
+    const { result } = renderAuth()
+    await waitFor(() => expect(result.current.sessionReady).toBe(true))
+    await act(() => result.current.signInInternal('test@example.test', 'Password1!'))
+    setCsrfCookie('csrf-1')
+    vi.setSystemTime(Date.now() + 450000)
+    act(() => result.current.updateUser({ ...result.current.user, FullName: 'Tên mới' }))
+    vi.setSystemTime(Date.now() + 451000)
+    await act(() => result.current.withAccessToken((token) => request('/orders', { accessToken: token })))
+    expect(refreshCalls(calls)).toHaveLength(1)
+    expect(calls.filter((call) => call.url === '/api/orders')[0].headers.Authorization).toBe('Bearer renewed-access')
+  })
+
+  test('refresh never silently changes to another account of the same role', async () => {
+    const calls = backend({
+      renewed: { ...sessionData('Admin', 'other'), user: { ...sessionData().user, UserId: 'another-admin' } },
+      resource: () => jsonResponse({ detail: 'Access token hết hạn' }, 401),
+    })
+    const { result } = renderAuth()
+    await waitFor(() => expect(result.current.sessionReady).toBe(true))
+    await act(() => result.current.signInInternal('test@example.test', 'Password1!'))
+    setCsrfCookie('csrf-1')
+    await act(async () => {
+      await expect(result.current.withAccessToken((token) => request('/orders', { accessToken: token }))).rejects.toMatchObject({ status: 403 })
+    })
+    expect(result.current.session).toBeNull()
+    expect(calls.filter((call) => call.url === '/api/orders')).toHaveLength(1)
+  })
+
   test.each(['Admin', 'Customer'])('a %s session stays signed in when an expired access token is renewed', async (role) => {
     const calls = backend({
       login: sessionData(role),

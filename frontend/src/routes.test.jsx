@@ -252,7 +252,7 @@ describe('internal menu', () => {
     for (const name of ['Tài khoản', 'Đánh giá', 'Tin tức & Banner']) expect(menu.queryByRole('button', { name })).not.toBeInTheDocument()
     for (const name of ['Sản phẩm', 'Đơn hàng', 'Nhập hàng', 'Nhà cung cấp', 'Đổi trả', 'Bảo hành', 'Báo cáo thống kê', 'Hỗ trợ khách hàng', 'Thanh toán']) expect(menu.getByRole('button', { name })).toBeInTheDocument()
     expect(menu.queryByRole('button', { name: 'Kho hàng' })).not.toBeInTheDocument()
-    expect(screen.getByRole('article', { name: 'Lãi gộp' })).toBeInTheDocument()
+    expect(await screen.findByRole('article', { name: 'Lãi gộp' })).toBeInTheDocument()
     expect(screen.queryByRole('article', { name: 'Số đơn đã giao' })).not.toBeInTheDocument()
     expect(screen.queryByRole('article', { name: 'Số đơn hủy' })).not.toBeInTheDocument()
   })
@@ -260,7 +260,8 @@ describe('internal menu', () => {
   test('resource tabs follow URL history and do not leak when switching sidebar sections', async () => {
     const router = renderAt('/admin/inventory', makeAuth({ role: 'Staff', permissions: ['admin.portal', 'inventory:view', 'orders:view'] }))
     await screen.findByRole('heading', { level: 1, name: 'Kho hàng' })
-    await act(async () => screen.getByRole('button', { name: 'Sắp hết hàng' }).click())
+    const lowStock = await screen.findByRole('button', { name: 'Sắp hết hàng' })
+    await act(async () => lowStock.click())
     expect(location(router)).toBe('/admin/inventory?tab=low-stock')
     expect(await screen.findByRole('heading', { level: 3, name: 'Sắp hết hàng' })).toBeInTheDocument()
     const menu = within(screen.getByRole('navigation', { name: 'Menu quản trị' }))

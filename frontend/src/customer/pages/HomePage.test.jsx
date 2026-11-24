@@ -6,6 +6,7 @@ import { afterEach, describe, expect, test, vi } from 'vitest'
 import { AuthContext } from '../../auth/context.js'
 import { appRoutes } from '../../routes.jsx'
 import { makeAuth } from '../../test/auth.js'
+import { productCardsResponse } from '../../test/catalog.js'
 
 const category = (id, name, slug, parent = null) => ({
   CategoryId: id, ParentCategoryId: parent, Name: name, Slug: slug, Description: null, DisplayOrder: 0, IsActive: true,
@@ -76,6 +77,7 @@ function mockApi(overrides = {}) {
       return json({ Items: ids.slice(0, size).map((id) => ({ ProductId: id, BrandId: DETAILS[id].BrandId,
         CategoryId: DETAILS[id].CategoryId, SoldQuantity: DETAILS[id].SoldQuantity })), Total: ids.length, Page: 1, PageSize: size })
     }
+    if (path === '/products/cards') return productCardsResponse(url, DETAILS, overrides)
     const product = /^\/products\/(\w+)$/.exec(path)
     if (product && DETAILS[product[1]]) return json(DETAILS[product[1]])
     if (path === '/users/me/notifications/unread-count') return json({ Count: 3 })

@@ -1,22 +1,22 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { promotionTargetName } from '../lib/promotions.js'
-import { ALL_PROMOTION_CATEGORIES, SAVED_PROMOTION_SCOPE, promotionCategoryFamily, promotionProductCategory } from '../lib/promotion-targets.js'
+import { ALL_PROMOTION_CATEGORIES, SAVED_PROMOTION_SCOPE, promotionSelectedFamily, promotionProductCategory } from '../lib/promotion-targets.js'
 
 const searchKey = (text) => String(text).normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/gi, 'd').toLocaleLowerCase('vi')
 export default function PromotionTargetPicker({ products, categories = [], selection, onChange, disabled }) {
   const [open, setOpen] = useState(false), [keyword, setKeyword] = useState('')
   const root = useRef(null), trigger = useRef(null), panelId = useId()
-  const unavailable = disabled || !selection.categoryId || [ALL_PROMOTION_CATEGORIES, SAVED_PROMOTION_SCOPE].includes(selection.categoryId)
+  const unavailable = disabled || !selection.categoryIds.length || selection.categoryIds.some((id) => [ALL_PROMOTION_CATEGORIES, SAVED_PROMOTION_SCOPE].includes(id))
   useEffect(() => {
     if (!open) return
     const outside = (event) => { if (!root.current?.contains(event.target)) setOpen(false) }
     document.addEventListener('pointerdown', outside)
     return () => document.removeEventListener('pointerdown', outside)
   }, [open])
-  const family = promotionCategoryFamily(selection.categoryId, categories)
+  const family = promotionSelectedFamily(selection.categoryIds, categories)
   const available = products.filter((product) => family.includes(promotionProductCategory(product)))
   const shown = available.filter((product) => searchKey(product.Name).includes(searchKey(keyword.trim())))
-  const summary = !selection.categoryId ? 'Chọn danh mục trước' : selection.categoryId === SAVED_PROMOTION_SCOPE ? 'Theo phạm vi đã lưu' : selection.allProducts ? 'Tất cả sản phẩm' : promotionTargetName(selection.productIds, available, 'ProductId') || 'Chọn sản phẩm áp dụng'
+  const summary = !selection.categoryIds.length ? 'Chọn danh mục trước' : selection.categoryIds.includes(SAVED_PROMOTION_SCOPE) ? 'Theo phạm vi đã lưu' : selection.allProducts ? 'Tất cả sản phẩm' : promotionTargetName(selection.productIds, available, 'ProductId') || 'Chọn sản phẩm áp dụng'
   return <div ref={root} className="relative flex min-w-0 flex-col gap-[7px]" onKeyDown={(event) => { if (open && event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); setOpen(false); trigger.current?.focus() } }}>
     <span className="text-xs leading-[normal] font-medium">Sản phẩm</span>
     <button ref={trigger} type="button" aria-label="Sản phẩm áp dụng" aria-expanded={open && !unavailable} aria-controls={open && !unavailable ? panelId : undefined} disabled={unavailable} onClick={() => setOpen((value) => !value)} className="relative h-[42px] w-full min-w-0 cursor-pointer truncate rounded-[9px] border border-admin-border bg-white py-0 pr-8 pl-3 text-left text-xs leading-[normal] text-admin-text disabled:cursor-default disabled:bg-admin-page disabled:text-admin-muted">

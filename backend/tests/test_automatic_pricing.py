@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.core.dependencies import get_optional_actor
 from app.database import get_db
-from app.models import Coupon, Order, ProductVariant, Promotion
+from app.models import Category, Coupon, Order, Product, ProductVariant, Promotion
 from app.routers.catalog import router as catalog_router
 from app.routers.dependencies import get_product_service
 from app.schemas.pricing import QuoteItemRequest
@@ -77,6 +77,10 @@ def test_public_detail_same_sku_prices_and_per_unit_discount(pricing_shop):
     assert Decimal(variant["SalePrice"]) == 33000000
     assert Decimal(variant["DiscountPercent"]) == Decimal("5.71")
     assert "CostPrice" not in variant and "UnitCost" not in variant
+    cards = ok(s["client"].get("/products/cards", params={"product_id": str(s["variant"].ProductId)}))
+    assert cards[0]["Variants"][0]["SalePrice"] == variant["SalePrice"]
+    assert cards[0]["Variants"][0]["OriginalPrice"] == variant["OriginalPrice"]
+    assert "CostPrice" not in cards[0]["Variants"][0]
     quote = ok(preview(s, quantity=2))
     assert Decimal(quote["AutomaticDiscount"]) == 4000000
     assert Decimal(quote["Total"]) == 66000000
@@ -316,3 +320,44 @@ def test_last_redemption_reserved_once_and_persisted_with_order(pricing_shop):
             with service.transaction():
                 service.reserve_order_quote(actor, items, coupon_code="TEST300")
         assert error.value.code == "coupon_usage_exceeded"
+
+
+@pytest.mark.parametrize("selected_count", [2, 3])
+@pytest.mark.parametrize("mode", ["Automatic", "Coupon"])
+def test_multiple_sibling_categories_discount_only_products_in_the_selected_categories(pricing_shop, selected_count, mode):
+    s = pricing_shop
+    root_id = uuid.uuid4()
+    category_ids, variant_ids = [], []
+    with Session(s["engine"]) as session:
+        source = session.get(ProductVariant, s["variant"].ProductVariantId)
+        session.add(Category(CategoryId=root_id, Name="Laptop", Slug="multi-laptops"))
+        session.flush()
+        for name in ["gaming", "study", "office", "other"]:
+            category_id, product_id, variant_id = uuid.uuid4(), uuid.uuid4(), uuid.uuid4()
+            category_ids.append(category_id)
+            variant_ids.append(variant_id)
+            session.add(Category(CategoryId=category_id, ParentCategoryId=root_id, Name=f"Laptop {name}", Slug=f"multi-{name}"))
+            product_values = {column.key: getattr(source.product, column.key) for column in Product.__table__.columns}
+            product_values.update(ProductId=product_id, CategoryId=category_id, Name=f"Laptop {name}", Slug=f"multi-product-{name}")
+            session.add(Product(**product_values))
+            variant_values = {column.key: getattr(source, column.key) for column in ProductVariant.__table__.columns}
+            variant_values.update(ProductVariantId=variant_id, ProductId=product_id, Sku=f"MULTI-{name}", Price=Decimal("1000000"), CostPrice=Decimal("500000"))
+            session.add(ProductVariant(**variant_values))
+        session.commit()
+    selected = category_ids[:selected_count]
+    promotion = program(s, mode=mode, amount="10", products=[], DiscountType="Percentage", CategoryIds=[str(value) for value in selected])
+    assert {item["CategoryId"] for item in promotion["Categories"]} == {str(value) for value in selected}
+    assert promotion["Products"] == []
+    payload = {"Items": [{"ProductVariantId": str(value), "Quantity": 1} for value in variant_ids]}
+    if mode == "Coupon":
+        ok(s["client"].post("/admin/coupons", json={"PromotionId": promotion["PromotionId"], "Code": "MULTICAT10", "Name": "Giảm các nhóm laptop"}), 201)
+        payload["CouponCode"] = "MULTICAT10"
+    quote = ok(s["client"].post("/pricing/quote", json=payload))
+    field = "AutomaticDiscount" if mode == "Automatic" else "CouponDiscount"
+    assert Decimal(quote[field]) == selected_count * 100000
+    assert Decimal(quote["Total"]) == 4000000 - selected_count * 100000
+    lines = {line["ProductVariantId"]: line for line in quote["Items"]}
+    for index, variant_id in enumerate(variant_ids):
+        assert Decimal(lines[str(variant_id)][field]) == (100000 if index < selected_count else 0)
+    with Session(s["engine"]) as session:
+        assert session.scalar(select(Order.OrderId).limit(1)) is None

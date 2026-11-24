@@ -5,6 +5,7 @@ import LoadingState from '../../components/shared/LoadingState.jsx'
 import useApiData from '../../hooks/useApiData.js'
 import { getStorePolicies, listPaymentMethods, listShippingMethods } from '../../lib/catalog-api.js'
 import { formatMoney } from '../../lib/format.js'
+import { paymentMethodLabel } from '../../lib/payment-methods.js'
 import { ACCOUNT_PATH, CART_PATH, CHAT_PATH, INFO_PATHS, RETURN_CREATE_PATH, SEARCH_PATH, WARRANTY_CREATE_PATH } from '../routes/paths.js'
 import './ShoppingPages.css'
 
@@ -15,7 +16,7 @@ function Methods({ shipping = false }) {
   if (source.error) return <ErrorState message={source.error} onRetry={source.reload} />
   if (!source.data.length) return <p>Thông tin {shipping ? 'vận chuyển' : 'thanh toán'} đang được cập nhật.</p>
   return <ul>{source.data.map((method) => <li key={method.ShippingMethodId ?? method.PaymentMethodId}>
-    <strong>{method.Name}</strong>{method.Description && <p>{method.Description}</p>}
+    <strong>{shipping ? method.Name : paymentMethodLabel(method)}</strong>{method.Description && <p>{method.Description}</p>}
     {shipping && <p>Phí cơ bản: {formatMoney(method.BaseFee)} · Thời gian dự kiến: {method.EstimatedDays === 0 ? 'Trong ngày' : `${method.EstimatedDays} ngày`}</p>}
   </li>)}</ul>
 }

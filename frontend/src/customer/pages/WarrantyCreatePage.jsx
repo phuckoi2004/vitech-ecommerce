@@ -24,8 +24,8 @@ export default function WarrantyCreatePage() {
   const [itemId, setItemId] = useState('')
   const [serialId, setSerialId] = useState('')
   const [issue, setIssue] = useState('')
-  const [issueType, setIssueType] = useState('')
-  const [occurredOn, setOccurredOn] = useState('')
+  // Preview only; the saved fault date is the server's RequestedAt.
+  const [requestDate, setRequestDate] = useState(() => formatDate(new Date()))
   const [entries, setEntries] = useState([])
   const [consent, setConsent] = useState(false)
   const [uploading, setUploading] = useState(false)
@@ -33,7 +33,6 @@ export default function WarrantyCreatePage() {
   const [error, setError] = useState('')
   const submitLock = useRef(false)
   const errorBox = useRef(null)
-  const [today] = useState(() => new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' }))
   const orders = useApiData(`warranty-orders:${user?.UserId}:${page}`, (signal) => withAccessToken((token) =>
     listMyOrders(token, { order_status: ['Delivered', 'Completed'], page, page_size: PAGE_SIZE }, { signal })))
   const items = useApiData(orderId ? `warranty-items:${user?.UserId}:${orderId}` : null,
@@ -66,17 +65,15 @@ export default function WarrantyCreatePage() {
     if (item.IsSerialTracked && !serial) return setError('Vui lòng chọn Serial/IMEI của thiết bị cần bảo hành.')
     if (!eligibility?.CanRequest) return setError(eligibility?.Reason || 'Sản phẩm chưa đủ điều kiện gửi yêu cầu.')
     if (!issue.trim()) return setError('Vui lòng mô tả tình trạng lỗi của sản phẩm.')
-    if (occurredOn && occurredOn > today) return setError('Thời điểm phát sinh lỗi không được ở tương lai.')
     if (entries.some((entry) => !entry.attachment)) return setError('Hãy tải lại hoặc xóa ảnh chưa tải thành công trước khi gửi.')
     if (!consent) return setError('Vui lòng xác nhận thông tin và chính sách bảo hành trước khi gửi.')
-    const description = [issueType && `Loại lỗi: ${issueType}`, occurredOn && `Phát sinh ngày: ${formatDate(occurredOn)}`,
-      issue.trim()].filter(Boolean).join('\n')
     submitLock.current = true
+    setRequestDate(formatDate(new Date()))
     setSaving(true)
     try {
       const created = await withAccessToken((token) => createWarranty(token, {
         OrderItemId: item.OrderItemId, ProductSerialId: serial?.ProductSerialId ?? null,
-        IssueDescription: description, Attachments: entries.map((entry) => entry.attachment),
+        IssueDescription: issue.trim(), Attachments: entries.map((entry) => entry.attachment),
       }))
       navigate(warrantyRequestPath(created.WarrantyRequestId), { replace: true, state: { warrantyCreated: created.WarrantyRequestId } })
     } catch (failure) {
@@ -134,14 +131,12 @@ export default function WarrantyCreatePage() {
           </>}
         </WarrantyCard>
         <WarrantyCard id="warranty-issue" number="02" title="Thông tin lỗi bảo hành">
-          <div className="cw-fields">
-            <Field id="cw-type" label="Loại lỗi"><select id="cw-type" className="cacc-input" value={issueType} disabled={busy} onChange={(event) => setIssueType(event.target.value)}>
-              <option value="">Chọn loại lỗi của sản phẩm</option>{['Không lên nguồn', 'Màn hình / hiển thị', 'Pin / sạc', 'Âm thanh / kết nối', 'Lỗi khác'].map((value) => <option key={value}>{value}</option>)}
-            </select></Field>
-            <Field id="cw-date" label="Thời điểm phát sinh lỗi"><input id="cw-date" className="cacc-input" type="date" max={today} value={occurredOn} disabled={busy} onChange={(event) => setOccurredOn(event.target.value)} /></Field>
-          </div>
+          <Field id="cw-date" label="Thời điểm phát sinh lỗi">
+            <input id="cw-date" className="cacc-input" readOnly value={requestDate} aria-describedby="cw-date-note" />
+            <p id="cw-date-note" className="cw-help">Tự động ghi nhận theo ngày tạo phiếu bảo hành.</p>
+          </Field>
           <Field id="cw-issue" label="Mô tả tình trạng lỗi *"><textarea id="cw-issue" className="cacc-input cw-textarea" required maxLength={5000} rows={5}
-            placeholder="Vui lòng mô tả rõ tình trạng, thời điểm xảy ra lỗi và các thao tác đã thử…" value={issue} disabled={busy} onChange={(event) => setIssue(event.target.value)} /></Field>
+            placeholder="Vui lòng mô tả rõ tình trạng lỗi và các thao tác đã thử…" value={issue} disabled={busy} onChange={(event) => setIssue(event.target.value)} /></Field>
         </WarrantyCard>
         <WarrantyCard id="warranty-evidence" number="03" title="Hình ảnh minh chứng (không bắt buộc)">
           <EvidenceImages entries={entries} setEntries={setEntries} busy={busy} setBusy={setUploading} withAccessToken={withAccessToken} uploadImage={uploadWarrantyImage} />

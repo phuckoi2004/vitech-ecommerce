@@ -98,6 +98,8 @@
 .checkout-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
 .checkout-field.is-wide { grid-column: 1 / -1; }
 .checkout-required { color: var(--color-brand-500); }
+.checkout-prepayment-policy { margin: 0; color: var(--color-muted-600); font-size: 13px; line-height: 20px; }
+.checkout-prepayment { padding-top: 0; }
 .checkout-field input, .checkout-textarea {
   width: 100%;
   min-height: 46px;
@@ -138,7 +140,8 @@
 
 .checkout-options.is-stacked .checkout-option { min-height: 72px; }
 .checkout-section > .checkout-options.is-stacked .checkout-option { min-height: 100px; }
-.checkout-option:hover { border-color: var(--color-brand-300); }
+.checkout-option:not(.is-disabled):hover { border-color: var(--color-brand-300); }
+.checkout-option.is-disabled { opacity: 0.65; cursor: not-allowed; background: var(--checkout-field); }
 .checkout-option.is-selected { padding: 11.5px 13.5px; border: 1.5px solid var(--color-brand-500); background: var(--checkout-selected); }
 .checkout-option:focus-within { box-shadow: 0 0 0 3px var(--color-brand-100); }
 
@@ -205,8 +208,10 @@
 .checkout-totals dd { margin: 0; color: var(--color-ink-900); font-weight: 600; text-align: right; }
 .checkout-totals .is-muted { color: var(--color-muted-600); font-weight: 500; }
 .checkout-total { margin: 0; color: var(--color-ink-900); font-weight: 600; text-transform: uppercase; }
-.checkout-total > span:last-child { color: var(--color-brand-500); font-size: 17px; font-weight: 700; text-transform: none; }
+.checkout-total > span:last-child { color: #000; font-size: 17px; font-weight: 700; text-transform: none; }
 .checkout-total > span.is-muted { color: var(--color-muted-600); font-size: 13px; font-weight: 500; }
+.checkout-prepayment dt { font-weight: 700; }
+.checkout-prepayment dd { color: var(--color-brand-500); }
 .checkout-note { margin: 0; color: var(--color-muted-600); font-size: 11px; line-height: 17px; }
 
 /* Figma "Summary/Giảm giá" (red) and "Coupon Applied" (38px, 12px grey: "Mã giảm giá · Chưa áp dụng"). */

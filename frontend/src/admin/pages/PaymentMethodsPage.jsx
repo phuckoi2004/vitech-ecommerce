@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import useInternalAuth from '../../hooks/useInternalAuth.js'
+import { paymentMethodLabel } from '../../lib/payment-methods.js'
 import { useAdminLoad } from '../hooks/useAdminQuery.js'
 import { getPaymentMethods } from '../services/payment-methods.js'
 import AdminTable from '../components/AdminTable.jsx'
@@ -23,11 +24,11 @@ export default function PaymentMethodsPage() {
   const mode = params.get('dialog'), id = params.get('method'), permission = ({ new: 'create', edit: 'update', delete: 'delete' })[mode]
   const columns = [
     { key: 'Code', label: 'Mã', className: 'w-[13.30%]', render: (value) => <span className="break-words">{value}</span> },
-    { key: 'Name', label: 'Tên phương thức', className: 'w-[19.06%]', render: (value) => <span className="break-words">{value}</span> },
+    { key: 'Name', label: 'Tên phương thức', className: 'w-[19.06%]', render: (_, row) => <span className="break-words">{paymentMethodLabel(row)}</span> },
     { key: 'Description', label: 'Mô tả / hướng dẫn', className: 'w-[34.57%]', render: (value) => <span className="break-words whitespace-pre-wrap">{value || '—'}</span> },
     { key: 'IsActive', label: 'Trạng thái', className: 'w-[12.41%]', render: (value) => <PaymentStatus active={value} /> },
     { key: 'DisplayOrder', label: 'Thứ tự', className: 'w-[9.75%]' },
-    { key: 'actions', label: 'Thao tác', className: 'w-[10.91%]', render: (_, row) => <div className="flex items-center gap-1.5">{can('update') && <PaymentAction action="edit" name={row.Name} onClick={() => open('edit', row.PaymentMethodId)} />}{can('delete') && <PaymentAction action="delete" name={row.Name} onClick={() => open('delete', row.PaymentMethodId)} />}{!can('update') && !can('delete') && <span className="text-admin-muted">—</span>}</div> },
+    { key: 'actions', label: 'Thao tác', className: 'w-[10.91%]', render: (_, row) => <div className="flex items-center gap-1.5">{can('update') && <PaymentAction action="edit" name={paymentMethodLabel(row)} onClick={() => open('edit', row.PaymentMethodId)} />}{can('delete') && <PaymentAction action="delete" name={paymentMethodLabel(row)} onClick={() => open('delete', row.PaymentMethodId)} />}{!can('update') && !can('delete') && <span className="text-admin-muted">—</span>}</div> },
   ]
   // Keep the previous transaction-list bookmark; the default view follows the payment-method design.
   if (legacyTransactions) return <AdminResourcePage section={{ id: 'payments', label: 'Thanh toán' }} />

@@ -34,6 +34,7 @@ test('lists own warranty requests and opens their real customer detail', async (
   await screen.findByRole('heading', { name: 'Yêu cầu BH-001' })
   expect(router.state.location.search).toContain('request=w1')
   expect(api.getMyWarranty).toHaveBeenCalledWith('access-for-test', 'w1', expect.anything())
+  expect(screen.getByText('Thời điểm phát sinh lỗi').nextElementSibling).toHaveTextContent('20/10/2026')
   expect(screen.getByText('Khách hàng gửi yêu cầu.')).toBeInTheDocument()
 })
 

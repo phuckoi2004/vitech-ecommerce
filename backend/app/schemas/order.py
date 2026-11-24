@@ -183,6 +183,9 @@ class OrderSummary(ResponseSchema):
     SourceReturnRequestId: uuid.UUID | None = None
     ExchangeCreditAmount: Money = 0
     TotalAmount: Money
+    PrepaymentAmount: Money = 0
+    ReceivedAmount: Money = 0
+    RemainingAmount: Money = 0
     OrderStatus: OrderStatusValue
     PaymentStatus: PaymentStatusValue
     OrderedAt: datetime

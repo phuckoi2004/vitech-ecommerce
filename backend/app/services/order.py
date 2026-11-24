@@ -43,7 +43,7 @@ import uuid
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
-from decimal import Decimal
+from decimal import Decimal, ROUND_CEILING
 
 from sqlalchemy.orm import Session
 
@@ -108,6 +108,9 @@ ORDER_COMPLETED = "Completed"
 ORDER_CANCELLED = "Cancelled"
 PAYMENT_PENDING = "Pending"
 PAYMENT_PAID = "Paid"
+PAYMENT_PARTIAL = "PartiallyPaid"
+PREPAYMENT_THRESHOLD = Decimal("10000000")
+PREPAYMENT_RATE = Decimal("0.20")
 PAYMENT_CANCELLED = "Cancelled"
 # Chưa thanh toán: hủy đơn thì PaymentStatus → Cancelled.
 UNPAID_PAYMENT_STATUSES = ("Pending", "Failed")
@@ -262,6 +265,10 @@ class OrderService(BaseService):
 
             shipping_fee = shipping.BaseFee
             total = subtotal - discount + shipping_fee
+            prepayment = ((total * PREPAYMENT_RATE).quantize(Decimal("1"), rounding=ROUND_CEILING)
+                          if payment.Code == PAYMENT_METHOD_COD and total > PREPAYMENT_THRESHOLD else Decimal("0"))
+            if prepayment > 0 and not any(m.Code == "QR" for m in self.payment_methods.list_methods(is_active=True)):
+                raise BusinessRuleError("Thanh toán trả trước qua QR hiện chưa khả dụng", code="prepayment_unavailable")
             # Phương thức khác COD thanh toán chuyển khoản (QR SePay) nên cần số tiền > 0; COD giữ quy tắc hiện tại.
             # Lỗi ở đây hủy cả transaction: không tạo đơn, không trừ tồn kho, lượt dùng coupon được hoàn tác.
             if payment.Code != PAYMENT_METHOD_COD and total <= 0:
@@ -284,6 +291,7 @@ class OrderService(BaseService):
                     "ShippingFee": shipping_fee,
                     "DiscountAmount": automatic + discount,
                     "TotalAmount": total,
+                    "PrepaymentAmount": prepayment,
                     "OrderStatus": ORDER_PENDING,
                     "PaymentStatus": PAYMENT_PENDING,
                     "ReceiverName": receiver["ReceiverName"],
@@ -348,7 +356,7 @@ class OrderService(BaseService):
             raise NotFoundError("Không tìm thấy đơn hàng", code="order_not_found")
         # The exchange payment page polls this endpoint. Expired replacement stock must be released even when
         # the external expiry job has not run yet; a verified payment that won the row lock is never cancelled.
-        if (order.SourceReturnRequestId and order.OrderStatus == ORDER_PENDING
+        if ((order.SourceReturnRequestId or (order.PrepaymentAmount or 0) > 0) and order.OrderStatus == ORDER_PENDING
                 and order.PaymentStatus in UNPAID_PAYMENT_STATUSES and self.now() >= qr_payment_deadline(order)):
             with self.transaction():
                 locked = self.orders.get_by_id_for_update(order_id)
@@ -431,7 +439,7 @@ class OrderService(BaseService):
                 raise BusinessRuleError(
                     f"Không thể hủy đơn ở trạng thái {status_label(order.OrderStatus, ORDER_STATUS_LABELS)}", code="order_not_cancellable"
                 )
-            if order.PaymentStatus == PAYMENT_PAID:
+            if order.PaymentStatus in (PAYMENT_PAID, PAYMENT_PARTIAL):
                 raise BusinessRuleError(
                     "Đơn hàng đã được thanh toán nên không thể tự hủy. Vui lòng liên hệ VieTech để được hỗ trợ.",
                     code="order_paid_not_cancellable",
@@ -565,24 +573,29 @@ class OrderService(BaseService):
                     f"Chỉ xác nhận giao COD cho đơn đang giao (hiện tại: {status_label(order.OrderStatus, ORDER_STATUS_LABELS)})",
                     code="invalid_status_transition",
                 )
-            if order.PaymentStatus != PAYMENT_PENDING:
+            if order.PaymentStatus not in (PAYMENT_PENDING, PAYMENT_PARTIAL) and not (
+                    (order.PrepaymentAmount or 0) > 0 and order.PaymentStatus == PAYMENT_PAID):
                 raise BusinessRuleError(
                     f"Trạng thái thanh toán không hợp lệ để ghi nhận thu COD: {status_label(order.PaymentStatus, PAYMENT_STATUS_LABELS)}",
                     code="cod_payment_not_pending",
                 )
+            self._require_prepayment(order)
+            received = self._received_amount(order)
+            remaining = max(order.TotalAmount - received, Decimal("0"))
             now = self.now()
             self._move_to(order, ORDER_DELIVERED, changed_by=actor.user_id, note=note)
             order.PaymentStatus = PAYMENT_PAID
-            self.payment_transactions.create(
-                {
-                    "OrderId": order.OrderId,
-                    "PaymentMethodId": order.PaymentMethodId,
-                    "TransactionType": TX_PAYMENT,
-                    "Amount": order.TotalAmount,
-                    "Status": TX_SUCCESS,
-                    "PaidAt": now,
-                }
-            )
+            if remaining > 0 or order.TotalAmount == 0:
+                self.payment_transactions.create(
+                    {
+                        "OrderId": order.OrderId,
+                        "PaymentMethodId": order.PaymentMethodId,
+                        "TransactionType": TX_PAYMENT,
+                        "Amount": remaining,
+                        "Status": TX_SUCCESS,
+                        "PaidAt": now,
+                    }
+                )
             self.orders.flush()
             return AdminOrderDetailResponse.model_validate(self.orders.get_detail(order_id))
 
@@ -826,7 +839,7 @@ class OrderService(BaseService):
         return (
             order.OrderStatus == ORDER_PENDING
             and order.PaymentStatus in UNPAID_PAYMENT_STATUSES
-            and not self._is_cod(order)
+            and (not self._is_cod(order) or (order.PrepaymentAmount or 0) > 0)
             and qr_payment_deadline(order) <= self.now()
         )
 
@@ -938,7 +951,7 @@ class OrderService(BaseService):
         self._record_history(order, previous, ORDER_CANCELLED, changed_by=changed_by, note=note)
         self.notifications.resolve_new_order(order.OrderId)
         self._notify_status(order)
-        if order.PaymentStatus == PAYMENT_PAID:
+        if order.PaymentStatus in (PAYMENT_PAID, PAYMENT_PARTIAL):
             self._notify_staff_refund_needed(order)
 
     def _cancel_pending_payment_requests(self, order: Order) -> None:
@@ -1032,6 +1045,8 @@ class OrderService(BaseService):
         Đơn không phải COD chỉ xác nhận Pending → Confirmed khi đã Paid: đơn chưa thanh toán ở lại Pending để
         tác vụ hết hạn QR xử lý. Kiểm tra Shipping giữ lại cho dữ liệu cũ.
         """
+        if target in (ORDER_CONFIRMED, ORDER_PROCESSING, ORDER_SHIPPING):
+            self._require_prepayment(order)
         if target == ORDER_CONFIRMED and order.OrderStatus == ORDER_PENDING:
             if not self._is_cod(order) and order.PaymentStatus != PAYMENT_PAID:
                 raise BusinessRuleError(
@@ -1046,6 +1061,16 @@ class OrderService(BaseService):
         elif target == ORDER_DELIVERED:
             self._sell_reserved_serials(order, delivered_at=moved_at)
             self._update_sales_counters(order)
+
+    def _received_amount(self, order: Order) -> Decimal:
+        transactions = self.payment_transactions.list_by_order(order.OrderId, status=TX_SUCCESS)
+        paid = sum((t.Amount for t in transactions if t.TransactionType == TX_PAYMENT), Decimal("0"))
+        refunded = sum((t.Amount for t in transactions if t.TransactionType == "Refund"), Decimal("0"))
+        return max(paid - refunded, Decimal("0"))
+
+    def _require_prepayment(self, order: Order) -> None:
+        if (order.PrepaymentAmount or 0) > 0 and self._received_amount(order) < order.PrepaymentAmount:
+            raise BusinessRuleError("Đơn hàng chưa thanh toán đủ khoản trả trước 20%", code="order_prepayment_required")
 
     @staticmethod
     def _require_order_operator(actor: Actor, order: Order) -> None:

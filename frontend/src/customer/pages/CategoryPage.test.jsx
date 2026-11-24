@@ -6,6 +6,7 @@ import { afterEach, expect, test, vi } from 'vitest'
 import { AuthContext } from '../../auth/context.js'
 import { appRoutes } from '../../routes.jsx'
 import { makeAuth } from '../../test/auth.js'
+import { productCardsResponse } from '../../test/catalog.js'
 
 const category = (id, name, slug, parent = null, extra = {}) => ({
   CategoryId: id, ParentCategoryId: parent, Name: name, Slug: slug, Description: null, DisplayOrder: 0, IsActive: true, ...extra,
@@ -53,6 +54,7 @@ function mockApi({ total = 25, overrides = {} } = {}) {
       const items = Array.from({ length: total }, (_, index) => product(index + 1)).slice((page - 1) * size, page * size)
       return json({ Items: items, Total: total, Page: page, PageSize: size })
     }
+    if (path === '/products/cards') return productCardsResponse(url, (id) => product(Number(id.slice(1))), overrides)
     if (path.startsWith('/products/')) return json(product(Number(path.slice('/products/p'.length))))
     if (path === '/banners') return json([{ BannerId: 'bn1', Title: 'Ưu đãi iPhone', ImageUrl: 'https://cdn.example/b1.png', LinkUrl: '/danh-muc/dien-thoai' }])
     if (path === '/news') return json({ Items: [

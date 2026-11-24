@@ -108,6 +108,7 @@ TX_CANCELLED = "Cancelled"
 
 PAYMENT_PENDING = "Pending"
 PAYMENT_PAID = "Paid"
+PAYMENT_PARTIAL = "PartiallyPaid"
 PAYMENT_FAILED = "Failed"
 PAYMENT_REFUNDED = "Refunded"
 
@@ -235,9 +236,16 @@ class PaymentService(BaseService):
             if order.CustomerId != actor.user_id:
                 raise NotFoundError("Không tìm thấy đơn hàng", code="order_not_found")
             self._ensure_qr_payable(order)
+            amount = order.PrepaymentAmount if (order.PrepaymentAmount or 0) > 0 else order.TotalAmount
+            method_id = order.PaymentMethodId
+            if (order.PrepaymentAmount or 0) > 0:
+                qr_method = next((m for m in self.methods.list_methods(is_active=True) if m.Code == "QR"), None)
+                if qr_method is None:
+                    raise BusinessRuleError("Thanh toán trả trước qua QR hiện chưa khả dụng", code="prepayment_unavailable")
+                method_id = qr_method.PaymentMethodId
             validate_amount = getattr(gateway, "validate_payment_amount", None)
             if validate_amount is not None:
-                validate_amount(order.TotalAmount)
+                validate_amount(amount)
             pending = self._payments(order.OrderId, status=TX_PENDING)
             ready = [t for t in pending if t.QrData]
             if ready:
@@ -250,15 +258,15 @@ class PaymentService(BaseService):
             placeholder = self.transactions.create(
                 {
                     "OrderId": order.OrderId,
-                    "PaymentMethodId": order.PaymentMethodId,
+                    "PaymentMethodId": method_id,
                     "TransactionType": TX_PAYMENT,
-                    "Amount": order.TotalAmount,
+                    "Amount": amount,
                     "Status": TX_PENDING,
                 }
             )
             self.transactions.flush()
             transaction_id = placeholder.PaymentTransactionId
-            order_code, amount = order.OrderCode, order.TotalAmount
+            order_code = order.OrderCode
 
         try:
             request = gateway.create_qr_payment(order_code=order_code, amount=amount)
@@ -360,10 +368,13 @@ class PaymentService(BaseService):
         elif other_success:
             outcome = self._flag_duplicate_payment(order, transaction, result, webhook_event_id)
         else:
-            order.PaymentStatus = PAYMENT_PAID
-            self._notify(order, "Thanh toán thành công", f"Đơn hàng {order.OrderCode} đã được thanh toán.")
-            self._notify_staff(order, "Đã nhận thanh toán", f"Đơn hàng {order.OrderCode} đã được thanh toán chuyển khoản.")
-            outcome = "paid"
+            self._set_received_status(order)
+            partial = order.PaymentStatus == PAYMENT_PARTIAL
+            text = (f"Đơn hàng {order.OrderCode} đã nhận khoản trả trước {transaction.Amount}; "
+                    "phần còn lại thanh toán khi nhận hàng." if partial else f"Đơn hàng {order.OrderCode} đã được thanh toán.")
+            self._notify(order, "Đã nhận khoản trả trước" if partial else "Thanh toán thành công", text)
+            self._notify_staff(order, "Đã nhận khoản trả trước" if partial else "Đã nhận thanh toán", text)
+            outcome = "partially_paid" if partial else "paid"
         self.transactions.flush()
         return outcome
 
@@ -371,7 +382,7 @@ class PaymentService(BaseService):
         self, order: Order, transaction: PaymentTransaction, result: GatewayPaymentResult, webhook_event_id: uuid.UUID | None
     ) -> str:
         # Ghi nhận tiền đã nhận (Paid) để đơn đủ điều kiện hoàn thủ công; không khôi phục đơn.
-        order.PaymentStatus = PAYMENT_PAID
+        self._set_received_status(order)
         self._open_reconciliation(
             order,
             transaction,
@@ -392,6 +403,8 @@ class PaymentService(BaseService):
     def _flag_duplicate_payment(
         self, order: Order, transaction: PaymentTransaction, result: GatewayPaymentResult, webhook_event_id: uuid.UUID | None
     ) -> str:
+        if (order.PrepaymentAmount or 0) > 0:
+            self._set_received_status(order)
         self._open_reconciliation(
             order,
             transaction,
@@ -604,7 +617,7 @@ class PaymentService(BaseService):
             return PaymentTransactionResponse.model_validate(transaction)
 
     def _ensure_qr_payable(self, order: Order) -> None:
-        if order.payment_method.Code == PAYMENT_METHOD_COD:
+        if order.payment_method.Code == PAYMENT_METHOD_COD and not (order.PrepaymentAmount or 0) > 0:
             raise BusinessRuleError("Đơn thanh toán khi nhận hàng (COD)", code="payment_method_is_cod")
         if order.OrderStatus not in QR_PAYABLE_ORDER_STATUSES or order.PaymentStatus not in QR_PAYABLE_PAYMENT_STATUSES:
             raise BusinessRuleError("Đơn hàng không ở trạng thái chờ thanh toán", code="order_not_payable")
@@ -758,7 +771,7 @@ class PaymentService(BaseService):
             )
         with self.transaction():
             order = self._lock_order(order_id)
-            if order.PaymentStatus != PAYMENT_PAID:
+            if order.PaymentStatus not in (PAYMENT_PAID, PAYMENT_PARTIAL):
                 raise BusinessRuleError("Đơn hàng không ở trạng thái đã thanh toán", code="refund_not_allowed")
             payments = self._payments(order.OrderId, status=TX_SUCCESS)
             paid = sum((t.Amount for t in payments), Decimal("0"))
@@ -767,7 +780,8 @@ class PaymentService(BaseService):
             if order.OrderStatus == ORDER_CANCELLED:
                 refundable = paid - refunded - pending
             else:
-                overpaid = paid - order.TotalAmount
+                required = order.PrepaymentAmount if order.PaymentStatus == PAYMENT_PARTIAL else order.TotalAmount
+                overpaid = paid - required
                 if overpaid <= 0:
                     raise BusinessRuleError(
                         "Đơn chưa hủy chỉ được hoàn phần thanh toán vượt tổng tiền đơn", code="refund_not_allowed"
@@ -825,7 +839,7 @@ class PaymentService(BaseService):
         """
         require_role(actor, *STAFF_OR_ADMIN)
         offset, limit = self._page_args(page, page_size)
-        filters = {"order_status": ORDER_CANCELLED, "payment_status": PAYMENT_PAID}
+        filters = {"order_status": ORDER_CANCELLED, "payment_status": (PAYMENT_PAID, PAYMENT_PARTIAL)}
         items = self.orders.list_orders(**filters, offset=offset, limit=limit)
         return PageResponse[AdminOrderResponse](
             Items=[AdminOrderResponse.model_validate(o) for o in items],
@@ -1164,6 +1178,15 @@ class PaymentService(BaseService):
 
     def _payments(self, order_id: uuid.UUID, *, status: str) -> list[PaymentTransaction]:
         return [t for t in self.transactions.list_by_order(order_id, status=status) if t.TransactionType == TX_PAYMENT]
+
+    def _set_received_status(self, order: Order) -> None:
+        self.transactions.flush()
+        if (order.PrepaymentAmount or 0) > 0:
+            paid = sum((t.Amount for t in self._payments(order.OrderId, status=TX_SUCCESS)), Decimal("0"))
+            refunded = sum((t.Amount for t in self._refunds(order.OrderId, status=TX_SUCCESS)), Decimal("0"))
+            order.PaymentStatus = PAYMENT_PAID if paid - refunded >= order.TotalAmount else PAYMENT_PARTIAL
+        else:
+            order.PaymentStatus = PAYMENT_PAID
 
     def _refunds(self, order_id: uuid.UUID, *, status: str) -> list[PaymentTransaction]:
         return [t for t in self.transactions.list_by_order(order_id, status=status) if t.TransactionType == TX_REFUND]

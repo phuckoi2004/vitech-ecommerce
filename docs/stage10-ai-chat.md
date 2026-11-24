@@ -10,7 +10,7 @@ Xem `backend/.env.example`. SDK `google-genai==2.31.0` gọi `/v1beta/interactio
 
 Giới hạn mặc định: input 1.000 ký tự, tối đa 12 cặp hỏi–đáp đã hoàn thành (thêm ngân sách lịch sử 10.000 ký tự), 2.048 token đầu ra mỗi lần gọi, deadline 60 giây cho cả vòng suy luận/công cụ, 10 yêu cầu/phút/khách, tối đa 3 lần xử lý cho một request ID. Các lần đọc lại kết quả/Pending không tiêu thụ thêm lượt gọi model.
 
-Rate limit/cooldown dùng StateStore đang cấu hình của Auth: memory cho development/test, Redis cho production. HTTP 429 từ Gemini được chuyển thành 503 `ai_quota_exceeded` và `Retry-After`; yêu cầu mới cũng tôn trọng cooldown của model. Không retry tự động trong SDK.
+Rate limit/cooldown dùng StateStore đang cấu hình của Auth: SQLite cho local theo `.env.example`, memory cho kiểm thử, Redis cho production. HTTP 429 từ Gemini được chuyển thành 503 `ai_quota_exceeded` và `Retry-After`; yêu cầu mới cũng tôn trọng cooldown của model. Không retry tự động trong SDK.
 
 ## Migration
 

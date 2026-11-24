@@ -48,7 +48,9 @@ test('creates a request with exact assigned serial, order line, public descripti
   expect(screen.getByLabelText('Thời hạn bảo hành')).toHaveValue('01/10/2026 – 30/09/2027')
   expect(await screen.findByRole('img', { name: 'Điện thoại VieTech' })).toHaveAttribute('src', 'https://images.test/phone.png')
   await describe()
-  await userEvent.selectOptions(screen.getByLabelText('Loại lỗi'), 'Màn hình / hiển thị')
+  expect(screen.queryByLabelText('Loại lỗi')).not.toBeInTheDocument()
+  expect(screen.getByLabelText('Thời điểm phát sinh lỗi')).toHaveAttribute('readonly')
+  expect(screen.getByLabelText('Thời điểm phát sinh lỗi')).not.toHaveAttribute('type', 'date')
   const attachment = { FileUrl: 'https://storage.test/evidence.png', FileType: 'Image' }
   api.uploadWarrantyImage.mockResolvedValue(attachment)
   await userEvent.upload(screen.getByLabelText('Chọn ảnh minh chứng'), new File(['image'], 'loi.png', { type: 'image/png' }))
@@ -57,7 +59,7 @@ test('creates a request with exact assigned serial, order line, public descripti
   await waitFor(() => expect(router.state.location.pathname).toBe('/tai-khoan'))
   expect(router.state.location.search).toBe('?section=service&request=request1')
   expect(api.createWarranty).toHaveBeenCalledWith('access-for-test', {
-    OrderItemId: 'line1', ProductSerialId: 's2', IssueDescription: 'Loại lỗi: Màn hình / hiển thị\nMàn hình bị nhấp nháy khi sạc.', Attachments: [attachment],
+    OrderItemId: 'line1', ProductSerialId: 's2', IssueDescription: 'Màn hình bị nhấp nháy khi sạc.', Attachments: [attachment],
   })
   expect(api.createWarranty).toHaveBeenCalledTimes(1)
 })

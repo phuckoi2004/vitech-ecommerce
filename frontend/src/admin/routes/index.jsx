@@ -1,13 +1,7 @@
 import RequireInternal from '../../auth/RequireInternal.jsx'
 import RequirePermission from '../../auth/RequirePermission.jsx'
 import NotFoundPage from '../../components/shared/NotFoundPage.jsx'
-import AdminAuthPage from '../pages/AdminAuthPage.jsx'
-import AdminHomePage from '../pages/AdminHomePage.jsx'
-import { AdminProfileSection, AdminUsersSection } from '../pages/AdminSections.jsx'
-import DashboardPage from '../pages/DashboardPage.jsx'
-import AdminResourcePage from '../pages/AdminResourcePage.jsx'
-import ProductsPage from '../pages/ProductsPage.jsx'
-import CategoriesPage from '../pages/CategoriesPage.jsx'
+import { lazyPage } from '../../components/shared/LazyPage.jsx'
 import BrandsPageRoute from '../pages/BrandsPageRoute.jsx'
 import OrdersPageRoute from '../pages/OrdersPageRoute.jsx'
 import OrderDetailPageRoute from '../pages/OrderDetailPageRoute.jsx'
@@ -35,6 +29,15 @@ import ShippingMethodsPageRoute from '../pages/ShippingMethodsPageRoute.jsx'
 import ShippingMethodWorkspacePageRoute from '../pages/ShippingMethodWorkspacePageRoute.jsx'
 import { ADMIN_SECTIONS } from './menu.js'
 import { ADMIN_FORGOT_PASSWORD_PATH, ADMIN_HOME_PATH, ADMIN_LOGIN_PATH } from './paths.js'
+
+const AdminAuthPage = lazyPage(() => import('../pages/AdminAuthPage.jsx'))
+const AdminHomePage = lazyPage(() => import('../pages/AdminHomePage.jsx'))
+const AdminProfileSection = lazyPage(() => import('../pages/AdminSections.jsx'), 'AdminProfileSection')
+const AdminUsersSection = lazyPage(() => import('../pages/AdminSections.jsx'), 'AdminUsersSection')
+const DashboardPage = lazyPage(() => import('../pages/DashboardPage.jsx'))
+const AdminResourcePage = lazyPage(() => import('../pages/AdminResourcePage.jsx'))
+const ProductsPage = lazyPage(() => import('../pages/ProductsPage.jsx'))
+const CategoriesPage = lazyPage(() => import('../pages/CategoriesPage.jsx'))
 
 // Internal area for Staff/Admin (English URLs). Unknown /admin/* URLs show the 404 page, signed in or not.
 export const adminRoutes = [

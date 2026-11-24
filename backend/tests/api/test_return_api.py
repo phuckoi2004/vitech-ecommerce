@@ -40,11 +40,12 @@ def test_success_exchange_completes_only_after_order_commit_and_restocks_origina
     assert received["Status"] == "Processing" and received["ReceivedAt"] is not None
     for action, body in PAUSED_STEPS:  # the deferred inspection/approval/refund steps change nothing
         step(api, admin, request_id, action, body, status=400, code="service_workflow_paused")
-    step(api, admin, request_id, "advance", {"ExpectedStatus": "Processing"}, status=400, code="exchange_order_not_settled")
+    result = {"ExpectedStatus": "Processing", "DamageAssessment": "Đã kiểm tra sản phẩm.", "Note": "Đã đổi sản phẩm cho khách."}
+    step(api, admin, request_id, "advance", result, status=400, code="exchange_order_not_settled")
     api.payment_method("QR")
     replacement = expect(api.client.post(f"/return-requests/{request_id}/exchange-order", headers=customer.headers, json={}), 200)
     assert replacement["TotalAmount"] == "0.00" and replacement["PaymentStatus"] == "Paid"
-    done = step(api, admin, request_id, "advance", {"ExpectedStatus": "Processing"})
+    done = step(api, admin, request_id, "advance", result)
     assert done["Status"] == "Completed" and done["CompletedAt"] is not None
     assert done["CompensationAmount"] is None and done["RefundPaymentTransactionId"] is None  # Completed is no refund
     assert api.scalar('select "StockQuantity" from "ProductVariants" where "ProductVariantId" = :id',

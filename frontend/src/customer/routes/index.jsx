@@ -1,25 +1,28 @@
 import RequireCustomer from '../../auth/RequireCustomer.jsx'
 import NotFoundPage from '../../components/shared/NotFoundPage.jsx'
 import CustomerLayout from '../layouts/CustomerLayout.jsx'
-import AccountPage from '../pages/AccountPage.jsx'
-import WarrantyCreatePage from '../pages/WarrantyCreatePage.jsx'
-import ReturnCreatePage from '../pages/ReturnCreatePage.jsx'
+import { lazyPage } from '../../components/shared/LazyPage.jsx'
 import { RETURN_CREATE_PATH, WARRANTY_CREATE_PATH } from './paths.js'
-import ForgotPasswordPage from '../pages/ForgotPasswordPage.jsx'
 import HomePage from '../pages/HomePage.jsx'
-import LoginPage from '../pages/LoginPage.jsx'
-import RegisterPage from '../pages/RegisterPage.jsx'
-import CatalogPage from '../pages/CatalogPage.jsx'
-import CategoryPage from '../pages/CategoryPage.jsx'
-import ProductPage from '../pages/ProductPage.jsx'
-import NewsPage from '../pages/NewsPage.jsx'
-import ChatPage from '../pages/ChatPage.jsx'
-import InfoPage from '../pages/InfoPage.jsx'
-import CartPage from '../pages/CartPage.jsx'
-import CheckoutPage from '../pages/CheckoutPage.jsx'
-import OrderResultPage from '../pages/OrderResultPage.jsx'
-import { NotificationsPage, WishlistPage } from '../pages/CustomerLists.jsx'
 import { ACCOUNT_PATH, CART_PATH, CHAT_PATH, CHECKOUT_PATH, FORGOT_PASSWORD_PATH, HOME_PATH, INFO_PATHS, LOGIN_PATH, NEWS_PATH, NOTIFICATIONS_PATH, ORDERS_PATH, REGISTER_PATH, SEARCH_PATH, WISHLIST_PATH } from './paths.js'
+
+const AccountPage = lazyPage(() => import('../pages/AccountPage.jsx'))
+const WarrantyCreatePage = lazyPage(() => import('../pages/WarrantyCreatePage.jsx'))
+const ReturnCreatePage = lazyPage(() => import('../pages/ReturnCreatePage.jsx'))
+const ForgotPasswordPage = lazyPage(() => import('../pages/ForgotPasswordPage.jsx'))
+const LoginPage = lazyPage(() => import('../pages/LoginPage.jsx'))
+const RegisterPage = lazyPage(() => import('../pages/RegisterPage.jsx'))
+const CatalogPage = lazyPage(() => import('../pages/CatalogPage.jsx'))
+const CategoryPage = lazyPage(() => import('../pages/CategoryPage.jsx'))
+const ProductPage = lazyPage(() => import('../pages/ProductPage.jsx'))
+const NewsPage = lazyPage(() => import('../pages/NewsPage.jsx'))
+const ChatPage = lazyPage(() => import('../pages/ChatPage.jsx'))
+const InfoPage = lazyPage(() => import('../pages/InfoPage.jsx'))
+const CartPage = lazyPage(() => import('../pages/CartPage.jsx'))
+const CheckoutPage = lazyPage(() => import('../pages/CheckoutPage.jsx'))
+const OrderResultPage = lazyPage(() => import('../pages/OrderResultPage.jsx'))
+const NotificationsPage = lazyPage(() => import('../pages/CustomerLists.jsx'), 'NotificationsPage')
+const WishlistPage = lazyPage(() => import('../pages/CustomerLists.jsx'), 'WishlistPage')
 
 // Customer site (Vietnamese URLs). Auth pages use their own two-column frame; other pages share CustomerLayout.
 // Unknown URLs outside /admin show the 404 page inside the customer layout.

@@ -17,6 +17,8 @@ import uuid
 from tests.test_return_directory import directory as returns_directory
 from tests.test_warranty_directory import directory as warranty_directory
 
+RETURN_RESULT = {'DamageAssessment': 'Cổng sạc bị hỏng.', 'Note': 'Đã kiểm tra và đổi máy mới cho khách.'}
+
 
 @pytest.fixture
 def returns(returns_directory):
@@ -62,10 +64,10 @@ def test_return_forward_flow_requires_settled_exchange_before_restock(returns):
             body = response.json()
             assert body['Status'] == new and body['CustomerName'] is not None
             assert body['CompensationAmount'] is body['CompensationApprovedAt'] is body['RefundPaymentTransactionId'] is None
-        blocked = client.post(path + '/advance', json={'ExpectedStatus': 'Processing'})
+        blocked = client.post(path + '/advance', json={'ExpectedStatus': 'Processing', **RETURN_RESULT})
         assert blocked.status_code == 400 and blocked.json()['code'] == 'exchange_order_not_settled'
         settled_exchange(engine, rows[1].ReturnRequestId, source)
-        response = client.post(path + '/advance', json={'ExpectedStatus': 'Processing'})
+        response = client.post(path + '/advance', json={'ExpectedStatus': 'Processing', **RETURN_RESULT})
         assert response.status_code == 200 and response.json()['CompletedAt'] is not None
         with Session(engine) as session:
             assert session.scalar(select(ProductVariant.StockQuantity)) == 1
@@ -91,9 +93,52 @@ def test_exchange_can_complete_and_stale_click_does_not_skip_a_stage(returns):
     # Acceptance now creates the settled same-SKU replacement without a customer POST.
     assert client.get(path).json()['Exchange']['Committed']
     for expected in ['Approved', 'Receiving', 'Processing']:
-        response = client.post(path + '/advance', json={'ExpectedStatus': expected})
+        response = client.post(path + '/advance', json={'ExpectedStatus': expected, **(RETURN_RESULT if expected == 'Processing' else {})})
         assert response.status_code == 200, response.text
     assert response.json()['Status'] == 'Completed'
+
+
+@pytest.mark.parametrize('actor_index', [1, 2])
+def test_return_assessment_and_public_result_are_required_and_saved_for_the_customer(returns, actor_index):
+    client, engine, current, rows, actors, _ = returns
+    current['actor'] = actors[actor_index]
+    request_id = rows[1].ReturnRequestId
+    path = '/admin/return-requests/' + str(request_id)
+    for status in ('Pending', 'Approved', 'Receiving'):
+        assert client.post(path + '/advance', json={'ExpectedStatus': status}).status_code == 200
+    with Session(engine) as session:
+        stock = session.scalar(select(ProductVariant.StockQuantity))
+    for extra, code in (({}, 'return_assessment_required'),
+                        ({'DamageAssessment': '   ', 'Note': 'Kết quả'}, 'return_assessment_required'),
+                        ({'DamageAssessment': 'Đã kiểm tra', 'Note': '   '}, 'return_result_note_required')):
+        response = client.post(path + '/advance', json={'ExpectedStatus': 'Processing', **extra})
+        assert response.status_code == 400 and response.json()['code'] == code
+        assert client.get(path).json()['Status'] == 'Processing'
+        with Session(engine) as session:
+            assert session.get(ReturnRequest, request_id).DamageAssessment is None
+            assert session.scalar(select(ProductVariant.StockQuantity)) == stock
+    body = {'ExpectedStatus': 'Processing', **{key: '  ' + value + '  ' for key, value in RETURN_RESULT.items()}}
+    response = client.post(path + '/advance', json=body)
+    assert response.status_code == 200, response.text
+    assert response.json()['DamageAssessment'] == RETURN_RESULT['DamageAssessment']
+    assert client.post(path + '/advance', json=body).status_code == 409
+    current['actor'] = actors[0]
+    public = client.get('/return-requests/' + str(request_id)).json()
+    assert public['Status'] == 'Completed' and public['DamageAssessment'] == RETURN_RESULT['DamageAssessment']
+    histories = [entry for entry in public['Histories'] if entry['NewStatus'] == 'Completed']
+    assert len(histories) == 1 and histories[0]['Note'] == RETURN_RESULT['Note']
+    assert all('InternalNote' not in entry for entry in public['Histories'])
+    with Session(engine) as session:
+        assert session.scalar(select(ProductVariant.StockQuantity)) == stock + 1
+        assert any(RETURN_RESULT['Note'] in notification.Content for notification in session.scalars(select(Notification)))
+
+
+def test_return_assessment_cannot_be_recorded_before_the_assessment_step(returns):
+    client, _, _, rows, _, _ = returns
+    path = '/admin/return-requests/' + str(rows[1].ReturnRequestId)
+    response = client.post(path + '/advance', json={'ExpectedStatus': 'Pending', **RETURN_RESULT})
+    assert response.status_code == 400 and response.json()['code'] == 'return_assessment_not_allowed'
+    assert client.get(path).json()['Status'] == 'Pending'
 
 
 def test_staff_cannot_reject_after_acceptance_but_can_reject_pending(returns):

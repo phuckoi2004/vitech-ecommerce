@@ -33,6 +33,13 @@ test.each([
   expect(screen.queryByText(/Khoản hoàn tiền được xác nhận/)).not.toBeInTheDocument()
 })
 
+test('payment information displays a friendly label for the stored SePay name', async () => {
+  vi.stubGlobal('fetch', vi.fn(async () => response([{ PaymentMethodId: 'qr', Code: 'QR', Name: 'sepay' }])))
+  render(<MemoryRouter><InfoPage page="payment" /></MemoryRouter>)
+  expect(await screen.findByText('Chuyển khoản qua QR')).toBeInTheDocument()
+  expect(screen.queryByText('sepay')).not.toBeInTheDocument()
+})
+
 test('a failed policy request is retryable and does not publish a guessed return window', async () => {
   vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce(response({ detail: 'Không tải được chính sách.' }, 503))
     .mockResolvedValueOnce(response()))

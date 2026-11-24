@@ -60,7 +60,7 @@ function open(path = '/admin/reports', role = 'Admin', permissions = ['admin.por
 }
 test('summary and product table keep daily chart points from the report API', async () => {
   open('/admin/reports?period=month&month=2026-09')
-  await screen.findByText('Doanh số trang 1')
+  await screen.findByText('Doanh số trang 1', {}, { timeout: 5000 })
   const row = screen.getByRole('button', { name: 'Doanh số trang 1' }).closest('tr')
   expect(within(row).getAllByRole('cell').slice(1, 4).map((cell) => cell.textContent)).toEqual(['12', '1', '31'])
   expect(within(screen.getByRole('article', { name: 'Doanh số bán hàng' })).getByText(/100\.000/)).toBeInTheDocument()

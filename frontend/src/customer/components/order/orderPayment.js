@@ -4,6 +4,7 @@
 
 // The order is read again this often while it waits for its transfer.
 import { formatStatus } from '../../../lib/status-labels.js'
+import { hasPrepayment } from '../../../lib/prepayment.js'
 
 export const POLL_MS = 3000
 
@@ -20,7 +21,8 @@ const PAYMENT_STATUS = {
 // An unpaid COD order is "Chưa thanh toán" (paid on delivery), a transfer order "Chờ thanh toán" (its QR).
 export function paymentStatusText(order, cod) {
   if (order.SourceReturnRequestId && Number(order.TotalAmount) === 0) return 'Không cần thanh toán · Đã chốt đơn đổi'
-  if (order.PaymentStatus === 'Pending') return cod ? 'Chưa thanh toán' : 'Chờ thanh toán'
+  if (order.PaymentStatus === 'Pending') return hasPrepayment(order) ? 'Chờ trả trước 20%' : cod ? 'Chưa thanh toán' : 'Chờ thanh toán'
+  if (order.PaymentStatus === 'PartiallyPaid') return order.OrderStatus === 'Cancelled' ? 'Đã ghi nhận thanh toán một phần' : 'Đã trả trước 20%'
   if (order.PaymentStatus === 'Paid' && order.OrderStatus === 'Cancelled') return 'Đã ghi nhận thanh toán'
   return formatStatus(order.PaymentStatus, PAYMENT_STATUS)
 }
@@ -32,6 +34,8 @@ export function orderTitle(order, { code, placed }) {
   if (order?.SourceReturnRequestId && Number(order.TotalAmount) === 0) return 'Đã chốt đơn đổi trả'
   if (!order || order.OrderStatus === 'Cancelled') return 'Chi tiết đơn hàng'
   const cod = code === 'COD'
+  if (hasPrepayment(order) && order.PaymentStatus === 'PartiallyPaid') return 'Đã nhận khoản trả trước'
+  if (hasPrepayment(order) && placed && ['Pending', 'Failed'].includes(order.PaymentStatus)) return 'Đã tạo đơn hàng, chờ trả trước 20%'
   if (code && !cod && order.PaymentStatus === 'Paid') return 'Thanh toán thành công'
   if (!placed) return 'Chi tiết đơn hàng'
   return cod ? 'Đặt hàng thành công' : code ? 'Đã tạo đơn hàng, chờ thanh toán' : 'Đã tạo đơn hàng'
@@ -51,6 +55,7 @@ export function timeLeft(deadline, now) {
 
 const AGAIN = { retry: true }
 const QR_PROBLEMS = {
+  prepayment_unavailable: { ...AGAIN, message: 'Thanh toán khoản trả trước qua QR hiện chưa sẵn sàng. Vui lòng thử lại sau.' },
   // The 15 minutes after the order passed: no QR, the order is cancelled by the expiry job.
   order_payment_expired: { expired: true, message: 'Đơn hàng đã hết thời gian thanh toán (15 phút) và sẽ được huỷ tự động.' },
   // Paid, cancelled or moved on meanwhile: the order is read again.

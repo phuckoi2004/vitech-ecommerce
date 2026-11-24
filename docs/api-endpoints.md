@@ -52,6 +52,7 @@ Thông báo Admin/Staff mở chi tiết phiếu nhập, bảo hành và đổi t
 | GET | `/products` | Công khai |  | keyword ([cách so khớp](customer-search.md)), category_id, brand_id, include_descendants, min_price, max_price, sort, in_stock, new_arrivals, spec (lặp lại, cần category_id), page, page_size | `PageResponse[ProductSummary]` | `search_products` |
 | GET | `/products/suggestions` | Công khai |  | keyword | `SearchSuggestionsResponse` ([gợi ý dưới ô tìm kiếm](customer-search.md)) | `search_suggestions` |
 | GET | `/products/filters` | Công khai |  | keyword, category_id (gồm danh mục con), brand_id, min_price, max_price, in_stock | `SearchFiltersResponse` ([danh mục gốc và hãng có trong kết quả](customer-search.md)) | `search_filters` |
+| GET | `/products/cards` | Công khai |  | product_id (lặp lại, 1–50 UUID) | `list[ProductCardResponse]`: giá, tồn kho, ảnh; giữ thứ tự, bỏ ID trùng và sản phẩm ngừng bán | `get_product_details` |
 | GET | `/products/slug/{slug}` | Công khai |  |  | `ProductDetailResponse` | `get_product_detail_by_slug` |
 | GET | `/products/{product_id}` | Công khai |  |  | `ProductDetailResponse` | `get_product_detail` |
 | GET | `/products/{product_id}/images` | Công khai |  |  | `list[ProductImageResponse]` | `list_images` |
@@ -137,15 +138,17 @@ Thông báo Admin/Staff mở chi tiết phiếu nhập, bảo hành và đổi t
 ### Đặt, xác nhận và hủy đơn
 
 - **`POST /orders`**: tổng tiền = tạm tính − tiền giảm của coupon + phí vận chuyển của phương thức đã chọn. Phương thức khác COD (chuyển khoản qua QR) cần tổng tiền > 0; nếu không, trả 400 `order_total_zero` và không có gì được ghi: không tạo đơn, không trừ tồn kho, lượt dùng coupon được hoàn tác. Đơn COD không bị chặn bởi quy tắc này.
+  - Đơn mua mới chọn COD có tổng thanh toán **trên** 10.000.000đ bắt buộc trả trước 20% qua QR: server lưu `PrepaymentAmount = ceil(TotalAmount × 20%)` (VND nguyên đồng). Chính xác 10 triệu không áp dụng. UI gọi lựa chọn này là **Trả trước 20%**; phần còn lại thu khi nhận hàng. QR 100% vẫn là lựa chọn riêng. Client không được truyền số tiền trả trước. Đơn cũ và đơn đổi giữ snapshot 0, không tính lại chính sách. Thiếu phương thức QR đang hoạt động: 400 `prepayment_unavailable`, rollback toàn bộ.
+  - Response bổ sung `PrepaymentAmount`, `ReceivedAmount` (Payment Success trừ Refund Success), `RemainingAmount` (còn phải thu; 0 khi đơn đã giao/đã hủy). Các khoản tiền đều lấy từ server, không nhận từ client.
 - **`POST /orders/{order_id}/cancel`** (khách hàng hủy đơn của chính mình):
   - Đơn không tồn tại hoặc không thuộc khách hàng: 404 `order_not_found`.
   - Chỉ hủy được đơn `Pending`; trạng thái khác trả 400 `order_not_cancellable`.
-  - Đơn đã thanh toán (`PaymentStatus` = `Paid`) trả 400 `order_paid_not_cancellable`: khách cần liên hệ cửa hàng để được hỗ trợ.
+  - Đơn đã nhận tiền (`PaymentStatus` = `Paid` hoặc `PartiallyPaid`) trả 400 `order_paid_not_cancellable`: khách cần liên hệ cửa hàng để được hỗ trợ. Staff/Admin hủy đơn đã trả trước sẽ đưa đơn vào danh sách chờ hoàn; chỉ hoàn số thực thu.
 - **`POST /admin/orders/{order_id}/status`** (Staff/Admin):
   - Chỉ chuyển sang trạng thái kế tiếp: `Pending` → `Confirmed` → `Processing` → `Shipping` → `Delivered` (đóng đơn); bước khác trả 400 `invalid_status_transition`. `CancelReason` chỉ dùng khi hủy (400 `cancel_reason_not_allowed`).
-  - Sang `Confirmed`: đơn không phải COD phải có `PaymentStatus` = `Paid`, nếu không trả 400 `order_not_paid`. Đơn chuyển khoản chưa thanh toán ở lại `Pending` cho tới khi được thanh toán hoặc bị tác vụ hết hạn QR hủy. Đơn COD được xác nhận trước khi thu tiền.
+  - Sang `Confirmed`: đơn không phải COD phải có `PaymentStatus` = `Paid`, nếu không trả 400 `order_not_paid`. Đơn có `PrepaymentAmount > 0` chỉ xác nhận/bắt đầu xử lý/giao hàng khi các giao dịch thực thu đã đủ khoản trả trước (400 `order_prepayment_required`). COD thông thường không yêu cầu trả trước.
   - Sang `Shipping`: đơn không phải COD phải `Paid` (400 `order_not_paid`), và mọi sản phẩm quản lý Serial/IMEI phải đã được gán đủ (400 `order_serials_not_assigned`).
-  - Đơn COD sang `Delivered` phải dùng `POST /admin/orders/{order_id}/confirm-cod-delivery` (400 `cod_delivery_requires_collection`).
+  - Đơn COD sang `Delivered` phải dùng `POST /admin/orders/{order_id}/confirm-cod-delivery` (400 `cod_delivery_requires_collection`). Với đơn trả trước, chỉ tạo giao dịch thu phần còn thiếu, không thu lại cả tổng đơn. Giao thành công mới đổi từ `PartiallyPaid` sang `Paid`.
   - Hủy (`Cancelled`) chỉ được trước `Delivered`; sau đó trả 400 `order_not_cancellable`.
 
 ## Thanh toán và hoàn tiền
@@ -180,15 +183,15 @@ Thông báo Admin/Staff mở chi tiết phiếu nhập, bảo hành và đổi t
 | `TransferContent` | Nội dung chuyển khoản bắt buộc: mã thanh toán duy nhất của yêu cầu này. |
 | `Bank`, `AccountNumber` | Tài khoản nhận tiền mà cổng thanh toán đã dùng khi tạo QR (`SEPAY_ACCOUNT_NUMBER`; với ngân hàng bắt buộc tài khoản ảo như MSB là số VA); `null` nếu không có (ví dụ yêu cầu tạo trước khi server lưu thông tin này). |
 | `AccountName` | Tên chủ tài khoản nhận tiền (`SEPAY_ACCOUNT_NAME`) lưu lúc tạo QR, để khách đối chiếu; `null` nếu không cấu hình. Không nằm trong ảnh QR. |
-| `TransferAmount` | Số tiền cần chuyển, số nguyên VND, bằng `Amount` (= `TotalAmount` của đơn). |
+| `TransferAmount` | Số tiền cần chuyển, số nguyên VND, bằng `Amount`: `PrepaymentAmount` với đơn trả trước, `TotalAmount` với đơn QR 100%. Giao dịch trả trước dùng phương thức QR dù phần còn lại của đơn dùng COD. |
 | `ExpiresAt` | Hạn thanh toán = `OrderedAt` + 15 phút khi đơn còn `Pending`; `null` khi đơn đã ở trạng thái khác. Đơn quá hạn chưa thanh toán bị tác vụ `/internal/orders/expire-unpaid-qr` hủy. |
 
 - Gọi lại khi đơn đã có giao dịch `Pending` kèm QR: trả lại đúng giao dịch đó, không tạo giao dịch mới.
-- Endpoint này không xác nhận thanh toán: chỉ webhook SePay đã xác thực mới chuyển đơn sang `Paid`.
+- Endpoint này không xác nhận thanh toán: webhook SePay đã xác thực mới ghi nhận tiền. Đủ 20% chuyển sang `PartiallyPaid`; đủ cả đơn mới `Paid`. Không cấp QR trả trước thứ hai khi đã ghi nhận khoản trả trước. Đơn chờ trả trước chưa nhận tiền cũng hết hạn sau 15 phút; đơn đã nhận khoản trả trước không bị tác vụ hết hạn hủy.
 - Lỗi:
   - 400 `payment_gateway_not_configured`: server chưa cấu hình cổng thanh toán.
   - 404 `order_not_found`: đơn không tồn tại hoặc không thuộc khách hàng đang đăng nhập.
-  - 400 `payment_method_is_cod`: đơn thanh toán khi nhận hàng.
+  - 400 `payment_method_is_cod`: đơn COD không có khoản trả trước.
   - 400 `order_not_payable`: `OrderStatus` không thuộc `Pending`/`Confirmed`/`Processing`, hoặc `PaymentStatus` không thuộc `Pending`/`Failed`.
   - 400 `order_payment_expired`: đơn `Pending` đã quá `OrderedAt` + 15 phút.
   - 400 `order_total_zero`: `TotalAmount` ≤ 0. Đây là chốt chặn thứ hai cho đơn cũ; đơn mới đã bị chặn từ lúc tạo.
@@ -382,20 +385,21 @@ Khi nhân viên/Admin phụ trách gửi tin trả lời, Customer nhận thông
 
 ### Luồng đổi/trả đang hoạt động (từ 15/10/2026)
 
-- **Chỉ cập nhật tiến trình:** mỗi bước đổi trạng thái phiếu, ghi một dòng lịch sử và gửi thông báo cho khách. Không tạo giao dịch hoàn tiền, không nhập/xuất kho, không đổi trạng thái serial. `Completed` **không** có nghĩa là đã hoàn tiền.
+- **Cập nhật tiến trình và kết quả đánh giá:** mỗi bước đổi trạng thái phiếu, ghi lịch sử công khai và gửi thông báo cho khách. Khi hoàn tất, đơn đổi phải đã chốt; hệ thống nhập lại đúng một sản phẩm cũ theo cơ chế đổi hàng hiện hành. Không tạo giao dịch hoàn tiền; `Completed` **không** có nghĩa là đã hoàn tiền.
 - **Chuyển trạng thái** (mỗi lần tiến một bước): `Pending → Approved → Receiving → Processing → Completed`. Bước `Receiving → Processing` ghi `ReceivedAt`, bước `Processing → Completed` ghi `CompletedAt`. Phiếu chưa có người phụ trách được gán `AssignedStaffId` là người thực hiện bước đó.
-- **`POST .../advance`** với `{"ExpectedStatus": "<trạng thái hiện tại>"}` là route giao diện quản trị đang dùng. Route này không nhận ghi chú: gửi thêm trường khác trả 422.
+- **`POST .../advance`** với `{"ExpectedStatus": "<trạng thái hiện tại>"}` là route giao diện quản trị đang dùng. Khi chuyển `Processing → Completed`, bắt buộc thêm `DamageAssessment` (tình trạng sản phẩm) và `Note` (nội dung kết quả gửi khách hàng), mỗi trường tối đa 4.000 ký tự, không được rỗng sau khi bỏ khoảng trắng. Tình trạng được lưu trên phiếu, kết quả được lưu trong lịch sử công khai và gửi qua thông báo cho khách. Chỉ hoàn tất khi đơn đổi đã chốt và thanh toán phần bù nếu có. Các bước khác cho phép `Note` tùy chọn; chỉ bước đánh giá hư hại được ghi `DamageAssessment`.
 - **`POST .../accept`, `.../start-receiving`, `.../receive`** là các bước ứng với `ExpectedStatus` lần lượt `Pending`, `Approved`, `Receiving`, có thêm ghi chú tùy chọn:
   - `Note`: khách xem được, nối vào dòng lịch sử dạng `<sự kiện>. Ghi chú: <Note>`.
   - `InternalNote`: chỉ Staff/Admin thấy (trường `InternalNote` của lịch sử trong response admin), không có trong response của khách.
   - Ghi chú không được đưa vào nội dung thông báo gửi khách.
   - `/receive`: phải gửi body `ReturnGoodsReceive` (tối thiểu `{}`). `SerialNumber` được chấp nhận nhưng **hiện không được đối chiếu hay xử lý**: không kiểm tra khớp serial của phiếu và không đổi trạng thái serial. Việc đối chiếu serial khi nhận hàng chưa được chốt nghiệp vụ.
-- **`POST .../reject`** với `{"Reason": "..."}`: từ chối phiếu ở trạng thái còn mở (`Pending`, `Approved`, `Receiving`, `Processing`). `Reason` khách xem được, được lưu vào `DecisionReason` và có trong thông báo. `InternalNote` (tùy chọn) chỉ lưu trong lịch sử cho Staff/Admin, không có trong response của khách hay thông báo.
+- **`POST .../reject`** với `{"Reason": "..."}`: chỉ từ chối phiếu đang chờ (`Pending`), trước khi tiếp nhận. `Reason` khách xem được, được lưu vào `DecisionReason` và có trong thông báo. `InternalNote` (tùy chọn) chỉ lưu trong lịch sử cho Staff/Admin, không có trong response của khách hay thông báo.
 - **Lỗi:**
   - 401 khi thiếu Bearer token hợp lệ; 403 `permission_denied` khi Customer gọi (bị chặn trước khi vào Service).
   - 404 `return_request_not_found`.
   - 409 `service_request_stale`: trạng thái hiện tại khác trạng thái mong đợi. Gồm cả bấm lặp lại, và gọi `/accept`, `/start-receiving`, `/receive` khi phiếu đã ở bước khác hoặc đã đóng.
-  - 400 `service_request_closed`: gọi `/advance` với `ExpectedStatus` là trạng thái đã đóng (`Completed`, `Rejected`, `Cancelled`), hoặc từ chối phiếu đã đóng.
+  - 400 `service_request_closed`: gọi `/advance` với `ExpectedStatus` là trạng thái đã đóng (`Completed`, `Rejected`, `Cancelled`). `return_rejection_not_allowed`: từ chối phiếu đã qua trạng thái `Pending`.
+  - 400 `return_assessment_required`, `return_result_note_required`: thiếu tình trạng hoặc nội dung kết quả ở bước hoàn tất. `return_assessment_not_allowed`: ghi tình trạng ngoài bước đánh giá hư hại. `exchange_order_not_settled`: đơn đổi chưa chốt hoặc chưa thanh toán phần bù.
   - 422: body sai (trường lạ, sai kiểu, `ExpectedStatus` ngoài danh sách, `Reason` rỗng).
 - **Tạm dừng:** `inspect`, `approve`, `refund`, `confirm-refund` luôn trả 400 `service_workflow_paused` và không thay đổi phiếu. Phần cài đặt tài chính/kiểm định cũ được giữ lại trong Service để tham khảo, chờ quyết định nghiệp vụ.
 

@@ -7,7 +7,9 @@ export default function ServiceRequestActions({ workflow, warranty = false }) {
   const Button = warranty ? WarrantyButton : ReturnButton
   if (!item) return null
   const initial = warranty ? workflow.stage === 'New' : item.Status === 'Pending'
-  const resultIncomplete = warranty && workflow.stage === 'Repairing' && (!workflow.resultType || !workflow.resultNote.trim())
+  const resultIncomplete = warranty
+    ? workflow.stage === 'Repairing' && (!workflow.resultType || !workflow.resultNote.trim())
+    : workflow.stage === 'Processing' && (!workflow.damageAssessment.trim() || !workflow.resultNote.trim())
   return <>
     <div aria-label="Thao tác phiếu" className="flex min-h-[33px] items-center justify-end gap-2 pr-3.5">
       {notice && <span role="status" className="mr-auto text-[11px] text-admin-muted">{notice}</span>}

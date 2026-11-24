@@ -14,13 +14,14 @@ from tests.test_ai_grounded import ask, grounded_shop  # noqa: F401
 
 
 @pytest.mark.parametrize("question,count", [
-    ("Hãy chọn 3 laptop dưới 25 triệu rồi so sánh CPU, RAM, SSD, màn hình và giá.", 3),
-    ("Chọn giúp tôi 3 laptop dưới 25 triệu và so sánh về CPU, RAM, SSD, màn hình và giá.", 3),
+    ("Hãy chọn 2 laptop dưới 25 triệu rồi so sánh CPU, RAM, SSD, màn hình và giá.", 2),
+    ("Chọn giúp tôi 2 laptop dưới 25 triệu và so sánh về CPU, RAM, SSD, màn hình và giá.", 2),
     ("Tìm 2 laptop dưới 20 triệu rồi so sánh CPU, RAM và giá.", 2),
-    ("So sánh 3 laptop dưới 25 triệu về CPU, RAM, SSD, màn hình và giá.", 3),
-    ("Hãy chọn 3 mẫu laptop dưới 25 triệu rồi so sánh CPU, RAM, SSD, màn hình và giá.", 3),
-    ("Chọn 3 chiếc laptop dưới 25 triệu rồi so sánh CPU, RAM, SSD, màn hình và giá.", 3),
-    ("So sánh CPU, RAM, SSD, màn hình và giá của 3 laptop dưới 25 triệu.", 3),
+    ("So sánh 2 laptop dưới 25 triệu về CPU, RAM, SSD, màn hình và giá.", 2),
+    ("Hãy chọn 2 mẫu laptop dưới 25 triệu rồi so sánh CPU, RAM, SSD, màn hình và giá.", 2),
+    ("Chọn hai chiếc laptop dưới 25 triệu rồi so sánh CPU, RAM, SSD, màn hình và giá.", 2),
+    ("So sánh CPU, RAM, SSD, màn hình và giá của 2 laptop dưới 25 triệu.", 2),
+    ("Hãy chọn laptop dưới 25 triệu rồi so sánh CPU, RAM, SSD, màn hình và giá.", 2),
 ])
 def test_select_then_compare_filters_products_and_builds_the_requested_number_of_columns(grounded_shop, question, count):
     shop = grounded_shop
@@ -44,20 +45,21 @@ def test_the_selected_comparison_replays_and_restores_without_selecting_again(gr
     shop = grounded_shop
     service, model = shop.service([])
     data = AiMessageCreate(ClientRequestId=uuid.uuid4(),
-                           Content="Hãy chọn 3 laptop dưới 25 triệu rồi so sánh CPU, RAM, SSD, màn hình và giá.")
+                           Content="Hãy chọn 2 laptop dưới 25 triệu rồi so sánh CPU, RAM, SSD, màn hình và giá.")
     response = service.ask(shop.actor, shop.cid, data)
-    assert len(table(response)["Products"]) == 3
+    assert len(table(response)["Products"]) == 2
     assert table(service.ask(shop.actor, shop.cid, data)) == table(response)
     assert table(service.get_status(shop.actor, shop.cid, data.ClientRequestId)) == table(response)
     assert model.calls == []
 
 
-def test_a_new_selection_request_does_not_compare_only_the_previous_two_products(grounded_shop):
+def test_a_new_selection_request_uses_current_constraints_instead_of_the_previous_pair(grounded_shop):
     shop = grounded_shop
     show(shop)
     service, model = shop.service([])
-    response = ask(shop, service, "Hãy chọn 3 laptop dưới 25 triệu rồi so sánh CPU, RAM, SSD, màn hình và giá.")
-    assert len(table(response)["Products"]) == 3
+    response = ask(shop, service, "Hãy chọn 2 laptop dưới 20 triệu rồi so sánh CPU, RAM, SSD, màn hình và giá.")
+    assert len(table(response)["Products"]) == 2
+    assert all(Decimal(product["Price"]) <= 20000000 for product in table(response)["Products"])
     assert model.calls == []
 
 
@@ -74,22 +76,23 @@ def test_brand_and_ram_constraints_apply_to_the_selected_versions(grounded_shop)
 @pytest.mark.parametrize("budget,remaining", [(1, 0), (17, 1), (20, 2)])
 def test_not_enough_products_is_reported_without_looser_filters_or_an_incorrect_limit_question(grounded_shop, budget, remaining):
     service, model = grounded_shop.service([])
-    response = ask(grounded_shop, service, f"Chọn 3 laptop dưới {budget} triệu rồi so sánh CPU, RAM, SSD và giá.")
+    response = ask(grounded_shop, service, f"Chọn 2 laptop dưới {budget} triệu rồi so sánh CPU, RAM, SSD và giá.")
     message = response.AiMessages[0]
-    assert "tối đa 3 sản phẩm" not in message.Content
+    assert "Mỗi bảng so sánh" not in message.Content
     if remaining == 2:
         assert len(table(response)["Products"]) == 2
-        assert any("2 mẫu" in note and "3" in note for note in table(response)["Caveats"])
+        assert not any("mẫu yêu cầu" in note for note in table(response)["Caveats"])
     else:
         assert not (message.Metadata or {}).get("Comparison")
         assert "chưa" in message.Content.lower() or "1 mẫu" in message.Content
     assert model.calls == []
 
 
-def test_a_real_request_for_four_selected_products_still_respects_the_table_limit(grounded_shop):
+@pytest.mark.parametrize("count", [3, 4])
+def test_a_request_for_more_than_two_products_asks_for_a_pair(grounded_shop, count):
     service, model = grounded_shop.service([])
-    response = ask(grounded_shop, service, "Hãy chọn 4 laptop dưới 25 triệu rồi so sánh CPU, RAM, SSD, màn hình và giá.")
-    assert "tối đa 3 sản phẩm" in response.AiMessages[0].Content
+    response = ask(grounded_shop, service, f"Hãy chọn {count} laptop dưới 25 triệu rồi so sánh CPU, RAM, SSD, màn hình và giá.")
+    assert "đúng 2 sản phẩm" in response.AiMessages[0].Content
     assert not (response.AiMessages[0].Metadata or {}).get("Comparison")
     assert model.calls == []
 
@@ -97,14 +100,14 @@ def test_a_real_request_for_four_selected_products_still_respects_the_table_limi
 def test_a_list_of_criteria_without_products_is_not_reported_as_too_many_products(grounded_shop):
     service, _ = grounded_shop.service([{"intent": "clarify", "clarification": "products"}])
     response = ask(grounded_shop, service, "So sánh CPU, RAM, SSD, màn hình và giá.")
-    assert "tối đa 3 sản phẩm" not in response.AiMessages[0].Content
+    assert "Mỗi bảng so sánh" not in response.AiMessages[0].Content
     assert not (response.AiMessages[0].Metadata or {}).get("Comparison")
 
 
 @pytest.mark.parametrize("changed", ["price", "stock"])
 def test_a_selected_version_is_rechecked_against_the_search_constraints_before_showing_it(grounded_shop, changed):
     shop = grounded_shop
-    context = GroundingContext("Chọn 3 laptop dưới 25 triệu rồi so sánh CPU, RAM, SSD và giá.")
+    context = GroundingContext("Chọn 2 laptop dưới 25 triệu rồi so sánh CPU, RAM, SSD và giá.")
     with Session(shop.engine) as db:
         tools = AiTools(db, clock=lambda: shop.now.value)
         tools.prepare(context)

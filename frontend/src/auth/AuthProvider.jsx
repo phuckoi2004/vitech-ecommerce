@@ -24,9 +24,15 @@ export default function AuthProvider({ children }) {
   // Why the last session ended: 'signout', 'ended' (revoked by the server, e.g. password change) or 'expired'.
   const [endReason, setEndReason] = useState(null)
   const sessionRef = useRef(null)
+  const accessExpiresAt = useRef(0)
   const operation = useRef(0)
 
   const saveSession = useCallback((next) => {
+    if (!next) accessExpiresAt.current = 0
+    else if (next.access_token !== sessionRef.current?.access_token) {
+      const lifetime = Number(next.expires_in)
+      accessExpiresAt.current = lifetime > 0 ? Date.now() + lifetime * 1000 : 0
+    }
     sessionRef.current = next
     setSession(next)
   }, [])
@@ -130,7 +136,7 @@ export default function AuthProvider({ children }) {
     }
   }, [saveSession])
 
-  // Runs an authenticated call. On 401 the session is renewed once (overlapping renewals share one cookie
+  // Renew before an expired token is sent. On an unexpected 401 renew once (overlapping renewals share one cookie
   // rotation) and the call is retried once with the new token. A 401 is answered before the backend runs the
   // use case, so the single retry is safe for writes as well. Other errors are never retried.
   const withAccessToken = useCallback(async (call) => {
@@ -150,33 +156,39 @@ export default function AuthProvider({ children }) {
         requireCurrentSession()
       }
     }
+    async function renew() {
+      let renewed
+      try {
+        renewed = await renewSession()
+        if (sessionArea(renewed) !== sessionArea(existing) || renewed.user?.UserId !== existing.user?.UserId) {
+          throw new AuthApiError('Phiên đăng nhập đã thay đổi. Vui lòng đăng nhập lại.', 403)
+        }
+      } catch (failure) {
+        requireCurrentSession()
+        if ([401, 403].includes(failure.status)) {
+          ++operation.current
+          clearLocalCsrf()
+          saveSession(null)
+          setEndReason('expired')
+          setError('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.')
+        }
+        throw failure
+      }
+      requireCurrentSession()
+      saveSession(renewed)
+      return renewed.access_token
+    }
+    const preflight = accessExpiresAt.current > 0 && Date.now() >= accessExpiresAt.current - 30000
+    const token = preflight ? await renew() : existing.access_token
     try {
-      return await invoke(existing.access_token)
+      return await invoke(token)
     } catch (failure) {
       requireCurrentSession()
-      if (failure.status !== 401) throw failure
+      if (failure.status !== 401 || preflight) throw failure
     }
-    let renewed
-    try {
-      renewed = await renewSession()
-      // The cookie now belongs to the other portal (signed in elsewhere in this browser).
-      if (sessionArea(renewed) !== sessionArea(existing)) {
-        throw new AuthApiError('Phiên đăng nhập đã thay đổi. Vui lòng đăng nhập lại.', 403)
-      }
-    } catch (failure) {
-      requireCurrentSession()
-      if ([401, 403].includes(failure.status)) {
-        ++operation.current
-        clearLocalCsrf()
-        saveSession(null)
-        setEndReason('expired')
-        setError('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.')
-      }
-      throw failure
-    }
-    requireCurrentSession()
-    saveSession(renewed)
-    return invoke(renewed.access_token)
+    // Another request may already have refreshed while this older request was still in flight.
+    if (sessionRef.current.access_token !== token) return invoke(sessionRef.current.access_token)
+    return invoke(await renew())
   }, [saveSession])
 
   const updateUser = useCallback((user) => {

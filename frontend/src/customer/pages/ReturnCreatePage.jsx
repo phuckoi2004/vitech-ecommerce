@@ -14,7 +14,6 @@ import './AccountPage.css'
 import './WarrantyPage.css'
 
 const PAGE_SIZE = 50
-const REASONS = ['Sản phẩm bị lỗi', 'Giao sai sản phẩm', 'Hư hỏng khi nhận hàng', 'Thiếu phụ kiện', 'Lý do khác']
 
 export default function ReturnCreatePage() {
   const { user, withAccessToken } = useCustomerSession()
@@ -25,7 +24,6 @@ export default function ReturnCreatePage() {
   const [itemId, setItemId] = useState('')
   const [serialId, setSerialId] = useState('')
   const [quantity, setQuantity] = useState('1')
-  const [reason, setReason] = useState('')
   const [description, setDescription] = useState('')
   const [usage, setUsage] = useState('')
   const [entries, setEntries] = useState([])
@@ -46,7 +44,7 @@ export default function ReturnCreatePage() {
   const busy = saving || uploading
   const count = Number(quantity)
   const validQuantity = Number.isSafeInteger(count) && count > 0 && count <= (item?.MaxQuantity ?? 0) && (!item?.IsSerialTracked || count === 1)
-  const ready = eligibility?.CanRequest && validQuantity && reason && description.trim() && consent && entries.every((entry) => entry.attachment)
+  const ready = eligibility?.CanRequest && validQuantity && description.trim() && consent && entries.every((entry) => entry.attachment)
 
   useEffect(() => { document.title = 'Tạo yêu cầu đổi trả | VieTech' }, [])
   useEffect(() => { if (error) errorBox.current?.focus() }, [error])
@@ -67,11 +65,10 @@ export default function ReturnCreatePage() {
     if (item.IsSerialTracked && !serial && !item.CanRequestWithoutSerial) return setError('Vui lòng chọn Serial/IMEI của thiết bị cần đổi trả.')
     if (!eligibility?.CanRequest) return setError(eligibility?.Reason || item.Reason || 'Sản phẩm chưa đủ điều kiện gửi yêu cầu.')
     if (!validQuantity) return setError(`Số lượng phải là số nguyên từ 1 đến ${item.IsSerialTracked ? 1 : item.MaxQuantity}.`)
-    if (!reason) return setError('Vui lòng chọn lý do đổi trả.')
     if (!description.trim()) return setError('Vui lòng mô tả chi tiết lý do đổi trả và tình trạng sản phẩm.')
     if (entries.some((entry) => !entry.attachment)) return setError('Hãy tải lại hoặc xóa ảnh chưa tải thành công trước khi gửi.')
     if (!consent) return setError('Vui lòng xác nhận thông tin và chính sách đổi trả trước khi gửi.')
-    const details = [`Lý do: ${reason}`, description.trim(), usage && `Tình trạng sử dụng: ${usage}`].filter(Boolean).join('\n')
+    const details = [description.trim(), usage && `Tình trạng sử dụng: ${usage}`].filter(Boolean).join('\n')
     lock.current = true; setSaving(true)
     try {
       const created = await withAccessToken((token) => createReturn(token, {
@@ -131,13 +128,8 @@ export default function ReturnCreatePage() {
           </>}
         </RequestCard>
         <RequestCard id="return-reason" number="02" title="Thông tin yêu cầu đổi trả">
-          <p>Đổi mới 1 sản phẩm. Còn hàng sẽ đổi đúng phiên bản đã mua, hết hàng có thể chọn sản phẩm cùng danh mục.</p>
-          <div className="cw-fields">
-            <Field id="cr-reason" label="Lý do đổi trả *"><select id="cr-reason" className="cacc-input" value={reason} disabled={busy} onChange={(event) => setReason(event.target.value)}>
-              <option value="">Chọn lý do đổi trả</option>{REASONS.map((value) => <option key={value}>{value}</option>)}</select></Field>
-            <Field id="cr-usage" label="Tình trạng sử dụng"><select id="cr-usage" className="cacc-input" value={usage} disabled={busy} onChange={(event) => setUsage(event.target.value)}>
-              <option value="">Chọn tình trạng sản phẩm</option>{['Chưa sử dụng', 'Đã sử dụng', 'Không hoạt động'].map((value) => <option key={value}>{value}</option>)}</select></Field>
-          </div>
+          <Field id="cr-usage" label="Tình trạng sử dụng"><select id="cr-usage" className="cacc-input" value={usage} disabled={busy} onChange={(event) => setUsage(event.target.value)}>
+            <option value="">Chọn tình trạng sản phẩm</option>{['Chưa sử dụng', 'Đã sử dụng', 'Không hoạt động'].map((value) => <option key={value}>{value}</option>)}</select></Field>
           <Field id="cr-description" label="Mô tả chi tiết lý do đổi trả *"><textarea id="cr-description" className="cacc-input cw-textarea" rows={5} maxLength={5000} required
             placeholder="Mô tả vấn đề gặp phải, tình trạng sản phẩm và đề xuất xử lý của bạn…" value={description} disabled={busy} onChange={(event) => setDescription(event.target.value)} /></Field>
         </RequestCard>
@@ -169,7 +161,8 @@ export default function ReturnCreatePage() {
         </ul></div>
       </aside></div>
       {item && item.OriginalInStock === false && <p className="my-4 text-sm font-medium text-red-600">
-        * Bạn được dùng giá trị {Number(item.ExchangeCreditLimit || 0).toLocaleString('vi-VN')}đ để đổi một sản phẩm cùng danh mục.
+        * Sản phẩm đã mua hiện hết hàng. Sau khi phiếu được tiếp nhận, bạn có thể chọn sản phẩm khác cùng danh mục để đổi.
+        {' '}Bạn được dùng giá trị {Number(item.ExchangeCreditLimit || 0).toLocaleString('vi-VN')}đ cho sản phẩm đổi.
         Chọn máy giá cao hơn sẽ thanh toán phần bù, giá bằng hoặc thấp hơn không cần trả thêm. Phần dư không hoàn lại.
       </p>}
       <div className="cw-card cw-confirm">

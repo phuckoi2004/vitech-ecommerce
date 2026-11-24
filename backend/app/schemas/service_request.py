@@ -422,7 +422,10 @@ class AdminReturnRequestDetailResponse(AdminReturnRequestResponse):
 
 class ReturnProgressRequest(RequestSchema):
     """One forward step; the observed state prevents stale/repeated clicks from skipping stages."""
+    NULLABLE_FIELDS = frozenset({"DamageAssessment", "Note"})
     ExpectedStatus: ReturnRequestStatus
+    DamageAssessment: str | None = Field(default=None, max_length=4000)
+    Note: str | None = Field(default=None, max_length=4000)
 
 
 class WarrantyProgressRequest(RequestSchema):

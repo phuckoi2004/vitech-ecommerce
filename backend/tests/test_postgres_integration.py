@@ -345,7 +345,8 @@ def test_cod_order_delivery_review_status_only_return_and_statistics(pg, team, m
     # Delivery already closed the order; there is no separate completion step.
     blocked = client.post(f"/admin/orders/{order_id}/status", headers=staff, json={"OrderStatus": "Completed"})
     assert blocked.status_code == 400 and blocked.json()["code"] == "invalid_status_transition"
-    completed_request = ok(client.post(f"{base}/advance", headers=staff, json={"ExpectedStatus": "Processing"}))
+    completed_request = ok(client.post(f"{base}/advance", headers=staff, json={"ExpectedStatus": "Processing",
+        "DamageAssessment": "Đã kiểm tra sản phẩm.", "Note": "Đã đổi sản phẩm cho khách."}))
     assert completed_request["Status"] == "Completed"
     assert completed_request["CompensationAmount"] is None and completed_request["RefundPaymentTransactionId"] is None
     assert stock_of(pg, item) == 8  # nothing restocked

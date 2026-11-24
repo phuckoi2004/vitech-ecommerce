@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import Money from '../../../components/shared/Money.jsx'
+import { prepaymentAmount } from '../../../lib/prepayment.js'
 import { CART_PATH } from '../../routes/paths.js'
 import { lineDisplay, orderTotal } from '../cart/cartLines.js'
 import CouponProblem from '../cart/CouponProblem.jsx'
@@ -11,7 +12,7 @@ import StoreImage from '../StoreImage.jsx'
 // be removed here; it is changed in the cart. `coupon` comes from useCartCoupon; `block` explains why the order
 // cannot be confirmed; `waiting` disables the button while data loads and `placing` while the order is being sent;
 // `orderProblem` (OrderProblem) tells why the last attempt failed.
-export default function CheckoutSummary({ cart, lines, details, shipping, coupon, block, orderProblem, waiting, placing,
+export default function CheckoutSummary({ cart, lines, details, shipping, coupon, block, orderProblem, waiting, placing, prepay = false,
   onRemoveCoupon, onRetryCoupon, onReload }) {
   const fee = shipping ? shipping.BaseFee : null
   const quantity = lines.reduce((sum, line) => sum + line.Quantity, 0)
@@ -52,10 +53,15 @@ export default function CheckoutSummary({ cart, lines, details, shipping, coupon
       {coupon.status === 'checking' ? <span className="is-muted">Đang tính…</span>
         : unknown ? <span className="is-muted">Chưa xác định</span> : <Money value={total} />}
     </p>
-    <p className="checkout-note">Giá, tồn kho, phí vận chuyển và mã giảm giá được hệ thống kiểm tra lại khi tạo đơn hàng.</p>
+    {prepay && !unknown && coupon.status !== 'checking' && <dl className="checkout-totals checkout-prepayment">
+      <div><dt>Trả trước ngay (20%)</dt><dd><Money value={prepaymentAmount(total)} /></dd></div>
+      <div><dt>Thanh toán khi nhận hàng</dt><dd><Money value={total - prepaymentAmount(total)} /></dd></div>
+    </dl>}
     {orderProblem}
+    <p id="checkout-prepayment-policy" className="checkout-prepayment-policy"><span className="checkout-required">*</span>{' '}
+      Với đơn hàng giá trị trên 10 triệu, khách hàng trả trước 20% giá trị đơn hàng.</p>
     <button type="submit" className="checkout-submit" disabled={waiting || placing || !!block}
-      aria-describedby={block ? 'checkout-block' : undefined}>{placing ? 'Đang đặt hàng…' : 'Xác nhận đặt hàng'}</button>
+      aria-describedby={block ? 'checkout-block' : 'checkout-prepayment-policy'}>{placing ? 'Đang đặt hàng…' : 'Xác nhận đặt hàng'}</button>
     {block && <p id="checkout-block" className="checkout-block">{block}</p>}
     <Link className="checkout-back" to={CART_PATH}><span aria-hidden="true">←</span>Quay lại giỏ hàng</Link>
   </aside>

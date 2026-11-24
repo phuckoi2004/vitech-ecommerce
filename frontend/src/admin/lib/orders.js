@@ -19,7 +19,7 @@ export const ORDER_NEXT = {
   Shipping: ['Delivered', 'Giao hoàn tất'],
 }
 
-export const PAYMENT_LABELS = { Pending: 'Chưa thanh toán', Paid: 'Đã thanh toán', Failed: 'Thanh toán thất bại', Refunded: 'Đã hoàn tiền', Cancelled: 'Đã hủy thanh toán' }
+export const PAYMENT_LABELS = { Pending: 'Chưa thanh toán', PartiallyPaid: 'Đã thanh toán một phần', Paid: 'Đã thanh toán', Failed: 'Thanh toán thất bại', Refunded: 'Đã hoàn tiền', Cancelled: 'Đã hủy thanh toán' }
 
 export function orderFilters(params) {
   const rawPage = Number(params.get('page'))

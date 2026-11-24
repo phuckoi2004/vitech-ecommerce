@@ -5,6 +5,7 @@ import { afterEach, expect, test, vi } from 'vitest'
 import { AuthContext } from '../../auth/context.js'
 import { appRoutes } from '../../routes.jsx'
 import { makeAuth } from '../../test/auth.js'
+import { productCardsResponse } from '../../test/catalog.js'
 
 const brands = [{ BrandId: 'apple', Name: 'Apple' }, { BrandId: 'samsung', Name: 'Samsung' }]
 const product = index => ({
@@ -42,6 +43,7 @@ function mockApi(overrides = {}) {
       return json({ Items: items, Total: 25, Page: page, PageSize: 20 })
     }
     if (path === '/products/filters') return json(searchFilters)
+    if (path === '/products/cards') return productCardsResponse(url, (id) => product(Number(id.slice(1))), overrides)
     if (/^\/products\/p\d+$/.test(path)) return json(product(Number(path.slice('/products/p'.length))))
     return json({ detail: 'Không tìm thấy' }, 404)
   }))
@@ -62,7 +64,7 @@ afterEach(() => vi.unstubAllGlobals())
 test('a search says what it found, sorts by relevance and loads more instead of turning pages', async () => {
   const calls = mockApi()
   renderAt('/tim-kiem?q=samsung%20s25')
-  expect(screen.getByRole('heading', { level: 1, name: "Kết quả tìm kiếm cho: 'samsung s25'" })).toBeInTheDocument()
+  expect(await screen.findByRole('heading', { level: 1, name: "Kết quả tìm kiếm cho: 'samsung s25'" })).toBeInTheDocument()
   await waitFor(() => expect(names()).toHaveLength(20))
   expect(screen.getByRole('status')).toHaveTextContent("Tìm thấy 25 sản phẩm cho từ khoá 'samsung s25'")
   expect(document.title).toBe("Kết quả tìm kiếm cho: 'samsung s25' | VieTech")

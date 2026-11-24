@@ -13,7 +13,7 @@ const vnd = (value) => formatMoney(value).replace(/\s/g, ' ')
 
 const PAYMENT = [
   { PaymentMethodId: 'm1', Code: 'COD', Name: 'Thanh toán khi nhận hàng (COD)', Description: null, IsActive: true, DisplayOrder: 1 },
-  { PaymentMethodId: 'm2', Code: 'SEPAY', Name: 'Chuyển khoản QR', Description: null, IsActive: true, DisplayOrder: 2 },
+  { PaymentMethodId: 'm2', Code: 'SEPAY', Name: 'sepay', Description: null, IsActive: true, DisplayOrder: 2 },
 ]
 const ORDER = {
   OrderId: 'o1', OrderCode: 'VT261016ABC123', TotalAmount: '313334.00', OrderStatus: 'Pending', PaymentStatus: 'Pending',
@@ -103,6 +103,30 @@ afterEach(() => {
 })
 
 describe('order page: COD', () => {
+  test('a high-value order shows QR for only its mandatory prepayment', async () => {
+    const deposit = { ...COD_ORDER, TotalAmount: '12000000', PrepaymentAmount: '2400000', ReceivedAmount: '0', RemainingAmount: '12000000' }
+    const server = mockApi({ 'GET /orders/o1': { body: deposit },
+      'POST /orders/o1/payments/qr': { body: { ...QR, Amount: '2400000', TransferAmount: 2400000 } } })
+    renderAt('/don-hang/o1', { state: { order: deposit, paymentCode: 'COD' } })
+    const qr = await screen.findByRole('region', { name: 'Quét mã QR để thanh toán' })
+    expect(within(qr).getByText(vnd(2400000))).toBeInTheDocument()
+    expect(within(qr).queryByText(vnd(12000000))).not.toBeInTheDocument()
+    expect(server.qrRequests()).toHaveLength(1)
+    expect(screen.queryByRole('heading', { name: 'Đặt hàng thành công' })).not.toBeInTheDocument()
+  })
+
+  test('a received prepayment stops QR requests and shows the remaining COD balance', async () => {
+    const deposit = { ...COD_ORDER, TotalAmount: '12000000', PrepaymentAmount: '2400000', ReceivedAmount: '2400000',
+      RemainingAmount: '9600000', PaymentStatus: 'PartiallyPaid' }
+    const server = mockApi({ 'GET /orders/o1': { body: deposit } })
+    renderAt('/don-hang/o1')
+    expect(await screen.findByRole('heading', { name: 'Đã nhận khoản trả trước' })).toBeInTheDocument()
+    expect(screen.getByText('Đã trả trước 20%')).toBeInTheDocument()
+    expect(screen.getByText(/VieTech đã nhận khoản trả trước/)).toHaveTextContent(vnd(9600000))
+    expect(server.qrRequests()).toHaveLength(0)
+    expect(screen.queryByRole('button', { name: 'Hủy đơn', exact: true })).toBeDisabled()
+  })
+
   test('opened from the confirmation page it still reads the order from the server; COD needs no QR and no polling', async () => {
     fakeClock('2026-10-16T03:01:00Z')
     const server = mockApi({ 'GET /orders/o1': { body: { ...COD_ORDER, TotalAmount: '313000.00' } } })
@@ -141,6 +165,8 @@ describe('order page: SePay QR', () => {
     renderAt('/don-hang/o1')
 
     const qr = await screen.findByRole('region', { name: 'Quét mã QR để thanh toán' })
+    expect(screen.getByText('Chuyển khoản qua QR')).toBeInTheDocument()
+    expect(screen.queryByText('sepay')).not.toBeInTheDocument()
     expect(within(qr).getByRole('img', { name: 'Mã QR chuyển khoản cho đơn hàng' })).toHaveAttribute('src', QR.QrData)
     expect(within(qr).getByText('Vietcombank')).toBeInTheDocument()
     expect(within(qr).getByText('0123456789')).toBeInTheDocument()

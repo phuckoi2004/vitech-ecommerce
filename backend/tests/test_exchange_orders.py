@@ -5,7 +5,7 @@ from unittest.mock import patch
 import uuid
 
 from app.models import Order, OrderItem, ProductSerial, PaymentTransaction
-from app.schemas import ReturnRequestCreate, ServiceRequestRejection, OrderStatusUpdate, OrderCancelRequest
+from app.schemas import ReturnRequestCreate, ServiceRequestNote, ServiceRequestRejection, OrderStatusUpdate, OrderCancelRequest
 from app.schemas.exchange import ExchangeOrderCreate
 from app.services import BusinessRuleError, ConflictError, NotFoundError
 from tests.test_return_service import ReturnTestBase
@@ -27,7 +27,9 @@ class ExchangeOrderTest(ReturnTestBase):
         self.phone.StockQuantity = stock
 
     def advance(self):
-        return self.svc.advance_status(self.a(self.staff), self.rid, self.request.Status)
+        result = {'damage_assessment': 'Đã kiểm tra tình trạng sản phẩm.',
+                  'notes': ServiceRequestNote(Note='Đã xử lý đổi sản phẩm cho khách.')} if self.request.Status == 'Processing' else {}
+        return self.svc.advance_status(self.a(self.staff), self.rid, self.request.Status, **result)
 
     def place(self, variant=None, by=None):
         return self.svc.exchange.create_order(self.a(by or self.customer), self.rid,
@@ -230,6 +232,7 @@ class ExchangeOrderTest(ReturnTestBase):
             with self.assertRaises(RuntimeError):
                 self.advance()
         assert self.phone.StockQuantity == before and self.request.Status == "Processing"
+        assert self.request.DamageAssessment is None
         assert self.serial.Status == "Sold"
 
     def test_cannot_reject_after_acceptance(self):

@@ -176,6 +176,7 @@ class CreateWarrantyRequestTest(WarrantyTestBase):
                                           ("https://cdn.vietech.vn/b.mp4", "Video")))
         self.assertEqual((result.Status, result.EligibilityStatus, result.EligibilityReason), ("New", "Pending", None))
         self.assertEqual((result.OrderItemId, result.ProductSerialId), (self.item.OrderItemId, self.serial.ProductSerialId))
+        self.assertEqual(result.RequestedAt, self.clock.now)
         self.assertTrue(result.RequestCode.startswith("BH261009"))
         self.assertEqual([(a.FileUrl, a.FileType) for a in result.Attachments],
                          [("https://cdn.vietech.vn/a.jpg", "Image"), ("https://cdn.vietech.vn/b.mp4", "Video")])
@@ -314,10 +315,13 @@ class CreateWarrantyRequestTest(WarrantyTestBase):
     def test_customer_cannot_set_server_controlled_fields(self):
         with self.assertRaises(ValidationError):
             WarrantyRequestCreate(OrderItemId=self.item.OrderItemId, IssueDescription="x", Status="Completed")
+        with self.assertRaises(ValidationError):
+            WarrantyRequestCreate(OrderItemId=self.item.OrderItemId, IssueDescription="x", RequestedAt=DELIVERED_AT)
         base = {"OrderItemId": self.item.OrderItemId, "ProductSerialId": self.serial.ProductSerialId,
                 "IssueDescription": "Lỗi"}
         for extra in ({"Status": "Completed"}, {"EligibilityStatus": "Eligible"}, {"ResultType": "ProductReplaced"},
-                      {"CustomerId": self.other.UserId}, {"AssignedStaffId": self.staff.UserId}):
+                      {"CustomerId": self.other.UserId}, {"AssignedStaffId": self.staff.UserId},
+                      {"RequestedAt": DELIVERED_AT}):
             with self.subTest(extra=extra):
                 self.assert_error(BusinessRuleError, "warranty_field_not_allowed",
                                   lambda e=extra: self.svc.create_warranty_request(self.a(self.customer), bypass({**base, **e})))

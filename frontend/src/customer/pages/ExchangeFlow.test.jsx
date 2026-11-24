@@ -27,6 +27,7 @@ function mount(url, { exchange = context, products = [product], placed } = {}) {
     if (path === '/return-requests/r1/exchange-order') return json(placed || { OrderId: 'new-order', TotalAmount: '0', PaymentStatus: 'Paid' })
     if (path === '/products/filters') return json({ Categories: [{ CategoryId: 'phone', Name: 'Điện thoại' }, { CategoryId: 'other', Name: 'Laptop' }] })
     if (path === '/products') return json({ Items: products, Total: products.length, Page: 1, PageSize: 20 })
+    if (path === '/products/cards') return json(products)
     if (['/products/p2', '/products/slug/may-doi'].includes(path)) return json(product)
     if (path === '/products/p1') return json({ ...product, ProductId: 'p1', Variants: [{ ...product.Variants[0], ProductVariantId: 'v1' }] })
     if (path === '/products/p2/reviews') return json({ Items: [], Total: 0, Page: 1, PageSize: 10 })

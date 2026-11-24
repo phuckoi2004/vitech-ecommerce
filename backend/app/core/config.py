@@ -30,6 +30,7 @@ class AuthSettings:
     send_limit: int = 5
     send_window: int = 3600
     state_backend: str = "memory"
+    state_path: str = ""
     redis_url: str = ""
     app_env: str = "development"
     smtp_host: str = ""
@@ -47,7 +48,7 @@ class AuthSettings:
             raise AuthConfigurationError()
         if self.app_env not in {"development", "test", "production"}:
             raise AuthConfigurationError()
-        if self.state_backend not in {"memory", "redis"}:
+        if self.state_backend not in {"memory", "sqlite", "redis"}:
             raise AuthConfigurationError()
         if self.state_backend == "redis" and not self.redis_url:
             raise AuthConfigurationError()
@@ -119,6 +120,7 @@ def get_auth_settings() -> AuthSettings:
         jwt_issuer=os.getenv("AUTH_JWT_ISSUER", "vietech"),
         app_env=os.getenv("APP_ENV", "development").lower(),
         state_backend=os.getenv("AUTH_STATE_BACKEND", "memory").lower(),
+        state_path=os.getenv("AUTH_STATE_PATH", ""),
         redis_url=os.getenv("REDIS_URL", ""),
         smtp_host=os.getenv("SMTP_HOST", ""),
         smtp_username=os.getenv("SMTP_USERNAME", ""),

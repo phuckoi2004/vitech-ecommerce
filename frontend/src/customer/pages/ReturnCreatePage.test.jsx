@@ -29,7 +29,6 @@ async function chooseProduct(serial = 's2') {
   if (serial) await userEvent.selectOptions(screen.getByLabelText('Serial / IMEI *'), serial)
 }
 async function describe() {
-  await userEvent.selectOptions(screen.getByLabelText('Lý do đổi trả *'), 'Sản phẩm bị lỗi')
   await userEvent.type(screen.getByLabelText('Mô tả chi tiết lý do đổi trả *'), 'Màn hình bị nhấp nháy khi mở máy.')
   await userEvent.click(screen.getByRole('checkbox', { name: /Tôi cam kết/ }))
 }
@@ -57,7 +56,7 @@ test('sends the selected return type, exact serial, quantity, public description
   await waitFor(() => expect(router.state.location.search).toBe('?section=service&type=return&request=request1'))
   expect(api.createReturn).toHaveBeenCalledWith('access-for-test', {
     OrderItemId: 'line1', ProductSerialId: 's2', Quantity: 1, RequestType: 'Exchange',
-    Reason: 'Lý do: Sản phẩm bị lỗi\nMàn hình bị nhấp nháy khi mở máy.', Attachments: [attachment],
+    Reason: 'Màn hình bị nhấp nháy khi mở máy.', Attachments: [attachment],
   })
   expect(api.createReturn).toHaveBeenCalledTimes(1)
 })
@@ -82,14 +81,12 @@ test('nonserial products also exchange exactly one unit', async () => {
   await waitFor(() => expect(api.createReturn).toHaveBeenCalledWith('access-for-test', expect.objectContaining({ ProductSerialId: null, Quantity: 1 })))
 })
 
-test('requires a selected device, reason, detailed description and confirmation before posting', async () => {
+test('requires a selected device, detailed description and confirmation before posting', async () => {
   mount(); await chooseProduct(null)
   expect(screen.getByRole('button', { name: 'Gửi yêu cầu đổi trả' })).toBeDisabled()
   await userEvent.selectOptions(screen.getByLabelText('Serial / IMEI *'), 's1')
   await userEvent.click(screen.getByRole('button', { name: 'Gửi yêu cầu đổi trả' }))
-  expect(screen.getByRole('alert')).toHaveTextContent('Vui lòng chọn lý do')
-  await userEvent.selectOptions(screen.getByLabelText('Lý do đổi trả *'), 'Lý do khác')
-  await userEvent.click(screen.getByRole('button', { name: 'Gửi yêu cầu đổi trả' }))
+  expect(screen.queryByLabelText('Lý do đổi trả *')).not.toBeInTheDocument()
   expect(screen.getByRole('alert')).toHaveTextContent('Vui lòng mô tả chi tiết')
   await userEvent.type(screen.getByLabelText('Mô tả chi tiết lý do đổi trả *'), 'Giao sai màu')
   await userEvent.click(screen.getByRole('button', { name: 'Gửi yêu cầu đổi trả' }))
@@ -151,6 +148,7 @@ test('out-of-stock credit notice sits immediately above and outside the confirma
   api.getReturnItems.mockResolvedValue([{ ...item, OriginalInStock: false, ExchangeCreditLimit: '12000000' }])
   mount(); await chooseProduct()
   const notice = screen.getByText(/Bạn được dùng giá trị 12.000.000đ/)
+  expect(notice).toHaveTextContent('Sau khi phiếu được tiếp nhận, bạn có thể chọn sản phẩm khác cùng danh mục để đổi.')
   const footer = screen.getByRole('button', { name: 'Gửi yêu cầu đổi trả' }).closest('.cw-confirm')
   expect(footer.previousElementSibling).toBe(notice)
   expect(footer).not.toContainElement(notice)

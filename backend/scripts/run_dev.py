@@ -9,6 +9,6 @@ sys.path.insert(0, str(BACKEND))
 
 
 if __name__ == "__main__":
-    # Keep one worker: the development auth state store lives in memory.
+    # Reload local code; use AUTH_STATE_BACKEND=sqlite to keep sessions across reloads.
     uvicorn.run("app.main:app", host="127.0.0.1", port=8000, reload=True,
                 reload_dirs=[str(BACKEND / "app")])

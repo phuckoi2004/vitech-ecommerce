@@ -43,15 +43,32 @@ test('empty data retains six columns and an accurate zero count without example 
 })
 
 test('renders complete active/inactive API data, server ordering and safe text descriptions', async () => {
-  methods = [method, { ...method, PaymentMethodId: 'pm2', Code: 'QR', Name: 'Chuyển khoản QR', IsActive: false, Description: '<script>untrusted()</script>', DisplayOrder: 2 }]
+  methods = [method, { ...method, PaymentMethodId: 'pm2', Code: 'QR', Name: 'sepay', IsActive: false, Description: '<script>untrusted()</script>', DisplayOrder: 2 }]
   renderPage()
   await screen.findByText('2 phương thức')
   const table = within(screen.getByRole('table'))
   expect(table.getByText('Hoạt động')).toBeInTheDocument()
   expect(table.getByText('Ngừng hoạt động')).toBeInTheDocument()
+  expect(table.getByText('Chuyển khoản qua QR')).toBeInTheDocument()
+  expect(methods[1].Name).toBe('sepay')
   expect(table.getByText('<script>untrusted()</script>')).toBeInTheDocument()
   expect(screen.getByRole('table').querySelector('script')).toBeNull()
   expect(table.getAllByRole('row').slice(1).map((row) => row.firstChild.textContent)).toEqual(['COD', 'QR'])
+})
+
+test('editing SePay preserves its stored name instead of saving the display label', async () => {
+  methods = [{ ...method, Code: 'QR', Name: 'sepay' }]
+  renderPage()
+  fireEvent.click(await screen.findByRole('button', { name: 'Sửa Chuyển khoản qua QR' }))
+  const editor = within(await screen.findByRole('region', { name: 'Sửa phương thức thanh toán' }))
+  expect(editor.getByRole('textbox', { name: 'Tên phương thức' })).toHaveValue('sepay')
+  fireEvent.change(editor.getByRole('combobox'), { target: { value: 'inactive' } })
+  fireEvent.click(editor.getByRole('button', { name: 'Cập nhật' }))
+  const success = await screen.findByRole('dialog', { name: 'Cập nhật thành công' })
+  expect(api.updatePaymentMethod).toHaveBeenCalledWith('access-for-test', 'pm1', expect.objectContaining({ Name: 'sepay', IsActive: false }))
+  expect(methods[0].Name).toBe('sepay')
+  fireEvent.click(within(success).getByRole('button', { name: 'Đóng' }))
+  expect(await screen.findByText('Chuyển khoản qua QR')).toBeInTheDocument()
 })
 
 test('refresh and retry load server changes without displaying a fabricated count during failure', async () => {

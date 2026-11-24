@@ -6,6 +6,7 @@ import { AuthContext } from '../../auth/context.js'
 import { appRoutes } from '../../routes.jsx'
 import { formatMoney } from '../../lib/format.js'
 import { makeAuth } from '../../test/auth.js'
+import { productCardsResponse } from '../../test/catalog.js'
 
 const variant = (id, storage, color, price = '41990000.00', stock = 3) => ({
   ProductVariantId: id, VariantName: storage, Storage: storage, Color: color, Price: price,
@@ -40,7 +41,10 @@ function mockApi({ detail = product, productStatus = 200, cartStatus = 200, rela
     } else if (endpoint === '/products') {
       status = relatedStatus
       result = status === 200 ? { Items: [product, { ProductId: 'p2' }], Total: 2 } : { detail: 'Không tải được sản phẩm tương tự' }
-    } else if (endpoint === '/products/p2') result = { ...product, ProductId: 'p2', Slug: 'san-pham-khac', Name: 'Sản phẩm khác' }
+    } else if (endpoint === '/products/cards') return productCardsResponse(url, {
+      p1: product, p2: { ...product, ProductId: 'p2', Slug: 'san-pham-khac', Name: 'Sản phẩm khác' },
+    })
+    else if (endpoint === '/products/p2') result = { ...product, ProductId: 'p2', Slug: 'san-pham-khac', Name: 'Sản phẩm khác' }
     else if (endpoint === '/products/p1/reviews') result = { Items: [], Total: 0, Page: Number(url.searchParams.get('page')), PageSize: Number(url.searchParams.get('page_size')) }
     else if (endpoint === '/cart/items' && method === 'POST') {
       if (holdCart) await addGate

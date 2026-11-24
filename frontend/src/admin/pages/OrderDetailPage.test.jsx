@@ -59,13 +59,41 @@ beforeEach(() => {
   })
 })
 
+test.each(['Pending', 'PartiallyPaid'])('a %s deposit order requires the actual prepayment before confirmation', async (status) => {
+  order = { ...order, TotalAmount: '12000000', PrepaymentAmount: '2400000', ReceivedAmount: status === 'Pending' ? '0' : '1000000',
+    RemainingAmount: status === 'Pending' ? '12000000' : '11000000', PaymentStatus: status }
+  const original = api.getAdminData.getMockImplementation()
+  api.getAdminData.mockImplementation((token, path) => path.endsWith('/payments') ? Promise.resolve([]) : original(token, path))
+  renderPage()
+  const confirm = await screen.findByRole('button', { name: 'Xác nhận', exact: true })
+  await waitFor(() => expect(confirm).toBeDisabled())
+  expect(confirm).toHaveAccessibleDescription('Đơn hàng chưa thanh toán đủ khoản trả trước 20%.')
+  expect(screen.getByRole('region', { name: 'Thanh toán trả trước' })).toBeInTheDocument()
+})
+
+test('COD confirmation states only the balance after a verified prepayment', async () => {
+  order = { ...order, OrderStatus: 'Shipping', TotalAmount: '12000000', PrepaymentAmount: '2400000', ReceivedAmount: '2400000',
+    RemainingAmount: '9600000', PaymentStatus: 'PartiallyPaid' }
+  const original = api.getAdminData.getMockImplementation()
+  api.getAdminData.mockImplementation((token, path) => path.endsWith('/payments') ? Promise.resolve([]) : original(token, path))
+  renderPage()
+  fireEvent.click(await screen.findByRole('button', { name: 'Giao hoàn tất' }))
+  const check = screen.getByRole('checkbox', { name: /Tôi xác nhận đã giao hàng/ })
+  expect(check).toHaveAccessibleName(/9.600.000/)
+  expect(check).not.toHaveAccessibleName(/12.000.000/)
+  fireEvent.click(check)
+  fireEvent.click(screen.getByRole('button', { name: 'Xác nhận giao và thu tiền' }))
+  await waitFor(() => expect(api.confirmCodDelivery).toHaveBeenCalledWith('access-for-test', 'o1', { Note: null }))
+})
+
 test.each([['Pending', 'Chưa thanh toán'], ['Failed', 'Thanh toán thất bại']])(
   'a transfer order with payment %s cannot be confirmed: the action is disabled with the reason', async (status, label) => {
-    method = { PaymentMethodId: 'pm1', Code: 'SEPAY', Name: 'Chuyển khoản QR' }
+    method = { PaymentMethodId: 'pm1', Code: 'SEPAY', Name: 'sepay' }
     order = { ...order, PaymentStatus: status }
     renderPage()
     const confirm = await screen.findByRole('button', { name: 'Xác nhận', exact: true }, { timeout: 5000 })
     await waitFor(() => expect(confirm).toBeDisabled())
+    expect(screen.getByText('Chuyển khoản qua QR')).toBeInTheDocument()
     expect(confirm).toHaveAccessibleDescription(`Đơn thanh toán chuyển khoản chỉ được xác nhận sau khi khách đã thanh toán (hiện tại: ${label}).`)
     fireEvent.click(confirm)
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()

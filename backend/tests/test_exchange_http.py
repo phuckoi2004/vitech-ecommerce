@@ -3,7 +3,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 import pytest
 
-from app.models import Order, ProductVariant, ReturnRequest
+from app.models import Category, Order, Product, ProductVariant, ReturnRequest
+import uuid
 from tests.test_service_request_progress import returns, returns_directory  # noqa: F401 - pytest fixtures
 
 
@@ -54,7 +55,8 @@ def test_customer_can_create_one_zero_order_and_staff_complete_only_after_settle
     current['actor'] = actors[1]
     assert client.post(path, json={}).status_code == 403
     for state in ['Approved', 'Receiving', 'Processing']:
-        response = client.post(f'/admin/return-requests/{request_id}/advance', json={'ExpectedStatus': state})
+        result = {'DamageAssessment': 'Đã kiểm tra sản phẩm.', 'Note': 'Đã đổi sản phẩm cho khách.'} if state == 'Processing' else {}
+        response = client.post(f'/admin/return-requests/{request_id}/advance', json={'ExpectedStatus': state, **result})
         assert response.status_code == 200, response.text
     with Session(engine) as session:
         assert session.get(ReturnRequest, requests[0].ReturnRequestId).Status == 'Completed'
@@ -70,3 +72,42 @@ def test_exchange_payload_cannot_override_identity_credit_quantity_shipping_or_p
     for field in ['CustomerId', 'Quantity', 'ExchangeCreditAmount', 'TotalAmount', 'ShippingMethodId', 'PaymentMethodId']:
         response = client.post(path, json={field: 0})
         assert response.status_code == 422
+
+
+def test_out_of_stock_original_allows_another_product_only_in_the_same_category(returns):
+    client, engine, current, requests, actors, _ = returns
+    request_id = requests[0].ReturnRequestId  # Already accepted, no replacement reserved yet.
+    product_id, variant_id, other_category_id = uuid.uuid4(), uuid.uuid4(), uuid.uuid4()
+    with Session(engine) as session:
+        original = session.scalar(select(ProductVariant))
+        original.StockQuantity = 0
+        category_id = original.product.CategoryId
+        category = session.get(Category, category_id)
+        category_values = {c.key: getattr(category, c.key) for c in Category.__table__.columns}
+        category_values.update(CategoryId=other_category_id, Slug='other-exchange-category', Name='Other category')
+        session.add(Category(**category_values))
+        product_values = {c.key: getattr(original.product, c.key) for c in Product.__table__.columns}
+        product_values.update(ProductId=product_id, Slug='replacement-for-exchange', Name='Replacement product', CategoryId=other_category_id)
+        session.add(Product(**product_values))
+        variant_values = {c.key: getattr(original, c.key) for c in ProductVariant.__table__.columns}
+        variant_values.update(ProductVariantId=variant_id, ProductId=product_id, Sku='EXCHANGE-OTHER', StockQuantity=2)
+        session.add(ProductVariant(**variant_values))
+        session.commit()
+    current['actor'] = actors[0]
+    context = client.get(f'/return-requests/{request_id}/exchange')
+    assert context.status_code == 200, context.text
+    assert context.json()['CanChoose'] and not context.json()['OriginalInStock']
+    path = f'/return-requests/{request_id}/exchange-order'
+    rejected = client.post(path, json={'ProductVariantId': str(variant_id)})
+    assert rejected.status_code == 400 and rejected.json()['code'] == 'exchange_category_mismatch'
+    with Session(engine) as session:
+        assert session.scalar(select(Order).where(Order.SourceReturnRequestId == request_id)) is None
+        assert session.get(ProductVariant, variant_id).StockQuantity == 2
+        session.get(Product, product_id).CategoryId = category_id
+        session.commit()
+    created = client.post(path, json={'ProductVariantId': str(variant_id)})
+    assert created.status_code == 200, created.text
+    assert created.json()['SourceReturnRequestId'] == str(request_id)
+    assert created.json()['Items'][0]['ProductVariantId'] == str(variant_id)
+    with Session(engine) as session:
+        assert session.get(ProductVariant, variant_id).StockQuantity == 1

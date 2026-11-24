@@ -38,6 +38,7 @@ function mockApi({ existingConversation = null, messages = [], history = [], new
       result = categoryRecords.find((item) => endpoint.endsWith('/' + item.Slug))
     else if (endpoint === '/brands/slug/apple') result = { BrandId: 'b1', Name: 'Apple', Slug: 'apple' }
     else if (endpoint === '/products') result = { Items: [product], Total: 1, Page: 1, PageSize: 20 }
+    else if (endpoint === '/products/cards') result = [product]
     else if (endpoint === '/products/filters') result = { Categories: [], Brands: [{ BrandId: 'b1', Name: 'Apple', Slug: 'apple', ProductCount: 1 }] }
     else if (endpoint === '/products/p1' || endpoint === '/products/slug/dien-thoai-mau') result = product
     else if (endpoint === '/products/p1/reviews') result = { Items: [], Total: 0, Page: Number(url.searchParams.get('page')), PageSize: Number(url.searchParams.get('page_size')) }
@@ -343,7 +344,7 @@ test('the home page has one employee entry and opens the conversation without le
   expect(screen.queryByRole('link', { name: 'Chat với nhân viên', exact: true })).not.toBeInTheDocument()
   expect(calls.some(c => c.endpoint === '/conversations')).toBe(false)
   await user.click(employee)
-  const dialog = screen.getByRole('dialog', { name: 'Chat với nhân viên' })
+  const dialog = await screen.findByRole('dialog', { name: 'Chat với nhân viên' })
   expect(await within(dialog).findByRole('textbox', { name: 'Nội dung tin nhắn' })).toBeInTheDocument()
   expect(router.state.location.pathname).toBe('/')
   expect(calls.filter(c => c.endpoint === '/conversations' && c.method === 'POST')).toHaveLength(1)
@@ -414,7 +415,7 @@ test('AI opens a login prompt for guests without creating or closing any convers
   const ai = screen.getByRole('button', { name: 'Chat với AI', exact: true })
   expect(employee.compareDocumentPosition(ai) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   await user.click(ai)
-  const dialog = screen.getByRole('dialog', { name: 'Chat với AI' })
+  const dialog = await screen.findByRole('dialog', { name: 'Chat với AI' })
   expect(within(dialog).getByRole('heading', { name: 'Đăng nhập để chat với AI' })).toBeInTheDocument()
   expect(within(dialog).queryByRole('textbox')).not.toBeInTheDocument()
   expect(calls.some(c => c.endpoint.startsWith('/conversations'))).toBe(false)
@@ -529,7 +530,7 @@ test('the hamburger keeps history and new-chat actions hidden until opened, with
   const user = userEvent.setup()
   renderAt('/', makeAuth({ role: 'Customer' }))
   await user.click(screen.getByRole('button', { name: 'Chat với nhân viên', exact: true }))
-  const dialog = screen.getByRole('dialog', { name: 'Chat với nhân viên' })
+  const dialog = await screen.findByRole('dialog', { name: 'Chat với nhân viên' })
   const box = await within(dialog).findByRole('textbox', { name: 'Nội dung tin nhắn' })
   await user.type(box, 'Tin nhắn đang soạn')
   expect(within(dialog).queryByRole('combobox')).not.toBeInTheDocument()
@@ -664,7 +665,7 @@ test('a detail 503 shows a retry action instead of claiming there are no product
   mockApi()
   const fetchApi = globalThis.fetch
   let failing = true
-  vi.stubGlobal('fetch', vi.fn((url, options) => String(url).endsWith('/products/p1') && failing
+  vi.stubGlobal('fetch', vi.fn((url, options) => String(url).includes('/products/cards?') && failing
     ? Promise.resolve(new Response(JSON.stringify({ detail: 'Hệ thống đang bận.' }), { status: 503 })) : fetchApi(url, options)))
   const router = renderAt('/tim-kiem')
   expect(await screen.findByRole('alert')).toHaveTextContent('Hệ thống đang bận.')

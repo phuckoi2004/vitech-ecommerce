@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { PROMOTION_MODES, PROMOTION_STATUSES, PROMOTION_TYPES, promotionDateTime, promotionForm } from '../lib/promotions.js'
 import { PromotionPopupButton } from './PromotionUi.jsx'
 import PromotionTargetPicker from './PromotionTargetPicker.jsx'
-import { ALL_PROMOTION_CATEGORIES, SAVED_PROMOTION_SCOPE, initialPromotionTargets, promotionCategoryOptions, promotionTargetBody } from '../lib/promotion-targets.js'
+import PromotionCategoryPicker from './PromotionCategoryPicker.jsx'
+import { initialPromotionTargets, promotionTargetBody } from '../lib/promotion-targets.js'
 
 const CONTROL = 'h-[42px] w-full min-w-0 rounded-[9px] border border-admin-border bg-white px-3 text-xs leading-[normal] font-normal text-admin-text placeholder:text-admin-muted disabled:bg-admin-page disabled:text-admin-muted'
 function Field({ label, children }) { return <label className="flex min-w-0 flex-col gap-[7px] text-xs leading-[normal] font-medium">{label}{children}</label> }
@@ -53,14 +54,8 @@ export default function PromotionEditor({ row, products, categories, busy, error
         <Field label="Thời gian kết thúc"><DateInput aria-label="Kết thúc" placeholder="Chọn ngày giờ kết thúc" required disabled={locked} value={form.EndDate} onChange={(event) => change('EndDate', event.target.value)} /></Field>
       </div>
       <div className="grid grid-cols-2 gap-3.5">
-        <Field label="Danh mục"><Select aria-label="Danh mục áp dụng" required disabled={locked} value={selection.categoryId} onChange={(event) => { setSelection({ categoryId: event.target.value, allProducts: true, productIds: [], changed: true }); setValidation('') }}>
-          <option value="" disabled hidden>Chọn danh mục áp dụng</option>
-          <option value={ALL_PROMOTION_CATEGORIES}>Tất cả danh mục</option>
-          {selection.categoryId === SAVED_PROMOTION_SCOPE && <option value={SAVED_PROMOTION_SCOPE} disabled>Phạm vi đã lưu (nhiều danh mục / sản phẩm)</option>}
-          {promotionCategoryOptions(categories).map(({ category, depth }) => <option key={category.CategoryId} value={category.CategoryId}>{'   '.repeat(depth) + category.Name}</option>)}
-          {selection.categoryId && ![ALL_PROMOTION_CATEGORIES, SAVED_PROMOTION_SCOPE].includes(selection.categoryId) && !categories.some((category) => category.CategoryId === selection.categoryId) && <option value={selection.categoryId} disabled>Danh mục đã lưu</option>}
-        </Select></Field>
-        <PromotionTargetPicker key={selection.categoryId} products={products} categories={categories} selection={selection} disabled={busy || locked} onChange={(next) => { setSelection(next); setValidation('') }} />
+        <div className="self-start"><PromotionCategoryPicker categories={categories} selection={selection} disabled={busy || locked} onChange={(next) => { setSelection(next); setValidation('') }} /></div>
+        <div className="self-start"><PromotionTargetPicker key={selection.categoryIds.join(',')} products={products} categories={categories} selection={selection} disabled={busy || locked} onChange={(next) => { setSelection(next); setValidation('') }} /></div>
       </div>
     </fieldset>
     <p className="m-0 text-[11px] leading-[normal] text-admin-muted">{locked ? 'Chương trình đang hoạt động: chỉ được sửa tên, mô tả và trạng thái.' : row ? 'Hệ thống kiểm tra các trường nhập liệu trước khi cập nhật và thông báo kết quả.' : 'Hệ thống kiểm tra định dạng và các trường bắt buộc trước khi thêm mới khuyến mãi.'}</p>

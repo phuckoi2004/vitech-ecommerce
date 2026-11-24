@@ -96,8 +96,8 @@ class PresentAnswerArguments(ToolArguments):
             raise ValueError("So sánh cùng sản phẩm phải chọn rõ từng phiên bản")
         if self.intent in ("recommend", "product") and not ids:
             raise ValueError("Cần chọn sản phẩm đã tra cứu")
-        if self.intent == "compare" and not 2 <= len(ids) <= 3:
-            raise ValueError("So sánh cần từ hai đến ba sản phẩm")
+        if self.intent == "compare" and len(ids) != 2:
+            raise ValueError("So sánh cần đúng hai sản phẩm")
         if self.intent == "compatibility" and len(ids) > 2:
             raise ValueError("Kiểm tra tương thích hỗ trợ tối đa hai thiết bị")
         if self.compatibility_explanation_ids and self.intent != "compatibility":

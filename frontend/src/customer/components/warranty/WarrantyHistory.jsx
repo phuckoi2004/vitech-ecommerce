@@ -4,7 +4,7 @@ import EmptyState from '../../../components/shared/EmptyState.jsx'
 import Pagination from '../../../components/shared/Pagination.jsx'
 import useApiData from '../../../hooks/useApiData.js'
 import useCustomerSession from '../../../hooks/useCustomerSession.js'
-import { formatDateTime } from '../../../lib/format.js'
+import { formatDate, formatDateTime } from '../../../lib/format.js'
 import { cancelWarranty, getMyWarranty, listMyWarranties } from '../../../lib/warranty-api.js'
 import { canCancelWarranty, warrantyResultLabel, warrantyStageLabel } from '../../../lib/warranty.js'
 import { orderPath, WARRANTY_CREATE_PATH, WARRANTY_HISTORY_PATH, warrantyRequestPath } from '../../routes/paths.js'
@@ -56,7 +56,9 @@ function WarrantyDetail({ id }) {
         {item.VariantInfo && <div><dt>Phiên bản</dt><dd>{item.VariantInfo}</dd></div>}
         <div><dt>Serial / IMEI</dt><dd>{item.SerialNumber || 'Không quản lý Serial/IMEI'}</dd></div>
         <div><dt>Tiếp nhận sản phẩm</dt><dd>{item.ReceivedAt ? formatDateTime(item.ReceivedAt) : 'Chờ tiếp nhận'}</dd></div></dl>
-      <section className="cw-detail-section"><h2>Thông tin lỗi đã gửi</h2><p className="cw-description">{item.IssueDescription}</p></section>
+      <section className="cw-detail-section"><h2>Thông tin lỗi đã gửi</h2>
+        <dl className="cw-facts"><div><dt>Thời điểm phát sinh lỗi</dt><dd>{formatDate(item.RequestedAt)}</dd></div></dl>
+        <p className="cw-description">{item.IssueDescription}</p></section>
       {item.EligibilityReason && <p className="cacc-notice" role="status">{item.EligibilityReason}</p>}
       {item.ResultApprovedAt && item.ResultType && <section className="cw-result"><h2>Kết quả bảo hành: {warrantyResultLabel(item.ResultType)}</h2>
         <p className="cw-description">{item.ResultNote}</p><small>Cập nhật: {formatDateTime(item.ResultApprovedAt)}</small></section>}

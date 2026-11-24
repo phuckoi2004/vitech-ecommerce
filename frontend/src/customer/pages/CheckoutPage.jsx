@@ -11,7 +11,9 @@ import { listAddresses } from '../../lib/account-api.js'
 import { getCart } from '../../lib/cart-api.js'
 import { listPaymentMethods, listShippingMethods } from '../../lib/catalog-api.js'
 import { createOrder, listMyOrders } from '../../lib/order-api.js'
-import { checkoutBlock, couponBlock } from '../components/cart/cartLines.js'
+import { paymentMethodLabel } from '../../lib/payment-methods.js'
+import { requiresPrepayment } from '../../lib/prepayment.js'
+import { checkoutBlock, couponBlock, orderTotal } from '../components/cart/cartLines.js'
 import useCartCoupon, { clearCartCoupon } from '../components/cart/useCartCoupon.js'
 import useProductDetails from '../components/cart/useProductDetails.js'
 import AddressPicker from '../components/checkout/AddressPicker.jsx'
@@ -58,7 +60,7 @@ function NormalCheckoutPage() {
   const [choosing, setChoosing] = useState(false)
   const [receiver, setReceiver] = useState(() => newReceiver(user))
   const [shippingId, setShippingId] = useState(null)
-  const [paymentId, setPaymentId] = useState(null)
+  const [paymentChoice, setPaymentChoice] = useState(null)
   const [note, setNote] = useState('')
   const [submitted, setSubmitted] = useState(false)
   // The order being sent. The ref is set at once, so a second click before the next render sends nothing.
@@ -80,7 +82,21 @@ function NormalCheckoutPage() {
   const shippingMethods = shipping.data ?? []
   const paymentMethods = [...(payment.data ?? [])].sort((a, b) => a.DisplayOrder - b.DisplayOrder)
   const shippingMethodId = shippingId ?? shippingMethods[0]?.ShippingMethodId ?? null
-  const paymentMethodId = paymentId ?? paymentMethods[0]?.PaymentMethodId ?? null
+  const selectedShipping = shippingMethods.find((method) => method.ShippingMethodId === shippingMethodId)
+  const total = orderTotal({ subtotal: cart.data?.SelectedSubtotal ?? 0,
+    discount: coupon.preview?.DiscountAmount, shippingFee: selectedShipping?.BaseFee ?? 0 })
+  const highValue = requiresPrepayment(total)
+  const codMethod = paymentMethods.find((method) => method.Code === 'COD')
+  const prepaymentChoice = codMethod ? `prepay:${codMethod.PaymentMethodId}` : null
+  const requestedPaymentChoice = paymentChoice ?? paymentMethods[0]?.PaymentMethodId ?? null
+  // Above the threshold, use the 20% plan instead of the full COD option.
+  const selectedPaymentChoice = highValue && codMethod && requestedPaymentChoice === codMethod.PaymentMethodId
+    ? prepaymentChoice : !highValue && prepaymentChoice && requestedPaymentChoice === prepaymentChoice
+      ? codMethod.PaymentMethodId : requestedPaymentChoice
+  const paymentMethodId = prepaymentChoice && selectedPaymentChoice === prepaymentChoice
+    ? codMethod.PaymentMethodId : selectedPaymentChoice
+  const selectedPayment = paymentMethods.find((method) => method.PaymentMethodId === paymentMethodId)
+  const prepay = highValue && Boolean(prepaymentChoice) && selectedPaymentChoice === prepaymentChoice
   const form = {
     delivery: mode === 'saved' ? { mode, addressId } : { mode, receiver },
     shippingMethodId,
@@ -99,7 +115,7 @@ function NormalCheckoutPage() {
     || (unresolved ? 'Hãy kiểm tra đơn hàng trước khi đặt lại.' : '')
 
   function focusField(name) {
-    formRef.current?.querySelector(`[data-field="${name}"]`)?.focus()
+    formRef.current?.querySelector(`[data-field="${name}"]:not(:disabled)`)?.focus()
   }
 
   // A server error under a field goes once the customer changes that field.
@@ -125,7 +141,7 @@ function NormalCheckoutPage() {
       setShippingId(null)
     } else if (action === 'reloadPayment') {
       payment.reload()
-      setPaymentId(null)
+      setPaymentChoice(null)
     }
   }
 
@@ -240,20 +256,25 @@ function NormalCheckoutPage() {
                 <CheckoutSection step="4" title="Phương thức thanh toán" id="checkout-payment">
                   <MethodGroup title="Phương thức thanh toán" hideTitle stacked data={payment} error={errors.payment} field="payment"
                     empty="Hiện chưa có phương thức thanh toán khả dụng." loadingLabel="Đang tải phương thức thanh toán…">
-                    {paymentMethods.map((method) => <OptionCard key={method.PaymentMethodId} name="checkout-payment"
-                      value={method.PaymentMethodId} checked={method.PaymentMethodId === paymentMethodId} field="payment"
-                      title={method.Name} detail={method.Description} onSelect={(id) => {
-                        setPaymentId(id)
+                    {paymentMethods.filter((method) => !highValue || method.Code !== 'COD').map((method) => <OptionCard key={method.PaymentMethodId} name="checkout-payment"
+                      value={method.PaymentMethodId} checked={method.PaymentMethodId === selectedPaymentChoice} field="payment"
+                      title={paymentMethodLabel(method)} detail={method.Description} onSelect={(id) => {
+                        setPaymentChoice(id)
                         settle('payment')
                       }} />)}
+                    {highValue && codMethod && <OptionCard name="checkout-payment" value={prepaymentChoice}
+                      checked={selectedPaymentChoice === prepaymentChoice} field="payment" title="Trả trước 20%"
+                      detail="Áp dụng với đơn hàng giá trị trên 10 triệu. Trả trước qua QR, phần còn lại thanh toán khi nhận hàng."
+                      onSelect={(id) => { setPaymentChoice(id); settle('payment') }} />}
                   </MethodGroup>
                   <p className="checkout-payment-note"><span aria-hidden="true">ⓘ</span>
-                    {paymentNote(paymentMethods.find((method) => method.PaymentMethodId === paymentMethodId))}
+                    {prepay ? 'Sau khi đặt hàng, chuyển khoản qua QR khoản trả trước 20% trong 15 phút. Phần còn lại thanh toán khi nhận hàng.'
+                      : paymentNote(selectedPayment)}
                   </p>
                 </CheckoutSection>
               </div>
               <CheckoutSummary cart={cart.data} lines={lines} details={details} waiting={waiting} placing={placing}
-                shipping={shippingMethods.find((method) => method.ShippingMethodId === shippingMethodId)}
+                shipping={selectedShipping} prepay={prepay}
                 coupon={coupon} block={block} orderProblem={problem}
                 onRemoveCoupon={() => {
                   coupon.remove()

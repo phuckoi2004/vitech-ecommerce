@@ -10,7 +10,7 @@ Context rules (docs/stage10-ai-advisor-upgrade.md):
 3. A new budget replaces the old range; "bỏ giới hạn ngân sách" clears it.
 4. Naming another root category starts a new need group: nothing from the old group is inherited.
 5. A question about named or referenced products applies only the constraints it states itself.
-6. Shown products and their order are read from the saved ProductReferences, so "máy thứ hai" is resolved by the
+6. Shown products and their order are read from saved ProductReferences/OrdinalReferences, so "máy thứ hai" is resolved by the
    backend; an ordinal or "máy này" that cannot be resolved is answered with a clarifying question, never a guess.
 """
 
@@ -184,6 +184,7 @@ class PastTurn:
     slots: dict
     answer_intent: str | None = None
     references: tuple = ()
+    ordinal_references: tuple = ()  # Stable source list, separate from the latest compared pair.
 
 
 @dataclass(frozen=True)
@@ -194,7 +195,7 @@ class ConversationState:
         return self.turns[-1] if self.turns else None
 
     def last_list(self):
-        """The latest answer that showed products as a list (recommend/compare), for "máy thứ hai"."""
+        """The latest visible product list (recommend/compare), for "hai mẫu trên"."""
         for turn in reversed(self.turns):
             if turn.references and turn.answer_intent not in ABOUT_SHOWN and (
                     turn.answer_intent in (None, "recommend", "compare") or len(turn.references) > 1):
@@ -207,6 +208,36 @@ class ConversationState:
             if turn.references:
                 return list(turn.references)
         return []
+
+    def ordinal_list(self):
+        """Keep recommendation ranks when later comparisons only pick subsets of that list.
+
+        A new recommendation or a comparison introducing other SKUs starts a new numbered list. Persisted anchors
+        keep the source list available even after its original turn leaves the model's bounded text history.
+        """
+        listed = []
+        for turn in self.turns:
+            if turn.ordinal_references:
+                listed = list(turn.ordinal_references)
+                continue
+            if not turn.references or turn.answer_intent in ABOUT_SHOWN or not (
+                    turn.answer_intent in (None, "recommend", "compare") or len(turn.references) > 1):
+                continue
+            if turn.answer_intent == "compare" and listed and all(any(
+                    ref["ProductId"] == source["ProductId"] and (
+                        not ref.get("ProductVariantId") or not source.get("ProductVariantId")
+                        or ref["ProductVariantId"] == source["ProductVariantId"])
+                    for source in listed) for ref in turn.references):
+                continue
+            listed = list(turn.references)
+        return listed
+
+    def reference_list(self, question):
+        """Explicit references to a comparison use its own columns; bare ranks use the stable source list."""
+        if re.search(r"\b(?:vua|da|moi)\s+so sanh\b|\b(?:bang|cap)\s+so sanh\b", fold(question)):
+            return next((list(turn.references) for turn in reversed(self.turns)
+                         if turn.answer_intent == "compare" and turn.references), self.last_list())
+        return self.ordinal_list()
 
 
 def slots_from_constraints(constraints):
@@ -257,7 +288,7 @@ _ORDINAL_VALUES = {"nhat": 1, "dau tien": 1, "1": 1, "hai": 2, "2": 2, "ba": 3, 
                    "tu": 4, "bon": 4, "4": 4, "nam": 5, "5": 5, "cuoi cung": -1, "cuoi": -1}
 # "máy thứ hai", "mẫu số 2", "máy 2", "cái cuối"; not "laptop 2 trong 1" or "máy 2 sim".
 _ORDINAL = re.compile(rf"\b{_NOUN}\s+(?:thu|so)\s+(nhat|hai|ba|tu|bon|nam|[1-5])\b"
-                      rf"|\b{_ITEM}\s+(dau tien|cuoi cung|cuoi|[1-5])\b(?!\s*(?:sim|khe|nhan|camera|loa|gb|tb|trong))")
+                      rf"|\b{_ITEM}\s+(dau tien|cuoi cung|cuoi|[1-5])\b(?!\s*(?:sim|khe|nhan|camera|loa|gb|tb|trong\s+1\b))")
 # A bare "thứ hai" counts only next to a full ordinal ("máy thứ nhất và thứ hai"); alone it can mean "firstly".
 _BARE_ORDINAL = re.compile(r"\bthu\s+(nhat|hai|ba|tu|bon|nam)\b")
 _FIRST_N = re.compile(rf"\b(hai|2|ba|3|bon|4|nam|5)\s+{_ITEM}\s+(?:dau|dau tien)\b")
@@ -495,6 +526,7 @@ def _resolve(text, state, intent_hint):
     ranks = _ranks(text)
     listed, focus = state.last_list(), state.last_focus()
     if ranks:
+        listed = state.reference_list(text)
         if not listed:
             return (), "Mình chưa tư vấn mẫu nào trong cuộc trò chuyện này. Bạn muốn hỏi sản phẩm nào?"
         resolved = []
@@ -680,7 +712,12 @@ def analyze(question, vocab: Vocabulary, state: ConversationState = Conversation
             category, hinted = counted_category, counted_hint
     mentioned, excluded, explicit_brands = _brands(text, vocab)
     ceiling, floor, cleared = budget_ceiling(question), budget_floor(question), budget_cleared(question)
-    named = _names_product(text, mentioned)
+    named = _names_product(text, mentioned) or any(
+        ref.get("ProductName") and re.search(r"(?<!\w)" + re.escape(fold(ref["ProductName"])) + r"(?!\w)", text)
+        for ref in state.last_list())
+    if count and named and _COMPARE.search(text) and re.match(r"\s+nao\b", count_text[count.end():]):
+        # "Lenovo IdeaPad Slim 3 máy nào tốt hơn?": 3 is part of the name, not a request for three products.
+        count = None
     compare_hint = "compare" if _COMPARE.search(text) else None
     refs, clarification = _resolve(text, state, compare_hint)
     listed = state.last_list()
@@ -713,18 +750,19 @@ def analyze(question, vocab: Vocabulary, state: ConversationState = Conversation
                    or any(not any(fold(brand.name) in fold(ref.get("ProductName") or "") for ref in listed)
                           for brand in mentioned))
     requested = (int(count[1]) if count[1].isdigit() else _COUNT_WORDS[count[1]]) if count else None
+    selecting = bool(re.search(r"\b(?:chon|tim|loc|lay|goi y|de xuat|tu van)\b", text))
     comparison_search = bool(intent == "product_comparison" and not (named or refs or clarification)
-                             and (category or prev.get("CategoryId")) and requested in (2, 3)
-                             and (budget_signal is not None or re.search(
-                                 r"\b(?:chon|tim|loc|lay|goi y|de xuat|tu van)\b", text)))
+                             and (category or prev.get("CategoryId"))
+                             and (requested == 2 or requested is None and selecting)
+                             and (budget_signal is not None or selecting))
     if intent == "product_comparison" and not refs and not named and listed and not clarification and not (new_set or comparison_search):
         refs = tuple(listed)  # "Máy nào pin tốt hơn?" compares the list just shown.
     if intent == "product_comparison":
-        if (requested and requested > 3) or len(refs) > 3:
-            clarification = "Mỗi bảng so sánh hỗ trợ tối đa 3 sản phẩm. Bạn chọn 2 hoặc 3 mẫu và phiên bản cụ thể nhé."
+        if (requested and requested != 2) or len(refs) > 2:
+            clarification = "Mỗi bảng so sánh gồm đúng 2 sản phẩm. Bạn chọn 2 mẫu và phiên bản cụ thể nhé."
         elif refs and (len(refs) < 2 or requested and requested != len(refs)):
             clarification = (f"Mình xác định được {len(refs)} mẫu: {_describe(refs)}. "
-                             "Bạn muốn so sánh 2 hoặc 3 mẫu nào?")
+                             "Bạn muốn so sánh 2 mẫu nào?")
     if intent == "explain_recommendation" and (not refs or clarification) and not _ranks(text):
         refs, clarification = tuple(listed), None  # "Tại sao lại chọn máy này?" after a list: explain the list.
     if intent == "product_description" and not refs and not clarification:
@@ -865,8 +903,8 @@ def analyze(question, vocab: Vocabulary, state: ConversationState = Conversation
             result.cheaper_than = int(min(prices))
             explicit.add("budget")
 
-    if count and intent == "product_comparison":
-        result.requested_count = requested
+    if intent == "product_comparison":
+        result.requested_count = requested or 2
     elif count and intent in RECOMMENDING:
         value = count[1]
         result.requested_count = min(5, int(value) if value.isdigit() else _COUNT_WORDS[value])

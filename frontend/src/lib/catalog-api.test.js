@@ -53,16 +53,29 @@ describe('loadProductCards', () => {
     vi.unstubAllGlobals()
   })
 
-  test('reads each product detail and leaves out the ones that fail', async () => {
+  test('one batch keeps requested order, deduplicates IDs and omits removed products', async () => {
     const urls = []
     vi.stubGlobal('fetch', vi.fn(async (url) => {
       urls.push(url)
-      if (url.endsWith('/products/gone')) return new Response(JSON.stringify({ detail: 'Không tìm thấy sản phẩm' }), { status: 404 })
-      return new Response(JSON.stringify(product), { status: 200, headers: { 'Content-Type': 'application/json' } })
+      return new Response(JSON.stringify([{ ...product, ProductId: 'p2' }, product]), { status: 200, headers: { 'Content-Type': 'application/json' } })
     }))
-    const cards = await loadProductCards([{ ProductId: 'p1' }, { ProductId: 'gone' }])
-    expect(urls).toEqual(['/api/products/p1', '/api/products/gone'])
-    expect(cards.map((card) => card.id)).toEqual(['p1'])
+    const cards = await loadProductCards(['p1', 'gone', 'p2', 'p1'].map((ProductId) => ({ ProductId })))
+    expect(urls).toEqual(['/api/products/cards?product_id=p1&product_id=gone&product_id=p2'])
+    expect(cards.map((card) => card.id)).toEqual(['p1', 'p2'])
+  })
+
+  test('empty lists make no request and larger lists respect the API batch limit', async () => {
+    const fetch = vi.fn(async (input) => {
+      const ids = new URL(input, 'http://localhost').searchParams.getAll('product_id')
+      expect(ids.length).toBeLessThanOrEqual(50)
+      return new Response(JSON.stringify(ids.map((ProductId) => ({ ...product, ProductId }))))
+    })
+    vi.stubGlobal('fetch', fetch)
+    expect(await loadProductCards([])).toEqual([])
+    expect(fetch).not.toHaveBeenCalled()
+    const summaries = Array.from({ length: 55 }, (_, index) => ({ ProductId: `p${index}` }))
+    expect((await loadProductCards(summaries)).map((card) => card.id)).toEqual(summaries.map((item) => item.ProductId))
+    expect(fetch).toHaveBeenCalledTimes(2)
   })
 
   test('an aborted load is not turned into an empty list', async () => {

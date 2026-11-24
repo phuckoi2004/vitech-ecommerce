@@ -40,7 +40,7 @@ ORDER_STATUSES = (
     "Completed",
     "Cancelled",
 )
-PAYMENT_STATUSES = ("Pending", "Paid", "Failed", "Refunded", "Cancelled")
+PAYMENT_STATUSES = ("Pending", "PartiallyPaid", "Paid", "Failed", "Refunded", "Cancelled")
 
 
 class ShippingMethod(Base):
@@ -70,6 +70,7 @@ class Order(Base):
         CheckConstraint('"ShippingFee" >= 0', name="ShippingFee_NonNegative"),
         CheckConstraint('"DiscountAmount" >= 0', name="DiscountAmount_NonNegative"),
         CheckConstraint('"TotalAmount" >= 0', name="TotalAmount_NonNegative"),
+        CheckConstraint('"PrepaymentAmount" >= 0 AND "PrepaymentAmount" <= "TotalAmount"', name="PrepaymentAmount_Valid"),
         CheckConstraint('"ExchangeCreditAmount" >= 0 AND "ExchangeCreditAmount" <= "DiscountAmount"', name="ExchangeCredit_Valid"),
         CheckConstraint('"SourceReturnRequestId" IS NOT NULL OR "ExchangeCreditAmount" = 0', name="ExchangeCredit_Source"),
         Index("UX_Orders_SourceReturn_Active", "SourceReturnRequestId", unique=True,
@@ -115,6 +116,8 @@ class Order(Base):
     )
     DiscountAmount: Mapped[Decimal] = mapped_column(Numeric(15, 2), nullable=False)
     TotalAmount: Mapped[Decimal] = mapped_column(Numeric(15, 2), nullable=False)
+    # Frozen on creation; zero for historical orders and fully prepaid QR orders.
+    PrepaymentAmount: Mapped[Decimal] = mapped_column(Numeric(15, 2), nullable=False, server_default=text("0"))
     OrderStatus: Mapped[str] = mapped_column(String(30), nullable=False)
     PaymentStatus: Mapped[str] = mapped_column(String(30), nullable=False)
     ReceiverName: Mapped[str] = mapped_column(String(255), nullable=False)
@@ -156,6 +159,20 @@ class Order(Base):
     payment_transactions: Mapped[list[PaymentTransaction]] = relationship(
         back_populates="order", foreign_keys="PaymentTransaction.OrderId", passive_deletes="all"
     )
+
+    @property
+    def ReceivedAmount(self) -> Decimal:
+        paid = sum((t.Amount for t in self.payment_transactions
+                    if t.TransactionType == "Payment" and t.Status == "Success"), Decimal("0"))
+        refunded = sum((t.Amount for t in self.payment_transactions
+                        if t.TransactionType == "Refund" and t.Status == "Success"), Decimal("0"))
+        return max(paid - refunded, Decimal("0"))
+
+    @property
+    def RemainingAmount(self) -> Decimal:
+        if self.OrderStatus in ("Cancelled", "Delivered", "Completed"):
+            return Decimal("0")
+        return max(self.TotalAmount - self.ReceivedAmount, Decimal("0"))
 
 
 class OrderItem(Base):

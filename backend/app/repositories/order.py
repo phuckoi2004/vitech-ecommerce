@@ -70,6 +70,7 @@ class OrderRepository(BaseRepository[Order]):
                 selectinload(Order.items).selectinload(OrderItem.product_serials),
                 selectinload(Order.items).selectinload(OrderItem.return_requests).selectinload(ReturnRequest.product_serial),
                 selectinload(Order.status_histories),
+                selectinload(Order.payment_transactions),
             )
         )
         return self.session.scalars(stmt).one_or_none()
@@ -117,7 +118,8 @@ class OrderRepository(BaseRepository[Order]):
         elif order_status:
             conditions.append(Order.OrderStatus.in_(order_status))
         if payment_status is not None:
-            conditions.append(Order.PaymentStatus == payment_status)
+            conditions.append(Order.PaymentStatus == payment_status if isinstance(payment_status, str)
+                              else Order.PaymentStatus.in_(payment_status))
         if ordered_from is not None:
             conditions.append(Order.OrderedAt >= ordered_from)
         if ordered_to is not None:
@@ -145,7 +147,7 @@ class OrderRepository(BaseRepository[Order]):
         product_id: đơn có dòng thuộc sản phẩm này. with_items: nạp sẵn Items kèm biến thể, sản phẩm và review
         (CustomerOrderSummary).
         """
-        options = (
+        options = (selectinload(Order.payment_transactions),) + (
             (selectinload(Order.items).selectinload(OrderItem.product_variant).selectinload(ProductVariant.product),
              selectinload(Order.items).selectinload(OrderItem.review))
             if with_items else ()
@@ -201,7 +203,7 @@ class OrderRepository(BaseRepository[Order]):
                 Order.OrderStatus == order_status,
                 Order.PaymentStatus.in_(payment_statuses),
                 Order.OrderedAt <= ordered_before,
-                PaymentMethod.Code != excluded_payment_method_code,
+                or_(PaymentMethod.Code != excluded_payment_method_code, Order.PrepaymentAmount > 0),
             )
             .order_by(Order.OrderedAt, Order.OrderId)
             .limit(limit)

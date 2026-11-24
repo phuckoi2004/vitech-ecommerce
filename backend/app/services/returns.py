@@ -423,12 +423,14 @@ class ReturnService(BaseService):
     def advance_status(
         self, actor: Actor, request_id: uuid.UUID, expected_status: str, *,
         notes: ServiceRequestNote | ReturnGoodsReceive | None = None,
+        damage_assessment: str | None = None,
     ) -> AdminReturnRequestDetailResponse:
         """Forward-only workflow; closing requires a settled exchange and restocks the original unit atomically.
 
         Financial/refund implementations below remain deferred; their HTTP endpoints are paused.
         ``notes``: the operator's optional step note (Note: customer-visible, InternalNote: Staff/Admin only),
-        kept in the history line of this step.
+        kept in the history line of this step. Completing assessment requires both damage_assessment and a public
+        Note; the condition is saved on the request and the result is published in history and the notification.
         """
         require_role(actor, *STAFF_OR_ADMIN)
         note, internal_note = step_notes(notes, allowed=ADVANCE_NOTE_FIELDS, code=FIELD_CODE)
@@ -442,19 +444,31 @@ class ReturnService(BaseService):
             next_status = transitions.get(request.Status)
             if next_status is None:
                 raise BusinessRuleError("Phiếu đã đóng, không thể chuyển giai đoạn", code="service_request_closed")
+            assessment = optional_text(damage_assessment)
+            if assessment and next_status != COMPLETED:
+                raise BusinessRuleError("Chỉ ghi nhận tình trạng sản phẩm ở bước đánh giá hư hại",
+                                        code="return_assessment_not_allowed")
             old = request.Status
             if request.AssignedStaffId is None:
                 request.AssignedStaffId = actor.user_id
             if next_status == COMPLETED:
+                assessment = required_text(assessment, code="return_assessment_required",
+                                           message="Vui lòng nhập tình trạng sản phẩm sau khi đánh giá hư hại")
+                note = required_text(note, code="return_result_note_required",
+                                     message="Vui lòng nhập nội dung kết quả gửi khách hàng")
                 self.exchange.complete(request, original)
+                request.DamageAssessment = assessment
             request.Status = next_status
             if next_status == PROCESSING:
                 request.ReceivedAt = self.now()
             if next_status == COMPLETED:
                 request.CompletedAt = self.now()
-            self._history(request, actor.user_id, old, next_status, compose_note(labels[next_status] + ".", note),
+            self._history(request, actor.user_id, old, next_status,
+                          note if next_status == COMPLETED else compose_note(labels[next_status] + ".", note),
                           internal_note=internal_note)
-            self._notify_customer(request, labels[next_status], f"Yêu cầu {request.RequestCode}: {labels[next_status]}.")
+            self._notify_customer(request, labels[next_status],
+                                  f"Yêu cầu {request.RequestCode}: {note}" if next_status == COMPLETED
+                                  else f"Yêu cầu {request.RequestCode}: {labels[next_status]}.")
             self.requests.flush()
             if next_status in (APPROVED, RECEIVING, PROCESSING):
                 self.exchange.ensure_original_order(request, original)

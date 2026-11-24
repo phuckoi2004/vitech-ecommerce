@@ -314,6 +314,25 @@ class ProductDetailResponse(ProductResponse):
     VariantImages: dict[uuid.UUID, list[ProductImageResponse]] = Field(default_factory=dict)
 
 
+class ProductCardVariantResponse(ResponseSchema):
+    ProductVariantId: uuid.UUID
+    Price: Money
+    OriginalPrice: Money | None = None
+    SalePrice: Money | None = None
+    DiscountPercent: Decimal = Field(default=Decimal("0"), ge=0, le=100)
+    StockQuantity: NonNegativeInt
+    IsActive: bool
+
+
+class ProductCardResponse(ProductSummary):
+    """Only public fields needed to render product list cards."""
+
+    Variants: list[ProductCardVariantResponse]
+    Images: list[ProductImageResponse]
+    DefaultVariantId: uuid.UUID | None = None
+    VariantImages: dict[uuid.UUID, list[ProductImageResponse]] = Field(default_factory=dict)
+
+
 class AdminProductDetailResponse(AdminProductResponse):
     Category: CategorySummary = relation_field("category")
     Brand: BrandSummary = relation_field("brand")

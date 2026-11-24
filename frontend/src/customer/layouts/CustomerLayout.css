@@ -143,6 +143,7 @@
 .shop-main { flex: 1; min-height: 420px; }
 
 
+
 /* Footer (Figma "Footer"): brand on the left, three link columns. */
 .shop-footer { color: #fff; background: var(--color-navy-900); }
 .shop-footer-inner {

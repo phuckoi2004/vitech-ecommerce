@@ -21,7 +21,7 @@ const TONES = {
 }
 export const statusTone = (status) => TONES[status] ?? 'neutral'
 
-const PAYMENT_TONES = { Pending: 'waiting', Paid: 'done', Failed: 'cancelled' }
+const PAYMENT_TONES = { Pending: 'waiting', PartiallyPaid: 'progress', Paid: 'done', Failed: 'cancelled' }
 export const paymentTone = (order) => (order.OrderStatus === 'Cancelled' && order.PaymentStatus !== 'Paid'
   ? 'neutral' : PAYMENT_TONES[order.PaymentStatus] ?? 'neutral')
 
@@ -58,7 +58,7 @@ export function historyEntries(histories = []) {
 }
 
 // Only a Pending order that is not paid can be cancelled by its customer (OrderService.cancel_customer_order).
-export const canCancel = (order) => order.OrderStatus === 'Pending' && order.PaymentStatus !== 'Paid'
+export const canCancel = (order) => order.OrderStatus === 'Pending' && !['Paid', 'PartiallyPaid'].includes(order.PaymentStatus)
 
 // Under "Cần hỗ trợ về đơn hàng?": whether the customer can cancel, and why not.
 export function cancelNote(order) {
@@ -73,6 +73,6 @@ export function cancelNote(order) {
   if (order.OrderStatus !== 'Pending') {
     return `Đơn ${formatStatus(order.OrderStatus, ORDER_STATUS).toLowerCase()}, nên chức năng hủy đơn không khả dụng ở trạng thái này.`
   }
-  if (order.PaymentStatus === 'Paid') return 'Đơn hàng đã được thanh toán nên không thể tự huỷ. Vui lòng chat với VieTech để được hỗ trợ.'
+  if (['Paid', 'PartiallyPaid'].includes(order.PaymentStatus)) return 'Đơn hàng đã được thanh toán nên không thể tự huỷ. Vui lòng chat với VieTech để được hỗ trợ.'
   return 'Bạn có thể huỷ đơn khi đơn hàng chưa được xác nhận.'
 }

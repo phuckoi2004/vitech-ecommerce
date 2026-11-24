@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
-import { beforeEach, expect, test, vi } from 'vitest'
+import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { AuthContext } from '../../auth/context.js'
 import { makeAuth } from '../../test/auth.js'
 import { adminRoutes } from '../routes/index.jsx'
@@ -13,6 +13,8 @@ const program = { PromotionId: 'p1', Name: 'Ưu đãi điện thoại', Discount
 const base = { CouponId: 'c1', PromotionId: 'p1', Code: 'PHONE10', Name: 'Mã điện thoại', UsageLimit: 100, UsedCount: 7, IsActive: true, CreatedAt: '2026-10-17T00:00:00Z' }
 let rows, programs, readError
 beforeEach(() => {
+  vi.useFakeTimers({ toFake: ['Date'] })
+  vi.setSystemTime(new Date('2026-10-17T08:00:00Z'))
   vi.resetAllMocks(); rows = []; programs = [program, { ...program, PromotionId: 'p2', Name: 'Ưu đãi laptop', DiscountType: 'FixedAmount', DiscountValue: '100000', Status: 'Draft' }]; readError = false
   reads.getAdminData.mockImplementation(async (_, path, query) => {
     if (path.endsWith('/unread-count')) return { Count: 0 }
@@ -40,6 +42,7 @@ function open(path = '/admin/coupons', role = 'Admin', writes = true) {
   render(<AuthContext.Provider value={makeAuth({ role, permissions })}><RouterProvider router={router} /></AuthContext.Provider>)
   return router
 }
+afterEach(() => vi.useRealTimers())
 const modal = () => within(screen.getByRole('dialog'))
 const table = () => within(screen.getByRole('table'))
 const loaded = () => screen.findByText(base.Code, {}, { timeout: 5000 })

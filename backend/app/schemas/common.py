@@ -52,7 +52,7 @@ def varchar(length: int) -> Any:
 UserRole = Literal["Customer", "Staff", "Admin"]
 AccountStatusValue = Literal["Active", "Locked"]
 OrderStatusValue = Literal["Pending", "Confirmed", "Processing", "Shipping", "Delivered", "Completed", "Cancelled"]
-PaymentStatusValue = Literal["Pending", "Paid", "Failed", "Refunded", "Cancelled"]
+PaymentStatusValue = Literal["Pending", "PartiallyPaid", "Paid", "Failed", "Refunded", "Cancelled"]
 ProductStatus = Literal["Draft", "Active", "Inactive", "Discontinued"]
 ProductSerialStatus = Literal["Available", "Reserved", "Sold", "Warranty", "Returned", "WrittenOff"]
 PromotionStatus = Literal["Draft", "Scheduled", "Active", "Expired", "Cancelled"]

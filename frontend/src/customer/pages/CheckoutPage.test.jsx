@@ -42,7 +42,7 @@ const SHIPPING = [
   { ShippingMethodId: 's2', Code: 'FAST', Name: 'Giao hàng nhanh', BaseFee: '50000.00', EstimatedDays: 1, IsActive: true },
 ]
 const PAYMENT = [
-  { PaymentMethodId: 'm2', Code: 'QR', Name: 'Chuyển khoản QR', Description: 'Quét mã QR sau khi đặt hàng.', IsActive: true, DisplayOrder: 2 },
+  { PaymentMethodId: 'm2', Code: 'QR', Name: 'sepay', Description: 'Quét mã QR sau khi đặt hàng.', IsActive: true, DisplayOrder: 2 },
   { PaymentMethodId: 'm1', Code: 'COD', Name: 'Thanh toán khi nhận hàng (COD)', Description: 'Trả tiền mặt khi nhận hàng.', IsActive: true, DisplayOrder: 1 },
 ]
 
@@ -157,6 +157,59 @@ describe('checkout form rules', () => {
 })
 
 describe('checkout page', () => {
+  test.each([9999999, 10000000, 10000001, 12000000])('prepayment choice follows the strict threshold for a %s order', async (total) => {
+    mockApi({ '/cart': { body: cartOf([{ ...LINES[0], Quantity: 1, CurrentPrice: String(total), LineTotal: String(total) }]) },
+      '/shipping-methods': { body: [{ ...SHIPPING[0], BaseFee: '0' }] } })
+    renderAt('/dat-hang')
+    await screen.findByRole('radio', { name: /Giao hàng tiêu chuẩn/ })
+    const button = await screen.findByRole('button', { name: 'Xác nhận đặt hàng' })
+    expect(button).toHaveAccessibleDescription('* Với đơn hàng giá trị trên 10 triệu, khách hàng trả trước 20% giá trị đơn hàng.')
+    if (total > 10000000) {
+      expect(await screen.findByRole('radio', { name: /Trả trước 20%/ })).toBeChecked()
+      expect(within(summary()).getByText('Trả trước ngay (20%)').nextElementSibling).toHaveTextContent(vnd(Math.ceil(total / 5)))
+      expect(within(summary()).getByText('Thanh toán khi nhận hàng').nextElementSibling).toHaveTextContent(vnd(total - Math.ceil(total / 5)))
+      expect(screen.queryByRole('radio', { name: /Thanh toán khi nhận hàng/ })).not.toBeInTheDocument()
+    } else {
+      expect(await screen.findByRole('radio', { name: /Thanh toán khi nhận hàng/ })).toBeChecked()
+      expect(screen.queryByRole('radio', { name: /Trả trước 20%/ })).not.toBeInTheDocument()
+      expect(within(summary()).queryByText('Trả trước ngay (20%)')).not.toBeInTheDocument()
+    }
+  })
+
+  test('choosing full QR hides the split payment amounts', async () => {
+    mockApi()
+    const user = userEvent.setup()
+    renderAt('/dat-hang')
+    await screen.findByRole('radio', { name: /Trả trước 20%/ })
+    expect(within(summary()).getByText('Trả trước ngay (20%)')).toBeInTheDocument()
+    await user.click(screen.getByRole('radio', { name: /Chuyển khoản qua QR/ }))
+    expect(within(summary()).queryByText('Trả trước ngay (20%)')).not.toBeInTheDocument()
+  })
+
+  test('COD visibility and the selected plan follow shipping across the threshold', async () => {
+    const total = '9970000'
+    mockApi({ '/cart': { body: cartOf([{ ...LINES[0], Quantity: 1, CurrentPrice: total, LineTotal: total }]) } })
+    const user = userEvent.setup()
+    renderAt('/dat-hang')
+    const cod = await screen.findByRole('radio', { name: /Thanh toán khi nhận hàng/ })
+    await screen.findByRole('radio', { name: /Giao hàng tiêu chuẩn/ })
+    await waitFor(() => expect(cod).toBeChecked())
+    expect(cod).toBeEnabled()
+    expect(screen.queryByRole('radio', { name: /Trả trước 20%/ })).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('radio', { name: /Giao hàng nhanh/ }))
+    expect(screen.queryByRole('radio', { name: /Thanh toán khi nhận hàng/ })).not.toBeInTheDocument()
+    expect(screen.getByRole('radio', { name: /Trả trước 20%/ })).toBeChecked()
+    expect(within(summary()).getByText('Trả trước ngay (20%)').nextElementSibling).toHaveTextContent(vnd(2004000))
+
+    await user.click(screen.getByRole('radio', { name: /Giao hàng tiêu chuẩn/ }))
+    const restoredCod = screen.getByRole('radio', { name: /Thanh toán khi nhận hàng/ })
+    expect(restoredCod).toBeEnabled()
+    expect(restoredCod).toBeChecked()
+    expect(screen.queryByRole('radio', { name: /Trả trước 20%/ })).not.toBeInTheDocument()
+    expect(within(summary()).queryByText('Trả trước ngay (20%)')).not.toBeInTheDocument()
+  })
+
   test('"Mua hàng" opens the confirmation page with the selected lines read again from the cart API', async () => {
     const server = mockApi({ '/cart': { body: cartOf(LINES) } })
     const user = userEvent.setup()
@@ -205,13 +258,14 @@ describe('checkout page', () => {
 
     const payments = screen.getAllByRole('radio').filter((radio) => radio.name === 'checkout-payment')
     expect(payments.map((radio) => radio.closest('label').textContent)).toEqual([
-      'Thanh toán khi nhận hàng (COD)Trả tiền mặt khi nhận hàng.', 'Chuyển khoản QRQuét mã QR sau khi đặt hàng.'])
-    expect(payments[0]).toBeChecked()
+      'Chuyển khoản qua QRQuét mã QR sau khi đặt hàng.',
+      'Trả trước 20%Áp dụng với đơn hàng giá trị trên 10 triệu. Trả trước qua QR, phần còn lại thanh toán khi nhận hàng.'])
+    expect(payments[1]).toBeChecked()
     // What comes after placing the order follows the chosen method: a transfer is paid by QR within 15 minutes.
-    expect(screen.getByText(/Bạn thanh toán khi nhận hàng\./)).toBeInTheDocument()
-    await user.click(payments[1])
+    expect(screen.getByText(/chuyển khoản qua QR khoản trả trước 20% trong 15 phút/i)).toBeInTheDocument()
+    await user.click(payments[0])
     expect(screen.getByText(/hiển thị mã QR và thông tin chuyển khoản, vui lòng thanh toán trong 15 phút/)).toBeInTheDocument()
-    expect(screen.queryByText(/Bạn thanh toán khi nhận hàng\./)).not.toBeInTheDocument()
+    expect(screen.queryByText(/chuyển khoản qua QR khoản trả trước 20% trong 15 phút/i)).not.toBeInTheDocument()
   })
 
   test('another saved address or a new receiver can be chosen; a new receiver is checked before the order is sent', async () => {
@@ -480,7 +534,7 @@ describe('placing the order', () => {
   async function loaded() {
     await screen.findByText('Nguyễn Văn B • 0987654321')
     await screen.findByRole('radio', { name: /Giao hàng tiêu chuẩn/ })
-    await screen.findByRole('radio', { name: /Thanh toán khi nhận hàng/ })
+    await screen.findByRole('radio', { name: /Trả trước 20%/ })
     await waitFor(() => expect(confirm()).toBeEnabled())
   }
 
@@ -523,7 +577,7 @@ describe('placing the order', () => {
     const router = renderAt('/dat-hang')
     await loaded()
 
-    await user.click(screen.getByRole('radio', { name: /Chuyển khoản QR/ }))
+    await user.click(screen.getByRole('radio', { name: /Chuyển khoản qua QR/ }))
     await user.click(confirm())
     await waitFor(() => expect(router.state.location.pathname).toBe('/don-hang/o1'))
     expect(server.posts().map((call) => call.body)).toEqual([{ ShippingMethodId: 's1', PaymentMethodId: 'm2', AddressId: 'a2' }])
@@ -609,7 +663,7 @@ describe('placing the order', () => {
     const router = renderAt('/dat-hang')
     await loaded()
 
-    const transfer = screen.getByRole('radio', { name: /Chuyển khoản QR/ })
+    const transfer = screen.getByRole('radio', { name: /Chuyển khoản qua QR/ })
     await user.click(transfer)
     await user.click(confirm())
     const payments = screen.getByRole('group', { name: 'Phương thức thanh toán' })
@@ -618,7 +672,7 @@ describe('placing the order', () => {
     expect(transfer).toBeChecked()
     expect(server.posts()).toHaveLength(1)
 
-    await user.click(screen.getByRole('radio', { name: /Thanh toán khi nhận hàng/ }))
+    await user.click(screen.getByRole('radio', { name: /Trả trước 20%/ }))
     expect(payments).not.toHaveAccessibleDescription()
     await user.click(confirm())
     await waitFor(() => expect(router.state.location.pathname).toBe('/don-hang/o1'))

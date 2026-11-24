@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
 
 from app.core.dependencies import get_current_actor
-from app.models import Base, Order, OrderItem, ProductSerial, ReturnRequest, ServiceRequestAttachment, ServiceRequestHistory, User
+from app.models import Base, Order, OrderItem, PaymentTransaction, ProductSerial, ReturnRequest, ServiceRequestAttachment, ServiceRequestHistory, User
 from app.repositories.service_request import ReturnRequestRepository
 from app.routers.dependencies import get_return_service
 from app.routers.errors import service_error_handler
@@ -31,6 +31,7 @@ def directory():
         connection.create_function('gen_random_uuid', 0, lambda: uuid.uuid4().hex)
         connection.create_function('now', 0, lambda: datetime.now(timezone.utc).isoformat(' '))
         connection.create_function('num_nonnulls', -1, lambda *values: sum(value is not None for value in values))
+        connection.create_function('btrim', 1, lambda value: value.strip() if value is not None else None)
 
     metadata = MetaData()
     for table in Base.metadata.tables.values():
@@ -42,7 +43,7 @@ def directory():
             if isinstance(column.type, JSONB):
                 column.type = JSON()
     models = (User, Order, OrderItem, ProductSerial, ReturnRequest, ServiceRequestAttachment, ServiceRequestHistory,
-              Category, Brand, Product, ProductVariant, Promotion, PromotionCategory, PromotionProduct, ShippingMethod, PaymentMethod, OrderStatusHistory, Review)
+              Category, Brand, Product, ProductVariant, Promotion, PromotionCategory, PromotionProduct, ShippingMethod, PaymentMethod, OrderStatusHistory, Review, PaymentTransaction)
     metadata.create_all(engine, tables=[metadata.tables[model.__tablename__] for model in models])
     db = InMemoryDB(); factory = Factory(db)
     customer, staff, admin = factory.user(), factory.user('Staff'), factory.user('Admin')

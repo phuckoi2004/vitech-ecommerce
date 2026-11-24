@@ -11,6 +11,7 @@ export default function useServiceRequestWorkflow(kind, id) {
   const detail = useAdminLoad(load)
   const [saved, setSaved] = useState(null), [busy, setBusy] = useState(false), [error, setError] = useState(''), [rejecting, setRejecting] = useState(false), [notice, setNotice] = useState('')
   const [resultType, setResultType] = useState(''), [resultNote, setResultNote] = useState(''), [validation, setValidation] = useState('')
+  const [damageAssessment, setDamageAssessment] = useState('')
   const writing = useRef(false), mounted = useRef(true)
   useEffect(() => { mounted.current = true; return () => { mounted.current = false } }, [])
   const item = saved ?? detail.data
@@ -35,8 +36,13 @@ export default function useServiceRequestWorkflow(kind, id) {
     if (resultRequired && (!WARRANTY_RESULTS.some(([key]) => key === resultType) || !resultNote.trim())) {
       setValidation('Vui lòng chọn kết quả bảo hành và nhập nội dung kết quả gửi cho khách.'); return
     }
+    const assessmentRequired = !warranty && stage === 'Processing'
+    if (assessmentRequired && (!damageAssessment.trim() || !resultNote.trim())) {
+      setValidation('Vui lòng nhập tình trạng sản phẩm và nội dung kết quả gửi khách hàng.'); return
+    }
     const body = { ExpectedStage: stage, ...(resultRequired ? { ResultType: resultType, ResultNote: resultNote.trim() } : {}) }
-    void write((token) => warranty ? advanceWarranty(token, id, body) : advanceReturn(token, id, item.Status))
+    const returnBody = { ExpectedStatus: item.Status, ...(assessmentRequired ? { DamageAssessment: damageAssessment.trim(), Note: resultNote.trim() } : {}) }
+    void write((token) => warranty ? advanceWarranty(token, id, body) : advanceReturn(token, id, returnBody))
   }
   function reject(reason) {
     if (!reason.trim()) return
@@ -44,9 +50,9 @@ export default function useServiceRequestWorkflow(kind, id) {
   }
   function refresh() {
     if (writing.current) return
-    setSaved(null); setError(''); setRejecting(false); setResultType(''); setResultNote(''); setValidation(''); detail.refresh()
+    setSaved(null); setError(''); setRejecting(false); setResultType(''); setResultNote(''); setDamageAssessment(''); setValidation(''); detail.refresh()
   }
   return { auth, detail, item, closed, canUpdate, stage, busy, error, notice, rejecting, resultType, resultNote, validation, advance, reject, refresh,
-    setResultType, setResultNote, chooseReject: () => { if (!writing.current) { setError(''); setRejecting(true) } },
+    damageAssessment, setDamageAssessment, setResultType, setResultNote, chooseReject: () => { if (!writing.current) { setError(''); setRejecting(true) } },
     closeReject: () => { if (!writing.current) { setError(''); setRejecting(false) } }, clearError: () => { if (!writing.current) setError('') } }
 }

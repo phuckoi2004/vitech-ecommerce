@@ -149,6 +149,12 @@ class InMemoryDB:
     def add(self, obj):
         _apply_server_defaults(obj)
         self.tables[type(obj)][_pk(obj)] = obj
+        if isinstance(obj, Order):
+            obj.payment_transactions = []
+        elif isinstance(obj, PaymentTransaction):
+            order = self.get(Order, obj.OrderId)
+            if order is not None:
+                obj.order = order
         return obj
 
     def get(self, model, pk):
@@ -534,7 +540,7 @@ class FakeOrderRepo(FakeRepo):
             lambda o: o.OrderStatus == order_status
             and o.PaymentStatus in payment_statuses
             and o.OrderedAt <= ordered_before
-            and self.db.get(PaymentMethod, o.PaymentMethodId).Code != excluded_payment_method_code
+            and (self.db.get(PaymentMethod, o.PaymentMethodId).Code != excluded_payment_method_code or o.PrepaymentAmount > 0)
         )
         return [o.OrderId for o in sorted(rows, key=lambda o: o.OrderedAt)[:limit]]
 
@@ -558,7 +564,8 @@ class FakeOrderRepo(FakeRepo):
         return sorted(
             self._rows(
                 lambda o: (not statuses or o.OrderStatus in statuses)
-                and (payment_status is None or o.PaymentStatus == payment_status)
+                and (payment_status is None or o.PaymentStatus == payment_status if isinstance(payment_status, str)
+                     else payment_status is None or o.PaymentStatus in payment_status)
                 and matches(o)
                 and (product_id is None or any(self.db.get(ProductVariant, i.ProductVariantId).ProductId == product_id
                                                for i in o.items))

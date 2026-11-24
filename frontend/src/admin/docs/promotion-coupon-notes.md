@@ -1,5 +1,12 @@
 # Ghi chú cần xử lý chung: Chương trình khuyến mãi và Mã giảm giá
 
+## Cập nhật ngày 24/11/2026 — chọn nhiều danh mục
+
+- Form thêm/sửa chương trình cho tích chọn nhiều danh mục cùng lúc, có tìm kiếm theo tên. Ví dụ chỉ chọn Laptop gaming và Laptop học tập sẽ không áp dụng cho những danh mục con khác của Laptop.
+- Chọn danh mục cha bao gồm toàn bộ danh mục con. Danh sách sản phẩm lấy hợp của các danh mục được chọn; có thể áp dụng tất cả sản phẩm hoặc chọn riêng nhiều sản phẩm trong các danh mục đó.
+- Gửi danh sách `CategoryIds` qua API hiện có; khi chỉ chọn sản phẩm thì gửi `ProductIds` và để `CategoryIds` rỗng để tránh mở rộng phạm vi. Mở lại chương trình khôi phục các lựa chọn và giữ nguyên phạm vi cũ nếu chỉ sửa thông tin khác.
+- Bỏ chọn hết danh mục sẽ yêu cầu chọn lại khi lưu. Chỉ mục Tất cả danh mục mới áp dụng toàn bộ. Chương trình đang hoạt động vẫn khóa phạm vi theo quy tắc hiện hành.
+
 ## Cập nhật ngày 19/10/2026 — giá giảm trực tiếp và mã công khai
 
 Yêu cầu mới cho phép bổ sung backend/CSDL, frontend quản trị và trang khách: thêm `Promotions.ApplyMode`, giảm trực tiếp theo từng chiếc, hiển thị giá gốc/giá ưu đãi/phần trăm, xem giá và lãi gộp trong admin, danh sách coupon công khai và xem thử giá độc lập. Không làm chức năng nhận/lưu mã. Giỏ hàng, thanh toán và tạo đơn đang do thành viên khác phụ trách nên chưa nối bộ tính giá mới vào luồng đó. Phạm vi và hợp đồng bàn giao ở [customer-pricing-promotions.md](../../../../docs/customer-pricing-promotions.md); nội dung mới thay thế những giới hạn phạm vi cũ bên dưới khi liên quan tới yêu cầu này.

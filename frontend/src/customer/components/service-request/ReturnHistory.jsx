@@ -7,7 +7,7 @@ import useApiData from '../../../hooks/useApiData.js'
 import useCustomerSession from '../../../hooks/useCustomerSession.js'
 import { formatDateTime } from '../../../lib/format.js'
 import { cancelReturn, getMyReturn, listMyReturns } from '../../../lib/return-api.js'
-import { canCancelReturn, RETURN_STATUSES, returnStatusLabel, returnTypeLabel } from '../../../lib/returns.js'
+import { canCancelReturn, RETURN_STATUSES, returnResultNote, returnStatusLabel, returnTypeLabel } from '../../../lib/returns.js'
 import { orderPath, RETURN_CREATE_PATH, RETURN_HISTORY_PATH, returnRequestPath } from '../../routes/paths.js'
 import { WarrantyError, WarrantyLoading } from '../warranty/WarrantyCommon.jsx'
 import '../../pages/WarrantyPage.css'
@@ -58,6 +58,11 @@ function ReturnDetail({ id }) {
         <div><dt>Tiếp nhận sản phẩm</dt><dd>{item.ReceivedAt ? formatDateTime(item.ReceivedAt) : 'Chưa ghi nhận nhận hàng'}</dd></div></dl>
       <section className="cw-detail-section"><h2>Lý do và tình trạng đã gửi</h2><p className="cw-description">{item.Reason}</p></section>
       {item.DecisionReason && <p className="cacc-notice" role="status">{item.DecisionReason}</p>}
+      {item.Status === 'Completed' && item.DamageAssessment && <section className="cw-result" aria-label="Kết quả đánh giá đổi trả">
+        <h2>Kết quả đánh giá đổi trả</h2>
+        <dl className="cw-facts"><div><dt>Tình trạng sản phẩm</dt><dd className="cw-description">{item.DamageAssessment}</dd></div></dl>
+        <p className="cw-description">{returnResultNote(item)}</p>
+      </section>}
       {item.CompensationApprovedAt && item.CompensationAmount != null && <div className="cw-result"><h2>Số tiền được xác nhận: <Money value={item.CompensationAmount} /></h2></div>}
       <div className="cw-policy cw-history-note"><p>Phiếu hoàn tất khi đơn đổi đã chốt và nhân viên xử lý xong. Máy cũ chỉ được nhập lại tồn khi phiếu hoàn tất.</p></div>
       {item.Exchange?.OrderId && <div className="cw-result"><h2>Đơn đổi trả {item.Exchange.OrderCode}</h2>
@@ -72,7 +77,8 @@ function ReturnDetail({ id }) {
       </ol></section>
       {error && <p className="cacc-notice" role="alert">{error}</p>}
       {['Approved', 'Receiving', 'Processing'].includes(item.Status) && item.Exchange?.CanChoose && !item.Exchange.OriginalInStock && !item.Exchange.OrderId &&
-        <div className="my-4"><Link className="cw-primary" to={exchangePath(SEARCH_PATH, id)}>Chọn sản phẩm đổi</Link></div>}
+        <div className="my-4"><p className="cw-help">Sản phẩm đã mua hiện hết hàng. Bạn có thể chọn sản phẩm khác cùng danh mục để đổi.</p>
+          <Link className="cw-primary" to={exchangePath(SEARCH_PATH, id)}>Chọn sản phẩm đổi</Link></div>}
       {canCancelReturn(item) && <div className="cw-cancel">{confirming ? <><p>Hủy yêu cầu {item.RequestCode}? Số lượng của yêu cầu sẽ được giải phóng để bạn có thể gửi lại nếu còn trong thời hạn.</p>
         <div className="cw-actions"><button className="cw-secondary" type="button" disabled={cancelling} onClick={() => setConfirming(false)}>Giữ yêu cầu</button>
           <button className="cw-primary" type="button" disabled={cancelling} onClick={cancel}>{cancelling ? 'Đang hủy…' : 'Xác nhận hủy'}</button></div></>

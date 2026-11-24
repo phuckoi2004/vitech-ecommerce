@@ -12,6 +12,10 @@ export function promotionCategoryFamily(categoryId, categories) {
   return family
 }
 
+export function promotionSelectedFamily(categoryIds, categories) {
+  return [...new Set(categoryIds.flatMap((id) => promotionCategoryFamily(id, categories)))]
+}
+
 // Roots first, each followed by its children, for the category picker.
 export function promotionCategoryOptions(categories) {
   const known = new Set(categories.map((category) => category.CategoryId)), result = []
@@ -35,34 +39,28 @@ const sameSet = (left, right) => left.length === right.length && left.every((id)
 
 export function initialPromotionTargets(row, products, categories = []) {
   const productIds = (row?.Products ?? []).map((item) => item.ProductId), categoryIds = (row?.Categories ?? []).map((item) => item.CategoryId)
-  const initial = { categoryId: '', allProducts: true, productIds: [], changed: false }
+  const initial = { categoryIds: [], allProducts: true, productIds: [], changed: false }
   if (!row) return initial
-  if (!productIds.length && !categoryIds.length) return { ...initial, categoryId: ALL_PROMOTION_CATEGORIES }
+  if (!productIds.length && !categoryIds.length) return { ...initial, categoryIds: [ALL_PROMOTION_CATEGORIES] }
   if (!productIds.length) {
     const top = promotionTopCategories(categoryIds, categories)
-    if (categoryIds.length === 1) return { ...initial, categoryId: categoryIds[0] }
-    if (top.length === 1 && sameSet(categoryIds, promotionCategoryFamily(top[0], categories))) return { ...initial, categoryId: top[0] }
+    if (categoryIds.length === 1 || sameSet(categoryIds, promotionSelectedFamily(top, categories))) return { ...initial, categoryIds: top }
   }
   if (productIds.length && !categoryIds.length) {
     const selected = productIds.map((id) => products.find((product) => product.ProductId === id))
-    let categoryId = selected[0] && promotionProductCategory(selected[0])
-    // The closest category that holds every selected product: their own category, or a parent of it.
-    while (categoryId && selected.every(Boolean)) {
-      const family = promotionCategoryFamily(categoryId, categories)
-      if (selected.every((product) => family.includes(promotionProductCategory(product)))) return { ...initial, categoryId, allProducts: false, productIds }
-      categoryId = categories.find((category) => category.CategoryId === categoryId)?.ParentCategoryId
+    if (selected.every((product) => product && promotionProductCategory(product))) return {
+      ...initial, categoryIds: [...new Set(selected.map(promotionProductCategory))], allProducts: false, productIds,
     }
   }
-  // Existing mixed/multiple-category targets cannot be represented by a single category.
-  // Preserve them until the user explicitly chooses a new category instead of silently broadening the scope.
-  return { ...initial, categoryId: SAVED_PROMOTION_SCOPE }
+  // Preserve mixed or incomplete legacy scopes until the user explicitly replaces them.
+  return { ...initial, categoryIds: [SAVED_PROMOTION_SCOPE] }
 }
 
 export function promotionTargetBody(selection, products, categories, original) {
   if (original && !selection.changed) return { ProductIds: (original.Products ?? []).map((item) => item.ProductId), CategoryIds: (original.Categories ?? []).map((item) => item.CategoryId) }
-  if (selection.categoryId === ALL_PROMOTION_CATEGORIES) return { ProductIds: [], CategoryIds: [] }
-  if (!categories.some((category) => category.CategoryId === selection.categoryId)) throw new Error('Vui lòng chọn danh mục áp dụng.')
-  const family = promotionCategoryFamily(selection.categoryId, categories)
+  if (selection.categoryIds.includes(ALL_PROMOTION_CATEGORIES)) return { ProductIds: [], CategoryIds: [] }
+  if (!selection.categoryIds.length || selection.categoryIds.some((id) => !categories.some((category) => category.CategoryId === id))) throw new Error('Vui lòng chọn danh mục áp dụng.')
+  const family = promotionSelectedFamily(selection.categoryIds, categories)
   if (selection.allProducts) return { ProductIds: [], CategoryIds: family }
   const ids = [...new Set(selection.productIds)]
   if (!ids.length) throw new Error('Vui lòng chọn ít nhất một sản phẩm hoặc chọn Tất cả sản phẩm.')

@@ -7,6 +7,7 @@ ORDER_STATUS_LABELS = {
     "Shipping": "Đang giao", "Delivered": "Đã giao", "Completed": "Hoàn tất", "Cancelled": "Đã hủy",
 }
 PAYMENT_STATUS_LABELS = {
+    "PartiallyPaid": "Đã thanh toán một phần",
     "Pending": "Chưa thanh toán", "Paid": "Đã thanh toán", "Failed": "Thanh toán thất bại",
     "Refunded": "Đã hoàn tiền", "Cancelled": "Đã hủy thanh toán",
 }

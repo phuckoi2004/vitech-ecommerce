@@ -51,6 +51,7 @@ from app.services.catalog import (
     ProductVariantService,
 )
 from app.schemas.catalog_filters import CategoryFiltersResponse, SearchFiltersResponse, SearchSuggestionsResponse
+from app.schemas.catalog import ProductCardResponse
 from app.schemas.catalog_item import CatalogItemCreate, CatalogItemResponse, CatalogProductWrite, CatalogVariantWrite
 from app.services.catalog_item import CatalogItemService
 
@@ -240,6 +241,15 @@ def get_search_suggestions(service: Products, keyword: str | None = None):
 @router.get("/products/slug/{slug}", response_model=ProductDetailResponse)
 def get_product_by_slug(slug: str, service: Products):
     return service.get_product_detail_by_slug(slug)
+
+
+@router.get("/products/cards", response_model=list[ProductCardResponse])
+def get_product_cards(service: Products,
+                      product_id: Annotated[list[uuid.UUID], Query(min_length=1, max_length=50)]):
+    """Batch current public prices, stock and images; omit products no longer on sale."""
+    ids = list(dict.fromkeys(product_id))
+    details = service.get_product_details(ids)
+    return [ProductCardResponse.model_validate(details[key]) for key in ids if key in details]
 
 
 @router.get("/products/{product_id}", response_model=ProductDetailResponse)

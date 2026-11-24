@@ -62,7 +62,7 @@ def test_the_exact_question_gets_a_direct_answer_without_cards_or_a_table(ground
     shop = grounded_shop
     service, model = shop.service([])
     if with_previous_products:
-        selected = ask(shop, service, "Hãy chọn 3 laptop dưới 25 triệu rồi so sánh CPU, RAM, SSD, màn hình và giá.")
+        selected = ask(shop, service, "Hãy chọn 2 laptop dưới 25 triệu rồi so sánh CPU, RAM, SSD, màn hình và giá.")
         ids = [p["ProductId"] for p in table(selected)["Products"]]
     response = ask(shop, service, QUESTION)
     assert response.Status == "Completed" and len(response.AiMessages) == 1
@@ -73,14 +73,14 @@ def test_the_exact_question_gets_a_direct_answer_without_cards_or_a_table(ground
     assert model.calls == []
     if with_previous_products:
         resumed, _ = shop.service([])
-        again = ask(shop, resumed, "So sánh 3 mẫu trên")
+        again = ask(shop, resumed, "So sánh 2 mẫu trên")
         assert [p["ProductId"] for p in table(again)["Products"]] == ids
 
 
 def test_a_guidance_reply_replays_and_keeps_the_saved_shopping_constraints(grounded_shop):
     shop = grounded_shop
     service, model = shop.service([])
-    original = ask(shop, service, "Chọn 3 laptop dưới 25 triệu RAM từ 16GB rồi so sánh CPU, RAM và giá.")
+    original = ask(shop, service, "Chọn 2 laptop dưới 25 triệu RAM từ 16GB rồi so sánh CPU, RAM và giá.")
     data = AiMessageCreate(ClientRequestId=uuid.uuid4(), Content=QUESTION)
     answer = service.ask(shop.actor, shop.cid, data)
     replay = service.ask(shop.actor, shop.cid, data)

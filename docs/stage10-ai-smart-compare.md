@@ -2,6 +2,15 @@
 
 Ngày bàn giao: 28/10/2026.
 
+## Cập nhật ngày 24/11/2026 — giữ danh sách đề xuất qua nhiều lượt so sánh
+
+- Mỗi bảng mới so sánh đúng 2 sản phẩm theo yêu cầu hiện hành. Sau khi đề xuất 5 mẫu, so sánh mẫu 1 và 2 rồi mẫu 4 và 5 vẫn dùng thứ tự của danh sách đề xuất đó.
+- Tách danh sách đánh số khỏi cặp vừa so sánh: câu có số thứ tự dùng danh sách nguồn; “hai mẫu trên” hoặc câu chỉ rõ “trong bảng so sánh vừa rồi” dùng cặp đang được nhắc tới. Một danh sách đề xuất mới thay thế danh sách nguồn cũ; không tìm số thứ tự bị thiếu trong danh sách khác.
+- Lưu tối đa 5 tham chiếu nguồn trong `Messages.Metadata.OrdinalReferences` nội bộ, khôi phục cùng lịch sử từng hội thoại. Không cần đổi cấu trúc CSDL; không gửi trường này ra API công khai. Bộ nhớ vẫn tồn tại khi khởi tạo lại service và khi lượt đề xuất đã ra ngoài giới hạn lịch sử văn bản gửi cho model.
+- So sánh đọc lại giá và tồn kho hiện tại của đúng SKU đã lưu. Bảng so sánh cũ giữ nguyên snapshot. Các tham chiếu không xác định vẫn hỏi lại khách.
+
+Phần bàn giao bên dưới ghi lại phiên bản ban đầu; giới hạn 2–3 sản phẩm đã được thay bằng đúng 2 sản phẩm.
+
 ## Chức năng đã triển khai
 
 - Bảng 2–3 sản phẩm/phiên bản ngay trong cửa sổ AI Chat hiện tại, gồm tên, ảnh, phiên bản, thương hiệu, danh mục, giá bán, tồn kho, thông số và liên kết chi tiết.

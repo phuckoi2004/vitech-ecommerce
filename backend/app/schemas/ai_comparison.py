@@ -33,6 +33,7 @@ class ComparisonRow(BaseModel):
 
 
 class ComparisonSnapshot(BaseModel):
+    # Version 1 history may contain three products; new tables require two in build_comparison.
     model_config = ConfigDict(extra="forbid")
     Version: Literal[1] = 1
     Products: list[ComparisonProduct] = Field(min_length=2, max_length=3)

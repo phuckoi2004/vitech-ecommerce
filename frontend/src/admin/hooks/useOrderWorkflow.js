@@ -3,6 +3,7 @@ import useInternalAuth from '../../hooks/useInternalAuth.js'
 import useAdminQuery from './useAdminQuery.js'
 import { canCancelOrder, canOperateOrder, ORDER_NEXT, orderStatusLabel, paymentStatusLabel } from '../lib/orders.js'
 import { confirmCodDelivery, updateOrderStatus } from '../services/orders.js'
+import { hasPrepayment } from '../../lib/prepayment.js'
 
 // Shared by the full detail page and quick actions: one set of payment, serial and status rules.
 export default function useOrderWorkflow(orderId, initialAction, onDone) {
@@ -29,11 +30,14 @@ export default function useOrderWorkflow(orderId, initialAction, onDone) {
   const cod = payment.data?.Code === 'COD'
   const codDelivery = order?.OrderStatus === 'Shipping' && cod
   // A transfer (non-COD) order is confirmed only once paid (backend OrderService: order_not_paid); COD before collection.
-  const awaitingPayment = Boolean(order?.OrderStatus === 'Pending' && payment.data && !cod && order.PaymentStatus !== 'Paid')
+  const prepaymentMissing = hasPrepayment(order) && Number(order.ReceivedAmount ?? 0) < Number(order.PrepaymentAmount)
+  const awaitingPayment = Boolean(order?.OrderStatus === 'Pending' && payment.data
+    && (prepaymentMissing || (!cod && order.PaymentStatus !== 'Paid')))
   const serialItems = Array.isArray(serials.data) ? serials.data : []
   let blocked = ''
   if (order?.OrderStatus === 'Pending') {
     if (payment.loading || !payment.data) blocked = 'Cần tải được phương thức thanh toán trước khi xác nhận đơn.'
+    else if (prepaymentMissing) blocked = 'Đơn hàng chưa thanh toán đủ khoản trả trước 20%.'
     else if (awaitingPayment) {
       blocked = 'Đơn thanh toán chuyển khoản chỉ được xác nhận sau khi khách đã thanh toán (hiện tại: '
         + paymentStatusLabel(order.PaymentStatus) + ').'
@@ -41,10 +45,13 @@ export default function useOrderWorkflow(orderId, initialAction, onDone) {
   } else if (order && ['Processing', 'Shipping'].includes(order.OrderStatus)) {
     if (payment.loading || !payment.data) blocked = 'Cần tải được phương thức thanh toán trước khi chuyển trạng thái.'
     else if (order.OrderStatus === 'Processing') {
-      if (serials.loading || !Array.isArray(serials.data)) blocked = 'Cần tải được danh sách Serial/IMEI trước khi giao hàng.'
+      if (prepaymentMissing) blocked = 'Đơn hàng chưa thanh toán đủ khoản trả trước 20%.'
+      else if (serials.loading || !Array.isArray(serials.data)) blocked = 'Cần tải được danh sách Serial/IMEI trước khi giao hàng.'
       else if (!cod && order.PaymentStatus !== 'Paid') blocked = 'Đơn thanh toán trực tuyến phải được thanh toán trước khi giao hàng.'
-    } else if (cod && order.PaymentStatus !== 'Pending') blocked = 'Trạng thái thanh toán hiện tại không cho phép xác nhận thu tiền COD.'
+    } else if (cod && !['Pending', 'PartiallyPaid', ...(hasPrepayment(order) ? ['Paid'] : [])].includes(order.PaymentStatus)) blocked = 'Trạng thái thanh toán hiện tại không cho phép xác nhận thu tiền COD.'
+    else if (cod && prepaymentMissing) blocked = 'Đơn hàng chưa thanh toán đủ khoản trả trước 20%.'
   }
+  if (order?.OrderStatus === 'Confirmed' && prepaymentMissing) blocked = 'Đơn hàng chưa thanh toán đủ khoản trả trước 20%.'
 
   async function write(call, after) {
     if (!canUpdate || writing.current) return false

@@ -537,12 +537,15 @@ class AiChatService(BaseService):
                 decision, context, self.settings.max_products)
             if not answer.strip() or len(answer) > 5000:
                 raise AiUnavailableError("AI chưa trả được câu trả lời hợp lệ.")
+            ordinal_references = ConversationState((*context.state.turns,
+                PastTurn({}, notes["AnswerIntent"], tuple(references)))).ordinal_list()
             reply = self.messages.create({
                 "MessageId": uuid.uuid4(), "ConversationId": conversation_id,
                 "SenderUserId": None, "SenderType": "AI", "MessageType": "Text", "Content": answer,
                 # Internal (customers only get ReplyToMessageId): the shown products, in order, for "máy thứ hai"
                 # and for not repeating them when the customer asks for more.
                 "Metadata": {"ReplyToMessageId": str(question.MessageId), "ProductReferences": references,
+                             "OrdinalReferences": ordinal_references,
                              "AnswerIntent": notes["AnswerIntent"],
                              **({"Comparison": notes["Comparison"]} if notes.get("Comparison") else {}),
                              **({"Compatibility": notes["Compatibility"]} if notes.get("Compatibility") else {})},
@@ -637,7 +640,8 @@ class AiChatService(BaseService):
             saved = question.Metadata or {}
             slots = (saved.get("AiIntent") or {}).get("Slots") or slots_from_constraints(saved.get("AiConstraints"))
             meta = reply.Metadata or {}
-            past.append(PastTurn(slots, meta.get("AnswerIntent"), tuple(meta.get("ProductReferences") or ())))
+            past.append(PastTurn(slots, meta.get("AnswerIntent"), tuple(meta.get("ProductReferences") or ()),
+                                 tuple(meta.get("OrdinalReferences") or ())))
         turns = []
         budget = 10000
         for question, reply in reversed(answered):

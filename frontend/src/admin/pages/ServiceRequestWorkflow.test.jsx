@@ -10,10 +10,10 @@ vi.mock('../../services/api/admin.js', () => ({ getAdminData: api.getAdminData }
 vi.mock('../../services/api/client.js', async (original) => ({ ...await original(), request: api.request }))
 const base = { CustomerName:'Nguyễn Văn An', ProductName:'Điện thoại đen', Sku:'SKU-01', OrderCode:'DH-123', AssignedStaffId:null, RequestedAt:'2026-10-15T03:00:00Z', ReceivedAt:null, ResultApprovedAt:null, Attachments:[], Histories:[] }
 let returned, warranty
-function renderPage(kind = 'returns', granted = true) {
+function renderPage(kind = 'returns', granted = true, role = 'Staff') {
   const router = createMemoryRouter(adminRoutes, { initialEntries:[`/admin/${kind}/id`] })
   const permissions=['admin.portal',kind+':view',...(granted?[kind+':update']:[])]
-  render(<AuthContext.Provider value={makeAuth({role:'Staff',permissions})}><RouterProvider router={router}/></AuthContext.Provider>)
+  render(<AuthContext.Provider value={makeAuth({role,permissions})}><RouterProvider router={router}/></AuthContext.Provider>)
   return router
 }
 beforeEach(()=>{
@@ -95,6 +95,52 @@ test('warranty requires one of three actual results and a customer message befor
   expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
 })
 
+test.each(['Staff','Admin'])('%s records damage assessment and a public result before completing a return',async(role)=>{
+  returned={...returned,Status:'Processing',ReceivedAt:'2026-10-15T04:00:00Z',Exchange:{Committed:true}}
+  api.request.mockImplementation(async()=>({...returned,Status:'Completed',DamageAssessment:'Cổng sạc bị hỏng.',Histories:[{
+    ServiceRequestHistoryId:'result',OldStatus:'Processing',NewStatus:'Completed',ChangedAt:'2026-10-15T05:00:00Z',Note:'Đã kiểm tra và đổi máy mới cho khách.',IsInternal:false,
+  }]}))
+  renderPage('returns',true,role)
+  const assessment=await screen.findByRole('textbox',{name:'Tình trạng sản phẩm'})
+  const result=screen.getByRole('textbox',{name:'Nội dung kết quả gửi khách hàng'})
+  const next=screen.getByRole('button',{name:'Giai đoạn kế tiếp'})
+  expect(next).toBeDisabled()
+  fireEvent.change(assessment,{target:{value:'  Cổng sạc bị hỏng.  '}})
+  expect(next).toBeDisabled()
+  fireEvent.change(result,{target:{value:'  Đã kiểm tra và đổi máy mới cho khách.  '}})
+  expect(next).toBeEnabled()
+  fireEvent.click(next)
+  await screen.findByText('Đã đóng phiếu')
+  expect(api.request).toHaveBeenCalledExactlyOnceWith('/admin/return-requests/id/advance',{method:'POST',accessToken:'access-for-test',body:{
+    ExpectedStatus:'Processing',DamageAssessment:'Cổng sạc bị hỏng.',Note:'Đã kiểm tra và đổi máy mới cho khách.',
+  }})
+  expect(screen.getByText('Cổng sạc bị hỏng.')).toBeInTheDocument()
+  expect(screen.getByText('Đã kiểm tra và đổi máy mới cho khách.')).toBeInTheDocument()
+  expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
+})
+
+test('an unsettled exchange cannot complete even after entering its assessment and result',async()=>{
+  returned={...returned,Status:'Processing',Exchange:{Committed:false}}
+  renderPage()
+  fireEvent.change(await screen.findByRole('textbox',{name:'Tình trạng sản phẩm'}),{target:{value:'Máy bị lỗi nguồn.'}})
+  fireEvent.change(screen.getByRole('textbox',{name:'Nội dung kết quả gửi khách hàng'}),{target:{value:'Đã kiểm tra.'}})
+  expect(screen.getByRole('button',{name:'Giai đoạn kế tiếp'})).toBeDisabled()
+  expect(api.request).not.toHaveBeenCalled()
+})
+
+test('failed assessment submission preserves both inputs for retry',async()=>{
+  returned={...returned,Status:'Processing',Exchange:{Committed:true}}
+  api.request.mockRejectedValue(new Error('Không lưu được kết quả.'))
+  renderPage()
+  fireEvent.change(await screen.findByRole('textbox',{name:'Tình trạng sản phẩm'}),{target:{value:'Máy bị lỗi nguồn.'}})
+  fireEvent.change(screen.getByRole('textbox',{name:'Nội dung kết quả gửi khách hàng'}),{target:{value:'Đã kiểm tra.'}})
+  fireEvent.click(screen.getByRole('button',{name:'Giai đoạn kế tiếp'}))
+  const dialog=await screen.findByRole('dialog',{name:'Không cập nhật được phiếu'})
+  fireEvent.click(within(dialog).getByRole('button',{name:'Đóng'}))
+  expect(screen.getByRole('textbox',{name:'Tình trạng sản phẩm'})).toHaveValue('Máy bị lỗi nguồn.')
+  expect(screen.getByRole('textbox',{name:'Nội dung kết quả gửi khách hàng'})).toHaveValue('Đã kiểm tra.')
+})
+
 test('stale response is shown in a dialog; reload fetches the actual terminal state',async()=>{
   api.request.mockRejectedValue(new Error('Phiếu đã thay đổi; hãy tải lại.'))
   renderPage()
@@ -108,10 +154,11 @@ test('stale response is shown in a dialog; reload fetches the actual terminal st
   expect(api.request).toHaveBeenCalledTimes(1)
 })
 
-test('view permission alone cannot submit status changes or publish results',async()=>{
+test.each(['returns','warranties'])('view permission alone cannot submit %s changes or publish results',async(kind)=>{
   warranty.Status='Processing'
-  renderPage('warranties',false)
-  await screen.findByRole('heading',{name:'Yêu cầu BH-1'})
+  returned.Status='Processing'
+  renderPage(kind,false)
+  await screen.findByRole('heading',{name:kind==='returns'?'Yêu cầu DT-1':'Yêu cầu BH-1'})
   expect(within(screen.getByLabelText('Thao tác phiếu')).queryByRole('button')).not.toBeInTheDocument()
   expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
   await waitFor(()=>expect(api.request).not.toHaveBeenCalled())

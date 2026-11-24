@@ -5,6 +5,8 @@ import LoadingState from '../../components/shared/LoadingState.jsx'
 import Money from '../../components/shared/Money.jsx'
 import useApiData from '../../hooks/useApiData.js'
 import { listPaymentMethods, listShippingMethods } from '../../lib/catalog-api.js'
+import { paymentMethodLabel } from '../../lib/payment-methods.js'
+import { hasPrepayment, remainingAmount } from '../../lib/prepayment.js'
 import CancelOrder from '../components/order/CancelOrder.jsx'
 import { OrderItems, OrderPayment, OrderProgress, OrderRecipient, OrderShipping, OrderStatusLog, OrderTotals } from '../components/order/OrderDetails.jsx'
 import { canCancel, cancelNote, statusHint } from '../components/order/orderDetail.js'
@@ -37,7 +39,8 @@ export default function OrderResultPage() {
   // The passed Code only once the list has answered without this method (e.g. a method withdrawn since).
   const code = method?.Code ?? (methods.loading ? null : placed?.paymentCode ?? null)
   const cod = code === 'COD'
-  const transfer = code !== null && !cod
+  const prepay = hasPrepayment(order)
+  const transfer = code !== null && (!cod || prepay)
   const awaiting = Boolean(order) && transfer && awaitingTransfer(order)
 
   const qr = useQrPayment(orderId, awaiting)
@@ -102,11 +105,11 @@ export default function OrderResultPage() {
       : <ErrorState title="Không thể tải đơn hàng" message={loaded.error} onRetry={loaded.refresh} />}
   </div>
 
-  const methodName = order.SourceReturnRequestId && Number(order.TotalAmount) === 0 ? 'Đơn đổi 0đ · Không cần thanh toán' : method?.Name ?? (cod ? 'Thanh toán khi nhận hàng (COD)' : code ? 'Chuyển khoản' : 'Chưa xác định')
+  const methodName = prepay ? 'Trả trước 20% qua QR, còn lại khi nhận hàng' : order.SourceReturnRequestId && Number(order.TotalAmount) === 0 ? 'Đơn đổi 0đ · Không cần thanh toán' : paymentMethodLabel(method ?? { Code: code }) ?? (cod ? 'Thanh toán khi nhận hàng (COD)' : code ? 'Chuyển khoản' : 'Chưa xác định')
   const shippingName = shippingMethods.data?.find((item) => item.ShippingMethodId === order.ShippingMethodId)?.Name
     ?? (shippingMethods.loading ? 'Đang tải…' : 'Chưa xác định')
   const cancelled = order.OrderStatus === 'Cancelled'
-  const payOnDelivery = cod && !cancelled && order.PaymentStatus === 'Pending'
+  const payOnDelivery = cod && !cancelled && (prepay ? order.PaymentStatus === 'PartiallyPaid' : order.PaymentStatus === 'Pending')
 
   return <div className="shop-container od-page">
     <OrderPageHeading title={title} />
@@ -123,19 +126,23 @@ export default function OrderResultPage() {
         </button>
       </div>
     </div>}
+    {prepay && order.PaymentStatus === 'PartiallyPaid' && !cancelled && <div className="order-success" role="status">
+      <span className="order-success-icon" aria-hidden="true">✓</span>
+      <div className="order-success-body"><p>VieTech đã nhận khoản trả trước. Bạn thanh toán phần còn lại <Money value={remainingAmount(order)} /> khi nhận hàng.</p></div>
+    </div>}
 
     <OrderProgress order={order} methodLabel={order.SourceReturnRequestId && Number(order.TotalAmount) === 0 ? 'Không cần thanh toán' : cod ? 'COD' : code ? 'Chuyển khoản' : 'Chưa xác định'}>
       {cancelled ? <div className="od-hint is-cancelled" role="status">
         <p>Đơn hàng đã bị huỷ.{order.CancelReason ? ` Lý do: ${order.CancelReason}` : ''}</p>
         {/* Cancelled after the money came in (or cancelled once paid): the refund is a manual step at the shop. */}
-        {order.PaymentStatus === 'Paid' && <p>
+        {['Paid', 'PartiallyPaid'].includes(order.PaymentStatus) && <p>
           VieTech đã ghi nhận khoản thanh toán của đơn hàng này. Vui lòng liên hệ VieTech để được hỗ trợ hoàn tiền.
         </p>}
       </div>
         : <div className="od-hint">
-          <p>{awaiting ? 'Đơn hàng đang chờ thanh toán chuyển khoản. Vui lòng quét mã QR bên dưới để thanh toán.'
+          <p>{awaiting ? prepay ? 'Vui lòng quét mã QR bên dưới để thanh toán khoản trả trước 20%.' : 'Đơn hàng đang chờ thanh toán chuyển khoản. Vui lòng quét mã QR bên dưới để thanh toán.'
             : payOnDelivery && order.OrderStatus === 'Pending'
-              ? <>Bạn sẽ thanh toán <Money value={order.TotalAmount} /> khi nhận hàng. VieTech sẽ liên hệ để xác nhận đơn hàng.</>
+              ? <>Bạn sẽ thanh toán <Money value={remainingAmount(order)} /> khi nhận hàng. VieTech sẽ liên hệ để xác nhận đơn hàng.</>
               : statusHint(order.OrderStatus)}</p>
         </div>}
     </OrderProgress>
@@ -161,8 +168,13 @@ export default function OrderResultPage() {
         <OrderRecipient order={order} />
         <OrderShipping order={order} methodName={shippingName} />
         <OrderPayment order={order} methodName={methodName} cod={cod}>
-          {payOnDelivery && <p className="od-muted">Thanh toán <Money value={order.TotalAmount} /> khi nhận hàng.</p>}
-          {awaiting && !expired && <p className="od-muted">Quét mã QR ở trên để chuyển khoản <Money value={order.TotalAmount} />.</p>}
+          {prepay && <dl className="od-lines">
+            <div><dt>Khoản trả trước bắt buộc (20%)</dt><dd><Money value={order.PrepaymentAmount} /></dd></div>
+            <div><dt>Đã thực nhận</dt><dd><Money value={order.ReceivedAmount ?? 0} /></dd></div>
+            {!cancelled && <div><dt>Còn phải thanh toán</dt><dd><Money value={remainingAmount(order)} /></dd></div>}
+          </dl>}
+          {payOnDelivery && <p className="od-muted">Thanh toán <Money value={remainingAmount(order)} /> khi nhận hàng.</p>}
+          {awaiting && !expired && <p className="od-muted">Quét mã QR ở trên để chuyển khoản <Money value={prepay ? order.PrepaymentAmount : order.TotalAmount} />.</p>}
           {!code && !methods.loading && <p className="od-muted">
             Không xác định được phương thức thanh toán của đơn hàng.
             {methods.error && <> {methods.error} <button type="button" className="order-link-button" onClick={methods.reload}>Thử lại</button></>}

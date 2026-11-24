@@ -8,6 +8,8 @@ Schema tiếp tục theo [database-schema.md](database-schema.md) và các model
 
 ## 1. Phạm vi
 
+Local: đặt `AUTH_STATE_BACKEND=sqlite` như `.env.example` để phiên, bộ đếm thử sai và thu hồi phiên tồn tại qua lần backend tải lại. Mặc định lưu tại `output/runtime/auth-state.sqlite3`, có thể đổi bằng `AUTH_STATE_PATH`. Khi chuyển từ kho RAM cần đăng nhập lại một lần. Production tiếp tục bắt buộc Redis; thời hạn access token và chính sách hết phiên không đổi.
+
 - Backend FastAPI xác thực qua bảng `Users` trong Supabase PostgreSQL; frontend React/Vite đã có Auth riêng cho khách hàng và khu vực nội bộ, cùng trang hồ sơ và quản lý tài khoản nội bộ.
 - Giai đoạn 5 gồm Auth, hồ sơ cá nhân, quản lý tài khoản, dependency xác thực và phân quyền, kiểm thử các luồng này. Source hiện có thêm API đọc/lưu địa chỉ mặc định phục vụ hồ sơ; CRUD địa chỉ đầy đủ thuộc AddressService của Giai đoạn 4. Các service thanh toán, nhập hàng, đổi trả hoặc chatbot thuộc giai đoạn tương ứng.
 - Customer có giao diện riêng với Staff/Admin. Giai đoạn 8 tiếp tục hoàn thiện hai khu vực và các thao tác nghiệp vụ, gọi chung backend/database; khu vực nội bộ không có đăng ký công khai.

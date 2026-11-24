@@ -25,6 +25,7 @@ export default function WarrantyInformation({ item, assignedName, children }) {
           <InformationRow label="Sản phẩm">{item.ProductName}</InformationRow>
           <InformationRow label="Serial / IMEI"><span title={item.SerialNumber || undefined}>{warrantySerialLabel(item.SerialNumber)}</span></InformationRow>
           <InformationRow label="Thời điểm gửi">{formatDateTime(item.RequestedAt)}</InformationRow>
+          <InformationRow label="Thời điểm phát sinh lỗi">{formatDate(item.RequestedAt)}</InformationRow>
           <InformationRow label="Mô tả lỗi">{item.IssueDescription || '—'}</InformationRow>
         </dl>
         <h3 className="m-0 text-sm leading-[17px] font-semibold">Kiểm tra điều kiện bảo hành</h3>

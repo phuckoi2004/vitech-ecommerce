@@ -115,16 +115,16 @@ test('comparison survives remount from conversation history without another mode
 test('new comparison response appears inside the existing message without duplicating product cards', async () => {
   mockApi({ post: (body) => {
     const response = result(body)
-    response.AiMessages[0].Metadata = { Comparison: comparisonFixture(3) }
+    response.AiMessages[0].Metadata = { Comparison: comparisonFixture(2) }
     response.AiMessages.push({ ...message('card', 'AI', ''), MessageType: 'Product', Metadata: {
       AiAnswerMessageId: 'answer', ProductName: 'Duplicated card', Slug: 'laptop-1', Price: '18000000',
     } })
     return response
   } })
   renderChat()
-  await ask('So sánh 3 sản phẩm trên')
+  await ask('So sánh 2 sản phẩm trên')
   const table = await screen.findByRole('table')
-  expect(within(table).getAllByRole('columnheader')).toHaveLength(4)
+  expect(within(table).getAllByRole('columnheader')).toHaveLength(3)
   expect(screen.queryByText('Duplicated card')).not.toBeInTheDocument()
   expect(screen.getByRole('textbox', { name: 'Câu hỏi cho AI' })).toBeEnabled()
 })

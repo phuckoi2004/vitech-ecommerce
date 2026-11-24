@@ -1,4 +1,6 @@
 import { ErrorState, LoadingState } from '../../components/shared/index.js'
+import { paymentMethodLabel } from '../../lib/payment-methods.js'
+import OrderPrepayment from './OrderPrepayment.jsx'
 import { formatDateTime, formatMoney } from '../../lib/format.js'
 import useOrderWorkflow from '../hooks/useOrderWorkflow.js'
 import { canCancelOrder, orderStatusLabel, paymentStatusLabel } from '../lib/orders.js'
@@ -47,13 +49,14 @@ export default function OrderDialog({ orderId, initialAction, onClose, onDone })
         <DetailField label="Người nhận">{order.ReceiverName}</DetailField><DetailField label="Số điện thoại">{order.ReceiverPhone}</DetailField>
         <div className="col-span-2"><DetailField label="Địa chỉ giao hàng">{order.ShippingAddress}</DetailField></div>
         <DetailField label="Thanh toán">{paymentStatusLabel(order.PaymentStatus)}</DetailField>
-        <DetailField label="Phương thức thanh toán">{payment.loading ? 'Đang tải…' : payment.data?.Name ?? 'Chưa tải được'}</DetailField>
+        <DetailField label="Phương thức thanh toán">{payment.loading ? 'Đang tải…' : paymentMethodLabel(payment.data) ?? 'Chưa tải được'}</DetailField>
         {order.CustomerNote && <div className="col-span-2"><DetailField label="Ghi chú khách hàng">{order.CustomerNote}</DetailField></div>}
         {order.CancelReason && <div className="col-span-2"><DetailField label="Lý do hủy">{order.CancelReason}</DetailField></div>}
       </dl>
       {payment.error && <ErrorState title="Chưa tải được phương thức thanh toán" message={payment.error} onRetry={payment.refresh} className="py-2" />}
       {awaitingPayment && !confirming && <p id="order-dialog-confirm-blocked" className="m-0 rounded-[10px] bg-amber-50 p-3 text-xs text-amber-700">{blocked}</p>}
       {confirming && <OrderActionForm workflow={workflow} />}
+      <OrderPrepayment order={order} />
       <section aria-label="Sản phẩm trong đơn"><h3 className="mb-3 text-sm font-semibold">Sản phẩm trong đơn</h3><AdminTable columns={itemColumns} rows={order.Items ?? []} rowKey="OrderItemId" label="Sản phẩm trong đơn" emptyText="Đơn hàng chưa có sản phẩm." className="min-w-[650px] [&_td]:py-3" /></section>
       <dl className="m-0 ml-auto grid w-[320px] max-w-full grid-cols-2 gap-x-4 gap-y-2 text-xs">
         <dt className="text-admin-muted">Tiền hàng</dt><dd className="m-0 text-right">{formatMoney(order.Subtotal)}</dd>

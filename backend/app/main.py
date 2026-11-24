@@ -63,7 +63,8 @@ configure_app_logging()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Fail at startup, not on the first login: validates settings and connects the state store.
-    app.dependency_overrides.get(get_runtime, get_runtime)()
+    runtime = app.dependency_overrides.get(get_runtime, get_runtime)()
+    logger.info("Auth state store: %s", type(runtime.state).__name__)
     # Same for business settings read per request (an invalid RETURN_WINDOW_DAYS raises ValueError here).
     app.dependency_overrides.get(get_return_policy, get_return_policy)()
     yield

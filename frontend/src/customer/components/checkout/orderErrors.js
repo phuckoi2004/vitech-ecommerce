@@ -28,6 +28,8 @@ const BY_CODE = {
     'Phương thức vận chuyển đã chọn hiện không còn khả dụng. Vui lòng chọn phương thức khác.'],
   payment_method_not_available: ['payment', 'reloadPayment',
     'Phương thức thanh toán đã chọn hiện không còn khả dụng. Vui lòng chọn phương thức khác.'],
+  prepayment_unavailable: ['payment', 'reloadPayment',
+    'Thanh toán trả trước qua QR hiện chưa khả dụng. Vui lòng thử lại sau hoặc chọn phương thức thanh toán khác.'],
   address_not_found: ['address', 'reloadAddresses', 'Địa chỉ đã chọn không còn trong sổ địa chỉ. Vui lòng chọn hoặc nhập địa chỉ khác.'],
   receiver_conflict: ['address', 'edit', 'Thông tin nhận hàng chưa hợp lệ. Vui lòng chọn lại địa chỉ nhận hàng.'],
   user_not_found: ['summary', 'signIn', 'Không tìm thấy tài khoản của bạn. Vui lòng đăng nhập lại.'],

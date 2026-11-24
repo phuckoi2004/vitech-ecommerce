@@ -1,10 +1,12 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import useCustomerSession from '../../hooks/useCustomerSession.js'
-import { StaffChat } from '../pages/ChatPage.jsx'
-import AiChat from './AiChat.jsx'
+import { lazyPage } from '../../components/shared/LazyPage.jsx'
 import { CHAT_PATH } from '../routes/paths.js'
 import './CustomerChat.css'
+
+const StaffChat = lazyPage(() => import('../pages/ChatPage.jsx'), 'StaffChat')
+const AiChat = lazyPage(() => import('./AiChat.jsx'))
 
 // Round speech bubble with three dots.
 function ChatIcon() {

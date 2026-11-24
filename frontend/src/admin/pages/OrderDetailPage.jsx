@@ -2,12 +2,14 @@ import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate, useOutletContext, useParams, useSearchParams } from 'react-router-dom'
 import { ErrorState, LoadingState } from '../../components/shared/index.js'
 import { formatDate, formatDateTime, formatMoney } from '../../lib/format.js'
+import { paymentMethodLabel } from '../../lib/payment-methods.js'
 import historyDot from '../assets/order-history-dot.svg'
 import AdminTable from '../components/AdminTable.jsx'
 import OrderBadge from '../components/OrderBadge.jsx'
 import { InternalNote, SerialRow } from '../components/OrderControls.jsx'
 import OrderProgress from '../components/OrderProgress.jsx'
 import OrderStatusModal from '../components/OrderStatusModal.jsx'
+import OrderPrepayment from '../components/OrderPrepayment.jsx'
 import { ProductButton } from '../components/ProductUi.jsx'
 import useOrderWorkflow from '../hooks/useOrderWorkflow.js'
 import { canCancelOrder, orderListSearch, orderStatusLabel, paymentStatusLabel } from '../lib/orders.js'
@@ -78,6 +80,7 @@ export default function OrderDetailPage() {
           </section>}
         </div>
         <aside aria-label="Xử lý đơn hàng" className="flex min-w-0 flex-col gap-4">
+          <OrderPrepayment order={order} />
           <section aria-label="Cập nhật trạng thái" className={CARD + ' flex min-h-[221px] flex-col items-start gap-3 py-[18px]'}><h3 className={TITLE}>Cập nhật trạng thái</h3><p className="m-0 text-[11px] leading-[normal] font-medium text-admin-muted">Trạng thái hiện tại</p><OrderBadge value={order.OrderStatus} className="leading-[normal]" />
             {canUpdate ? <>
               {next && <ProductButton disabled={busy || awaitingPayment} aria-describedby={awaitingPayment ? 'order-confirm-blocked' : undefined} onClick={() => choose('advance')}>{next[1]}</ProductButton>}
@@ -87,7 +90,7 @@ export default function OrderDetailPage() {
             </> : <p className="m-0 text-xs text-admin-muted">Bạn có quyền xem đơn hàng.</p>}
           </section>
           <details className={CARD} open={extraOpen} onToggle={(event) => setExtraOpen(event.currentTarget.open)}><summary className="cursor-pointer text-xs font-semibold text-admin-blue">Giao hàng, thanh toán & ghi chú</summary><div className="mt-4 flex flex-col gap-4">
-            <dl className="m-0 flex flex-col gap-4"><Info label="Địa chỉ giao hàng">{order.ShippingAddress}</Info><Info label="Ghi chú khách hàng">{order.CustomerNote}</Info><Info label="Thanh toán">{zeroExchange ? 'Đơn đổi 0đ · Đã chốt' : paymentStatusLabel(order.PaymentStatus)}</Info><Info label="Phương thức thanh toán">{zeroExchange ? 'Không cần thanh toán' : payment.loading ? 'Đang tải…' : payment.data?.Name ?? 'Chưa tải được'}</Info>{order.CancelReason && <Info label="Lý do hủy">{order.CancelReason}</Info>}</dl>
+            <dl className="m-0 flex flex-col gap-4"><Info label="Địa chỉ giao hàng">{order.ShippingAddress}</Info><Info label="Ghi chú khách hàng">{order.CustomerNote}</Info><Info label="Thanh toán">{zeroExchange ? 'Đơn đổi 0đ · Đã chốt' : paymentStatusLabel(order.PaymentStatus)}</Info><Info label="Phương thức thanh toán">{zeroExchange ? 'Không cần thanh toán' : payment.loading ? 'Đang tải…' : paymentMethodLabel(payment.data) ?? 'Chưa tải được'}</Info>{order.CancelReason && <Info label="Lý do hủy">{order.CancelReason}</Info>}</dl>
             {payment.error && <ErrorState title="Chưa tải được phương thức thanh toán" message={payment.error} onRetry={payment.refresh} className="py-2" />}
             <dl className="m-0 grid grid-cols-2 gap-x-3 gap-y-2 text-[11px]"><dt className="text-admin-muted">Tiền hàng</dt><dd className="m-0 text-right">{formatMoney(order.Subtotal)}</dd><dt className="text-admin-muted">Phí vận chuyển</dt><dd className="m-0 text-right">{formatMoney(order.ShippingFee)}</dd><dt className="text-admin-muted">Giảm giá đơn hàng</dt><dd className="m-0 text-right">{formatMoney(order.DiscountAmount)}</dd><dt className="border-t border-admin-border pt-2 font-semibold">Tổng thanh toán</dt><dd className="m-0 border-t border-admin-border pt-2 text-right font-semibold text-admin-blue">{formatMoney(order.TotalAmount)}</dd></dl>
             {canUpdate ? <InternalNote key={order.InternalNote ?? ''} order={order} busy={busy} onSave={(value) => write((token) => updateOrderNote(token, orderId, { InternalNote: value }), () => { detail.refresh(); setNotice('Đã lưu ghi chú nội bộ.') })} /> : <dl className="m-0"><Info label="Ghi chú nội bộ">{order.InternalNote}</Info></dl>}

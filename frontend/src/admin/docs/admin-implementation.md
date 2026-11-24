@@ -287,9 +287,9 @@ Yêu cầu có thông tin khách, đơn, sản phẩm/biến thể và lý do. D
 
 Luồng hiện hành: `Pending -> Approved -> Receiving -> Processing -> Completed`. Frontend hiển thị các tên giai đoạn theo giao diện. Khi đang chờ có thao tác tiếp nhận hoặc từ chối. Các giai đoạn sau dùng Giai đoạn kế tiếp; từ chối yêu cầu lý do. `Completed`, `Rejected`, `Cancelled` là trạng thái đóng, không có nút chuyển tiếp.
 
-Giao diện admin dùng `POST /admin/return-requests/{id}/advance` với `ExpectedStatus`. Backend khóa phiếu và so trạng thái hiện tại để tránh một thao tác cũ chuyển nhầm giai đoạn. Nếu người khác đã xử lý, trả lỗi và yêu cầu tải lại.
+Giao diện admin dùng `POST /admin/return-requests/{id}/advance` với `ExpectedStatus`. Ở bước Đang đánh giá hư hại (`Processing`), nhân viên và admin nhập hai ô bắt buộc: Tình trạng sản phẩm (`DamageAssessment`) và Nội dung kết quả gửi khách hàng (`Note`). Form dùng cùng bố cục ô kết quả của bảo hành, chỉ cho đi tiếp khi cả hai ô có nội dung và đơn đổi đã chốt. Sau khi hoàn tất, tình trạng và kết quả hiển thị trên phiếu khách hàng; nội dung kết quả cũng được gửi qua thông báo và lưu vào lịch sử công khai. Backend khóa phiếu và so trạng thái hiện tại để tránh một thao tác cũ chuyển nhầm giai đoạn. Nếu người khác đã xử lý, trả lỗi và yêu cầu tải lại.
 
-Theo quyết định mới nhất, chuyển giai đoạn đổi/trả là ghi nhận tiến độ gửi khách. Nó không tự tạo hoàn tiền, không tự điều chuyển hàng/serial và không yêu cầu trung tâm bảo hành. Luồng tài chính cũ được giữ để tham khảo và các điểm vào liên quan được tạm dừng; `Completed` của luồng này không có nghĩa đã hoàn tiền.
+Chuyển giai đoạn đổi/trả ghi nhận tiến độ và kết quả gửi khách. Phiếu chỉ hoàn tất khi đơn đổi đã chốt và hệ thống nhập lại sản phẩm cũ theo luồng đổi hàng hiện hành. Không tự tạo hoàn tiền và không yêu cầu trung tâm bảo hành. Luồng tài chính cũ được giữ để tham khảo và các điểm vào liên quan được tạm dừng; `Completed` của luồng này không có nghĩa đã hoàn tiền.
 
 ### 13.2. Bảo hành
 

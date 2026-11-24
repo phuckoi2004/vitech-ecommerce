@@ -56,9 +56,9 @@ def rename(shop, names):
         db.commit()
 
 
-@pytest.mark.parametrize("count", [2, 3])
-def test_two_or_three_columns_are_current_public_data_and_persist_without_migration(grounded_shop, count):
+def test_two_columns_are_current_public_data_and_persist_without_migration(grounded_shop):
     shop = grounded_shop
+    count = 2
     names = NAMES[:count]
     response, service, model = compare(shop, names)
     snapshot = table(response)
@@ -82,7 +82,6 @@ def test_two_or_three_columns_are_current_public_data_and_persist_without_migrat
 @pytest.mark.parametrize("question,count", [
     ("So sánh 2 laptop vừa giới thiệu.", 2),
     ("Máy thứ nhất và máy thứ hai khác nhau thế nào?", 2),
-    ("So sánh 3 sản phẩm trên.", 3),
     ("Tôi học lập trình, trong 2 laptop đó nên mua máy nào?", 2),
     ("Máy nào pin tốt hơn?", 2),
     ("So sánh camera, hiệu năng và giá của hai điện thoại này.", 2),
@@ -105,6 +104,31 @@ def test_invalid_number_of_references_asks_instead_of_guessing(grounded_shop, qu
     assert model.calls == []
     assert not (result.AiMessages[0].Metadata or {}).get("Comparison")
     assert len(result.AiMessages) == 1
+
+
+@pytest.mark.parametrize("question,names", [
+    ("So sánh máy thứ nhất và máy thứ hai", NAMES[:2]),
+    ("So sánh máy thứ ba và máy thứ nhất", (NAMES[2], NAMES[0])),
+    ("So sánh asus-vivo và lenovo-idea", (NAMES[2], NAMES[1])),
+])
+def test_only_the_requested_pair_is_compared_after_a_three_product_recommendation(grounded_shop, question, names):
+    shop = grounded_shop
+    show(shop, NAMES)
+    service, model = shop.service([])
+    snapshot = table(ask(shop, service, question))
+    assert [product["ProductId"] for product in snapshot["Products"]] == [shop.products[name] for name in names]
+    assert all(len(row["Values"]) == 2 for row in snapshot["Rows"])
+    assert model.calls == []
+
+
+@pytest.mark.parametrize("question", ["So sánh hai sản phẩm trên", "Máy nào pin tốt hơn?", "So sánh 3 sản phẩm trên"])
+def test_a_three_product_list_requires_the_customer_to_choose_the_pair(grounded_shop, question):
+    show(grounded_shop, NAMES)
+    service, model = grounded_shop.service([])
+    result = ask(grounded_shop, service, question)
+    assert "chọn 2" in result.AiMessages[0].Content
+    assert not (result.AiMessages[0].Metadata or {}).get("Comparison")
+    assert model.calls == []
 
 
 @pytest.mark.parametrize("question", ["So sánh 2 laptop vừa giới thiệu", "Máy nào pin tốt hơn?"])
@@ -410,8 +434,22 @@ def test_schema_rejects_over_limit_or_misaligned_data_and_history_ignores_invali
     message = result.AiMessages[0].model_dump()
     message["Metadata"] = {"Comparison": invalid, "AiLeaseToken": "internal"}
     assert MessageResponse.model_validate(message).Metadata is None
-    with pytest.raises(ValidationError):
-        PresentAnswerArguments(intent="compare", products=[{"product_id": uuid.uuid4()} for _ in range(4)])
+    for count in (1, 3, 4):
+        with pytest.raises(ValidationError):
+            PresentAnswerArguments(intent="compare", products=[{"product_id": uuid.uuid4()} for _ in range(count)])
+
+
+def test_a_legacy_three_product_snapshot_is_still_readable(grounded_shop):
+    result, _, _ = compare(grounded_shop)
+    snapshot = copy.deepcopy(table(result))
+    third = {**snapshot["Products"][0], "ProductId": grounded_shop.products[NAMES[2]],
+             "ProductVariantId": grounded_shop.variants[NAMES[2]], "ProductName": NAMES[2]}
+    snapshot["Products"].append(third)
+    for row in snapshot["Rows"]:
+        row["Values"].append("Chưa rõ")
+    message = result.AiMessages[0].model_dump()
+    message["Metadata"] = {"Comparison": snapshot}
+    assert len(MessageResponse.model_validate(message).Metadata["Comparison"]["Products"]) == 3
 
 
 def test_two_products_needing_a_version_are_resolved_one_reply_at_a_time(grounded_shop):
@@ -484,15 +522,16 @@ def test_comparison_criteria_are_not_counted_as_additional_products(grounded_sho
     snapshot = table(result)
     assert [p["ProductId"] for p in snapshot["Products"]] == [shop.products["asus-zen"], shop.products["lenovo-idea"]]
     assert {"camera", "battery", "cpu"} <= {row["Key"] for row in snapshot["Rows"]}
-    assert "tối đa 3 sản phẩm" not in result.AiMessages[0].Content
+    assert "Mỗi bảng so sánh" not in result.AiMessages[0].Content
     assert model.calls == []
 
 
-def test_three_named_products_still_compare_with_a_long_list_of_criteria(grounded_shop):
+def test_three_named_products_require_a_pair_even_with_a_long_list_of_criteria(grounded_shop):
     service, model = grounded_shop.service([])
     result = ask(grounded_shop, service,
                  "So sánh asus-zen, lenovo-idea và asus-vivo về CPU, RAM, pin, màn hình và giá.")
-    assert [p["ProductId"] for p in table(result)["Products"]] == [grounded_shop.products[name] for name in NAMES]
+    assert "đúng 2 sản phẩm" in result.AiMessages[0].Content
+    assert not (result.AiMessages[0].Metadata or {}).get("Comparison")
     assert model.calls == []
 
 
@@ -500,7 +539,7 @@ def test_four_actual_products_are_still_rejected_even_with_comparison_criteria(g
     service, model = grounded_shop.service([])
     result = ask(grounded_shop, service,
                  "So sánh asus-zen, lenovo-idea, asus-vivo và asus-ghost về CPU, pin và hiệu năng.")
-    assert "tối đa 3 sản phẩm" in result.AiMessages[0].Content
+    assert "đúng 2 sản phẩm" in result.AiMessages[0].Content
     assert "Comparison" not in (result.AiMessages[0].Metadata or {})
     assert model.calls == []
 

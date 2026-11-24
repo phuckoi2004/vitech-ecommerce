@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { formatDate, formatMoney } from '../../lib/format.js'
 import { formatStatus } from '../../lib/status-labels.js'
+import { paymentMethodLabel } from '../../lib/payment-methods.js'
 import { Pagination as SharedPagination } from '../../components/shared/index.js'
 import useInternalAuth from '../../hooks/useInternalAuth.js'
 import { useSearchParams } from 'react-router-dom'
@@ -27,7 +28,7 @@ const SECTIONS = {
   returns: [{ label: 'Đổi / Trả', path: '/admin/return-requests', rowKey: 'ReturnRequestId', columns: [column('RequestCode', 'Mã yêu cầu'), column('RequestType', 'Loại yêu cầu', (value) => value === 'Exchange' ? 'Đổi hàng' : 'Trả hàng'), column('Quantity', 'Số lượng'), column('Status', 'Trạng thái', statusLabel), column('RequestedAt', 'Ngày yêu cầu', formatDate)] }],
   warranties: [{ label: 'Bảo hành', path: '/admin/warranty-requests', rowKey: 'WarrantyRequestId', columns: [column('RequestCode', 'Mã yêu cầu'), column('IssueDescription', 'Mô tả lỗi'), column('Status', 'Trạng thái', statusLabel), column('RequestedAt', 'Ngày yêu cầu', formatDate)] }],
   payments: [
-    { label: 'Phương thức thanh toán', path: '/payment-methods', params: { active_only: false }, rowKey: 'PaymentMethodId', columns: [column('Code', 'Mã'), column('Name', 'Phương thức'), column('IsActive', 'Trạng thái', activeLabel)] },
+    { label: 'Phương thức thanh toán', path: '/payment-methods', params: { active_only: false }, rowKey: 'PaymentMethodId', columns: [column('Code', 'Mã'), column('Name', 'Phương thức', (_, row) => paymentMethodLabel(row)), column('IsActive', 'Trạng thái', activeLabel)] },
     { label: 'Giao dịch', path: '/admin/payment-transactions', rowKey: 'PaymentTransactionId', columns: [column('GatewayTransactionCode', 'Mã giao dịch'), column('TransactionType', 'Loại', (value) => value === 'Refund' ? 'Hoàn tiền' : 'Thanh toán'), column('Amount', 'Số tiền', formatMoney), column('Status', 'Trạng thái', statusLabel), column('CreatedAt', 'Ngày tạo', formatDate)] },
   ],
 }

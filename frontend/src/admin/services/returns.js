@@ -20,4 +20,4 @@ export const acceptReturn = (token, id) => request(PATH + '/' + encodeURICompone
 export const rejectReturn = (token, id, reason) => request(PATH + '/' + encodeURIComponent(id) + '/reject', { method: 'POST', accessToken: token, body: { Reason: reason } })
 export const startReturnReceiving = (token, id) => request(PATH + '/' + encodeURIComponent(id) + '/start-receiving', { method: 'POST', accessToken: token, body: {} })
 export const receiveReturn = (token, id) => request(PATH + '/' + encodeURIComponent(id) + '/receive', { method: 'POST', accessToken: token, body: {} })
-export const advanceReturn = (token, id, expectedStatus) => request(PATH + '/' + encodeURIComponent(id) + '/advance', { method: 'POST', accessToken: token, body: { ExpectedStatus: expectedStatus } })
+export const advanceReturn = (token, id, body) => request(PATH + '/' + encodeURIComponent(id) + '/advance', { method: 'POST', accessToken: token, body })

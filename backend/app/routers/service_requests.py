@@ -129,7 +129,8 @@ def advance_warranty(request_id: uuid.UUID, data: WarrantyProgressRequest, servi
 
 @admin_router.post("/return-requests/{request_id}/advance", response_model=AdminReturnRequestDetailResponse)
 def advance_return(request_id: uuid.UUID, data: ReturnProgressRequest, service: Returns, actor: CurrentActor):
-    return service.advance_status(actor, request_id, data.ExpectedStatus)
+    return service.advance_status(actor, request_id, data.ExpectedStatus,
+                                  notes=ServiceRequestNote(Note=data.Note), damage_assessment=data.DamageAssessment)
 
 
 @admin_router.get("/warranty-requests", response_model=PageResponse[AdminWarrantyRequestResponse])

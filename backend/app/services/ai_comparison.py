@@ -199,6 +199,8 @@ def _ahead(rows, others):
 
 def build_comparison(items, context, snapshot_at):
     """items are (public detail, exact active variant); never reorders the customer's columns."""
+    if len(items) != 2:
+        raise ValueError("Bảng so sánh mới cần đúng hai sản phẩm")
     criteria = RankingCriteria(context.intent.needs, context.intent.soft_brands())
     budget = context.intent.max_budget
     products, all_specs, kinds, analysis = [], [], [], []

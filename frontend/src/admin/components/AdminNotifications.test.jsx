@@ -38,7 +38,7 @@ test.each(['Staff', 'Admin'])('%s opens a new order directly and its dot clears 
   ])
   render(<AuthContext.Provider value={makeAuth({ role, permissions: ['orders:view'] })}><RouterProvider router={router} /></AuthContext.Provider>)
   await screen.findByText('1 thông báo chưa đọc')
-  fireEvent.click(screen.getByRole('button', { name: 'Thông báo' }))
+  fireEvent.click(await screen.findByRole('button', { name: 'Thông báo' }))
   fireEvent.click(await screen.findByRole('link', { name: 'Mở thông báo: Đơn hàng mới chờ xác nhận' }))
   await screen.findByText('Chi tiết đúng đơn')
   expect(router.state.location.pathname).toBe('/admin/orders/' + ids[0])
@@ -62,7 +62,7 @@ function open(role = 'Admin', path = '/admin/products?stock=low_stock') {
 
 test.each(['Admin', 'Staff'])('%s opens a reference-only stock notification at the correct SKU and marks only that notification read', async (role) => {
   const router = open(role)
-  fireEvent.click(screen.getByRole('button', { name: 'Thông báo' }))
+  fireEvent.click(await screen.findByRole('button', { name: 'Thông báo' }))
   const menu = within(await screen.findByRole('region', { name: 'Danh sách thông báo' }))
   const title = await menu.findByRole('link', { name: 'Mở thông báo: Cảnh báo tồn kho thấp 1' })
   expect(title).toHaveAttribute('href', '/admin/products?dialog=view&variant=' + ids[0])
@@ -80,7 +80,7 @@ test.each(['Admin', 'Staff'])('%s opens a reference-only stock notification at t
 
 test('an old stock alert opens current server data for its sibling variant after restocking', async () => {
   open()
-  fireEvent.click(screen.getByRole('button', { name: 'Thông báo' }))
+  fireEvent.click(await screen.findByRole('button', { name: 'Thông báo' }))
   const menu = within(await screen.findByRole('region', { name: 'Danh sách thông báo' }))
   const item = (await menu.findByText('Cảnh báo tồn kho thấp 2')).closest('li')
   fireEvent.click(within(item).getByRole('link', { name: 'Xem chi tiết' }))
@@ -94,7 +94,7 @@ test('an old stock alert opens current server data for its sibling variant after
 test('an already-read notification navigates without another mark request', async () => {
   notifications[0].IsRead = true
   open()
-  fireEvent.click(screen.getByRole('button', { name: 'Thông báo' }))
+  fireEvent.click(await screen.findByRole('button', { name: 'Thông báo' }))
   fireEvent.click(await screen.findByRole('link', { name: 'Mở thông báo: Cảnh báo tồn kho thấp 1' }))
   await screen.findByText('Mã sản phẩm: SKU-1')
   expect(api.markNotificationRead).not.toHaveBeenCalled()
@@ -103,13 +103,13 @@ test('an already-read notification navigates without another mark request', asyn
 test('mark-read failure does not prevent viewing the actual product', async () => {
   api.markNotificationRead.mockRejectedValue(new Error('Chưa đánh dấu được thông báo.'))
   open()
-  fireEvent.click(screen.getByRole('button', { name: 'Thông báo' }))
+  fireEvent.click(await screen.findByRole('button', { name: 'Thông báo' }))
   fireEvent.click(await screen.findByRole('link', { name: 'Mở thông báo: Cảnh báo tồn kho thấp 1' }))
   await screen.findByText('Mã sản phẩm: SKU-1')
   expect(notifications[0].IsRead).toBe(false)
   const failure = within(await screen.findByRole('alert', { name: 'Không đánh dấu được thông báo' }))
   expect(failure.getByText('Chưa đánh dấu được thông báo.')).toBeInTheDocument()
-  fireEvent.click(screen.getByRole('button', { name: 'Thông báo' }))
+  fireEvent.click(await screen.findByRole('button', { name: 'Thông báo' }))
   expect(failure.getByText('Chưa đánh dấu được thông báo.')).toBeInTheDocument()
   api.markNotificationRead.mockImplementation(async (_, id) => { notifications.find(n => n.NotificationId === id).IsRead = true })
   fireEvent.click(failure.getByRole('button', { name: 'Thử lại' }))
@@ -121,11 +121,11 @@ test('mark-read failure does not prevent viewing the actual product', async () =
 test('an unavailable variant shows an error and a usable return to the list', async () => {
   unavailable = true
   const router = open()
-  fireEvent.click(screen.getByRole('button', { name: 'Thông báo' }))
+  fireEvent.click(await screen.findByRole('button', { name: 'Thông báo' }))
   fireEvent.click(await screen.findByRole('link', { name: 'Mở thông báo: Cảnh báo tồn kho thấp 1' }))
   await screen.findByText('Không tìm thấy sản phẩm.')
   expect(screen.queryByRole('region', { name: 'Chi tiết sản phẩm' })).not.toBeInTheDocument()
-  fireEvent.click(screen.getByRole('button', { name: 'Quay lại', exact: true }))
+  fireEvent.click(await screen.findByRole('button', { name: 'Quay lại', exact: true }))
   await screen.findByRole('table', { name: '' })
   expect(router.state.location.pathname).toBe('/admin/products')
   expect(router.state.location.search).not.toContain('dialog=')
@@ -133,7 +133,7 @@ test('an unavailable variant shows an error and a usable return to the list', as
 
 test('focus refresh updates the open notification list; references do not create local notifications', async () => {
   render(<AuthContext.Provider value={makeAuth({ role: 'Staff', permissions })}><MemoryRouter><AdminNotifications /></MemoryRouter></AuthContext.Provider>)
-  fireEvent.click(screen.getByRole('button', { name: 'Thông báo' }))
+  fireEvent.click(await screen.findByRole('button', { name: 'Thông báo' }))
   await screen.findByText('Cảnh báo tồn kho thấp 1')
   notifications = [{ ...alert(1), Title: 'Cảnh báo mới từ server' }]
   fireEvent(window, new Event('focus'))
@@ -144,7 +144,7 @@ test('focus refresh updates the open notification list; references do not create
 
 test('stock notification references cannot bypass product-view permission', async () => {
   render(<AuthContext.Provider value={makeAuth({ role: 'Staff', permissions: ['admin.portal'] })}><MemoryRouter><AdminNotifications /></MemoryRouter></AuthContext.Provider>)
-  fireEvent.click(screen.getByRole('button', { name: 'Thông báo' }))
+  fireEvent.click(await screen.findByRole('button', { name: 'Thông báo' }))
   await screen.findByText('Cảnh báo tồn kho thấp 1')
   expect(within(screen.getByRole('region', { name: 'Danh sách thông báo' })).queryByRole('link')).not.toBeInTheDocument()
 })
@@ -155,7 +155,7 @@ test.each(['Admin', 'Staff'])('%s opening a second notification while the first 
     notifications.find(n => n.NotificationId === id).IsRead = true; resolve()
   } }))
   open(role)
-  fireEvent.click(screen.getByRole('button', { name: 'Thông báo' }))
+  fireEvent.click(await screen.findByRole('button', { name: 'Thông báo' }))
   const menu = within(await screen.findByRole('region', { name: 'Danh sách thông báo' }))
   const first = (await menu.findByText('Cảnh báo tồn kho thấp 1')).closest('li')
   fireEvent.click(within(first).getByRole('button', { name: 'Đánh dấu đã đọc' }))
@@ -171,7 +171,7 @@ test('repeat activation of the same pending notification sends only one request'
   let finish
   api.markNotificationRead.mockImplementationOnce(() => new Promise(resolve => { finish = resolve }))
   open()
-  fireEvent.click(screen.getByRole('button', { name: 'Thông báo' }))
+  fireEvent.click(await screen.findByRole('button', { name: 'Thông báo' }))
   const menu = within(await screen.findByRole('region', { name: 'Danh sách thông báo' }))
   const row = (await menu.findByText('Cảnh báo tồn kho thấp 1')).closest('li')
   fireEvent.click(within(row).getByRole('button', { name: 'Đánh dấu đã đọc' }))
@@ -186,7 +186,7 @@ test.each(['Admin', 'Staff'])('%s refreshes a cached chat alert target before na
   api.markNotificationRead.mockResolvedValue({ ...notifications[0], IsRead: true, ActionUrl: '/admin/support' })
   const router = createMemoryRouter([{ path: '/admin', element: <AdminNotifications /> }, { path: '/admin/support', element: <p>Hàng đợi hỗ trợ</p> }], { initialEntries: ['/admin'] })
   render(<AuthContext.Provider value={makeAuth({ role, permissions: ['admin.portal', 'chat:view'] })}><RouterProvider router={router} /></AuthContext.Provider>)
-  fireEvent.click(screen.getByRole('button', { name: 'Thông báo' }))
+  fireEvent.click(await screen.findByRole('button', { name: 'Thông báo' }))
   const link = await screen.findByRole('link', { name: 'Mở thông báo: Khách đang chờ' })
   expect(link).toHaveAttribute('href', '/admin/support')  // Safe fallback for opening in another tab.
   fireEvent.click(link)

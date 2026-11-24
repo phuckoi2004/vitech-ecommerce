@@ -74,7 +74,7 @@ class GroundingContext:
     state: ConversationState = field(default_factory=ConversationState)
     intent: ShoppingIntent | None = None
     vocab: Vocabulary = field(default_factory=Vocabulary)
-    references: list[dict] = field(default_factory=list)  # The latest product list shown, for get_product(rank).
+    references: list[dict] = field(default_factory=list)  # Stable numbered source list, for get_product(rank).
     products: dict[str, dict] = field(default_factory=dict)  # Public facts read this turn, by ProductId.
     filters: dict[str, dict] = field(default_factory=dict)
     searched: bool = False
@@ -92,7 +92,7 @@ class GroundingContext:
     nearest: dict | None = None  # Cheapest product just above the ceiling when a search found nothing within it.
     policy: dict | None = None  # Store policy lines by topic (Warranty/Returns/Promotion) read for this turn.
     explained: dict = field(default_factory=dict)  # explain_recommendation: Evaluation per shown ProductId.
-    comparison: dict | None = None  # Verified Smart Compare snapshot; set once the 2–3 exact SKUs are resolved.
+    comparison: dict | None = None  # Verified Smart Compare snapshot; set once the two exact SKUs are resolved.
     compatibility: dict | None = None
     compatibility_options: list[dict] = field(default_factory=list)
     compatibility_fallback: bool = False
@@ -200,7 +200,7 @@ class AiTools:
         the referenced products for "máy thứ hai", and the ranked search for a recommendation in a known category."""
         context.vocab = self.vocabulary()
         context.intent = analyze(context.question, context.vocab, context.state)
-        context.references = context.state.last_list()
+        context.references = context.state.reference_list(context.question)
         context.constraints = context.intent.filters()
         context.ranking = RankingCriteria(context.intent.needs, context.intent.soft_brands())
         if context.intent.intent == "comparison_guidance":
@@ -248,7 +248,7 @@ class AiTools:
         text = fold(context.question)
         sort = next((sort for terms, sort in PREFETCH_SORTS if any(term in text for term in terms)), "price_asc")
         context.prefetched = self.search_products(SearchProductsArguments(sort=sort), context)
-        products = context.prefetched["Products"][:context.intent.requested_count]
+        products = context.prefetched["Products"][:2]
         if not products:
             return
         if len(products) == 1:
@@ -268,7 +268,7 @@ class AiTools:
                           context.question, flags=re.I).strip(" .?!")
         if (not context.state.last_list() and re.search(r"\b(?:may|mau|san pham|cai|con|laptop|dien thoai) nao\b", fold(question))
                 and not re.search(r"\d", question)):
-            intent.clarification = "Mình chưa xác định được các mẫu cần so sánh. Bạn muốn so sánh 2 hoặc 3 sản phẩm nào?"
+            intent.clarification = "Mình chưa xác định được các mẫu cần so sánh. Bạn muốn so sánh 2 sản phẩm nào?"
             return
         # A trailing question ('… khác nhau thế nào?', '…, máy nào tốt hơn?') is not part of the last model name.
         question = re.split(r"(?:\s+|\s*,\s*)(?:khác nhau|khác gì|có gì|có khác|thì|nên|cái nào|máy nào|mẫu nào|con nào"
@@ -282,8 +282,8 @@ class AiTools:
         chunks = re.split(r"\s+(?:v[àa]|v[ớo]i|vs\.?|versus)\s+|\s*[,;]\s*", question, flags=re.I)
         if len(chunks) < 2:
             return
-        if len(chunks) > 3:
-            intent.clarification = "Mỗi bảng so sánh hỗ trợ tối đa 3 sản phẩm. Bạn chọn 2 hoặc 3 mẫu nhé."
+        if len(chunks) > 2:
+            intent.clarification = "Mỗi bảng so sánh gồm đúng 2 sản phẩm. Bạn chọn 2 mẫu nhé."
             return
         references = []
         for index, chunk in enumerate(chunks, 1):
@@ -315,6 +315,9 @@ class AiTools:
 
     def _comparison_items(self, context, details):
         """Lock referenced SKUs, including out-of-stock ones. Never substitute another version."""
+        if len(context.intent.references) != 2:
+            context.intent.clarification = "Bạn chọn đúng 2 sản phẩm hoặc phiên bản khác nhau để so sánh nhé."
+            return []
         items = []
 
         def colour_default(detail, variants):
@@ -357,8 +360,8 @@ class AiTools:
                 return []
             ref["ProductVariantId"] = str(variants[0].ProductVariantId)
             items.append((detail, variants[0]))
-        if not 2 <= len(items) <= 3 or len({v.ProductVariantId for _, v in items}) != len(items):
-            context.intent.clarification = "Bạn chọn từ 2 đến 3 sản phẩm hoặc phiên bản khác nhau để so sánh nhé."
+        if len(items) != 2 or len({v.ProductVariantId for _, v in items}) != 2:
+            context.intent.clarification = "Bạn chọn đúng 2 sản phẩm hoặc phiên bản khác nhau để so sánh nhé."
             return []
         context.comparison = build_comparison(items, context, self.clock().isoformat())
         if context.intent.comparison_search and len(items) < context.intent.requested_count:

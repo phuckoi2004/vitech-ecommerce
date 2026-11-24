@@ -9,11 +9,13 @@ from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
 from app.core.ai_config import AiSettings
+from app.models import Message, ProductVariant
 from app.schemas.ai_chat import GetProductArguments, PresentAnswerArguments
 from app.services.ai_intent import ConversationState, PastTurn, analyze
 from app.services.ai_tools import AiTools, GroundingContext
 from app.services.exceptions import AiUnavailableError
 from tests.test_ai_advisor import LIST, NOW, PHONES, VOCAB, AdvisorModel, cards, store, turn_data  # noqa: F401
+from tests.test_ai_comparison import table
 
 
 class FiveProductsModel(AdvisorModel):
@@ -67,6 +69,110 @@ def test_five_ranked_cards_and_the_fifth_product_are_available_on_the_next_turn(
     assert all(Decimal(p["Price"]) <= 8_000_000 for p in selected)
     fifth = s.ask(svc, "Máy thứ năm pin bao nhiêu?")
     assert cards(fifth)[0]["ProductId"] == selected[4]["ProductId"] and "mAh" in fifth.AiMessages[0].Content
+
+
+@pytest.mark.parametrize("context_turns", [1, 12])
+def test_sequential_pairs_keep_the_five_recommendation_ranks_across_fresh_services(store, context_turns):
+    s = store
+    svc = s.service(FiveProductsModel(s.counters))
+    selected = cards(s.ask(svc, "Tư vấn 5 điện thoại dưới 8 triệu"))
+    assert len(selected) == 5
+    for question, indices in [
+        ("Hãy so sánh mẫu 1 và mẫu 2 cho tôi", [0, 1]),
+        ("So sánh cho tôi mẫu 4 và mẫu 5", [3, 4]),
+        ("So sánh mẫu thứ ba và mẫu thứ năm", [2, 4]),
+        ("So sánh mẫu 5 và mẫu 1", [4, 0]),
+    ]:
+        model = FiveProductsModel(s.counters)
+        resumed = s.service(model)
+        resumed.settings = replace(resumed.settings, context_max_turns=context_turns)
+        response = s.ask(resumed, question)
+        compared = table(response)
+        assert [product["ProductId"] for product in compared["Products"]] == [selected[index]["ProductId"] for index in indices]
+        assert [product["ProductVariantId"] for product in compared["Products"]] == [selected[index]["ProductVariantId"] for index in indices]
+        assert all(len(row["Values"]) == 2 for row in compared["Rows"])
+        assert model.calls == []
+        assert "OrdinalReferences" not in response.AiMessages[0].Metadata
+        with Session(s.engine) as db:
+            saved = db.get(Message, response.AiMessages[0].MessageId).Metadata
+            assert [ref["ProductId"] for ref in saved["OrdinalReferences"]] == [product["ProductId"] for product in selected]
+            assert [ref["ProductId"] for ref in saved["ProductReferences"]] == [selected[index]["ProductId"] for index in indices]
+
+
+def test_the_compared_pair_remains_the_focus_but_numbered_products_still_use_the_source_list(store):
+    s = store
+    svc = s.service(FiveProductsModel(s.counters))
+    selected = cards(s.ask(svc, "Tư vấn 5 điện thoại dưới 8 triệu"))
+    s.ask(svc, "So sánh mẫu 4 và mẫu 5")
+    for question in ["So sánh hai mẫu trên", "So sánh mẫu 1 và mẫu 2 trong bảng so sánh vừa rồi"]:
+        response = s.ask(svc, question)
+        assert "Comparison" in (response.AiMessages[0].Metadata or {}), (question, response.AiMessages[0].Content)
+        compared = table(response)
+        assert [product["ProductId"] for product in compared["Products"]] == [product["ProductId"] for product in selected[3:]]
+    detail = s.ask(svc, "Máy thứ năm pin bao nhiêu?")
+    assert cards(detail)[0]["ProductId"] == selected[4]["ProductId"]
+    compared = table(s.ask(svc, "So sánh mẫu 2 và mẫu 3"))
+    assert [product["ProductId"] for product in compared["Products"]] == [selected[1]["ProductId"], selected[2]["ProductId"]]
+
+
+def test_a_new_recommendation_replaces_the_numbered_list_instead_of_reusing_an_older_longer_list(store):
+    s = store
+    svc = s.service(FiveProductsModel(s.counters))
+    s.ask(svc, "Tư vấn 5 điện thoại dưới 8 triệu")
+    s.ask(svc, "So sánh mẫu 1 và mẫu 2")
+    selected = cards(s.ask(svc, "Tư vấn 3 laptop dưới 20 triệu"))
+    assert len(selected) == 3
+    compared = table(s.ask(svc, "So sánh mẫu 3 và mẫu 1"))
+    assert [product["ProductId"] for product in compared["Products"]] == [selected[2]["ProductId"], selected[0]["ProductId"]]
+    response = s.ask(svc, "So sánh mẫu 4 và mẫu 5")
+    assert "Comparison" not in (response.AiMessages[0].Metadata or {})
+    assert "chỉ có 3 mẫu" in response.AiMessages[0].Content
+
+
+def test_remembered_products_keep_their_sku_but_read_current_price_and_stock(store):
+    s = store
+    svc = s.service(FiveProductsModel(s.counters))
+    selected = cards(s.ask(svc, "Tư vấn 5 điện thoại dưới 8 triệu"))
+    first = s.ask(svc, "So sánh mẫu 1 và mẫu 2")
+    with Session(s.engine) as db:
+        original_snapshot = db.get(Message, first.AiMessages[0].MessageId).Metadata["Comparison"]
+        variant = db.get(ProductVariant, uuid.UUID(selected[4]["ProductVariantId"]))
+        variant.StockQuantity = 0
+        variant.Price += Decimal("100000")
+        db.commit()
+    resumed = s.service(FiveProductsModel(s.counters))
+    compared = table(s.ask(resumed, "So sánh mẫu 4 và mẫu 5"))
+    assert compared["Products"][1]["ProductVariantId"] == selected[4]["ProductVariantId"]
+    assert compared["Products"][1]["InStock"] is False
+    assert Decimal(compared["Products"][1]["Price"]) == Decimal(selected[4]["Price"]) + 100000
+    with Session(s.engine) as db:
+        assert db.get(Message, first.AiMessages[0].MessageId).Metadata["Comparison"] == original_snapshot
+
+
+def test_legacy_subsets_keep_the_source_ranks_but_a_different_variant_starts_a_new_list():
+    refs = tuple({"Rank": rank, "ProductId": f"p{rank}", "ProductVariantId": f"v{rank}"} for rank in range(1, 6))
+    pair = ({**refs[3], "Rank": 1}, {**refs[4], "Rank": 2})
+    state = ConversationState((PastTurn({}, "recommend", refs), PastTurn({}, "compare", pair)))
+    assert state.ordinal_list() == list(refs)
+    assert state.last_list() == list(pair)
+    changed = ({**refs[0], "ProductVariantId": "another-version"}, refs[1])
+    assert ConversationState((*state.turns, PastTurn({}, "compare", changed))).ordinal_list() == list(changed)
+    assert not analyze("Có máy 2 trong 1 không?", VOCAB, state).references
+
+
+def test_rank_tool_uses_the_same_source_numbering_as_intent_resolution(store):
+    s = store
+    svc = s.service(FiveProductsModel(s.counters))
+    selected = cards(s.ask(svc, "Tư vấn 5 điện thoại dưới 8 triệu"))
+    s.ask(svc, "So sánh mẫu 1 và mẫu 2")
+    with Session(s.engine) as db:
+        context = GroundingContext("Máy thứ năm pin bao nhiêu?")
+        _, context.state = s.service(FiveProductsModel(s.counters))._history(
+            db.get(Message, uuid.UUID(selected[0]["AiAnswerMessageId"])).ConversationId)
+        tools = AiTools(db, clock=lambda: NOW)
+        tools.prepare(context)
+        result = tools.get_product(GetProductArguments(rank=5), context)
+        assert result["ProductId"] == selected[4]["ProductId"]
 
 
 def test_an_explicit_request_for_five_is_filled_when_the_model_only_selects_three(store):

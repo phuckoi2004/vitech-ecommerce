@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import { beforeEach, expect, test, vi } from 'vitest'
@@ -71,6 +71,25 @@ test('completion never implies a refund and unapproved amounts remain hidden', a
   expect(screen.getByText(/Máy cũ chỉ được nhập lại tồn khi phiếu hoàn tất/)).toBeInTheDocument()
 })
 
+test('a completed return shows the saved condition and public result after loading history', async () => {
+  api.getMyReturn.mockResolvedValue({ ...request, Status: 'Completed', DamageAssessment: 'Cổng sạc bị hỏng.', Histories: [
+    ...request.Histories,
+    { ServiceRequestHistoryId: 'result', OldStatus: 'Processing', NewStatus: 'Completed', ChangedAt: '2026-10-21T05:00:00Z', Note: 'Đã đổi máy mới cho khách.' },
+  ] })
+  mount('&request=r1')
+  const result = within(await screen.findByRole('region', { name: 'Kết quả đánh giá đổi trả' }))
+  expect(result.getByText('Cổng sạc bị hỏng.')).toBeInTheDocument()
+  expect(result.getByText('Đã đổi máy mới cho khách.')).toBeInTheDocument()
+  expect(result.queryByRole('textbox')).not.toBeInTheDocument()
+})
+
+test('a return still being assessed does not publish a completion result', async () => {
+  api.getMyReturn.mockResolvedValue({ ...request, Status: 'Processing', DamageAssessment: 'Đang kiểm tra.', Histories: [] })
+  mount('&request=r1')
+  await screen.findByRole('heading', { name: 'Yêu cầu DT-001' })
+  expect(screen.queryByRole('region', { name: 'Kết quả đánh giá đổi trả' })).not.toBeInTheDocument()
+})
+
 test('filters and pagination use server statuses and reset the page on filter changes', async () => {
   api.listMyReturns.mockResolvedValue({ Items: [request], Total: 14 })
   const router = mount()
@@ -98,6 +117,7 @@ test('out-of-stock request offers category-restricted choice only when no replac
   } })
   mount('&request=r1')
   expect(await screen.findByRole('link', { name: 'Chọn sản phẩm đổi' })).toHaveAttribute('href', '/tim-kiem?exchange=r1')
+  expect(screen.getByText('Sản phẩm đã mua hiện hết hàng. Bạn có thể chọn sản phẩm khác cùng danh mục để đổi.')).toBeInTheDocument()
 })
 
 test('pending automatic order offers payment through the saved order, never another choice', async () => {

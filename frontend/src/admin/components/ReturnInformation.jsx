@@ -9,7 +9,7 @@ import Money from '../../components/shared/Money.jsx'
 function InfoRow({ label, children }) {
   return <div className="grid grid-cols-[170px_minmax(0,1fr)] text-[10px] leading-3"><dt className="font-medium text-admin-muted">{label}</dt><dd className="m-0 break-words whitespace-pre-wrap">{children ?? '—'}</dd></div>
 }
-export default function ReturnInformation({ item, assignedName }) {
+export default function ReturnInformation({ item, assignedName, children }) {
   const [open, setOpen] = useState(false)
   const files = (item.Attachments ?? []).filter((file) => /^https:\/\//i.test(file.FileUrl) && ['Image', 'Video'].includes(file.FileType))
   const acceptedAt = (item.Histories ?? []).filter((history) => history.NewStatus === 'Approved').sort((a, b) => Date.parse(a.ChangedAt) - Date.parse(b.ChangedAt))[0]?.ChangedAt
@@ -41,6 +41,7 @@ export default function ReturnInformation({ item, assignedName }) {
         </>}
       </dl>
       <div className="flex items-center gap-2 [&>span]:px-2 [&>span]:text-[9px]"><ReturnStatus status={item.Status} /></div>
+      {children}
     </section>
     <Modal open={open} title="Minh chứng yêu cầu đổi trả" onClose={() => setOpen(false)} variant="tailwind" wide footer={<ReturnButton secondary onClick={() => setOpen(false)}>Đóng</ReturnButton>}><div className="grid grid-cols-2 gap-4">{files.map((file) => <figure className="m-0" key={file.ServiceRequestAttachmentId}>{file.FileType === 'Image' ? <a href={file.FileUrl} target="_blank" rel="noopener noreferrer"><img src={file.FileUrl} alt="Ảnh minh chứng do khách hàng cung cấp" className="h-52 w-full rounded-lg bg-admin-page object-contain" /></a> : <video src={file.FileUrl} controls preload="metadata" className="h-52 w-full rounded-lg bg-admin-page" />}</figure>)}</div></Modal>
   </>

@@ -119,15 +119,18 @@ export function toProductCard(product) {
   }
 }
 
-// The product list has no price or image (ProductSummary), so each card reads its product detail. A product
-// that is no longer on sale by then (404) is omitted; service/network failures must remain retryable.
+// Read current prices, stock and images together, without downloading full descriptions/specifications.
+// Products no longer on sale are omitted; service/network failures remain retryable.
 export async function loadProductCards(summaries, { signal } = {}) {
-  const details = await Promise.all(summaries.map((item) => getProduct(item.ProductId, { signal }).catch((failure) => {
-    if (signal?.aborted) throw failure
-    if (failure.status === 404) return null
-    throw failure
+  signal?.throwIfAborted()
+  const ids = [...new Set(summaries.map((item) => item.ProductId))]
+  const chunks = []
+  for (let start = 0; start < ids.length; start += 50) chunks.push(ids.slice(start, start + 50))
+  const responses = await Promise.all(chunks.map((productIds) => request('/products/cards', {
+    query: { product_id: productIds }, signal,
   })))
-  return details.filter(Boolean).map(toProductCard)
+  const details = new Map(responses.flat().map((product) => [product.ProductId, product]))
+  return ids.filter((id) => details.has(id)).map((id) => toProductCard(details.get(id)))
 }
 
 export const getCategoryBySlug = (slug, { signal } = {}) => request(`/categories/slug/${encodeURIComponent(slug)}`, { signal })
