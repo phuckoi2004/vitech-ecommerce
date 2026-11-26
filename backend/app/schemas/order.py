@@ -17,6 +17,7 @@ from .common import (
     RequestSchema,
     ResponseSchema,
     SerialNumberValue,
+    UserRole,
     VndAmount,
     relation_field,
     varchar,
@@ -173,6 +174,14 @@ class OrderStatusHistoryResponse(ResponseSchema):
 
 class AdminOrderStatusHistoryResponse(OrderStatusHistoryResponse):
     ChangedByUserId: uuid.UUID | None
+    ChangedByRole: UserRole | None = Field(default=None, validation_alias=AliasPath("changed_by", "Role"))
+    ChangedByName: str | None = Field(default=None, validation_alias=AliasPath("changed_by", "FullName"))
+
+    @model_validator(mode="after")
+    def _only_name_staff_operators(self):
+        if self.ChangedByRole not in {"Admin", "Staff"}:
+            self.ChangedByName = None
+        return self
 
 
 class OrderSummary(ResponseSchema):

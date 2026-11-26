@@ -830,6 +830,17 @@ class FakeHistoryRepo(FakeRepo):
     def list_by_order(self, order_id):
         return self._rows(lambda h: h.OrderId == order_id)
 
+    def first_confirmers(self, order_ids):
+        order_ids = set(order_ids)
+        first_by_order = {}
+        rows = sorted(self._rows(lambda h: h.OrderId in order_ids),
+                      key=lambda h: (h.OrderId, h.ChangedAt, h.OrderStatusHistoryId))
+        for history in rows:
+            if (history.OldStatus == "Pending" and history.NewStatus == "Confirmed"
+                    and history.ChangedByUserId is not None):
+                first_by_order.setdefault(history.OrderId, history.ChangedByUserId)
+        return first_by_order
+
 
 class FakePaymentTransactionRepo(FakeRepo):
     model = PaymentTransaction

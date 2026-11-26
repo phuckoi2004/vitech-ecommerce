@@ -69,7 +69,7 @@ class OrderRepository(BaseRepository[Order]):
                 selectinload(Order.items).selectinload(OrderItem.review),
                 selectinload(Order.items).selectinload(OrderItem.product_serials),
                 selectinload(Order.items).selectinload(OrderItem.return_requests).selectinload(ReturnRequest.product_serial),
-                selectinload(Order.status_histories),
+                selectinload(Order.status_histories).selectinload(OrderStatusHistory.changed_by),
                 selectinload(Order.payment_transactions),
             )
         )
@@ -243,8 +243,34 @@ class OrderItemRepository(BaseRepository[OrderItem]):
 class OrderStatusHistoryRepository(BaseRepository[OrderStatusHistory]):
     model = OrderStatusHistory
 
-    def list_by_order(self, order_id: uuid.UUID) -> list[OrderStatusHistory]:
-        return self.get_all(
-            OrderStatusHistory.OrderId == order_id,
-            order_by=(OrderStatusHistory.ChangedAt, OrderStatusHistory.OrderStatusHistoryId),
+    def first_confirmers(self, order_ids: Sequence[uuid.UUID]) -> dict[uuid.UUID, uuid.UUID]:
+        """Return the first staff/admin actor who confirmed each order, for legacy ownership resolution."""
+        if not order_ids:
+            return {}
+        stmt = (
+            select(OrderStatusHistory.OrderId, OrderStatusHistory.ChangedByUserId)
+            .where(
+                OrderStatusHistory.OrderId.in_(order_ids),
+                OrderStatusHistory.OldStatus == "Pending",
+                OrderStatusHistory.NewStatus == "Confirmed",
+                OrderStatusHistory.ChangedByUserId.is_not(None),
+            )
+            .order_by(
+                OrderStatusHistory.OrderId,
+                OrderStatusHistory.ChangedAt,
+                OrderStatusHistory.OrderStatusHistoryId,
+            )
         )
+        first_by_order: dict[uuid.UUID, uuid.UUID] = {}
+        for order_id, user_id in self.session.execute(stmt):
+            first_by_order.setdefault(order_id, user_id)
+        return first_by_order
+
+    def list_by_order(self, order_id: uuid.UUID) -> list[OrderStatusHistory]:
+        stmt = (
+            select(OrderStatusHistory)
+            .where(OrderStatusHistory.OrderId == order_id)
+            .options(selectinload(OrderStatusHistory.changed_by))
+            .order_by(OrderStatusHistory.ChangedAt, OrderStatusHistory.OrderStatusHistoryId)
+        )
+        return list(self.session.scalars(stmt).all())

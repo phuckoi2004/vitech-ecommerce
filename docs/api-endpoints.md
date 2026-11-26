@@ -494,12 +494,16 @@ Luồng đổi trả hiện hành không bắt kiểm tra thiệt hại, duyệt
 
 - `GET /admin/orders?keyword=...`: tìm chuỗi liên tiếp trong mã đơn, tên tài khoản khách hoặc SĐT tài khoản, tối đa 255 ký tự. Bộ lọc cũ vẫn dùng được; không thêm tham số này vào API danh sách đơn của khách.
 - POST đổi trạng thái dùng luồng `Pending → Confirmed → Processing → Shipping → Delivered` và đóng tại Delivered. Xác nhận dừng tại Confirmed; thao tác bắt đầu xử lý mới sang Processing. COD vẫn qua `confirm-cod-delivery`; ghi doanh số và thời điểm đóng cùng giao dịch giao hàng thành công.
-- Người xác nhận đầu tiên sở hữu bước tiếp theo; Admin có thể làm thay. Không cho PATCH thay người phụ trách để lách quyền. Confirmed là bước hoạt động bình thường; Completed vẫn được đọc cho các bản ghi đã có.
+- Đơn Pending chưa có người phụ trách được nhân viên đầu tiên xác nhận nhận làm người phụ trách. Staff chỉ thao tác đơn được gán cho mình; Admin có thể can thiệp ở mọi bước nhưng không thay đổi người phụ trách ban đầu. Vì vậy Staff vẫn xử lý được bước tiếp theo sau khi Admin can thiệp nếu Staff xác nhận đầu tiên; nếu Admin xác nhận đầu tiên thì Staff bị chặn. Không cho PATCH thay người phụ trách để lách quyền. Confirmed là bước hoạt động bình thường; Completed vẫn được đọc cho các bản ghi đã có.
 - Tạo đơn gửi `NewOrder` cho Staff/Admin; mỗi người đọc riêng. Xác nhận/hủy đơn giải quyết thông báo NewOrder của tất cả người nhận trong cùng giao dịch. Tham chiếu mở thẳng `/admin/orders/{id}`.
 - Các API đánh giá nội bộ, tin tức và banner cho Staff/Admin; `ReviewDeleteRequest.DeleteReason` bắt buộc, không trắng, tối đa 2.000 ký tự. API tin tức nội bộ trả thêm `CreatedByName`.
 - API `POST /admin/product-image-uploads` cho Staff/Admin để dùng kho ảnh chung cho tin tức/banner; chỉ tải file, không cấp quyền sửa catalog.
 
 Phạm vi, phần giữ lại và kết quả xác minh: [bản bổ sung](updates/2026-10-21-admin-orders-content.md).
+
+### Quy tắc tiếp quản đơn — 26/11/2026
+
+Admin có thể can thiệp đơn đang do Staff xử lý nhưng không chiếm lại `AssignedStaffId`. Nút và API của Staff vẫn cho phép người xác nhận đầu tiên tiếp tục xử lý; nếu Admin xác nhận đơn Pending trước, `AssignedStaffId` là Admin và Staff bị chặn. Đơn cũ được đối chiếu với người thực hiện lần chuyển `Pending → Confirmed` đầu tiên trong lịch sử để khôi phục quyền phụ trách nếu dữ liệu đã bị ghi đè. Ghi chú nội bộ không thay đổi người phụ trách. Chi tiết: [quyết định quyền xử lý đơn](updates/2026-11-26-admin-order-takeover.md).
 
 ### Bổ sung tiếp 21/10/2026 — sửa chay số tồn trong chi tiết sản phẩm
 

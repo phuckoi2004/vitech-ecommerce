@@ -62,6 +62,7 @@ Giữ nguyên các biên bản này. Số test đạt, head migration và mô t�
 ## Bổ sung ngày 21/10/2026
 
 - [Tìm đơn, luồng trạng thái, quyền người phụ trách, thông báo đơn mới và quyền đánh giá/tin tức/banner](updates/2026-10-21-admin-orders-content.md). Bổ sung hiện hành cho 3.26, 3.29 và 3.33–3.36; ghi rõ phần bảo hành/đổi trả giữ lại và giới hạn phía khách.
+- [Admin can thiệp đơn hàng](updates/2026-11-26-admin-order-takeover.md). Người xác nhận đầu tiên giữ quyền phụ trách; Admin có thể làm thay mà không chuyển quyền đó.
 
 - Báo cáo hai chức năng bảo hành và đổi trả phía khách hàng: [bản Word](updates/2026-10-21-customer-warranty-returns-report.docx) và [bản Markdown](updates/2026-10-21-customer-warranty-returns-report.md). Gồm nội dung triển khai, kết nối admin, kết quả kiểm thử và phạm vi bàn giao.
 

@@ -8,7 +8,8 @@ Quyết định đã chốt:
   gì = toàn đơn); tiền giảm phân bổ theo tỷ lệ vào OrderItems.DiscountAmount.
 - Customer chỉ tự hủy khi đơn Pending.
 - Luồng admin: Pending → Confirmed → Processing → Shipping → Delivered (đóng đơn).
-  Người xác nhận đầu tiên là AssignedStaffId; Staff khác chỉ xem, Admin được can thiệp.
+  Người đầu tiên xác nhận đơn Pending được lưu làm người phụ trách. Admin luôn có thể can thiệp nhưng không thay đổi
+  người phụ trách đã được ghi nhận; Staff chỉ tiếp tục nếu chính họ là người xác nhận đầu tiên.
   Cancelled chỉ trước Delivered
   (sau Delivered dùng ReturnRequest).
 - Hủy đơn trước Shipping (hàng còn trong kho): hoàn tồn kho, nhả Serial/IMEI đang giữ ngay.
@@ -483,8 +484,14 @@ class OrderService(BaseService):
             "keyword": keyword.strip() if keyword and keyword.strip() else None,
         }
         orders = self.orders.list_orders(**filters, offset=offset, limit=limit)
+        first_confirmers = self.histories.first_confirmers([order.OrderId for order in orders])
+        items = []
+        for order in orders:
+            response = AdminOrderResponse.model_validate(order)
+            response.AssignedStaffId = first_confirmers.get(order.OrderId, response.AssignedStaffId)
+            items.append(response)
         return PageResponse[AdminOrderResponse](
-            Items=[AdminOrderResponse.model_validate(o) for o in orders],
+            Items=items,
             Total=self.orders.count_orders(**filters),
             Page=page,
             PageSize=page_size,
@@ -526,6 +533,7 @@ class OrderService(BaseService):
                 raise NotFoundError("Không tìm thấy đơn hàng", code="order_not_found")
             current, target = order.OrderStatus, data.OrderStatus
             self._require_order_operator(actor, order)
+            self._restore_order_operator_from_history(order)
             if target == ORDER_CANCELLED:
                 if order.SourceReturnRequestId:
                     raise BusinessRuleError("Đơn đổi trả chỉ được khách hủy trước khi chốt hoặc tự hủy khi hết hạn QR", code="exchange_order_not_cancellable_by_staff")
@@ -544,7 +552,7 @@ class OrderService(BaseService):
                         "Đơn COD chỉ chuyển Delivered khi xác nhận giao hàng và đã thu tiền",
                         code="cod_delivery_requires_collection",
                     )
-                if current == ORDER_PENDING:
+                if order.AssignedStaffId is None:
                     order.AssignedStaffId = actor.user_id
                 self._move_to(order, target, changed_by=actor.user_id, note=data.Note)
             self.orders.flush()
@@ -566,6 +574,7 @@ class OrderService(BaseService):
             if order is None:
                 raise NotFoundError("Không tìm thấy đơn hàng", code="order_not_found")
             self._require_order_operator(actor, order)
+            self._restore_order_operator_from_history(order)
             if not self._is_cod(order):
                 raise BusinessRuleError("Đơn không thanh toán khi nhận hàng (COD)", code="payment_method_not_cod")
             if order.OrderStatus != ORDER_SHIPPING:
@@ -583,6 +592,8 @@ class OrderService(BaseService):
             received = self._received_amount(order)
             remaining = max(order.TotalAmount - received, Decimal("0"))
             now = self.now()
+            if order.AssignedStaffId is None:
+                order.AssignedStaffId = actor.user_id
             self._move_to(order, ORDER_DELIVERED, changed_by=actor.user_id, note=note)
             order.PaymentStatus = PAYMENT_PAID
             if remaining > 0 or order.TotalAmount == 0:
@@ -600,7 +611,7 @@ class OrderService(BaseService):
             return AdminOrderDetailResponse.model_validate(self.orders.get_detail(order_id))
 
     def update_order_admin_info(self, actor: Actor, order_id: uuid.UUID, data: OrderAdminUpdate) -> AdminOrderDetailResponse:
-        """Only the confirming operator/Admin edits notes; ownership is assigned at confirmation."""
+        """Only the order operator/Admin edits notes; note edits never claim or replace the order operator."""
         require_role(actor, *STAFF_OR_ADMIN)
         with self.transaction():
             order = self.orders.get_by_id_for_update(order_id)
@@ -608,7 +619,9 @@ class OrderService(BaseService):
                 raise NotFoundError("Không tìm thấy đơn hàng", code="order_not_found")
             values = data.model_dump(exclude_unset=True)
             self._require_order_operator(actor, order)
-            if "AssignedStaffId" in values and values["AssignedStaffId"] != order.AssignedStaffId:
+            self._restore_order_operator_from_history(order)
+            requested_assignee = values.pop("AssignedStaffId", order.AssignedStaffId)
+            if requested_assignee != order.AssignedStaffId:
                 raise BusinessRuleError("Người phụ trách được ghi nhận khi xác nhận đơn, không được thay đổi",
                                         code="order_assignment_read_only")
             self.orders.update(order, values)
@@ -1072,13 +1085,30 @@ class OrderService(BaseService):
         if (order.PrepaymentAmount or 0) > 0 and self._received_amount(order) < order.PrepaymentAmount:
             raise BusinessRuleError("Đơn hàng chưa thanh toán đủ khoản trả trước 20%", code="order_prepayment_required")
 
-    @staticmethod
-    def _require_order_operator(actor: Actor, order: Order) -> None:
-        if actor.role == "Admin" or order.OrderStatus == ORDER_PENDING:
+    def _initial_order_operator_id(self, order: Order) -> uuid.UUID | None:
+        """Use the first Pending → Confirmed actor as owner for rows from the old takeover behavior."""
+        for history in self.histories.list_by_order(order.OrderId):
+            if (history.OldStatus == ORDER_PENDING and history.NewStatus == ORDER_CONFIRMED
+                    and history.ChangedByUserId is not None):
+                return history.ChangedByUserId
+        return order.AssignedStaffId
+
+    def _restore_order_operator_from_history(self, order: Order) -> None:
+        """Repair a stale AssignedStaffId that an older Admin takeover may have replaced."""
+        initial_operator_id = self._initial_order_operator_id(order)
+        if initial_operator_id is not None:
+            order.AssignedStaffId = initial_operator_id
+
+    def _require_order_operator(self, actor: Actor, order: Order) -> None:
+        if actor.role == "Admin":
             return
-        if order.AssignedStaffId != actor.user_id:
-            raise PermissionDeniedError("Chỉ nhân viên đã xác nhận đơn hoặc quản trị viên được xử lý đơn này",
-                                        code="order_not_assigned_to_you")
+        initial_operator_id = self._initial_order_operator_id(order)
+        if initial_operator_id == actor.user_id:
+            return
+        if order.OrderStatus == ORDER_PENDING and initial_operator_id is None:
+            return
+        raise PermissionDeniedError("Chỉ nhân viên phụ trách hoặc quản trị viên được xử lý đơn này",
+                                    code="order_not_assigned_to_you")
 
     def _ensure_no_open_returns(self, order: Order) -> None:
         """Retired completion rule, retained for consultation; not called by the active delivery workflow."""

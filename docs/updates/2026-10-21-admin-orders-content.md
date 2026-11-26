@@ -15,6 +15,7 @@
 - Nút lần lượt: **Xác nhận → Bắt đầu xử lý → Giao hàng → Giao hoàn tất**. Đã xác nhận có bộ lọc và một bước riêng trong tiến trình; bỏ chữ “(cũ)” khỏi nhãn trạng thái. Không yêu cầu bấm Completed ở cuối.
 - Xác nhận đầu tiên ghi người thao tác vào `AssignedStaffId` và thời gian `ConfirmedAt`. Khóa dòng đơn trước khi kiểm tra/ghi để hai lần xác nhận không lấy quyền phụ trách của nhau.
 - Sau đó chỉ nhân viên đã xác nhận được chuyển bước/hủy và xử lý ghi chú, gán/gỡ Serial của đơn đó; nhân viên khác vẫn xem được. Admin được can thiệp, không tự thay người phụ trách khi làm thay.
+- Cập nhật 26/11/2026: Admin có thể can thiệp nhưng giữ nguyên người phụ trách đầu tiên; xem [quy tắc quyền xử lý đơn mới](2026-11-26-admin-order-takeover.md).
 - Không cho dùng PATCH thông tin đơn để tự thay/xóa `AssignedStaffId` và lách quyền. Nhân viên không được tự chiếm đơn cũ chưa có người phụ trách; Admin có thể xử lý các đơn này.
 - Khi Đã giao: trong cùng transaction ghi thời điểm giao/đóng, bán các Serial đã gán, bắt đầu bảo hành và cộng bộ đếm doanh số/số đơn/số lượng bán đúng một lần. Gọi lặp không ghi thêm giao dịch COD hoặc cộng doanh số lần nữa. Không ghi lại hàng lịch sử.
 - Giữ điều kiện thanh toán và Serial trước giao: QR phải đã thanh toán; COD phải xác nhận thu đủ tiền khi giao hoàn tất; biến thể có quản lý Serial phải gán đủ mã trước giao.

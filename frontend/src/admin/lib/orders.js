@@ -33,8 +33,22 @@ export function orderFilters(params) {
 
 export const orderStatusLabel = (value) => ORDER_STATUSES.find(([status]) => status && status === value)?.[1] ?? formatStatus(value)
 export const paymentStatusLabel = (value) => formatStatus(value, PAYMENT_LABELS)
+export function orderHistoryActorLabel(entry) {
+  if (entry.ChangedByRole === 'Admin') return `Admin: ${entry.ChangedByName || 'Không rõ tên'}`
+  if (entry.ChangedByRole === 'Staff') return `Nhân viên: ${entry.ChangedByName || 'Không rõ tên'}`
+  if (entry.ChangedByRole === 'Customer') return 'Khách hàng'
+  return 'Hệ thống'
+}
+export function initialOrderOperatorId(order) {
+  const initialConfirmation = order?.StatusHistories?.find((entry) => entry.OldStatus === 'Pending'
+    && entry.NewStatus === 'Confirmed' && entry.ChangedByUserId
+    && ['Admin', 'Staff'].includes(entry.ChangedByRole))
+  return initialConfirmation?.ChangedByUserId || order?.AssignedStaffId || null
+}
 export const canOperateOrder = (order, auth) => Boolean(order && auth.permissions.includes('orders:update') && (
-  auth.user.Role === 'Admin' || (auth.user.Role === 'Staff' && (order.OrderStatus === 'Pending' || order.AssignedStaffId === auth.user.UserId))
+  auth.user.Role === 'Admin' || (auth.user.Role === 'Staff' && (
+    initialOrderOperatorId(order) === auth.user.UserId || (order.OrderStatus === 'Pending' && !initialOrderOperatorId(order))
+  ))
 ))
 export const canCancelOrder = (order) => !order.SourceReturnRequestId && ['Pending', 'Confirmed', 'Processing', 'Shipping'].includes(order.OrderStatus)
 

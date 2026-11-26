@@ -12,7 +12,7 @@ import OrderStatusModal from '../components/OrderStatusModal.jsx'
 import OrderPrepayment from '../components/OrderPrepayment.jsx'
 import { ProductButton } from '../components/ProductUi.jsx'
 import useOrderWorkflow from '../hooks/useOrderWorkflow.js'
-import { canCancelOrder, orderListSearch, orderStatusLabel, paymentStatusLabel } from '../lib/orders.js'
+import { canCancelOrder, orderHistoryActorLabel, orderListSearch, orderStatusLabel, paymentStatusLabel } from '../lib/orders.js'
 import { updateOrderNote } from '../services/orders.js'
 
 const CARD = 'min-w-0 rounded-[14px] border border-admin-border bg-white px-[18px] py-4'
@@ -69,7 +69,7 @@ export default function OrderDetailPage() {
           <section aria-label="Lịch sử trạng thái" className={CARD + ' min-h-[230px]'}><h3 className={TITLE + ' mb-2.5'}>Lịch sử trạng thái</h3>
             {order.StatusHistories?.length ? <ol className="m-0 flex list-none flex-col gap-2.5 p-0">{order.StatusHistories.map((entry) => <li key={entry.OrderStatusHistoryId} className="flex items-start gap-3.5">
               <img src={historyDot} width="8" height="8" alt="" className="mt-1 shrink-0" />
-              <div className="min-w-0"><p className="m-0 text-[11px] leading-normal font-medium break-words">{entry.OldStatus ? orderStatusLabel(entry.OldStatus) + ' → ' : 'Đơn hàng được tạo — '}{orderStatusLabel(entry.NewStatus)}</p><time dateTime={entry.ChangedAt} className="mt-0.5 block text-[10px] leading-normal text-admin-muted">{formatDateTime(entry.ChangedAt)}</time>{entry.Note && <p className="mt-1 mb-0 text-[11px] break-words whitespace-pre-wrap text-admin-muted">{entry.Note}</p>}</div>
+              <div className="min-w-0"><p className="m-0 text-[11px] leading-normal font-medium break-words">{entry.OldStatus ? orderStatusLabel(entry.OldStatus) + ' → ' : 'Đơn hàng được tạo — '}{orderStatusLabel(entry.NewStatus)}</p><p className="m-0 mt-0.5 text-[10px] leading-normal text-admin-muted">Thực hiện bởi: {orderHistoryActorLabel(entry)} · {formatDateTime(entry.ChangedAt)}</p>{entry.Note && <p className="mt-1 mb-0 text-[11px] break-words whitespace-pre-wrap text-admin-muted">{entry.Note}</p>}</div>
             </li>)}</ol> : <p className="m-0 text-xs text-admin-muted">Chưa có lịch sử trạng thái.</p>}
           </section>
           {needsSerials && <section aria-label="Serial/IMEI của đơn" className={CARD + ' flex flex-col gap-3'}><h3 className={TITLE}>Serial/IMEI của đơn</h3>

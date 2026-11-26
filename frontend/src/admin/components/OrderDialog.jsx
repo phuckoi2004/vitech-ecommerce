@@ -3,7 +3,7 @@ import { paymentMethodLabel } from '../../lib/payment-methods.js'
 import OrderPrepayment from './OrderPrepayment.jsx'
 import { formatDateTime, formatMoney } from '../../lib/format.js'
 import useOrderWorkflow from '../hooks/useOrderWorkflow.js'
-import { canCancelOrder, orderStatusLabel, paymentStatusLabel } from '../lib/orders.js'
+import { canCancelOrder, orderHistoryActorLabel, orderStatusLabel, paymentStatusLabel } from '../lib/orders.js'
 import { updateOrderNote } from '../services/orders.js'
 import AdminTable from './AdminTable.jsx'
 import Modal from './Modal.jsx'
@@ -74,6 +74,7 @@ export default function OrderDialog({ orderId, initialAction, onClose, onDone })
       <section aria-label="Lịch sử trạng thái"><h3 className="mb-3 text-sm font-semibold">Lịch sử trạng thái</h3>
         {order.StatusHistories?.length ? <ol className="m-0 flex list-none flex-col gap-3 p-0">{order.StatusHistories.map((entry) => <li key={entry.OrderStatusHistoryId} className="border-l-2 border-admin-border pl-3 text-xs">
           <div className="flex items-center justify-between gap-3"><strong>{entry.OldStatus ? orderStatusLabel(entry.OldStatus) + ' → ' : 'Tạo đơn → '}{orderStatusLabel(entry.NewStatus)}</strong><time dateTime={entry.ChangedAt} className="text-admin-muted">{formatDateTime(entry.ChangedAt)}</time></div>
+          <p className="mt-1 mb-0 text-admin-muted">Thực hiện bởi: {orderHistoryActorLabel(entry)}</p>
           {entry.Note && <p className="mt-1 mb-0 break-words whitespace-pre-wrap text-admin-muted">{entry.Note}</p>}
         </li>)}</ol> : <p className="m-0 text-xs text-admin-muted">Chưa có lịch sử trạng thái.</p>}
       </section>
